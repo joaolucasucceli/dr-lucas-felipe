@@ -1,7 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Central Dr. Lucas — Schema Prisma
+// Todos os nomes de campos em português (camelCase)
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +8,206 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ==========================================
+// Enums
+// ==========================================
+
+enum Perfil {
+  gestor
+  atendente
+  desenvolvedor
+}
+
+enum TipoUsuario {
+  humano
+  ia
+}
+
+enum StatusFunil {
+  primeiro_atendimento
+  qualificacao
+  agendamento
+  consulta_agendada
+  consulta_realizada
+  sinal_pago
+  procedimento_agendado
+  concluido
+  perdido
+}
+
+enum EtapaConversa {
+  primeiro_atendimento
+  qualificacao
+  agendamento
+  consulta_agendada
+  consulta_realizada
+  sinal_pago
+  procedimento_agendado
+  concluido
+  perdido
+}
+
+enum StatusAgendamento {
+  agendado
+  confirmado
+  cancelado
+  realizado
+  remarcado
+}
+
+// ==========================================
+// Models
+// ==========================================
+
+model Usuario {
+  id          String       @id @default(cuid())
+  nome        String
+  email       String       @unique
+  senha       String
+  perfil      Perfil
+  tipo        TipoUsuario  @default(humano)
+  ativo       Boolean      @default(true)
+  criadoEm    DateTime     @default(now())
+  atualizadoEm DateTime   @updatedAt
+  deletadoEm  DateTime?
+
+  leads       Lead[]       @relation("ResponsavelLead")
+  auditLogs   AuditLog[]
+
+  @@map("usuarios")
+}
+
+model Lead {
+  id                    String       @id @default(cuid())
+  nome                  String
+  whatsapp              String       @unique
+  email                 String?
+  procedimentoInteresse String?
+  statusFunil           StatusFunil  @default(primeiro_atendimento)
+  origem                String?
+  sobreOPaciente        String?      @db.Text
+  responsavelId         String?
+  arquivado             Boolean      @default(false)
+  arquivadoEm           DateTime?
+  consentimentoLgpd     Boolean      @default(false)
+  consentimentoLgpdEm   DateTime?
+  criadoEm              DateTime     @default(now())
+  atualizadoEm          DateTime     @updatedAt
+  deletadoEm            DateTime?
+
+  responsavel   Usuario?           @relation("ResponsavelLead", fields: [responsavelId], references: [id])
+  conversas     Conversa[]
+  agendamentos  Agendamento[]
+  mensagens     MensagemWhatsapp[]
+  fotos         FotoLead[]
+
+  @@index([responsavelId])
+  @@index([statusFunil])
+  @@index([criadoEm])
+  @@map("leads")
+}
+
+model Conversa {
+  id         String        @id @default(cuid())
+  leadId     String
+  etapa      EtapaConversa @default(primeiro_atendimento)
+  criadoEm   DateTime      @default(now())
+  atualizadoEm DateTime   @updatedAt
+
+  lead       Lead                @relation(fields: [leadId], references: [id])
+  mensagens  MensagemWhatsapp[]
+
+  @@index([leadId])
+  @@index([etapa])
+  @@map("conversas")
+}
+
+model MensagemWhatsapp {
+  id                  String   @id @default(cuid())
+  conversaId          String
+  leadId              String
+  messageIdWhatsapp   String   @unique
+  tipo                String
+  conteudo            String   @db.Text
+  remetente           String
+  criadoEm            DateTime @default(now())
+
+  conversa  Conversa @relation(fields: [conversaId], references: [id])
+  lead      Lead     @relation(fields: [leadId], references: [id])
+
+  @@index([leadId])
+  @@index([conversaId])
+  @@index([criadoEm])
+  @@map("mensagens_whatsapp")
+}
+
+model Agendamento {
+  id              String            @id @default(cuid())
+  leadId          String
+  procedimentoId  String?
+  dataHora        DateTime
+  status          StatusAgendamento @default(agendado)
+  googleEventId   String?
+  observacao      String?           @db.Text
+  criadoEm        DateTime          @default(now())
+  atualizadoEm    DateTime          @updatedAt
+
+  lead         Lead          @relation(fields: [leadId], references: [id])
+  procedimento Procedimento? @relation(fields: [procedimentoId], references: [id])
+
+  @@index([leadId])
+  @@index([criadoEm])
+  @@index([dataHora])
+  @@map("agendamentos")
+}
+
+model Procedimento {
+  id             String    @id @default(cuid())
+  nome           String
+  tipo           String
+  descricao      String?   @db.Text
+  valorBase      Decimal?
+  duracaoMin     Int
+  posOperatorio  String?   @db.Text
+  ativo          Boolean   @default(true)
+  criadoEm       DateTime  @default(now())
+  atualizadoEm   DateTime  @updatedAt
+  deletadoEm     DateTime?
+
+  agendamentos Agendamento[]
+
+  @@map("procedimentos")
+}
+
+model FotoLead {
+  id          String   @id @default(cuid())
+  leadId      String
+  url         String
+  descricao   String?
+  tipoAnalise String?
+  criadoEm    DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id])
+
+  @@index([leadId])
+  @@map("fotos_lead")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  usuarioId   String?
+  acao        String
+  entidade    String
+  entidadeId  String?
+  dadosAntes  Json?
+  dadosDepois Json?
+  ip          String?
+  criadoEm    DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([entidade, entidadeId])
+  @@map("audit_logs")
 }

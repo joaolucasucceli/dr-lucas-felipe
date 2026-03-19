@@ -17,7 +17,7 @@ test("página raiz redireciona para login", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/)
 })
 
-test("dashboard carrega", async ({ page }) => {
+test("dashboard protegido redireciona para login", async ({ page }) => {
   await page.goto("/dashboard")
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible()
+  await expect(page).toHaveURL(/\/login/)
 })
