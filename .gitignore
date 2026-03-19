@@ -10,6 +10,9 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
 
 # next.js
 /.next/
@@ -30,6 +33,10 @@ pnpm-debug.log*
 
 # env files
 .env*.local
+.env
+
+# prisma
+/generated
 
 # typescript
 *.tsbuildinfo
