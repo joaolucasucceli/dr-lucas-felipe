@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Stethoscope,
   Map,
+  Settings,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -54,6 +55,12 @@ const navItems: NavItem[] = [
     titulo: "Usuários",
     href: "/usuarios",
     icone: <Users className="h-4 w-4" />,
+    perfis: ["gestor", "desenvolvedor"],
+  },
+  {
+    titulo: "Configurações",
+    href: "/configuracoes",
+    icone: <Settings className="h-4 w-4" />,
     perfis: ["gestor", "desenvolvedor"],
   },
   {

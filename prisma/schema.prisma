@@ -211,3 +211,16 @@ model AuditLog {
   @@index([entidade, entidadeId])
   @@map("audit_logs")
 }
+
+model ConfigGoogleCalendar {
+  id             String   @id @default(cuid())
+  clientId       String
+  clientSecret   String
+  refreshToken   String
+  calendarId     String
+  ativo          Boolean  @default(true)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  @@map("config_google_calendar")
+}
