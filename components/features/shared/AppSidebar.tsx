@@ -67,7 +67,7 @@ const navItems: NavItem[] = [
     titulo: "Roadmap",
     href: "/roadmap",
     icone: <Map className="h-4 w-4" />,
-    perfis: ["desenvolvedor"],
+    perfis: ["gestor", "desenvolvedor"],
   },
 ]
 

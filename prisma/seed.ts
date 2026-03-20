@@ -138,10 +138,71 @@ async function main() {
     leads.push(lead)
   }
 
+  // Sprints de exemplo
+  const sprint1 = await prisma.sprint.upsert({
+    where: { id: "sprint-8" },
+    update: { nome: "Sprint 8 — Dashboards com Métricas", status: "concluida", deletadoEm: null },
+    create: {
+      id: "sprint-8",
+      nome: "Sprint 8 — Dashboards com Métricas",
+      descricao: "Dashboard com métricas e KPIs do funil para o gestor",
+      status: "concluida",
+      dataInicio: new Date("2026-03-01"),
+      dataFim: new Date("2026-03-15"),
+      ordem: 0,
+    },
+  })
+
+  const sprint1Itens = [
+    { id: "s8-i1", titulo: "API de métricas do dashboard", concluido: true },
+    { id: "s8-i2", titulo: "Componente MetricCard", concluido: true },
+    { id: "s8-i3", titulo: "Página do dashboard com gráficos", concluido: true },
+    { id: "s8-i4", titulo: "Leads em alerta (sem interação)", concluido: true },
+  ]
+
+  for (const item of sprint1Itens) {
+    await prisma.sprintItem.upsert({
+      where: { id: item.id },
+      update: { titulo: item.titulo, concluido: item.concluido },
+      create: { ...item, sprintId: sprint1.id },
+    })
+  }
+
+  const sprint2 = await prisma.sprint.upsert({
+    where: { id: "sprint-9" },
+    update: { nome: "Sprint 9 — Roadmap de Sprints", status: "em_andamento", deletadoEm: null },
+    create: {
+      id: "sprint-9",
+      nome: "Sprint 9 — Roadmap de Sprints",
+      descricao: "Módulo de roadmap com sprints e checklists para gestão do desenvolvimento",
+      status: "em_andamento",
+      dataInicio: new Date("2026-03-16"),
+      dataFim: new Date("2026-03-31"),
+      ordem: 1,
+    },
+  })
+
+  const sprint2Itens = [
+    { id: "s9-i1", titulo: "Schema Sprint e SprintItem", concluido: true },
+    { id: "s9-i2", titulo: "API CRUD de sprints", concluido: true },
+    { id: "s9-i3", titulo: "Componentes visuais (cards, checklist)", concluido: true },
+    { id: "s9-i4", titulo: "Página do roadmap com drag & drop", concluido: false },
+    { id: "s9-i5", titulo: "Testes E2E", concluido: false },
+  ]
+
+  for (const item of sprint2Itens) {
+    await prisma.sprintItem.upsert({
+      where: { id: item.id },
+      update: { titulo: item.titulo, concluido: item.concluido },
+      create: { ...item, sprintId: sprint2.id },
+    })
+  }
+
   console.log("Seed concluído:")
   console.log(`  Usuários: ${lucas.nome}, ${anaJulia.nome}, ${dev.nome}, ${maria.nome}`)
   console.log(`  Procedimentos: ${miniLipo.nome}, ${lipoGlutea.nome}, ${pmma.nome}`)
   console.log(`  Leads: ${leads.map((l) => l.nome).join(", ")}`)
+  console.log(`  Sprints: ${sprint1.nome}, ${sprint2.nome}`)
 }
 
 main()
