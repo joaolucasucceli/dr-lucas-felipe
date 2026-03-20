@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test"
+import { restaurarSeed } from "./helpers/db"
 
-// Helper para login como gestor
 async function loginComoGestor(page: import("@playwright/test").Page) {
   await page.goto("/login")
   await page.getByLabel("Email").fill("lucas@drlucas.com.br")
@@ -9,7 +9,13 @@ async function loginComoGestor(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 })
 }
 
-test.describe("Gestão de Usuários", () => {
+test.describe.serial("Gestão de Usuários", () => {
+  test.beforeAll(async () => {
+    await restaurarSeed()
+  })
+
+
+
   test("listar usuários exibe tabela com dados do seed", async ({ page }) => {
     await loginComoGestor(page)
     await page.goto("/usuarios")
@@ -76,6 +82,18 @@ test.describe("Gestão de Usuários", () => {
     })
   })
 
+  test("atendente não tem acesso à página de usuários", async ({ page }) => {
+    // Login como Maria Atendente (antes de desativá-la no próximo teste)
+    await page.goto("/login")
+    await page.getByLabel("Email").fill("maria@drlucas.com.br")
+    await page.locator("#senha").fill("senha123")
+    await page.getByRole("button", { name: "Entrar" }).click()
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 })
+
+    // Verificar que o menu Usuários não aparece na sidebar
+    await expect(page.getByRole("link", { name: "Usuários" })).not.toBeVisible()
+  })
+
   test("desativar usuário com confirmação", async ({ page }) => {
     await loginComoGestor(page)
     await page.goto("/usuarios")
@@ -92,17 +110,5 @@ test.describe("Gestão de Usuários", () => {
     await expect(page.getByText("Usuário desativado")).toBeVisible({
       timeout: 5000,
     })
-  })
-
-  test("atendente não tem acesso à página de usuários", async ({ page }) => {
-    // Login como Maria Atendente
-    await page.goto("/login")
-    await page.getByLabel("Email").fill("maria@drlucas.com.br")
-    await page.locator("#senha").fill("senha123")
-    await page.getByRole("button", { name: "Entrar" }).click()
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 })
-
-    // Verificar que o menu Usuários não aparece na sidebar
-    await expect(page.getByRole("link", { name: "Usuários" })).not.toBeVisible()
   })
 })

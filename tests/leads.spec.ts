@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test"
+import { restaurarSeed } from "./helpers/db"
 
 async function loginComoGestor(page: import("@playwright/test").Page) {
   await page.goto("/login")
@@ -8,7 +9,13 @@ async function loginComoGestor(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 })
 }
 
-test.describe("Gestão de Leads", () => {
+test.describe.serial("Gestão de Leads", () => {
+  test.beforeAll(async () => {
+    await restaurarSeed()
+  })
+
+
+
   test("listar leads exibe dados do seed", async ({ page }) => {
     await loginComoGestor(page)
     await page.goto("/leads")

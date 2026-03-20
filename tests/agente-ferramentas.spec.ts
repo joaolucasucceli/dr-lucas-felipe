@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test"
+import { restaurarSeed } from "./helpers/db"
 
 const BASE_URL = "http://localhost:3100"
 const API_SECRET = "dev-api-secret"
@@ -11,6 +12,10 @@ function headers() {
 }
 
 test.describe("Ferramentas do Agente — API", () => {
+  test.afterAll(async () => {
+    await restaurarSeed()
+  })
+
   test("rejeita requisição sem x-api-secret", async ({ request }) => {
     const res = await request.post(`${BASE_URL}/api/agente/consultar-paciente`, {
       data: { whatsapp: "5511999990000" },
