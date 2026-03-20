@@ -226,3 +226,18 @@ model ConfigGoogleCalendar {
 
   @@map("config_google_calendar")
 }
+
+model ConfigWhatsapp {
+  id              String    @id @default(cuid())
+  uazapiUrl       String
+  adminToken      String
+  instanceId      String?
+  instanceToken   String?
+  numeroWhatsapp  String?
+  webhookUrl      String?
+  ativo           Boolean   @default(false)
+  criadoEm        DateTime  @default(now())
+  atualizadoEm    DateTime  @updatedAt
+
+  @@map("config_whatsapp")
+}
