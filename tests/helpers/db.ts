@@ -30,6 +30,9 @@ export async function restaurarSeed() {
   const prisma = new PrismaClient({ adapter })
 
   try {
+    // -- Passo 0: Deletar todos os agendamentos (sem seed de agendamentos) --
+    await prisma.agendamento.deleteMany({})
+
     // -- Passo 1: Identificar e deletar leads extras (não-seed) --
     const leadsExtras = await prisma.lead.findMany({
       where: { whatsapp: { notIn: SEED_WHATSAPPS } },

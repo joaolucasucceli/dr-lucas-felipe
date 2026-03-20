@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { ArrowLeft, Trash2, Archive, ArchiveRestore, Upload, X, ImageIcon } from "lucide-react"
+import { ArrowLeft, Trash2, Archive, ArchiveRestore, Upload, X, ImageIcon, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,8 @@ import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { useAutosave, IndicadorSalvamento } from "@/hooks/use-autosave"
 import { useLead } from "@/hooks/use-lead"
+import { useAgendamentos } from "@/hooks/use-agendamentos"
+import { AgendamentoForm } from "@/components/features/agendamentos/AgendamentoForm"
 
 export default function LeadDetalhePage() {
   const params = useParams()
@@ -39,6 +41,10 @@ export default function LeadDetalhePage() {
   const [confirmFoto, setConfirmFoto] = useState<string | null>(null)
   const [uploadingFoto, setUploadingFoto] = useState(false)
   const [confirmAnonimizar, setConfirmAnonimizar] = useState(false)
+  const [formAgendamento, setFormAgendamento] = useState(false)
+  const [confirmCancelarAgendamento, setConfirmCancelarAgendamento] = useState<string | null>(null)
+
+  const { dados: agendamentos, recarregar: recarregarAgendamentos } = useAgendamentos({ leadId: id })
 
   const [nome, setNome] = useState("")
   const [whatsapp, setWhatsapp] = useState("")
@@ -225,6 +231,20 @@ export default function LeadDetalhePage() {
     }
   }
 
+  async function handleCancelarAgendamento() {
+    if (!confirmCancelarAgendamento) return
+    try {
+      const res = await fetch(`/api/agendamentos/${confirmCancelarAgendamento}`, { method: "DELETE" })
+      if (!res.ok) throw new Error()
+      toast.success("Agendamento cancelado")
+      recarregarAgendamentos()
+    } catch {
+      toast.error("Erro ao cancelar agendamento")
+    } finally {
+      setConfirmCancelarAgendamento(null)
+    }
+  }
+
   if (carregando) {
     return (
       <div>
@@ -280,6 +300,7 @@ export default function LeadDetalhePage() {
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="fotos">Fotos</TabsTrigger>
+          <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dados" className="mt-4 grid gap-6">
@@ -485,7 +506,90 @@ export default function LeadDetalhePage() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="agendamentos" className="mt-4">
+          <div className="mb-4">
+            <Button onClick={() => setFormAgendamento(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Agendamento
+            </Button>
+          </div>
+
+          {agendamentos.length === 0 ? (
+            <EmptyState
+              titulo="Sem agendamentos"
+              descricao="Clique em Novo Agendamento para criar o primeiro."
+            />
+          ) : (
+            <div className="space-y-3">
+              {agendamentos.map((a) => (
+                <Card key={a.id}>
+                  <CardContent className="pt-4 flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={a.status} variante="agendamento" />
+                        <span className="text-sm font-medium">
+                          {new Date(a.dataHora).toLocaleString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        <span className="text-sm text-muted-foreground">{a.duracao} min</span>
+                      </div>
+                      {a.procedimento && (
+                        <p className="text-sm text-muted-foreground">{a.procedimento.nome}</p>
+                      )}
+                      {a.observacao && (
+                        <p className="text-sm">{a.observacao}</p>
+                      )}
+                      {a.googleEventUrl && (
+                        <a
+                          href={a.googleEventUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary underline"
+                        >
+                          Ver no Google Calendar
+                        </a>
+                      )}
+                    </div>
+                    {a.status !== "cancelado" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 text-destructive"
+                        onClick={() => setConfirmCancelarAgendamento(a.id)}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+
+      <AgendamentoForm
+        aberto={formAgendamento}
+        onFechar={() => setFormAgendamento(false)}
+        onSalvo={recarregarAgendamentos}
+        leadIdInicial={id}
+      />
+
+      <ConfirmDialog
+        titulo="Cancelar agendamento"
+        descricao="Tem certeza que deseja cancelar este agendamento?"
+        aberto={!!confirmCancelarAgendamento}
+        onFechar={() => setConfirmCancelarAgendamento(null)}
+        onConfirmar={handleCancelarAgendamento}
+        variante="destrutivo"
+        textoBotao="Cancelar agendamento"
+      />
 
       <ConfirmDialog
         titulo="Excluir lead"

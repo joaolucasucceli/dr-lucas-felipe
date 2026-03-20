@@ -155,6 +155,9 @@ model Agendamento {
   dataHora              DateTime
   status                StatusAgendamento @default(agendado)
   googleEventId         String?
+  googleEventUrl        String?
+  sincronizado          Boolean           @default(false)
+  duracao               Int               @default(60)
   observacao            String?           @db.Text
   confirmacoesEnviadas  String[]          @default([])
   criadoEm              DateTime          @default(now())

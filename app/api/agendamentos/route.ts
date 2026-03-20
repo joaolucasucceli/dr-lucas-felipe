@@ -1,0 +1,114 @@
+import { NextRequest, NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
+import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
+import { criarEvento } from "@/lib/google-calendar"
+
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth()
+  if (auth.error) return auth.error
+
+  const { searchParams } = req.nextUrl
+  const leadId = searchParams.get("leadId") || undefined
+  const status = searchParams.get("status") || undefined
+  const dataInicio = searchParams.get("dataInicio") || undefined
+  const dataFim = searchParams.get("dataFim") || undefined
+  const pagina = Math.max(1, Number(searchParams.get("pagina") || "1"))
+  const porPagina = Math.min(100, Math.max(1, Number(searchParams.get("porPagina") || "20")))
+
+  const where = {
+    ...(leadId && { leadId }),
+    ...(status && { status: status as never }),
+    ...(dataInicio || dataFim
+      ? {
+          dataHora: {
+            ...(dataInicio && { gte: new Date(dataInicio) }),
+            ...(dataFim && { lte: new Date(dataFim) }),
+          },
+        }
+      : {}),
+  }
+
+  const [total, dados] = await Promise.all([
+    prisma.agendamento.count({ where }),
+    prisma.agendamento.findMany({
+      where,
+      include: {
+        lead: { select: { nome: true, whatsapp: true } },
+        procedimento: { select: { nome: true } },
+      },
+      orderBy: { dataHora: "desc" },
+      skip: (pagina - 1) * porPagina,
+      take: porPagina,
+    }),
+  ])
+
+  return NextResponse.json({ dados, total, pagina, totalPaginas: Math.ceil(total / porPagina) })
+}
+
+export async function POST(req: NextRequest) {
+  const auth = await requireAnyRole(["gestor", "atendente", "desenvolvedor"])
+  if (auth.error) return auth.error
+
+  const body = await req.json()
+  const { leadId, procedimentoId, dataHora, duracao, observacao, criarNoGoogle } = body
+
+  if (!leadId || !dataHora) {
+    return NextResponse.json({ error: "leadId e dataHora são obrigatórios" }, { status: 400 })
+  }
+
+  const inicio = new Date(dataHora)
+  const fim = new Date(inicio.getTime() + (duracao ?? 60) * 60 * 1000)
+
+  let googleEventId: string | undefined
+  let googleEventUrl: string | undefined
+  let sincronizado = false
+
+  if (criarNoGoogle) {
+    const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { nome: true, email: true } })
+    const procedimento = procedimentoId
+      ? await prisma.procedimento.findUnique({ where: { id: procedimentoId }, select: { nome: true } })
+      : null
+
+    const resultado = await criarEvento({
+      titulo: `Consulta — ${lead?.nome || "Paciente"}${procedimento ? ` (${procedimento.nome})` : ""}`,
+      descricao: observacao,
+      inicio,
+      fim,
+      emailPaciente: lead?.email || undefined,
+    })
+
+    if (resultado) {
+      googleEventId = resultado.googleEventId
+      googleEventUrl = resultado.googleEventUrl
+      sincronizado = true
+    }
+  }
+
+  const agendamento = await prisma.agendamento.create({
+    data: {
+      leadId,
+      procedimentoId: procedimentoId || null,
+      dataHora: inicio,
+      duracao: duracao ?? 60,
+      observacao: observacao || null,
+      googleEventId: googleEventId || null,
+      googleEventUrl: googleEventUrl || null,
+      sincronizado,
+    },
+    include: {
+      lead: { select: { nome: true, whatsapp: true } },
+      procedimento: { select: { nome: true } },
+    },
+  })
+
+  await registrarAudit({
+    usuarioId: auth.session.user.id,
+    acao: "create",
+    entidade: "Agendamento",
+    entidadeId: agendamento.id,
+    ip: getIpFromHeaders(req.headers),
+  })
+
+  return NextResponse.json(agendamento, { status: 201 })
+}
