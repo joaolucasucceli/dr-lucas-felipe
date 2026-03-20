@@ -166,6 +166,21 @@ export async function POST(request: NextRequest) {
         messageId: msg.key.id,
       })
       await agendarProcessamento(chatId)
+
+      // Agendar processamento após debounce (21s > 20s TTL)
+      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+      setTimeout(() => {
+        fetch(`${baseUrl}/api/agente/processar`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-secret": process.env.API_SECRET || "",
+          },
+          body: JSON.stringify({ chatId }),
+        }).catch(() => {
+          // Ignorar erro de trigger — processamento pode ser feito por cron
+        })
+      }, 21000)
     } catch {
       // Redis não configurado — mensagem já salva no banco, ok
     }
