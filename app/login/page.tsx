@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { signIn, useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
@@ -38,11 +38,14 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   })
 
-  // Se já autenticado, redireciona
-  if (status === "authenticated") {
-    router.replace("/dashboard")
-    return null
-  }
+  // Se já autenticado, redireciona (em useEffect para não chamar router durante render)
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard")
+    }
+  }, [status, router])
+
+  if (status === "loading" || status === "authenticated") return null
 
   async function onSubmit(data: LoginForm) {
     setErro("")
