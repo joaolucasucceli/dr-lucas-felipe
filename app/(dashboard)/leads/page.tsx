@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Plus } from "lucide-react"
+import { Plus, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -126,6 +126,18 @@ export default function LeadsPage() {
   return (
     <div>
       <PageHeader titulo="Leads" descricao="Gerencie os leads e pacientes da clínica">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const params = new URLSearchParams({ tipo: "leads" })
+            if (statusFunil) params.set("statusFunil", statusFunil)
+            window.open(`/api/relatorios/exportar?${params.toString()}`, "_blank")
+          }}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Exportar CSV
+        </Button>
         {podecriar && (
           <Button onClick={() => setFormAberto(true)}>
             <Plus className="mr-2 h-4 w-4" />
