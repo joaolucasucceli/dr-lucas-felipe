@@ -11,6 +11,7 @@ import {
   Stethoscope,
   Map,
   Settings,
+  Shield,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -67,6 +68,12 @@ const navItems: NavItem[] = [
     titulo: "Roadmap",
     href: "/roadmap",
     icone: <Map className="h-4 w-4" />,
+    perfis: ["gestor", "desenvolvedor"],
+  },
+  {
+    titulo: "Auditoria",
+    href: "/auditoria",
+    icone: <Shield className="h-4 w-4" />,
     perfis: ["gestor", "desenvolvedor"],
   },
 ]

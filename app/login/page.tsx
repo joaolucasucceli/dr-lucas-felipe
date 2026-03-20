@@ -47,9 +47,19 @@ export default function LoginPage() {
   async function onSubmit(data: LoginForm) {
     setErro("")
 
+    let _ip = "unknown"
+    try {
+      const ipRes = await fetch("/api/ip")
+      if (ipRes.ok) {
+        const ipData = await ipRes.json()
+        _ip = ipData.ip || "unknown"
+      }
+    } catch {}
+
     const result = await signIn("credentials", {
       email: data.email,
       senha: data.senha,
+      _ip,
       redirect: false,
     })
 

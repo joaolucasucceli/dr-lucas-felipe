@@ -38,6 +38,7 @@ export default function LeadDetalhePage() {
   const [confirmExcluir, setConfirmExcluir] = useState(false)
   const [confirmFoto, setConfirmFoto] = useState<string | null>(null)
   const [uploadingFoto, setUploadingFoto] = useState(false)
+  const [confirmAnonimizar, setConfirmAnonimizar] = useState(false)
 
   const [nome, setNome] = useState("")
   const [whatsapp, setWhatsapp] = useState("")
@@ -187,6 +188,26 @@ export default function LeadDetalhePage() {
     } finally {
       setUploadingFoto(false)
       e.target.value = ""
+    }
+  }
+
+  function handleExportarDados() {
+    const a = document.createElement("a")
+    a.href = `/api/lgpd/exportar/${id}`
+    a.download = `lead-${id}-dados.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  async function handleAnonimizar() {
+    try {
+      const res = await fetch(`/api/lgpd/anonimizar/${id}`, { method: "POST" })
+      if (!res.ok) throw new Error()
+      toast.success("Dados anonimizados com sucesso")
+      router.push("/leads")
+    } catch {
+      toast.error("Erro ao anonimizar dados")
     }
   }
 
@@ -353,6 +374,27 @@ export default function LeadDetalhePage() {
               </CardContent>
             </Card>
           )}
+          {isGestor && (
+            <Card>
+              <CardHeader>
+                <CardTitle>LGPD — Direitos do Titular</CardTitle>
+              </CardHeader>
+              <CardContent className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleExportarDados}
+                >
+                  Exportar dados
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setConfirmAnonimizar(true)}
+                >
+                  Anonimizar
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="historico" className="mt-4">
@@ -463,6 +505,16 @@ export default function LeadDetalhePage() {
         onConfirmar={() => confirmFoto && handleExcluirFoto(confirmFoto)}
         variante="destrutivo"
         textoBotao="Excluir"
+      />
+
+      <ConfirmDialog
+        titulo="Anonimizar dados do paciente"
+        descricao="⚠️ Esta ação é irreversível. Todos os dados pessoais (nome, WhatsApp, e-mail, histórico) serão anonimizados permanentemente. Deseja continuar?"
+        aberto={confirmAnonimizar}
+        onFechar={() => setConfirmAnonimizar(false)}
+        onConfirmar={handleAnonimizar}
+        variante="destrutivo"
+        textoBotao="Anonimizar permanentemente"
       />
     </div>
   )
