@@ -13,14 +13,14 @@ async function getCalendarClient() {
   const config = await prisma.configGoogleCalendar.findFirst({
     where: { ativo: true },
   })
-  if (!config) return null
+  if (!config || !config.refreshToken) return null
 
   const oauth2 = new google.auth.OAuth2(config.clientId, config.clientSecret)
   oauth2.setCredentials({ refresh_token: config.refreshToken })
 
   return {
     calendar: google.calendar({ version: "v3", auth: oauth2 }),
-    calendarId: config.calendarId,
+    calendarId: config.calendarId ?? "primary",
   }
 }
 

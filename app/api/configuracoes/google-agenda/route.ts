@@ -5,11 +5,6 @@ import { requireAnyRole } from "@/lib/auth-helpers"
 import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { configGoogleSchema } from "@/lib/validations/config-google"
 
-function mascarar(valor: string): string {
-  if (valor.length <= 4) return "••••••••"
-  return "••••••••" + valor.slice(-4)
-}
-
 export async function GET(_request: NextRequest) {
   const auth = await requireAnyRole(["gestor", "desenvolvedor"])
   if (auth.error) return auth.error
@@ -28,9 +23,8 @@ export async function GET(_request: NextRequest) {
     config: {
       id: config.id,
       clientId: config.clientId,
-      clientSecret: mascarar(config.clientSecret),
-      refreshToken: mascarar(config.refreshToken),
-      calendarId: config.calendarId,
+      clientSecret: "••••••••" + config.clientSecret.slice(-4),
+      conectado: !!config.refreshToken,
       ativo: config.ativo,
       atualizadoEm: config.atualizadoEm,
     },
@@ -73,10 +67,7 @@ export async function POST(request: NextRequest) {
     acao: existente ? "update" : "create",
     entidade: "ConfigGoogleCalendar",
     entidadeId: config.id,
-    dadosDepois: {
-      clientId: config.clientId,
-      calendarId: config.calendarId,
-    },
+    dadosDepois: { clientId: config.clientId },
     ip: getIpFromHeaders(request.headers),
   })
 
@@ -106,7 +97,7 @@ export async function DELETE(request: NextRequest) {
     acao: "delete",
     entidade: "ConfigGoogleCalendar",
     entidadeId: config.id,
-    dadosAntes: { clientId: config.clientId, calendarId: config.calendarId },
+    dadosAntes: { clientId: config.clientId },
     ip: getIpFromHeaders(request.headers),
   })
 
