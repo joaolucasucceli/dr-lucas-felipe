@@ -95,6 +95,8 @@ model Lead {
   consentimentoLgpdEm   DateTime?
   criadoEm              DateTime     @default(now())
   atualizadoEm          DateTime     @updatedAt
+  motivoPerda           String?
+  ultimaMovimentacaoEm  DateTime?
   deletadoEm            DateTime?
 
   responsavel   Usuario?           @relation("ResponsavelLead", fields: [responsavelId], references: [id])

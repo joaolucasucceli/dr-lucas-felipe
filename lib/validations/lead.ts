@@ -45,19 +45,28 @@ export const atualizarLeadSchema = z.object({
   sobreOPaciente: z.string().optional(),
 })
 
-export const mudarStatusSchema = z.object({
-  statusFunil: z.enum([
-    "primeiro_atendimento",
-    "qualificacao",
-    "agendamento",
-    "consulta_agendada",
-    "consulta_realizada",
-    "sinal_pago",
-    "procedimento_agendado",
-    "concluido",
-    "perdido",
-  ]),
-})
+export const mudarStatusSchema = z
+  .object({
+    statusFunil: z.enum([
+      "primeiro_atendimento",
+      "qualificacao",
+      "agendamento",
+      "consulta_agendada",
+      "consulta_realizada",
+      "sinal_pago",
+      "procedimento_agendado",
+      "concluido",
+      "perdido",
+    ]),
+    motivoPerda: z
+      .string()
+      .min(3, "Motivo deve ter pelo menos 3 caracteres")
+      .optional(),
+  })
+  .refine(
+    (data) => data.statusFunil !== "perdido" || !!data.motivoPerda,
+    { message: "Motivo é obrigatório ao mover para Perdido", path: ["motivoPerda"] }
+  )
 
 export type CriarLeadInput = z.infer<typeof criarLeadSchema>
 export type AtualizarLeadInput = z.infer<typeof atualizarLeadSchema>

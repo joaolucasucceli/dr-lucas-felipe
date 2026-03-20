@@ -17,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Status inválido", detalhes: parsed.error.flatten() },
+      { error: "Dados inválidos", detalhes: parsed.error.flatten() },
       { status: 400 }
     )
   }
@@ -30,15 +30,42 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
   }
 
+  // Atendente só pode mover leads atribuídos a si
+  const perfil = auth.session.user.perfil
+  if (
+    perfil === "atendente" &&
+    lead.responsavelId !== auth.session.user.id
+  ) {
+    return NextResponse.json(
+      { error: "Sem permissão para mover este lead" },
+      { status: 403 }
+    )
+  }
+
   const statusAnterior = lead.statusFunil
+  const novoStatus = parsed.data.statusFunil
+
+  // Preparar dados de atualização
+  const dataUpdate: Record<string, unknown> = {
+    statusFunil: novoStatus,
+    ultimaMovimentacaoEm: new Date(),
+  }
+
+  // Salvar motivoPerda quando movendo para perdido, limpar quando saindo
+  if (novoStatus === "perdido") {
+    dataUpdate.motivoPerda = parsed.data.motivoPerda
+  } else if (statusAnterior === "perdido") {
+    dataUpdate.motivoPerda = null
+  }
 
   const leadAtualizado = await prisma.lead.update({
     where: { id },
-    data: { statusFunil: parsed.data.statusFunil },
+    data: dataUpdate,
     select: {
       id: true,
       nome: true,
       statusFunil: true,
+      motivoPerda: true,
     },
   })
 
@@ -48,7 +75,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     entidade: "Lead",
     entidadeId: id,
     dadosAntes: { statusFunil: statusAnterior },
-    dadosDepois: { statusFunil: leadAtualizado.statusFunil },
+    dadosDepois: { statusFunil: leadAtualizado.statusFunil, motivoPerda: leadAtualizado.motivoPerda },
     ip: getIpFromHeaders(request.headers),
   })
 
