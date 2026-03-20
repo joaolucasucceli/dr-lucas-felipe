@@ -64,9 +64,9 @@ export function KanbanBoard({ colunas, moverLead }: KanbanBoardProps) {
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4" style={{ scrollSnapType: "x mandatory" }}>
+        <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
           {ETAPAS_FUNIL.map((etapa) => (
-            <div key={etapa} style={{ scrollSnapAlign: "start" }}>
+            <div key={etapa} className="snap-start min-w-[280px]">
               <KanbanColuna
                 etapa={etapa}
                 leads={colunas[etapa] || []}

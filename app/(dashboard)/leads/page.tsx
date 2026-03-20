@@ -18,6 +18,7 @@ import {
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
 import { EmptyState } from "@/components/features/shared/EmptyState"
+import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
@@ -147,7 +148,9 @@ export default function LeadsPage() {
       </PageHeader>
 
       <div className="mt-6">
-        {!carregando && dados.length === 0 && !busca && !statusFunil ? (
+        {carregando && dados.length === 0 ? (
+          <SkeletonTabela linhas={6} colunas={5} />
+        ) : !carregando && dados.length === 0 && !busca && !statusFunil ? (
           <EmptyState
             titulo="Nenhum lead"
             descricao="Crie o primeiro lead ou aguarde o agente IA."

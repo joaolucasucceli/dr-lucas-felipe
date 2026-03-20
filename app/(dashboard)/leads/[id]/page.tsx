@@ -19,6 +19,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { PageHeader } from "@/components/features/shared/PageHeader"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { LoadingState } from "@/components/features/shared/LoadingState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { EmptyState } from "@/components/features/shared/EmptyState"
@@ -267,6 +275,17 @@ export default function LeadDetalhePage() {
 
   return (
     <div>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/leads">Leads</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{nome || lead.nome}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <PageHeader titulo={nome || lead.nome}>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => router.push("/leads")}>

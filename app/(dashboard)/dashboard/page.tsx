@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { MetricCard } from "@/components/features/shared/MetricCard"
-import { LoadingState } from "@/components/features/shared/LoadingState"
+import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { GraficoFunil } from "@/components/features/dashboard/GraficoFunil"
 import { GraficoOrigem } from "@/components/features/dashboard/GraficoOrigem"
@@ -31,7 +31,7 @@ export default function DashboardPage() {
           descricao="Visão geral do funil e atividade"
         />
         <div className="mt-6">
-          <LoadingState colunas={4} linhas={6} />
+          <SkeletonCard quantidade={4} />
         </div>
       </div>
     )
