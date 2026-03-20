@@ -51,5 +51,11 @@ export async function POST(request: NextRequest) {
     },
   })
 
+  // Atualizar ultimaMensagemEm na conversa
+  await prisma.conversa.update({
+    where: { id: conversaId },
+    data: { ultimaMensagemEm: new Date() },
+  })
+
   return NextResponse.json({ mensagem, conversaId })
 }

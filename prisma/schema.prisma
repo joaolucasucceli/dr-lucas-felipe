@@ -112,11 +112,14 @@ model Lead {
 }
 
 model Conversa {
-  id         String        @id @default(cuid())
-  leadId     String
-  etapa      EtapaConversa @default(primeiro_atendimento)
-  criadoEm   DateTime      @default(now())
-  atualizadoEm DateTime   @updatedAt
+  id                String        @id @default(cuid())
+  leadId            String
+  etapa             EtapaConversa @default(primeiro_atendimento)
+  ultimaMensagemEm  DateTime?
+  followUpEnviados  String[]      @default([])
+  encerradaEm       DateTime?
+  criadoEm          DateTime      @default(now())
+  atualizadoEm      DateTime      @updatedAt
 
   lead       Lead                @relation(fields: [leadId], references: [id])
   mensagens  MensagemWhatsapp[]
@@ -146,15 +149,16 @@ model MensagemWhatsapp {
 }
 
 model Agendamento {
-  id              String            @id @default(cuid())
-  leadId          String
-  procedimentoId  String?
-  dataHora        DateTime
-  status          StatusAgendamento @default(agendado)
-  googleEventId   String?
-  observacao      String?           @db.Text
-  criadoEm        DateTime          @default(now())
-  atualizadoEm    DateTime          @updatedAt
+  id                    String            @id @default(cuid())
+  leadId                String
+  procedimentoId        String?
+  dataHora              DateTime
+  status                StatusAgendamento @default(agendado)
+  googleEventId         String?
+  observacao            String?           @db.Text
+  confirmacoesEnviadas  String[]          @default([])
+  criadoEm              DateTime          @default(now())
+  atualizadoEm          DateTime          @updatedAt
 
   lead         Lead          @relation(fields: [leadId], references: [id])
   procedimento Procedimento? @relation(fields: [procedimentoId], references: [id])

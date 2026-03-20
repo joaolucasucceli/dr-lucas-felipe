@@ -156,6 +156,12 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Atualizar ultimaMensagemEm na conversa
+    await prisma.conversa.update({
+      where: { id: conversa.id },
+      data: { ultimaMensagemEm: new Date() },
+    })
+
     // Adicionar ao buffer Redis + debounce
     const chatId = msg.key.remoteJid
     try {

@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { CalendarDays, MessageCircle, ArrowRight } from "lucide-react"
+import { CalendarDays, MessageCircle, ArrowRight, Zap, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +15,27 @@ export default function ConfiguracoesPage() {
   const router = useRouter()
   const { configurado: googleConfigurado, carregando: googleCarregando } = useConfigGoogle()
   const { conectado: whatsappConectado, carregando: whatsappCarregando } = useConfigWhatsapp()
+  const [executandoCron, setExecutandoCron] = useState(false)
+
+  async function handleExecutarCron() {
+    setExecutandoCron(true)
+    try {
+      const res = await fetch("/api/agente/cron-manual", { method: "POST" })
+      if (!res.ok) {
+        const data = await res.json()
+        toast.error(data.error || "Erro ao executar automações")
+        return
+      }
+      const data = await res.json()
+      toast.success(
+        `Automações executadas: ${data.followups} follow-ups, ${data.confirmacoes} confirmações, ${data.autoClose} encerradas`
+      )
+    } catch {
+      toast.error("Erro ao executar automações")
+    } finally {
+      setExecutandoCron(false)
+    }
+  }
 
   return (
     <div>
@@ -72,6 +95,32 @@ export default function ConfiguracoesPage() {
             <Button variant="ghost" size="sm">
               Configurar
               <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-3">
+            <Zap className="h-8 w-8 text-muted-foreground" />
+            <div className="flex-1">
+              <CardTitle className="text-base">Automações</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Follow-ups e confirmações de consulta
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <Badge variant="default" className="bg-green-100 text-green-800">
+              Ativo
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExecutarCron}
+              disabled={executandoCron}
+            >
+              {executandoCron && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+              Executar agora
             </Button>
           </CardContent>
         </Card>
