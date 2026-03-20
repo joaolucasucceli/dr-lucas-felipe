@@ -60,7 +60,7 @@ async function main() {
   // Procedimentos
   const miniLipo = await prisma.procedimento.upsert({
     where: { id: "proc-mini-lipo" },
-    update: {},
+    update: { nome: "Mini Lipo", ativo: true, deletadoEm: null },
     create: {
       id: "proc-mini-lipo",
       nome: "Mini Lipo",
@@ -75,7 +75,7 @@ async function main() {
 
   const lipoGlutea = await prisma.procedimento.upsert({
     where: { id: "proc-lipo-glutea" },
-    update: {},
+    update: { nome: "Lipo Enxertia Glútea", ativo: true, deletadoEm: null },
     create: {
       id: "proc-lipo-glutea",
       nome: "Lipo Enxertia Glútea",
@@ -91,7 +91,7 @@ async function main() {
 
   const pmma = await prisma.procedimento.upsert({
     where: { id: "proc-pmma" },
-    update: {},
+    update: { nome: "PMMA", ativo: true, deletadoEm: null },
     create: {
       id: "proc-pmma",
       nome: "PMMA",
@@ -104,9 +104,44 @@ async function main() {
     },
   })
 
+  // Leads de exemplo
+  const leadsData = [
+    { nome: "Ana Silva", whatsapp: "11991110001", statusFunil: "primeiro_atendimento" as const, procedimentoInteresse: "Mini Lipo" },
+    { nome: "Bruna Costa", whatsapp: "11991110002", statusFunil: "qualificacao" as const, procedimentoInteresse: "Lipo Enxertia Glútea" },
+    { nome: "Carla Souza", whatsapp: "11991110003", statusFunil: "agendamento" as const, procedimentoInteresse: "PMMA" },
+    { nome: "Diana Lima", whatsapp: "11991110004", statusFunil: "consulta_agendada" as const, procedimentoInteresse: "Mini Lipo" },
+    { nome: "Elena Rocha", whatsapp: "11991110005", statusFunil: "consulta_realizada" as const, procedimentoInteresse: "Lipo Enxertia Glútea" },
+  ]
+
+  const leads = []
+  for (const data of leadsData) {
+    const lead = await prisma.lead.upsert({
+      where: { whatsapp: data.whatsapp },
+      update: {
+        nome: data.nome,
+        statusFunil: data.statusFunil,
+        procedimentoInteresse: data.procedimentoInteresse,
+        responsavelId: anaJulia.id,
+        arquivado: false,
+        arquivadoEm: null,
+        deletadoEm: null,
+      },
+      create: {
+        nome: data.nome,
+        whatsapp: data.whatsapp,
+        statusFunil: data.statusFunil,
+        procedimentoInteresse: data.procedimentoInteresse,
+        responsavelId: anaJulia.id,
+        origem: "whatsapp",
+      },
+    })
+    leads.push(lead)
+  }
+
   console.log("Seed concluído:")
   console.log(`  Usuários: ${lucas.nome}, ${anaJulia.nome}, ${dev.nome}, ${maria.nome}`)
   console.log(`  Procedimentos: ${miniLipo.nome}, ${lipoGlutea.nome}, ${pmma.nome}`)
+  console.log(`  Leads: ${leads.map((l) => l.nome).join(", ")}`)
 }
 
 main()
