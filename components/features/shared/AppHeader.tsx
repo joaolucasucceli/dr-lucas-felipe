@@ -15,6 +15,7 @@ import { UserAvatar } from "@/components/features/shared/UserAvatar"
 import { MobileSidebarTrigger } from "@/components/features/shared/AppSidebar"
 import { Badge } from "@/components/ui/badge"
 import dynamic from "next/dynamic"
+import { ThemeToggle } from "@/components/features/shared/ThemeToggle"
 
 const BuscaGlobal = dynamic(
   () => import("@/components/features/busca/BuscaGlobal").then((m) => m.BuscaGlobal),
@@ -62,6 +63,7 @@ export function AppHeader({ nome, email, perfil }: AppHeaderProps) {
       </div>
 
       <div className="flex items-center gap-1">
+        <ThemeToggle />
         <Button
           variant="ghost"
           size="sm"
