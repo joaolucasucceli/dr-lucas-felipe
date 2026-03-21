@@ -70,6 +70,12 @@ export async function restaurarSeed() {
       })
     }
 
+    // -- Passo 3a: Deletar tipos de procedimento extras --
+    const SEED_TIPOS_NOMES = ["Cirúrgico", "Estético", "Minimamente Invasivo"]
+    await prisma.tipoProcedimento.deleteMany({
+      where: { nome: { notIn: SEED_TIPOS_NOMES } },
+    })
+
     // -- Passo 3: Deletar procedimentos extras --
     await prisma.agendamento.updateMany({
       where: {

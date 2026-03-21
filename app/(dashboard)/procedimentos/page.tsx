@@ -53,9 +53,16 @@ export default function ProcedimentosPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [busca, setBusca] = useState("")
+  const [formAberto, setFormAberto] = useState(false)
+  const [procedimentoEditando, setProcedimentoEditando] =
+    useState<Procedimento | null>(null)
+  const [confirmToggle, setConfirmToggle] = useState<Procedimento | null>(null)
 
-  const autorizado =
-    session?.user?.perfil === "gestor"
+  const autorizado = session?.user?.perfil === "gestor"
+
+  const { dados, carregando, erro, recarregar } = useProcedimentos({
+    busca: busca || undefined,
+  })
 
   useEffect(() => {
     if (status === "unauthenticated") router.replace("/login")
@@ -63,14 +70,6 @@ export default function ProcedimentosPage() {
   }, [status, autorizado, router])
 
   if (status === "loading" || !autorizado) return null
-  const [formAberto, setFormAberto] = useState(false)
-  const [procedimentoEditando, setProcedimentoEditando] =
-    useState<Procedimento | null>(null)
-  const [confirmToggle, setConfirmToggle] = useState<Procedimento | null>(null)
-
-  const { dados, carregando, erro, recarregar } = useProcedimentos({
-    busca: busca || undefined,
-  })
 
   const isGestor = autorizado
 

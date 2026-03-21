@@ -51,13 +51,16 @@ test.describe("Sprint 1 — Controle de Acesso", () => {
   })
 
   test("gestor vê Procedimentos na sidebar e acessa a página", async ({
-    page,
+    page, isMobile,
   }) => {
     await loginComo(page, "lucas@drlucas.com.br", "senha123")
+    if (isMobile) {
+      await page.getByRole("button", { name: "Abrir menu" }).click()
+    }
     await expect(page.getByRole("link", { name: "Procedimentos" })).toBeVisible()
     await page.getByRole("link", { name: "Procedimentos" }).click()
     await expect(page).toHaveURL(/\/procedimentos/)
-    await expect(page.getByText("Procedimentos")).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Procedimentos" })).toBeVisible()
   })
 
   test("gestor vê Atividade do Agente IA no dashboard", async ({ page }) => {

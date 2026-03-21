@@ -11,7 +11,7 @@ test.describe("Autenticação", () => {
     await page.getByRole("button", { name: "Entrar" }).click()
 
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 })
-    await expect(page.getByText("Dr. Lucas Felipe")).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible()
   })
 
   test("login com credenciais inválidas mostra erro", async ({ page }) => {

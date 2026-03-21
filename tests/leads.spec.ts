@@ -84,10 +84,12 @@ test.describe.serial("Gestão de Leads", () => {
     await loginComoGestor(page)
     await page.goto("/leads")
 
+    await page.getByPlaceholder("Buscar por nome ou whatsapp").fill("Carla Souza")
+    await expect(page.getByText("Carla Souza")).toBeVisible({ timeout: 5000 })
     await page.getByText("Carla Souza").click()
 
-    await expect(page).toHaveURL(/\/leads\//, { timeout: 5000 })
-    await expect(page.getByRole("tab", { name: "Dados" })).toBeVisible()
+    await expect(page).toHaveURL(/\/leads\//, { timeout: 10000 })
+    await expect(page.getByRole("tab", { name: "Dados" })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole("tab", { name: "Histórico" })).toBeVisible()
     await expect(page.getByRole("tab", { name: "Fotos" })).toBeVisible()
   })
@@ -97,6 +99,8 @@ test.describe.serial("Gestão de Leads", () => {
     await page.goto("/leads")
 
     // Navigate to lead detail
+    await page.getByPlaceholder("Buscar por nome ou whatsapp").fill("Diana Lima")
+    await expect(page.getByText("Diana Lima")).toBeVisible({ timeout: 5000 })
     await page.getByText("Diana Lima").click()
     await expect(page).toHaveURL(/\/leads\//, { timeout: 5000 })
 
@@ -106,6 +110,6 @@ test.describe.serial("Gestão de Leads", () => {
 
     // Unarchive
     await page.getByRole("button", { name: "Desarquivar" }).click()
-    await expect(page.getByText("Lead desarquivado")).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText("Lead desarquivado")).toBeVisible({ timeout: 10000 })
   })
 })

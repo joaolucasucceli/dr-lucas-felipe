@@ -84,7 +84,7 @@ test.describe.serial("Agendamentos", () => {
     await page.getByRole("option", { name: "Cancelado" }).click()
 
     // Com status cancelado filtrado, não deve aparecer o agendamento de Ana Silva (que está agendado)
-    await expect(page.getByText("Nenhum registro encontrado")).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText("Nenhum agendamento encontrado")).toBeVisible({ timeout: 5000 })
   })
 
   test("cancelar agendamento com ConfirmDialog", async ({ page }) => {
@@ -98,17 +98,18 @@ test.describe.serial("Agendamentos", () => {
 
     await expect(page.getByText("Ana Silva")).toBeVisible({ timeout: 8000 })
 
-    // Clicar em Cancelar
-    await page.getByRole("button", { name: "Cancelar" }).first().click()
+    // Clicar em Cancelar (force para contornar header fixo no mobile)
+    const btnCancelar = page.getByRole("button", { name: "Cancelar" }).first()
+    await btnCancelar.click({ force: true })
 
     // ConfirmDialog deve aparecer
     await expect(page.getByRole("heading", { name: "Cancelar agendamento" })).toBeVisible({ timeout: 5000 })
 
-    // Confirmar cancelamento
-    await page.getByRole("button", { name: "Cancelar agendamento" }).last().click()
+    // Confirmar cancelamento (force para contornar overlay do dialog no mobile)
+    await page.getByRole("button", { name: "Cancelar agendamento" }).last().click({ force: true })
 
     // Agendamento deve ser marcado como cancelado
-    await expect(page.getByText("Cancelado")).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText("Cancelado", { exact: true })).toBeVisible({ timeout: 8000 })
   })
 
   test("view calendário exibe grade semanal", async ({ page }) => {

@@ -80,8 +80,12 @@ test.describe("Atendimentos", () => {
     })
   })
 
-  test("atendimentos acessível via sidebar", async ({ page }) => {
+  test("atendimentos acessível via sidebar", async ({ page, isMobile }) => {
     await loginComoGestor(page)
+
+    if (isMobile) {
+      await page.getByRole("button", { name: "Abrir menu" }).click()
+    }
 
     // Clicar no link Atendimentos na sidebar
     await page.getByRole("link", { name: "Atendimentos" }).click()

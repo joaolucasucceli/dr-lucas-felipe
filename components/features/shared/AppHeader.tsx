@@ -85,7 +85,7 @@ export function AppHeader({ nome, email, perfil }: AppHeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2">
+            <Button variant="ghost" className="gap-2" aria-label={nome}>
               <UserAvatar nome={nome} tamanho="sm" />
               <span className="hidden text-sm font-medium sm:inline-block">
                 {nome}

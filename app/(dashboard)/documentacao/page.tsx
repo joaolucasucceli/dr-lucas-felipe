@@ -8,6 +8,7 @@ import {
   BarChart3,
   Settings,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { TabsDocumentacao } from "@/components/features/documentacao/TabsDocumentacao"
@@ -21,6 +22,7 @@ import { ModuloAnaJulia } from "@/components/features/documentacao/modulos/Modul
 import { ModuloRelatorios } from "@/components/features/documentacao/modulos/ModuloRelatorios"
 import { ModuloConfiguracoes } from "@/components/features/documentacao/modulos/ModuloConfiguracoes"
 import { ModuloUsuarios } from "@/components/features/documentacao/modulos/ModuloUsuarios"
+import { ModuloSugestoes } from "@/components/features/documentacao/modulos/ModuloSugestoes"
 
 export default function DocumentacaoPage() {
   const abas = [
@@ -77,6 +79,12 @@ export default function DocumentacaoPage() {
       titulo: "Usuários e Permissões",
       icone: <ShieldCheck className="h-3.5 w-3.5" />,
       conteudo: <ModuloUsuarios />,
+    },
+    {
+      valor: "sugestoes",
+      titulo: "Sugestões",
+      icone: <Sparkles className="h-3.5 w-3.5" />,
+      conteudo: <ModuloSugestoes />,
     },
   ]
 

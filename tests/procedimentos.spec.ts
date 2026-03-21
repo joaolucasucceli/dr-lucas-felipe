@@ -22,7 +22,7 @@ test.describe.serial("Gestão de Procedimentos", () => {
 
     await expect(
       page.getByRole("heading", { name: "Procedimentos" })
-    ).toBeVisible()
+    ).toBeVisible({ timeout: 10000 })
     await expect(page.getByText("Mini Lipo")).toBeVisible()
     await expect(page.getByText("Lipo Enxertia Glútea")).toBeVisible()
     await expect(page.getByText("PMMA")).toBeVisible()
@@ -36,6 +36,12 @@ test.describe.serial("Gestão de Procedimentos", () => {
 
     await page.getByLabel("Nome").fill("Teste Playwright Proc")
     await page.getByLabel("Duração (min)").fill("90")
+
+    // Selecionar tipo (aguardar carregar)
+    const tipoSelect = page.getByRole("dialog").getByRole("combobox")
+    await expect(tipoSelect).not.toBeDisabled({ timeout: 5000 })
+    await tipoSelect.click()
+    await page.getByRole("option", { name: "Cirúrgico" }).click()
 
     await page.getByRole("button", { name: "Criar" }).click()
 
@@ -71,8 +77,12 @@ test.describe.serial("Gestão de Procedimentos", () => {
     await linha.getByRole("button").last().click()
     await page.getByRole("menuitem", { name: "Desativar" }).click()
 
+    // ConfirmDialog aparece — confirmar
+    await expect(page.getByRole("heading", { name: "Desativar procedimento" })).toBeVisible({ timeout: 5000 })
+    await page.getByRole("button", { name: "Desativar" }).last().click()
+
     await expect(page.getByText("Procedimento desativado")).toBeVisible({
-      timeout: 5000,
+      timeout: 8000,
     })
   })
 

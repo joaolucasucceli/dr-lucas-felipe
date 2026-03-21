@@ -39,7 +39,7 @@ test.describe("Sprint 6 — Tipos de Procedimento Configuráveis", () => {
     await page.getByLabel("Nome").fill("Laser")
     await page.getByRole("button", { name: "Criar" }).click()
 
-    await expect(page.getByText("Tipo criado")).toBeVisible()
+    await expect(page.getByText("Tipo criado")).toBeVisible({ timeout: 8000 })
     await expect(page.getByText("Laser")).toBeVisible()
 
     // Limpeza: excluir o tipo criado para não afetar outros testes

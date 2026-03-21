@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.2.1"
+export const VERSAO_DOCUMENTACAO = "1.3.0"
 export const DATA_ATUALIZACAO = "2026-03-21"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -408,6 +408,28 @@ id | conversaId | messageIdWhatsapp (único) | tipo | conteudo | remetente
 - ConfirmDialog — único diálogo de confirmação destrutiva
 - MetricCard — único card de número/métrica
 - DataTable — única tabela com filtro/paginação
+
+---
+
+## Sugestões de Features
+
+Funcionalidades disponíveis para implementação em sprints futuras.
+Cada item é um módulo independente — é possível contratar qualquer combinação conforme a prioridade da clínica.
+
+| # | Feature | Categoria | O que faz | Por que contratar |
+|---|---------|-----------|-----------|-------------------|
+| 1 | Site Institucional Integrado | Marketing | Landing page profissional conectada ao sistema; formulário captura leads direto no kanban | Aumenta captação orgânica e elimina perda de leads do site |
+| 2 | Atendimento via Instagram | IA | Ana Júlia responde DMs do Instagram com a mesma inteligência do WhatsApp | Dobra o alcance do atendimento automatizado sem aumentar equipe |
+| 3 | Campanhas de Disparo em Massa | Marketing | Mensagens segmentadas para aniversariantes, inativos, pós-procedimento ou por interesse | Reativa pacientes inativos e gera agendamentos sem esforço manual |
+| 4 | Portal do Paciente | Expansão | Área exclusiva do paciente com histórico, documentos e agendamentos | Profissionaliza a experiência e reduz chamadas para informações básicas |
+| 5 | Captação via Google Ads & Meta Ads | Marketing | Leads das campanhas entram automaticamente no kanban com ROI por campanha | Mostra exatamente quanto cada real investido gerou de receita |
+| 6 | NPS e Pesquisa de Satisfação | Clínica | Pesquisa automática pós-procedimento via WhatsApp com dashboard de NPS | Identifica pontos de melhoria antes que se tornem reclamações |
+| 7 | Prescrições e Laudos Digitais | Clínica | Emissão com assinatura digital e envio automático ao paciente | Elimina papel e eleva a percepção de modernidade da clínica |
+| 8 | App Mobile para a Equipe | Expansão | Painel nativo para iOS/Android para gestão em campo | Acelera o ciclo de resposta sem depender do computador |
+| 9 | Multi-clínica | Expansão | Múltiplas unidades em um único login com relatórios consolidados | Prepara a operação para crescimento sem sistemas separados |
+| 10 | Integração com Planos de Saúde | Clínica | Elegibilidade em tempo real, guias e faturamento automático | Reduz glosas e transforma horas de trabalho em minutos |
+| 11 | Prontuário Eletrônico | Clínica | Registro clínico completo: anamnese, evolução, fotos e documentos | Elimina prontuários físicos e facilita a continuidade do cuidado |
+| 12 | Chatbot Google Business | IA | Ana Júlia atende mensagens do Google Meu Negócio | Captura pacientes com alta intenção de compra no momento da pesquisa |
 
 ---
 

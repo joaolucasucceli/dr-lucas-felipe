@@ -15,7 +15,7 @@ test.describe("Dashboard", () => {
 
     await expect(page.getByText("Total de Leads")).toBeVisible({ timeout: 10000 })
     await expect(page.getByText("Novos no Período")).toBeVisible()
-    await expect(page.getByRole("main").getByText("Agendamentos")).toBeVisible()
+    await expect(page.getByRole("main").getByText("Agendamentos", { exact: true })).toBeVisible()
     await expect(page.getByText("Taxa de Conversão")).toBeVisible()
   })
 

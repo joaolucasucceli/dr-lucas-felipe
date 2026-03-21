@@ -47,7 +47,7 @@ test.describe("Sprint 4 — Kanban: Layout, Scroll e Criação Manual", () => {
     await page.goto("/atendimentos")
     await page.getByRole("button", { name: "Novo Lead" }).click()
     await expect(page.getByRole("dialog")).toBeVisible()
-    await expect(page.getByText("Novo Lead")).toBeVisible()
+    await expect(page.getByRole("dialog").getByText("Novo Lead")).toBeVisible()
   })
 
   test("botão Novo Atendimento abre modal de busca", async ({ page }) => {
@@ -55,7 +55,7 @@ test.describe("Sprint 4 — Kanban: Layout, Scroll e Criação Manual", () => {
     await page.goto("/atendimentos")
     await page.getByRole("button", { name: "Novo Atendimento" }).click()
     await expect(page.getByRole("dialog")).toBeVisible()
-    await expect(page.getByText("Novo Atendimento")).toBeVisible()
+    await expect(page.getByRole("dialog").getByText("Novo Atendimento")).toBeVisible()
     await expect(
       page.getByPlaceholder("Buscar por nome ou WhatsApp...")
     ).toBeVisible()
