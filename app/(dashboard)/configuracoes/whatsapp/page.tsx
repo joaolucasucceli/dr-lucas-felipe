@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, CheckCircle, Loader2, Wifi, WifiOff } from "lucide-react"
+import { ArrowLeft, CheckCircle, Edit2, Loader2, Wifi, WifiOff } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,39 +15,36 @@ import { LoadingState } from "@/components/features/shared/LoadingState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { useConfigWhatsapp } from "@/hooks/use-config-whatsapp"
 
-type Etapa = "credenciais" | "qrcode" | "conectando" | "conectado"
-
 export default function WhatsAppConfigPage() {
   const router = useRouter()
   const { configurado, conectado, status, numeroWhatsapp, config, carregando, erro, recarregar } =
     useConfigWhatsapp()
 
-  const [etapa, setEtapa] = useState<Etapa>("credenciais")
   const [url, setUrl] = useState("")
   const [token, setToken] = useState("")
   const [qrcode, setQrcode] = useState("")
+  const [editandoCredenciais, setEditandoCredenciais] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [confirmarDesconectar, setConfirmarDesconectar] = useState(false)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Determinar etapa inicial baseado no estado
+  // Inicializar estado de credenciais
   useEffect(() => {
     if (carregando) return
-
-    if (conectado) {
-      setEtapa("conectado")
-    } else if (configurado && config) {
+    if (configurado && config) {
       setUrl(config.uazapiUrl || "")
       setToken(config.adminToken || "")
-      if (config.instanceId) {
-        setEtapa("conectando")
-      }
+      setEditandoCredenciais(false)
+    } else {
+      setEditandoCredenciais(true)
     }
-  }, [carregando, conectado, configurado, config])
+  }, [carregando, configurado, config])
 
-  // Polling no estado "conectando"
+  // Polling quando aguardando conexão
   useEffect(() => {
-    if (etapa !== "conectando") {
+    const aguardando = qrcode !== "" || status === "connecting"
+
+    if (!aguardando) {
       if (pollingRef.current) {
         clearInterval(pollingRef.current)
         pollingRef.current = null
@@ -59,9 +56,8 @@ export default function WhatsAppConfigPage() {
       try {
         const res = await fetch("/api/whatsapp/status")
         const data = await res.json()
-
         if (data.ativo && data.status === "connected") {
-          setEtapa("conectado")
+          setQrcode("")
           recarregar()
         }
       } catch {
@@ -75,9 +71,9 @@ export default function WhatsAppConfigPage() {
         pollingRef.current = null
       }
     }
-  }, [etapa, recarregar])
+  }, [qrcode, status, recarregar])
 
-  async function handleTestarConexao() {
+  async function handleSalvarCredenciais() {
     setSalvando(true)
     try {
       const res = await fetch("/api/whatsapp/test-connection", {
@@ -88,23 +84,23 @@ export default function WhatsAppConfigPage() {
 
       if (!res.ok) {
         const erro = await res.json()
-        toast.error(erro.error || "Erro ao testar conexão", {
+        toast.error(erro.error || "Erro ao salvar credenciais", {
           description: erro.detalhe,
         })
         return
       }
 
-      toast.success("Conexão bem-sucedida!")
-      setEtapa("qrcode")
+      toast.success("Credenciais salvas!")
+      setEditandoCredenciais(false)
       recarregar()
     } catch {
-      toast.error("Erro ao testar conexão")
+      toast.error("Erro ao salvar credenciais")
     } finally {
       setSalvando(false)
     }
   }
 
-  async function handleCriarInstancia() {
+  async function handleConectar() {
     setSalvando(true)
     try {
       const res = await fetch("/api/whatsapp/create-instance", {
@@ -114,16 +110,14 @@ export default function WhatsAppConfigPage() {
 
       if (!res.ok) {
         const erro = await res.json()
-        toast.error(erro.error || "Erro ao criar instância")
+        toast.error(erro.error || "Erro ao conectar")
         return
       }
 
       const data = await res.json()
-      setQrcode(data.qrcode)
-      setEtapa("conectando")
-      recarregar()
+      setQrcode(data.qrcode || "")
     } catch {
-      toast.error("Erro ao criar instância")
+      toast.error("Erro ao conectar")
     } finally {
       setSalvando(false)
     }
@@ -144,7 +138,6 @@ export default function WhatsAppConfigPage() {
       }
 
       toast.success("WhatsApp desconectado")
-      setEtapa("credenciais")
       setQrcode("")
       recarregar()
     } catch {
@@ -165,8 +158,10 @@ export default function WhatsAppConfigPage() {
     )
   }
 
+  const aguardandoQr = qrcode !== "" || status === "connecting"
+
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader titulo="WhatsApp" descricao="Conecte o sistema ao WhatsApp via Uazapi">
         <Button variant="outline" size="sm" onClick={() => router.push("/configuracoes")}>
           <ArrowLeft className="mr-1 h-4 w-4" />
@@ -174,173 +169,179 @@ export default function WhatsAppConfigPage() {
         </Button>
       </PageHeader>
 
-      <div className="mt-4 mb-6 flex items-center gap-2">
-        {conectado ? (
-          <Badge variant="default" className="bg-green-100 text-green-800">
-            <Wifi className="mr-1 h-3 w-3" />
-            Conectado {numeroWhatsapp ? `(${numeroWhatsapp})` : ""}
-          </Badge>
-        ) : (
-          <Badge variant="secondary">
-            <WifiOff className="mr-1 h-3 w-3" />
-            Desconectado
-          </Badge>
-        )}
-      </div>
-
-      {/* Stepper visual */}
-      <div className="mb-6 flex items-center gap-2 text-sm">
-        {(["credenciais", "qrcode", "conectando", "conectado"] as Etapa[]).map((e, i) => {
-          const labels = ["1. Credenciais", "2. QR Code", "3. Conectando", "4. Conectado"]
-          const ativo = e === etapa
-          const completo = (["credenciais", "qrcode", "conectando", "conectado"] as Etapa[]).indexOf(etapa) > i
-
-          return (
-            <div key={e} className="flex items-center gap-2">
-              {i > 0 && <div className="h-px w-6 bg-border" />}
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  ativo
-                    ? "bg-primary text-primary-foreground"
-                    : completo
-                      ? "bg-green-100 text-green-800"
-                      : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {labels[i]}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Etapa 1 — Credenciais */}
-      {etapa === "credenciais" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Credenciais Uazapi</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Crie a instância no painel Uazapi (uazapi.dev) e cole aqui a URL do servidor e o token gerado.
-            </p>
-            <div>
-              <Label htmlFor="uazapiUrl">URL do Servidor</Label>
-              <Input
-                id="uazapiUrl"
-                placeholder="https://producao.uazapi.com"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="adminToken">Token da Instância</Label>
-              <Input
-                id="adminToken"
-                type="password"
-                placeholder="Token da instância no painel Uazapi"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                onFocus={() => {
-                  if (token.startsWith("••••")) setToken("")
-                }}
-                className="mt-1"
-              />
-            </div>
+      {/* Card 1 — Credenciais (fixas, editáveis) */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-base">Acesso Uazapi</CardTitle>
+          {configurado && !editandoCredenciais && (
             <Button
-              onClick={handleTestarConexao}
-              disabled={salvando || !url || !token || token.startsWith("••••")}
+              variant="ghost"
+              size="sm"
+              onClick={() => setEditandoCredenciais(true)}
             >
-              {salvando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Testar Conexão
+              <Edit2 className="mr-1 h-3 w-3" />
+              Editar
             </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Etapa 2 — QR Code */}
-      {etapa === "qrcode" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Criar Instância WhatsApp</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Clique no botão abaixo para gerar o QR Code e conectar a instância ao WhatsApp.
-            </p>
-            <Button onClick={handleCriarInstancia} disabled={salvando}>
-              {salvando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Gerar QR Code
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Etapa 3 — Conectando (QR + polling) */}
-      {etapa === "conectando" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Escaneie o QR Code</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {qrcode ? (
-              <div className="flex justify-center">
-                <img
-                  src={`data:image/png;base64,${qrcode}`}
-                  alt="QR Code WhatsApp"
-                  className="max-w-[280px] rounded-lg border p-2"
+          )}
+        </CardHeader>
+        <CardContent>
+          {editandoCredenciais ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Insira a URL do servidor Uazapi e o token da instância criada no painel.
+              </p>
+              <div>
+                <Label htmlFor="uazapiUrl">URL do Servidor</Label>
+                <Input
+                  id="uazapiUrl"
+                  placeholder="https://producao.uazapi.com"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="mt-1"
                 />
               </div>
-            ) : (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <div>
+                <Label htmlFor="adminToken">Token da Instância</Label>
+                <Input
+                  id="adminToken"
+                  type="password"
+                  placeholder="Token da instância no painel Uazapi"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  onFocus={() => {
+                    if (token.startsWith("••••")) setToken("")
+                  }}
+                  className="mt-1"
+                />
               </div>
-            )}
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                Abra o WhatsApp no celular → Dispositivos Vinculados → Vincular Dispositivo
-              </p>
-              <div className="mt-3 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Aguardando conexão...
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSalvarCredenciais}
+                  disabled={salvando || !url || !token || token.startsWith("••••")}
+                >
+                  {salvando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar Credenciais
+                </Button>
+                {configurado && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setUrl(config?.uazapiUrl || "")
+                      setToken(config?.adminToken || "")
+                      setEditandoCredenciais(false)
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                )}
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="space-y-1 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground w-12">URL</span>
+                <span className="font-mono text-xs">{config?.uazapiUrl}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground w-12">Token</span>
+                <span className="font-mono text-xs">{config?.adminToken}</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Etapa 4 — Conectado */}
-      {etapa === "conectado" && (
+      {/* Card 2 — Instância (só aparece se credenciais configuradas) */}
+      {configurado && (
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              WhatsApp Conectado
+              Instância WhatsApp
+              {conectado ? (
+                <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                  <Wifi className="mr-1 h-3 w-3" />
+                  Conectado
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-xs">
+                  <WifiOff className="mr-1 h-3 w-3" />
+                  Desconectado
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {numeroWhatsapp && (
-              <p className="text-sm">
-                Número conectado: <strong>{numeroWhatsapp}</strong>
-              </p>
+          <CardContent>
+            {/* Conectado */}
+            {conectado && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>
+                    Número conectado:{" "}
+                    <strong>{numeroWhatsapp || "—"}</strong>
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  O sistema está recebendo mensagens do WhatsApp.
+                </p>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setConfirmarDesconectar(true)}
+                  disabled={salvando}
+                >
+                  Desconectar
+                </Button>
+              </div>
             )}
-            <p className="text-sm text-muted-foreground">
-              O sistema está recebendo mensagens do WhatsApp.
-            </p>
-            <Button
-              variant="destructive"
-              onClick={() => setConfirmarDesconectar(true)}
-            >
-              Desconectar
-            </Button>
+
+            {/* Aguardando QR */}
+            {!conectado && aguardandoQr && (
+              <div className="space-y-4">
+                {qrcode ? (
+                  <div className="flex justify-center">
+                    <img
+                      src={qrcode.startsWith("data:") ? qrcode : `data:image/png;base64,${qrcode}`}
+                      alt="QR Code WhatsApp"
+                      className="max-w-[260px] rounded-lg border p-2"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                <div className="text-center space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    Abra o WhatsApp → Dispositivos Vinculados → Vincular Dispositivo
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Aguardando leitura do QR Code...
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Desconectado */}
+            {!conectado && !aguardandoQr && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  A instância está desconectada. Clique em Conectar para gerar o QR Code.
+                </p>
+                <Button onClick={handleConectar} disabled={salvando}>
+                  {salvando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Conectar
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
       <ConfirmDialog
         titulo="Desconectar WhatsApp"
-        descricao="Tem certeza que deseja desconectar a instância WhatsApp? O sistema deixará de receber mensagens."
+        descricao="Tem certeza que deseja desconectar? O sistema deixará de receber mensagens."
         aberto={confirmarDesconectar}
         onFechar={() => setConfirmarDesconectar(false)}
         onConfirmar={handleDesconectar}

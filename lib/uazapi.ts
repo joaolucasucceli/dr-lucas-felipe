@@ -11,7 +11,7 @@ async function uazapiFetch(
     ...options,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      token: token,
       ...options.headers,
     },
   })
