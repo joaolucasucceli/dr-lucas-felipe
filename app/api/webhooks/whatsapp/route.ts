@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
+import type { TipoMensagem } from "@/generated/prisma/enums"
 import { adicionarAoBuffer, agendarProcessamento } from "@/lib/agente/buffer"
 import { transcreverAudio, descreverImagem } from "@/lib/agente/processar-midia"
 
@@ -32,7 +33,7 @@ function extrairNumero(remoteJid: string): string {
   return remoteJid.split("@")[0]
 }
 
-function detectarTipo(message: UazapiMessage["message"]): string {
+function detectarTipo(message: UazapiMessage["message"]): TipoMensagem {
   if (!message) return "texto"
   if (message.audioMessage) return "audio"
   if (message.imageMessage) return "imagem"
@@ -64,6 +65,17 @@ function extrairMediaUrl(message: UazapiMessage["message"]): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  // Validar origem: aceitar apenas se WEBHOOK_SECRET estiver configurado e coincidir
+  const webhookSecret = process.env.WEBHOOK_SECRET || process.env.API_SECRET
+  if (webhookSecret) {
+    const tokenRecebido =
+      request.headers.get("x-webhook-token") ??
+      request.headers.get("x-api-secret")
+    if (tokenRecebido !== webhookSecret) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    }
+  }
+
   let payload: UazapiPayload
 
   try {

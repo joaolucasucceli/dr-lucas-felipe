@@ -1,4 +1,5 @@
 import { PrismaClient } from "../generated/prisma/client"
+
 import { PrismaPg } from "@prisma/adapter-pg"
 import { hash } from "bcryptjs"
 
@@ -13,18 +14,50 @@ const atHour = (base: Date, utcH: number): Date => { const d = new Date(base); d
 
 // ── variação por índice ────────────────────────────────────────────────────────
 const IDADES = [24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 40]
-const OBJETIVOS = [
+const OBJETIVOS_BBL = [
   "quero um bumbum mais definido e levantado",
-  "quero melhorar meu contorno corporal e autoestima",
-  "quero eliminar gordura localizada e ter mais definição",
-  "sempre sonhei com essa transformação",
-  "quero recuperar minha confiança após emagrecer",
-  "quero um resultado natural e harmonioso",
-  "me incomoda muito a gordura na barriga e nos flancos",
-  "quero me sentir bem de biquíni novamente",
-  "quero resultado duradouro sem precisar de dieta extrema",
-  "quero harmonizar minha silhueta",
+  "quero mais projeção e volume nos glúteos",
+  "quero harmonizar minha silhueta com mais curvas",
+  "sempre sonhei com esse contorno corporal",
+  "quero recuperar o volume que perdi ao emagrecer",
+  "quero um resultado natural sem prótese",
 ]
+const OBJETIVOS_LIPO = [
+  "quero eliminar gordura localizada no abdômen e flancos",
+  "quero me livrar do culote que não sai com dieta",
+  "quero definição corporal e me sentir bem de biquíni",
+  "quero recuperar minha confiança após emagrecer",
+  "me incomoda muito a gordura acumulada na barriga",
+  "quero um contorno mais definido sem cirurgia grande",
+]
+const OBJETIVOS_PMMA = [
+  "quero um volume mais harmônico nos glúteos",
+  "quero uma melhora estética sem procedimento invasivo",
+  "quero complementar o resultado de outra cirurgia que fiz",
+  "quero resultado com recuperação rápida",
+  "quero ganhar volume de forma gradual e natural",
+  "quero melhorar o contorno sem me afastar muito do trabalho",
+]
+const PRIMEIROS_CONTATOS: Record<string, string> = {
+  instagram: "Vi sobre o Dr. Lucas no Instagram e tenho interesse em",
+  google: "Encontrei a clínica do Dr. Lucas pelo Google e gostaria de saber mais sobre",
+  indicacao: "Fui indicada por uma amiga que fez procedimento com o Dr. Lucas e tenho interesse em",
+  site: "Acessei o site da clínica e quero saber mais sobre",
+  whatsapp: "Recebi o contato de vocês e tenho interesse em",
+}
+
+// ── contagem de mensagens por estágio (usada em buildMsgs e no cálculo de datas) ──
+const MSG_COUNTS: Record<string, number> = {
+  primeiro_atendimento: 3,
+  qualificacao: 5,
+  agendamento: 8,
+  consulta_agendada: 10,
+  consulta_realizada: 14,
+  sinal_pago: 18,
+  procedimento_agendado: 20,
+  concluido: 20,
+  perdido: 5,
+}
 
 // ── gerador de mensagens por estágio ──────────────────────────────────────────
 function buildMsgs(
@@ -32,25 +65,29 @@ function buildMsgs(
   whatsapp: string,
   nome: string,
   procNome: string,
+  proc: "miniLipo" | "lipoGlutea" | "pmma",
+  origem: string,
   status: string,
   baseDt: Date,
   idx: number,
-): Array<{ id: string; messageIdWhatsapp: string; tipo: string; conteudo: string; remetente: string; criadoEm: Date }> {
+) {
   const fn = nome.split(" ")[0]
   const idade = IDADES[idx % IDADES.length]
-  const obj = OBJETIVOS[idx % OBJETIVOS.length]
+  const objArr = proc === "lipoGlutea" ? OBJETIVOS_BBL : proc === "miniLipo" ? OBJETIVOS_LIPO : OBJETIVOS_PMMA
+  const obj = objArr[idx % objArr.length]
+  const contato = PRIMEIROS_CONTATOS[origem] ?? PRIMEIROS_CONTATOS["instagram"]
   const min = (n: number) => new Date(baseDt.getTime() + n * 7 * 60000)
   const mk = (n: number, c: string, r: string) => ({
     id: `${pfx}-${String(n).padStart(2, "0")}`,
     messageIdWhatsapp: `wamid.${pfx}.${String(n).padStart(2, "0")}`,
-    tipo: "texto",
+    tipo: "texto" as const,
     conteudo: c,
     remetente: r,
     criadoEm: min(n),
   })
 
   const all = [
-    mk(1, `Olá! Vi sobre o Dr. Lucas no Instagram e tenho interesse em ${procNome}. Poderia me dar mais informações?`, whatsapp),
+    mk(1, `Olá! ${contato} ${procNome}. Poderia me dar mais informações?`, whatsapp),
     mk(2, `Olá, ${fn}! 😊 Aqui é a Ana Júlia, assistente virtual da clínica do Dr. Lucas Felipe. Que bom que você entrou em contato! Para te ajudar melhor, me conta: quantos anos você tem e qual é seu objetivo com ${procNome}?`, "bot"),
     mk(3, `Tenho ${idade} anos e ${obj}.`, whatsapp),
     mk(4, `Perfeito, ${fn}! O Dr. Lucas trabalha com uma abordagem muito natural e personalizada. Antes de prosseguirmos, você tem alguma condição de saúde como diabetes, hipertensão, problemas cardíacos ou de coagulação?`, "bot"),
@@ -72,19 +109,7 @@ function buildMsgs(
     mk(20, `Recebemos, ${fn}! 🎉 Seu procedimento está reservado. Em breve enviarei as orientações pré-operatórias completas. Qualquer dúvida, estou aqui!`, "bot"),
   ]
 
-  const counts: Record<string, number> = {
-    primeiro_atendimento: 3,
-    qualificacao: 5,
-    agendamento: 8,
-    consulta_agendada: 10,
-    consulta_realizada: 14,
-    sinal_pago: 18,
-    procedimento_agendado: 20,
-    concluido: 20,
-    perdido: 5,
-  }
-
-  return all.slice(0, counts[status] ?? 3)
+  return all.slice(0, MSG_COUNTS[status] ?? 3)
 }
 
 // ── definição dos leads ────────────────────────────────────────────────────────
@@ -169,18 +194,18 @@ const LEADS: LeadSeed[] = [
   { num: 49, nome: "Jaqueline Lima", whatsapp: "11991120049", email: "jaqueline.lima@outlook.com", proc: "lipoGlutea", status: "agendamento", origem: "indicacao", sobreOPaciente: "26 anos, IMC 23. BBL. Qualificada. Verificando datas disponíveis.", diasAtras: 10, lgpd: true, resp: "ia" },
 
   // ── QUALIFICAÇÃO (12) ── created 5-10 days ago ───────────────────────────────
-  { num: 50, nome: "Lívia Neves", whatsapp: "11991120050", email: "livia.neves@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "27 anos, sem comorbidades. Interessada em BBL. Em qualificação.", diasAtras: 10, lgpd: false, resp: "ia" },
-  { num: 51, nome: "Marta Oliveira", whatsapp: "11991120051", email: "marta.oliveira@hotmail.com", proc: "miniLipo", status: "qualificacao", origem: "indicacao", sobreOPaciente: "35 anos, saudável. Mini lipo abdômen. Qualificando.", diasAtras: 9, lgpd: false, resp: "ia" },
-  { num: 52, nome: "Nadine Pacheco", whatsapp: "11991120052", email: "nadine.pacheco@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "29 anos, saudável. BBL. Em qualificação pelo agente.", diasAtras: 9, lgpd: false, resp: "ia" },
-  { num: 53, nome: "Odília Quintas", whatsapp: "11991120053", proc: "pmma", status: "qualificacao", origem: "google", sobreOPaciente: "40 anos, saudável. PMMA. Em qualificação.", diasAtras: 8, lgpd: false, resp: "maria" },
-  { num: 54, nome: "Priscila Rezende", whatsapp: "11991120054", email: "priscila.rezende@outlook.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "31 anos, IMC 24. BBL. Qualificando.", diasAtras: 8, lgpd: false, resp: "ia" },
-  { num: 55, nome: "Rosa Tavares", whatsapp: "11991120055", proc: "miniLipo", status: "qualificacao", origem: "indicacao", sobreOPaciente: "38 anos, saudável. Mini lipo. Em qualificação.", diasAtras: 7, lgpd: false, resp: "ia" },
-  { num: 56, nome: "Sabrina Uzeda", whatsapp: "11991120056", email: "sabrina.uzeda@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "25 anos, saudável. BBL. Em qualificação.", diasAtras: 7, lgpd: false, resp: "ia" },
-  { num: 57, nome: "Talita Vaz", whatsapp: "11991120057", proc: "pmma", status: "qualificacao", origem: "google", sobreOPaciente: "32 anos, saudável. PMMA. Em qualificação.", diasAtras: 6, lgpd: false, resp: "maria" },
-  { num: 58, nome: "Urânia Winck", whatsapp: "11991120058", email: "urania.winck@hotmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "27 anos, IMC 23. BBL. Em qualificação.", diasAtras: 6, lgpd: false, resp: "ia" },
-  { num: 59, nome: "Vera Xavier", whatsapp: "11991120059", proc: "miniLipo", status: "qualificacao", origem: "indicacao", sobreOPaciente: "33 anos, saudável. Mini lipo. Qualificando.", diasAtras: 5, lgpd: false, resp: "ia" },
-  { num: 60, nome: "Wanda Yunes", whatsapp: "11991120060", email: "wanda.yunes@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "30 anos, IMC 22. BBL. Em qualificação.", diasAtras: 5, lgpd: false, resp: "ia" },
-  { num: 61, nome: "Xênia Zanini", whatsapp: "11991120061", proc: "pmma", status: "qualificacao", origem: "google", sobreOPaciente: "28 anos, saudável. PMMA. Em qualificação pelo agente.", diasAtras: 5, lgpd: false, resp: "maria" },
+  { num: 50, nome: "Lívia Neves", whatsapp: "11991120050", email: "livia.neves@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "27 anos, sem comorbidades. Interessada em BBL. Em qualificação.", diasAtras: 10, lgpd: true, resp: "ia" },
+  { num: 51, nome: "Marta Oliveira", whatsapp: "11991120051", email: "marta.oliveira@hotmail.com", proc: "miniLipo", status: "qualificacao", origem: "indicacao", sobreOPaciente: "35 anos, saudável. Mini lipo abdômen. Qualificando.", diasAtras: 9, lgpd: true, resp: "ia" },
+  { num: 52, nome: "Nadine Pacheco", whatsapp: "11991120052", email: "nadine.pacheco@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "29 anos, saudável. BBL. Em qualificação pelo agente.", diasAtras: 9, lgpd: true, resp: "ia" },
+  { num: 53, nome: "Odília Quintas", whatsapp: "11991120053", proc: "pmma", status: "qualificacao", origem: "google", sobreOPaciente: "40 anos, saudável. PMMA. Em qualificação.", diasAtras: 8, lgpd: true, resp: "maria" },
+  { num: 54, nome: "Priscila Rezende", whatsapp: "11991120054", email: "priscila.rezende@outlook.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "31 anos, IMC 24. BBL. Qualificando.", diasAtras: 8, lgpd: true, resp: "ia" },
+  { num: 55, nome: "Rosa Tavares", whatsapp: "11991120055", proc: "miniLipo", status: "qualificacao", origem: "indicacao", sobreOPaciente: "38 anos, saudável. Mini lipo. Em qualificação.", diasAtras: 7, lgpd: true, resp: "ia" },
+  { num: 56, nome: "Sabrina Uzeda", whatsapp: "11991120056", email: "sabrina.uzeda@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "25 anos, saudável. BBL. Em qualificação.", diasAtras: 7, lgpd: true, resp: "ia" },
+  { num: 57, nome: "Talita Vaz", whatsapp: "11991120057", proc: "pmma", status: "qualificacao", origem: "google", sobreOPaciente: "32 anos, saudável. PMMA. Em qualificação.", diasAtras: 6, lgpd: true, resp: "maria" },
+  { num: 58, nome: "Urânia Winck", whatsapp: "11991120058", email: "urania.winck@hotmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "27 anos, IMC 23. BBL. Em qualificação.", diasAtras: 6, lgpd: true, resp: "ia" },
+  { num: 59, nome: "Vera Xavier", whatsapp: "11991120059", proc: "miniLipo", status: "qualificacao", origem: "indicacao", sobreOPaciente: "33 anos, saudável. Mini lipo. Qualificando.", diasAtras: 5, lgpd: true, resp: "ia" },
+  { num: 60, nome: "Wanda Yunes", whatsapp: "11991120060", email: "wanda.yunes@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "30 anos, IMC 22. BBL. Em qualificação.", diasAtras: 5, lgpd: true, resp: "ia" },
+  { num: 61, nome: "Xênia Zanini", whatsapp: "11991120061", proc: "pmma", status: "qualificacao", origem: "google", sobreOPaciente: "28 anos, saudável. PMMA. Em qualificação pelo agente.", diasAtras: 5, lgpd: true, resp: "maria" },
 
   // ── PRIMEIRO ATENDIMENTO (15) ── created 0-5 days ago ───────────────────────
   { num: 62, nome: "Yasmin Abreu", whatsapp: "11991120062", proc: "lipoGlutea", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "24 anos. Primeiro contato: interesse em BBL.", diasAtras: 5, lgpd: false, resp: "ia" },
@@ -267,11 +292,25 @@ async function main() {
   // ── LEADS + CONVERSAS + MENSAGENS + AGENDAMENTOS ──────────────────────────
   const todosLeads = [...LEADS, ...LEADS_ORIGINAIS]
 
+  // helper: data da última movimentação real (não apenas criadoEm)
+  function calcUltimaMovimentacao(ld: LeadSeed): Date {
+    if (ld.procedimentoDias !== undefined && ld.procedimentoDias < 0)
+      return ago(-ld.procedimentoDias)
+    if (ld.consultaDias !== undefined && ld.consultaDias < 0)
+      return new Date(ago(-ld.consultaDias).getTime() + 2 * 24 * 60 * 60 * 1000)
+    if (ld.consultaDias !== undefined && ld.consultaDias > 0)
+      return ago(Math.max(1, ld.diasAtras - 3))
+    return ago(Math.max(0, ld.diasAtras - 1))
+  }
+
   for (const ld of todosLeads) {
     const responsavelId = ld.resp === "ia" ? anaJulia.id : maria.id
     const criadoEm = ago(ld.diasAtras)
     const procNome = ld.proc === "lipoGlutea" ? "Lipo Enxertia Glútea" : ld.proc === "miniLipo" ? "Mini Lipo" : "PMMA"
     const pfx = `ld${String(ld.num).padStart(3, "0")}`
+    const ultimaMovimentacaoEm = calcUltimaMovimentacao(ld)
+    const msgCount = MSG_COUNTS[ld.status] ?? 3
+    const ultimaMensagemEm = new Date(criadoEm.getTime() + msgCount * 7 * 60000)
 
     // Lead
     const lead = await prisma.lead.upsert({
@@ -285,7 +324,7 @@ async function main() {
         consentimentoLgpd: ld.lgpd,
         consentimentoLgpdEm: ld.lgpd ? criadoEm : null,
         motivoPerda: ld.motivoPerda ?? null,
-        ultimaMovimentacaoEm: criadoEm,
+        ultimaMovimentacaoEm,
         arquivado: false,
         arquivadoEm: null,
         deletadoEm: null,
@@ -304,7 +343,7 @@ async function main() {
         consentimentoLgpd: ld.lgpd,
         consentimentoLgpdEm: ld.lgpd ? criadoEm : null,
         motivoPerda: ld.motivoPerda ?? null,
-        ultimaMovimentacaoEm: criadoEm,
+        ultimaMovimentacaoEm,
         criadoEm,
       },
     })
@@ -312,18 +351,18 @@ async function main() {
     // Conversa
     const conversa = await prisma.conversa.upsert({
       where: { id: `conv-${pfx}` },
-      update: { etapa: ld.status, ultimaMensagemEm: criadoEm },
+      update: { etapa: ld.status, ultimaMensagemEm },
       create: {
         id: `conv-${pfx}`,
         leadId: lead.id,
         etapa: ld.status,
-        ultimaMensagemEm: criadoEm,
+        ultimaMensagemEm,
         criadoEm,
       },
     })
 
     // Mensagens
-    const mensagens = buildMsgs(pfx, ld.whatsapp, ld.nome, procNome, ld.status, criadoEm, ld.num)
+    const mensagens = buildMsgs(pfx, ld.whatsapp, ld.nome, procNome, ld.proc, ld.origem, ld.status, criadoEm, ld.num)
     for (const msg of mensagens) {
       await prisma.mensagemWhatsapp.upsert({
         where: { messageIdWhatsapp: msg.messageIdWhatsapp },
@@ -394,57 +433,47 @@ async function main() {
         },
       })
     }
-  }
 
-  // ── SPRINTS ───────────────────────────────────────────────────────────────
-  const sprintsData = [
-    { id: "sprint-0", nome: "Sprint 0 — Setup do Projeto", status: "concluida" as const, ordem: 0, inicio: "2025-09-01", fim: "2025-09-14", itens: [{ id: "s0-i1", titulo: "Repositório Git e estrutura Next.js", ok: true }, { id: "s0-i2", titulo: "Configuração Supabase + Prisma", ok: true }, { id: "s0-i3", titulo: "Deploy inicial na Vercel", ok: true }, { id: "s0-i4", titulo: "shadcn/ui configurado (preset b1Ymqvi3U)", ok: true }] },
-    { id: "sprint-1", nome: "Sprint 1 — Autenticação e Usuários", status: "concluida" as const, ordem: 1, inicio: "2025-09-15", fim: "2025-09-28", itens: [{ id: "s1-i1", titulo: "NextAuth com Credentials Provider", ok: true }, { id: "s1-i2", titulo: "Página de login", ok: true }, { id: "s1-i3", titulo: "CRUD de usuários (Gestor)", ok: true }, { id: "s1-i4", titulo: "Middleware de autenticação e perfis", ok: true }] },
-    { id: "sprint-2", nome: "Sprint 2 — Leads e Procedimentos", status: "concluida" as const, ordem: 2, inicio: "2025-09-29", fim: "2025-10-12", itens: [{ id: "s2-i1", titulo: "Schema Lead + Procedimento no Prisma", ok: true }, { id: "s2-i2", titulo: "CRUD de procedimentos", ok: true }, { id: "s2-i3", titulo: "Listagem e cadastro manual de leads", ok: true }, { id: "s2-i4", titulo: "DataTable com filtros e paginação", ok: true }] },
-    { id: "sprint-3", nome: "Sprint 3 — Agendamentos e Google Calendar", status: "concluida" as const, ordem: 3, inicio: "2025-10-13", fim: "2025-10-26", itens: [{ id: "s3-i1", titulo: "Schema Agendamento no Prisma", ok: true }, { id: "s3-i2", titulo: "CRUD de agendamentos", ok: true }, { id: "s3-i3", titulo: "Integração Google Calendar API", ok: true }, { id: "s3-i4", titulo: "Sincronização bidirecional de eventos", ok: true }, { id: "s3-i5", titulo: "Calendário visual na UI", ok: true }] },
-    { id: "sprint-4", nome: "Sprint 4 — Kanban Visual", status: "concluida" as const, ordem: 4, inicio: "2025-10-27", fim: "2025-11-09", itens: [{ id: "s4-i1", titulo: "Kanban com 9 colunas do funil", ok: true }, { id: "s4-i2", titulo: "Drag & drop entre colunas", ok: true }, { id: "s4-i3", titulo: "Cards de lead com info resumida", ok: true }, { id: "s4-i4", titulo: "Atualização de status via API", ok: true }] },
-    { id: "sprint-5", nome: "Sprint 5 — Agente IA WhatsApp (Etapas 1-3)", status: "concluida" as const, ordem: 5, inicio: "2025-11-10", fim: "2025-11-30", itens: [{ id: "s5-i1", titulo: "Webhook Uazapi + buffer Redis (debounce 20s)", ok: true }, { id: "s5-i2", titulo: "Memória conversacional Redis (20 msgs)", ok: true }, { id: "s5-i3", titulo: "GPT-4o com system prompt clínico", ok: true }, { id: "s5-i4", titulo: "Etapa 1: Qualificação de leads", ok: true }, { id: "s5-i5", titulo: "Etapa 2: Agendamento de consultas", ok: true }, { id: "s5-i6", titulo: "Etapa 3: Gestão pós-agendamento", ok: true }] },
-    { id: "sprint-6", nome: "Sprint 6 — Auditoria e Segurança", status: "concluida" as const, ordem: 6, inicio: "2025-12-01", fim: "2025-12-14", itens: [{ id: "s6-i1", titulo: "AuditLog para todas as entidades", ok: true }, { id: "s6-i2", titulo: "LGPD: consentimento e soft delete", ok: true }, { id: "s6-i3", titulo: "x-api-secret nas rotas internas", ok: true }, { id: "s6-i4", titulo: "Página de auditoria para gestor", ok: true }] },
-    { id: "sprint-7", nome: "Sprint 7 — Ficha Completa do Lead", status: "concluida" as const, ordem: 7, inicio: "2025-12-15", fim: "2025-12-28", itens: [{ id: "s7-i1", titulo: "Página de detalhes do lead (tabs)", ok: true }, { id: "s7-i2", titulo: "Histórico de conversas WhatsApp", ok: true }, { id: "s7-i3", titulo: "Upload de fotos pré/pós (FotoLead)", ok: true }, { id: "s7-i4", titulo: "Análise de mídia via GPT-4o Vision", ok: true }] },
-    { id: "sprint-8", nome: "Sprint 8 — Dashboard com Métricas", status: "concluida" as const, ordem: 8, inicio: "2026-01-05", fim: "2026-01-18", itens: [{ id: "s8-i1", titulo: "API de métricas do funil", ok: true }, { id: "s8-i2", titulo: "MetricCard + gráficos", ok: true }, { id: "s8-i3", titulo: "Leads em alerta (sem interação > 7 dias)", ok: true }, { id: "s8-i4", titulo: "Conversão por etapa do funil", ok: true }] },
-    { id: "sprint-9", nome: "Sprint 9 — Roadmap de Sprints", status: "concluida" as const, ordem: 9, inicio: "2026-01-19", fim: "2026-02-01", itens: [{ id: "s9-i1", titulo: "Schema Sprint e SprintItem", ok: true }, { id: "s9-i2", titulo: "API CRUD de sprints", ok: true }, { id: "s9-i3", titulo: "Componentes visuais (cards, checklist)", ok: true }, { id: "s9-i4", titulo: "Página do roadmap", ok: true }, { id: "s9-i5", titulo: "Testes E2E do módulo", ok: true }] },
-    { id: "sprint-10", nome: "Sprint 10 — Relatórios e Exportação", status: "concluida" as const, ordem: 10, inicio: "2026-02-02", fim: "2026-02-15", itens: [{ id: "s10-i1", titulo: "Relatório mensal de leads", ok: true }, { id: "s10-i2", titulo: "Exportação CSV e PDF", ok: true }, { id: "s10-i3", titulo: "Filtros avançados de data e status", ok: true }, { id: "s10-i4", titulo: "Gráfico de evolução do funil", ok: true }] },
-    { id: "sprint-11", nome: "Sprint 11 — Melhorias de UX e Mobile", status: "concluida" as const, ordem: 11, inicio: "2026-02-16", fim: "2026-03-01", itens: [{ id: "s11-i1", titulo: "Layout responsivo completo (mobile-first)", ok: true }, { id: "s11-i2", titulo: "Gestos touch no kanban", ok: true }, { id: "s11-i3", titulo: "Loading states e skeleton screens", ok: true }, { id: "s11-i4", titulo: "Feedback visual de ações (toast)", ok: true }] },
-    { id: "sprint-12", nome: "Sprint 12 — Busca Global e Notificações", status: "concluida" as const, ordem: 12, inicio: "2026-03-02", fim: "2026-03-15", itens: [{ id: "s12-i1", titulo: "Busca global Ctrl+K (leads, agendamentos)", ok: true }, { id: "s12-i2", titulo: "Central de notificações no header", ok: true }, { id: "s12-i3", titulo: "Notificações de lead sem resposta", ok: true }, { id: "s12-i4", titulo: "Theme toggle light/dark mode", ok: true }] },
-    { id: "sprint-13", nome: "Sprint 13 — Integrações Avançadas", status: "em_andamento" as const, ordem: 13, inicio: "2026-03-16", fim: "2026-03-31", itens: [{ id: "s13-i1", titulo: "Envio de áudio pelo agente IA", ok: true }, { id: "s13-i2", titulo: "Follow-up automático inteligente", ok: true }, { id: "s13-i3", titulo: "Integração com sistema de pagamentos", ok: false }, { id: "s13-i4", titulo: "Relatório de ROI por canal de origem", ok: false }, { id: "s13-i5", titulo: "Testes E2E completos", ok: false }] },
-  ]
-
-  for (const sp of sprintsData) {
-    const sprint = await prisma.sprint.upsert({
-      where: { id: sp.id },
-      update: { nome: sp.nome, status: sp.status, deletadoEm: null },
-      create: {
-        id: sp.id,
-        nome: sp.nome,
-        status: sp.status,
-        ordem: sp.ordem,
-        dataInicio: new Date(sp.inicio),
-        dataFim: new Date(sp.fim),
-      },
-    })
-    for (const item of sp.itens) {
-      await prisma.sprintItem.upsert({
-        where: { id: item.id },
-        update: { titulo: item.titulo, concluido: item.ok },
-        create: { id: item.id, sprintId: sprint.id, titulo: item.titulo, concluido: item.ok, ordem: sp.itens.indexOf(item) },
+    // FotoLead (apenas para leads concluídos)
+    if (ld.status === "concluido") {
+      const fn = ld.nome.split(" ")[0]
+      const dtPos = ld.procedimentoDias !== undefined ? ago(-ld.procedimentoDias) : criadoEm
+      await prisma.fotoLead.upsert({
+        where: { id: `foto-${pfx}-pre` },
+        update: {},
+        create: { id: `foto-${pfx}-pre`, leadId: lead.id, url: `https://placehold.co/800x600/f5f5f5/999999?text=Pre-Op+${fn}`, descricao: "Foto pré-operatória — avaliação inicial", tipoAnalise: "pre_op", criadoEm },
+      })
+      await prisma.fotoLead.upsert({
+        where: { id: `foto-${pfx}-pos` },
+        update: {},
+        create: { id: `foto-${pfx}-pos`, leadId: lead.id, url: `https://placehold.co/800x600/f5f5f5/999999?text=Pos-Op+${fn}`, descricao: "Foto pós-operatória — 30 dias após procedimento", tipoAnalise: "pos_op", criadoEm: dtPos },
       })
     }
   }
+
+  // ── CONFIGURAÇÕES ─────────────────────────────────────────────────────────
+  await prisma.configGoogleCalendar.upsert({
+    where: { id: "config-gcal-01" },
+    update: { ativo: true },
+    create: { id: "config-gcal-01", clientId: "123456789-abc.apps.googleusercontent.com", clientSecret: "GOCSPX-demo-client-secret", calendarId: "agenda@drlucasfelipe.com.br", refreshToken: "1//demo-refresh-token", ativo: true },
+  })
+
+  await prisma.configWhatsapp.upsert({
+    where: { id: "config-wp-01" },
+    update: { ativo: true },
+    create: { id: "config-wp-01", uazapiUrl: "https://api.uazapi.com.br", adminToken: "demo-admin-token-prod", instanceId: "inst-drlucas-prod", instanceToken: "demo-instance-token-prod", numeroWhatsapp: "+5511999990000", webhookUrl: "https://central.drlucasfelipe.com.br/api/webhooks/whatsapp", ativo: true },
+  })
 
   // ── SUMMARY ───────────────────────────────────────────────────────────────
   const totalLeads = await prisma.lead.count()
   const totalMsgs = await prisma.mensagemWhatsapp.count()
   const totalAgs = await prisma.agendamento.count()
+  const totalFotos = await prisma.fotoLead.count()
   console.log("\n✅ Seed concluído:")
   console.log(`   Leads: ${totalLeads}`)
   console.log(`   Mensagens WhatsApp: ${totalMsgs}`)
   console.log(`   Agendamentos: ${totalAgs}`)
-  console.log(`   Sprints: ${sprintsData.length}`)
+  console.log(`   Fotos: ${totalFotos}`)
 }
 
 main()

@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server"
 import { hash } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { criarUsuarioSchema } from "@/lib/validations/usuario"
 
 export async function GET(request: NextRequest) {
@@ -91,15 +90,6 @@ export async function POST(request: NextRequest) {
       ativo: true,
       criadoEm: true,
     },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "create",
-    entidade: "Usuario",
-    entidadeId: usuario.id,
-    dadosDepois: usuario,
-    ip: getIpFromHeaders(request.headers),
   })
 
   return NextResponse.json(usuario, { status: 201 })

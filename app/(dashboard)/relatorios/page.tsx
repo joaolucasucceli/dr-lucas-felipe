@@ -18,6 +18,9 @@ import {
 } from "recharts"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { MetricCard } from "@/components/features/shared/MetricCard"
+import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
+import { EmptyState } from "@/components/features/shared/EmptyState"
+import { ErrorState } from "@/components/features/shared/ErrorState"
 import { FiltroRelatorio } from "@/components/features/relatorios/FiltroRelatorio"
 import { GraficoFunilRelatorio } from "@/components/features/relatorios/GraficoFunilRelatorio"
 import { TabelaProcedimentos } from "@/components/features/relatorios/TabelaProcedimentos"
@@ -106,7 +109,23 @@ export default function RelatoriosPage() {
             </CardContent>
           </Card>
 
-          {funilGerado && funilDados && (
+          {funilGerado && funilRelatorio.carregando && (
+            <div className="mt-4"><SkeletonCard quantidade={4} /></div>
+          )}
+
+          {funilGerado && funilRelatorio.erro && (
+            <div className="mt-4">
+              <ErrorState mensagem={funilRelatorio.erro} onTentar={() => { funilRelatorio.recarregar(); setFunilGerado(true) }} />
+            </div>
+          )}
+
+          {funilGerado && !funilRelatorio.carregando && !funilRelatorio.erro && !funilDados && (
+            <div className="mt-4">
+              <EmptyState titulo="Nenhum dado no período" descricao="Selecione um período com atividade e clique em Gerar." />
+            </div>
+          )}
+
+          {funilGerado && funilDados && !funilRelatorio.carregando && (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
@@ -167,7 +186,23 @@ export default function RelatoriosPage() {
             </CardContent>
           </Card>
 
-          {receitaGerado && receitaDados && (
+          {receitaGerado && receitaRelatorio.carregando && (
+            <div className="mt-4"><SkeletonCard quantidade={3} /></div>
+          )}
+
+          {receitaGerado && receitaRelatorio.erro && (
+            <div className="mt-4">
+              <ErrorState mensagem={receitaRelatorio.erro} onTentar={() => { receitaRelatorio.recarregar(); setReceitaGerado(true) }} />
+            </div>
+          )}
+
+          {receitaGerado && !receitaRelatorio.carregando && !receitaRelatorio.erro && !receitaDados && (
+            <div className="mt-4">
+              <EmptyState titulo="Sem agendamentos no período" descricao="Selecione um período com agendamentos e clique em Gerar." />
+            </div>
+          )}
+
+          {receitaGerado && receitaDados && !receitaRelatorio.carregando && (
             <>
               <div className="grid gap-4 sm:grid-cols-3">
                 <MetricCard
@@ -252,7 +287,23 @@ export default function RelatoriosPage() {
             </CardContent>
           </Card>
 
-          {atendimentoGerado && atendimentoDados && (
+          {atendimentoGerado && atendimentoRelatorio.carregando && (
+            <div className="mt-4"><SkeletonCard quantidade={4} /></div>
+          )}
+
+          {atendimentoGerado && atendimentoRelatorio.erro && (
+            <div className="mt-4">
+              <ErrorState mensagem={atendimentoRelatorio.erro} onTentar={() => { atendimentoRelatorio.recarregar(); setAtendimentoGerado(true) }} />
+            </div>
+          )}
+
+          {atendimentoGerado && !atendimentoRelatorio.carregando && !atendimentoRelatorio.erro && !atendimentoDados && (
+            <div className="mt-4">
+              <EmptyState titulo="Sem mensagens no período" descricao="Selecione um período com atividade do agente e clique em Gerar." />
+            </div>
+          )}
+
+          {atendimentoGerado && atendimentoDados && !atendimentoRelatorio.carregando && (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard

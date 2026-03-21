@@ -18,6 +18,9 @@ import { PageHeader } from "@/components/features/shared/PageHeader"
 import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
+import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
+import { EmptyState } from "@/components/features/shared/EmptyState"
+import { ErrorState } from "@/components/features/shared/ErrorState"
 import { AgendamentoForm } from "@/components/features/agendamentos/AgendamentoForm"
 import { useAgendamentos, type Agendamento } from "@/hooks/use-agendamentos"
 
@@ -57,7 +60,7 @@ export default function AgendamentosPage() {
   const [dataHoraInicial, setDataHoraInicial] = useState<string | undefined>()
   const [confirmCancelar, setConfirmCancelar] = useState<string | null>(null)
 
-  const { dados, total, totalPaginas, carregando, recarregar } = useAgendamentos({
+  const { dados, total, totalPaginas, carregando, erro, recarregar } = useAgendamentos({
     status: filtroStatus || undefined,
     dataInicio: filtroDataInicio || undefined,
     dataFim: filtroDataFim || undefined,
@@ -187,6 +190,22 @@ export default function AgendamentosPage() {
     })
   }
 
+  if (erro) {
+    return (
+      <div>
+        <PageHeader titulo="Agendamentos">
+          <Button onClick={() => { setAgendamentoEditando(undefined); setDataHoraInicial(undefined); setFormAberto(true) }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Agendamento
+          </Button>
+        </PageHeader>
+        <div className="mt-6">
+          <ErrorState mensagem={erro} onTentar={recarregar} />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <PageHeader titulo="Agendamentos">
@@ -203,6 +222,16 @@ export default function AgendamentosPage() {
         </TabsList>
 
         <TabsContent value="lista" className="mt-4">
+          {carregando && dados.length === 0 ? (
+            <SkeletonTabela linhas={6} colunas={6} />
+          ) : !carregando && dadosFiltrados.length === 0 ? (
+            <EmptyState
+              titulo="Nenhum agendamento encontrado"
+              descricao="Crie um novo agendamento ou ajuste os filtros."
+              textoBotao="Novo Agendamento"
+              onAcao={() => { setAgendamentoEditando(undefined); setDataHoraInicial(undefined); setFormAberto(true) }}
+            />
+          ) : (
           <DataTable
             colunas={colunas}
             dados={dadosFiltrados}
@@ -250,6 +279,7 @@ export default function AgendamentosPage() {
               </>
             }
           />
+          )}
         </TabsContent>
 
         <TabsContent value="calendario" className="mt-4">

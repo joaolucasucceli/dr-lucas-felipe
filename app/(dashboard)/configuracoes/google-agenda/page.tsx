@@ -11,13 +11,14 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { LoadingState } from "@/components/features/shared/LoadingState"
+import { ErrorState } from "@/components/features/shared/ErrorState"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { useConfigGoogle } from "@/hooks/use-config-google"
 
 function GoogleAgendaConfigInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { configurado, config, carregando, recarregar } = useConfigGoogle()
+  const { configurado, config, carregando, erro, recarregar } = useConfigGoogle()
 
   const [clientId, setClientId] = useState("")
   const [clientSecret, setClientSecret] = useState("")
@@ -132,6 +133,15 @@ function GoogleAgendaConfigInner() {
       <div>
         <PageHeader titulo="Google Agenda" />
         <div className="mt-6"><LoadingState /></div>
+      </div>
+    )
+  }
+
+  if (erro) {
+    return (
+      <div>
+        <PageHeader titulo="Google Agenda" />
+        <div className="mt-6"><ErrorState mensagem={erro} onTentar={recarregar} /></div>
       </div>
     )
   }

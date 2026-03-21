@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { criarProcedimentoSchema } from "@/lib/validations/procedimento"
 
 export async function GET(request: NextRequest) {
@@ -70,15 +69,6 @@ export async function POST(request: NextRequest) {
       ativo: true,
       criadoEm: true,
     },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "create",
-    entidade: "Procedimento",
-    entidadeId: procedimento.id,
-    dadosDepois: procedimento,
-    ip: getIpFromHeaders(request.headers),
   })
 
   return NextResponse.json(procedimento, { status: 201 })

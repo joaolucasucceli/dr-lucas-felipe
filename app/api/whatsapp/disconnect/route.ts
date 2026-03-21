@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { desconectar, deletarInstancia } from "@/lib/uazapi"
 
 export async function POST(request: NextRequest) {
@@ -45,18 +44,6 @@ export async function POST(request: NextRequest) {
       webhookUrl: null,
       ativo: false,
     },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "delete",
-    entidade: "ConfigWhatsapp",
-    entidadeId: config.id,
-    dadosAntes: {
-      instanceId: config.instanceId,
-      numeroWhatsapp: config.numeroWhatsapp,
-    },
-    ip: getIpFromHeaders(request.headers),
   })
 
   return NextResponse.json({ sucesso: true })

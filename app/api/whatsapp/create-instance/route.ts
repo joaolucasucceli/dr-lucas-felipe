@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import {
   criarInstancia,
   configurarWebhook,
@@ -50,15 +49,6 @@ export async function POST(request: NextRequest) {
 
     // Obter QR code
     const { qrcode } = await obterQrCode(config.uazapiUrl, instancia.token)
-
-    await registrarAudit({
-      usuarioId: auth.session.user.id,
-      acao: "create",
-      entidade: "ConfigWhatsapp",
-      entidadeId: config.id,
-      dadosDepois: { instanceId: instancia.id, webhookUrl },
-      ip: getIpFromHeaders(request.headers),
-    })
 
     return NextResponse.json({
       sucesso: true,

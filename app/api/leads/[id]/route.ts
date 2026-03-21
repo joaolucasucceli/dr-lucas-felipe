@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { atualizarLeadSchema } from "@/lib/validations/lead"
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -112,25 +111,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     },
   })
 
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "update",
-    entidade: "Lead",
-    entidadeId: id,
-    dadosAntes: {
-      nome: leadAtual.nome,
-      whatsapp: leadAtual.whatsapp,
-      statusFunil: leadAtual.statusFunil,
-      procedimentoInteresse: leadAtual.procedimentoInteresse,
-    },
-    dadosDepois: {
-      nome: leadAtualizado.nome,
-      whatsapp: leadAtualizado.whatsapp,
-      statusFunil: leadAtualizado.statusFunil,
-      procedimentoInteresse: leadAtualizado.procedimentoInteresse,
-    },
-    ip: getIpFromHeaders(request.headers),
-  })
 
   return NextResponse.json(leadAtualizado)
 }
@@ -154,18 +134,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     data: {
       deletadoEm: new Date(),
     },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "delete",
-    entidade: "Lead",
-    entidadeId: id,
-    dadosAntes: {
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-    },
-    ip: getIpFromHeaders(request.headers),
   })
 
   return NextResponse.json({ mensagem: "Lead removido" })

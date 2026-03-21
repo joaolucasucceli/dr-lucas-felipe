@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { criarEvento } from "@/lib/google-calendar"
 
 export async function GET(req: NextRequest) {
@@ -110,14 +109,6 @@ export async function POST(req: NextRequest) {
       lead: { select: { nome: true, whatsapp: true } },
       procedimento: { select: { nome: true } },
     },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "create",
-    entidade: "Agendamento",
-    entidadeId: agendamento.id,
-    ip: getIpFromHeaders(req.headers),
   })
 
   return NextResponse.json(agendamento, { status: 201 })

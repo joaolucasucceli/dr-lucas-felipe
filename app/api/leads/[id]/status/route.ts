@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { mudarStatusSchema } from "@/lib/validations/lead"
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -69,15 +68,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     },
   })
 
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "update",
-    entidade: "Lead",
-    entidadeId: id,
-    dadosAntes: { statusFunil: statusAnterior },
-    dadosDepois: { statusFunil: leadAtualizado.statusFunil, motivoPerda: leadAtualizado.motivoPerda },
-    ip: getIpFromHeaders(request.headers),
-  })
 
   return NextResponse.json(leadAtualizado)
 }

@@ -12,13 +12,14 @@ import { Label } from "@/components/ui/label"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { LoadingState } from "@/components/features/shared/LoadingState"
+import { ErrorState } from "@/components/features/shared/ErrorState"
 import { useConfigWhatsapp } from "@/hooks/use-config-whatsapp"
 
 type Etapa = "credenciais" | "qrcode" | "conectando" | "conectado"
 
 export default function WhatsAppConfigPage() {
   const router = useRouter()
-  const { configurado, conectado, status, numeroWhatsapp, config, carregando, recarregar } =
+  const { configurado, conectado, status, numeroWhatsapp, config, carregando, erro, recarregar } =
     useConfigWhatsapp()
 
   const [etapa, setEtapa] = useState<Etapa>("credenciais")
@@ -155,6 +156,14 @@ export default function WhatsAppConfigPage() {
   }
 
   if (carregando) return <LoadingState />
+  if (erro) {
+    return (
+      <div>
+        <PageHeader titulo="WhatsApp" />
+        <div className="mt-6"><ErrorState mensagem={erro} onTentar={recarregar} /></div>
+      </div>
+    )
+  }
 
   return (
     <div>

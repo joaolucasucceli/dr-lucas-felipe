@@ -66,9 +66,6 @@ export async function restaurarSeed() {
     const idsUsuariosExtras = usuariosExtras.map((u) => u.id)
 
     if (idsUsuariosExtras.length > 0) {
-      await prisma.auditLog.deleteMany({
-        where: { usuarioId: { in: idsUsuariosExtras } },
-      })
       await prisma.usuario.deleteMany({
         where: { id: { in: idsUsuariosExtras } },
       })

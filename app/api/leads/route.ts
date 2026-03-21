@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { criarLeadSchema } from "@/lib/validations/lead"
 
 export async function GET(request: NextRequest) {
@@ -98,15 +97,6 @@ export async function POST(request: NextRequest) {
       origem: true,
       criadoEm: true,
     },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "create",
-    entidade: "Lead",
-    entidadeId: lead.id,
-    dadosDepois: lead,
-    ip: getIpFromHeaders(request.headers),
   })
 
   return NextResponse.json(lead, { status: 201 })

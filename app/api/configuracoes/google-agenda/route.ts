@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { configGoogleSchema } from "@/lib/validations/config-google"
 
 export async function GET(_request: NextRequest) {
@@ -62,15 +61,6 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: existente ? "update" : "create",
-    entidade: "ConfigGoogleCalendar",
-    entidadeId: config.id,
-    dadosDepois: { clientId: config.clientId },
-    ip: getIpFromHeaders(request.headers),
-  })
-
   return NextResponse.json({ sucesso: true, configurado: true })
 }
 
@@ -90,15 +80,6 @@ export async function DELETE(request: NextRequest) {
   await prisma.configGoogleCalendar.update({
     where: { id: config.id },
     data: { ativo: false },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "delete",
-    entidade: "ConfigGoogleCalendar",
-    entidadeId: config.id,
-    dadosAntes: { clientId: config.clientId },
-    ip: getIpFromHeaders(request.headers),
   })
 
   return NextResponse.json({ sucesso: true, configurado: false })

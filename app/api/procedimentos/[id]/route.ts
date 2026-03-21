@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { atualizarProcedimentoSchema } from "@/lib/validations/procedimento"
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -76,27 +75,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     },
   })
 
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "update",
-    entidade: "Procedimento",
-    entidadeId: id,
-    dadosAntes: {
-      nome: procedimentoAtual.nome,
-      tipo: procedimentoAtual.tipo,
-      valorBase: procedimentoAtual.valorBase,
-      duracaoMin: procedimentoAtual.duracaoMin,
-      ativo: procedimentoAtual.ativo,
-    },
-    dadosDepois: {
-      nome: procedimentoAtualizado.nome,
-      tipo: procedimentoAtualizado.tipo,
-      valorBase: procedimentoAtualizado.valorBase,
-      duracaoMin: procedimentoAtualizado.duracaoMin,
-      ativo: procedimentoAtualizado.ativo,
-    },
-    ip: getIpFromHeaders(request.headers),
-  })
 
   return NextResponse.json(procedimentoAtualizado)
 }
@@ -121,18 +99,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       deletadoEm: new Date(),
       ativo: false,
     },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "delete",
-    entidade: "Procedimento",
-    entidadeId: id,
-    dadosAntes: {
-      nome: procedimento.nome,
-      tipo: procedimento.tipo,
-    },
-    ip: getIpFromHeaders(request.headers),
   })
 
   return NextResponse.json({ mensagem: "Procedimento removido" })

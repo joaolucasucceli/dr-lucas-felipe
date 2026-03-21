@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { validarApiSecret } from "@/lib/api-auth"
 import { createId } from "@paralleldrive/cuid2"
+import type { TipoMensagem } from "@/generated/prisma/enums"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       conversaId,
       leadId,
       messageIdWhatsapp: messageIdWhatsapp || `agente_${createId()}`,
-      tipo: tipo || "texto",
+      tipo: (tipo || "texto") as TipoMensagem,
       conteudo,
       remetente: direcao === "agente" ? "agente" : "paciente",
     },

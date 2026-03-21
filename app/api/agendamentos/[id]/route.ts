@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { atualizarEvento, cancelarEvento } from "@/lib/google-calendar"
 
 export async function GET(
@@ -75,16 +74,6 @@ export async function PATCH(
     },
   })
 
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "update",
-    entidade: "Agendamento",
-    entidadeId: id,
-    dadosAntes: agendamentoAtual,
-    dadosDepois: atualizado,
-    ip: getIpFromHeaders(req.headers),
-  })
-
   return NextResponse.json(atualizado)
 }
 
@@ -110,14 +99,6 @@ export async function DELETE(
   await prisma.agendamento.update({
     where: { id },
     data: { status: "cancelado" },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "delete",
-    entidade: "Agendamento",
-    entidadeId: id,
-    ip: getIpFromHeaders(req.headers),
   })
 
   return NextResponse.json({ ok: true })

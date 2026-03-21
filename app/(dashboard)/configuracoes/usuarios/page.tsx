@@ -22,6 +22,8 @@ import {
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
+import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
+import { EmptyState } from "@/components/features/shared/EmptyState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { UsuarioForm } from "@/components/features/usuarios/UsuarioForm"
 import { useUsuarios } from "@/hooks/use-usuarios"
@@ -214,6 +216,16 @@ export default function UsuariosPage() {
       </PageHeader>
 
       <div className="mt-6">
+        {carregando && dados.length === 0 ? (
+          <SkeletonTabela linhas={5} colunas={5} />
+        ) : !carregando && dados.length === 0 ? (
+          <EmptyState
+            titulo="Nenhum usuário cadastrado"
+            descricao="Adicione usuários para dar acesso ao sistema."
+            textoBotao={isGestor ? "Novo Usuário" : undefined}
+            onAcao={isGestor ? () => { setUsuarioEditando(null); setFormAberto(true) } : undefined}
+          />
+        ) : (
         <DataTable
           colunas={colunas}
           dados={dados}
@@ -261,6 +273,7 @@ export default function UsuariosPage() {
             </>
           }
         />
+        )}
       </div>
 
       <UsuarioForm

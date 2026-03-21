@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       ultimaMovimentacaoEm: true,
       motivoPerda: true,
       responsavel: { select: { id: true, nome: true } },
-      conversas: { select: { followUpEnviados: true }, take: 1, orderBy: { criadoEm: "desc" } },
+      conversas: { where: { encerradaEm: null }, select: { followUpEnviados: true }, take: 1, orderBy: { criadoEm: "desc" } },
     },
     orderBy: { atualizadoEm: "desc" },
   })

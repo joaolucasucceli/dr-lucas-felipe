@@ -8,13 +8,15 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageHeader } from "@/components/features/shared/PageHeader"
+import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
+import { ErrorState } from "@/components/features/shared/ErrorState"
 import { useConfigGoogle } from "@/hooks/use-config-google"
 import { useConfigWhatsapp } from "@/hooks/use-config-whatsapp"
 
 export default function ConfiguracoesPage() {
   const router = useRouter()
-  const { configurado: googleConfigurado, carregando: googleCarregando } = useConfigGoogle()
-  const { conectado: whatsappConectado, carregando: whatsappCarregando } = useConfigWhatsapp()
+  const { configurado: googleConfigurado, carregando: googleCarregando, erro: googleErro, recarregar: recarregarGoogle } = useConfigGoogle()
+  const { conectado: whatsappConectado, carregando: whatsappCarregando, erro: whatsappErro, recarregar: recarregarWhatsapp } = useConfigWhatsapp()
   const [executandoCron, setExecutandoCron] = useState(false)
 
   async function handleExecutarCron() {
@@ -37,6 +39,31 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  const carregando = googleCarregando || whatsappCarregando
+
+  if (carregando) {
+    return (
+      <div>
+        <PageHeader titulo="Configurações" descricao="Gerencie as integrações e configurações do sistema" />
+        <div className="mt-6"><SkeletonCard quantidade={3} /></div>
+      </div>
+    )
+  }
+
+  if (googleErro || whatsappErro) {
+    return (
+      <div>
+        <PageHeader titulo="Configurações" descricao="Gerencie as integrações e configurações do sistema" />
+        <div className="mt-6">
+          <ErrorState
+            mensagem={googleErro || whatsappErro || "Erro ao carregar configurações"}
+            onTentar={() => { recarregarGoogle(); recarregarWhatsapp() }}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <PageHeader
@@ -56,9 +83,7 @@ export default function ConfiguracoesPage() {
             </div>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            {googleCarregando ? (
-              <Badge variant="secondary">Carregando...</Badge>
-            ) : googleConfigurado ? (
+            {googleConfigurado ? (
               <Badge variant="default" className="bg-green-100 text-green-800">
                 Configurado
               </Badge>
@@ -83,9 +108,7 @@ export default function ConfiguracoesPage() {
             </div>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            {whatsappCarregando ? (
-              <Badge variant="secondary">Carregando...</Badge>
-            ) : whatsappConectado ? (
+            {whatsappConectado ? (
               <Badge variant="default" className="bg-green-100 text-green-800">
                 Conectado
               </Badge>

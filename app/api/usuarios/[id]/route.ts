@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server"
 import { hash } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { atualizarUsuarioSchema } from "@/lib/validations/usuario"
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -90,25 +89,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     },
   })
 
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "update",
-    entidade: "Usuario",
-    entidadeId: id,
-    dadosAntes: {
-      nome: usuarioAtual.nome,
-      email: usuarioAtual.email,
-      perfil: usuarioAtual.perfil,
-      ativo: usuarioAtual.ativo,
-    },
-    dadosDepois: {
-      nome: usuarioAtualizado.nome,
-      email: usuarioAtualizado.email,
-      perfil: usuarioAtualizado.perfil,
-      ativo: usuarioAtualizado.ativo,
-    },
-    ip: getIpFromHeaders(request.headers),
-  })
 
   return NextResponse.json(usuarioAtualizado)
 }
@@ -141,19 +121,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       deletadoEm: new Date(),
       ativo: false,
     },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "delete",
-    entidade: "Usuario",
-    entidadeId: id,
-    dadosAntes: {
-      nome: usuario.nome,
-      email: usuario.email,
-      perfil: usuario.perfil,
-    },
-    ip: getIpFromHeaders(request.headers),
   })
 
   return NextResponse.json({ mensagem: "Usuário removido" })

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
+import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { EmptyState } from "@/components/features/shared/EmptyState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { ProcedimentoForm } from "@/components/features/procedimentos/ProcedimentoForm"
@@ -189,7 +190,9 @@ export default function ProcedimentosPage() {
       </PageHeader>
 
       <div className="mt-6">
-        {!carregando && dados.length === 0 && !busca ? (
+        {carregando && dados.length === 0 ? (
+          <SkeletonTabela linhas={5} colunas={4} />
+        ) : !carregando && dados.length === 0 && !busca ? (
           <EmptyState
             titulo="Nenhum procedimento"
             descricao="Cadastre o primeiro procedimento da clínica."

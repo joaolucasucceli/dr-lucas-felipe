@@ -2,8 +2,6 @@ import { createHash } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ leadId: string }> }
@@ -37,15 +35,6 @@ export async function POST(
     }),
     prisma.mensagemWhatsapp.deleteMany({ where: { leadId } }),
   ])
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "anonimizar",
-    entidade: "Lead",
-    entidadeId: leadId,
-    dadosAntes: { nome: lead.nome, whatsapp: lead.whatsapp, email: lead.email },
-    ip: getIpFromHeaders(req.headers) ?? undefined,
-  })
 
   return NextResponse.json({ ok: true })
 }

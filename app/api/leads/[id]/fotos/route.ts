@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server"
 import { createId } from "@paralleldrive/cuid2"
 import { prisma } from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { supabaseAdmin } from "@/lib/supabase"
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -99,15 +98,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       descricao,
       tipoAnalise,
     },
-  })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "create",
-    entidade: "FotoLead",
-    entidadeId: foto.id,
-    dadosDepois: { leadId: id, url: foto.url },
-    ip: getIpFromHeaders(request.headers),
   })
 
   return NextResponse.json(foto, { status: 201 })

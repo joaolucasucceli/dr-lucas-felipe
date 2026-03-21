@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { supabaseAdmin } from "@/lib/supabase"
 
 type RouteParams = { params: Promise<{ id: string; fotoId: string }> }
@@ -29,15 +28,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 
   await prisma.fotoLead.delete({ where: { id: fotoId } })
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: "delete",
-    entidade: "FotoLead",
-    entidadeId: fotoId,
-    dadosAntes: { leadId: id, url: foto.url },
-    ip: getIpFromHeaders(request.headers),
-  })
 
   return NextResponse.json({ mensagem: "Foto removida" })
 }

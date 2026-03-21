@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { ArrowLeft, Trash2, Archive, ArchiveRestore, Upload, X, ImageIcon, Plus } from "lucide-react"
+import { ArrowLeft, Trash2, Archive, ArchiveRestore, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,6 +36,7 @@ import { useAutosave, IndicadorSalvamento } from "@/hooks/use-autosave"
 import { useLead } from "@/hooks/use-lead"
 import { useAgendamentos } from "@/hooks/use-agendamentos"
 import { AgendamentoForm } from "@/components/features/agendamentos/AgendamentoForm"
+import { GaleriaFotos } from "@/components/features/leads/GaleriaFotos"
 
 export default function LeadDetalhePage() {
   const params = useParams()
@@ -46,8 +47,6 @@ export default function LeadDetalhePage() {
   const { lead, carregando, erro, recarregar } = useLead(id)
 
   const [confirmExcluir, setConfirmExcluir] = useState(false)
-  const [confirmFoto, setConfirmFoto] = useState<string | null>(null)
-  const [uploadingFoto, setUploadingFoto] = useState(false)
   const [confirmAnonimizar, setConfirmAnonimizar] = useState(false)
   const [formAgendamento, setFormAgendamento] = useState(false)
   const [confirmCancelarAgendamento, setConfirmCancelarAgendamento] = useState<string | null>(null)
@@ -177,34 +176,6 @@ export default function LeadDetalhePage() {
     }
   }
 
-  async function handleUploadFoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploadingFoto(true)
-    const formData = new FormData()
-    formData.append("arquivo", file)
-
-    try {
-      const res = await fetch(`/api/leads/${id}/fotos`, {
-        method: "POST",
-        body: formData,
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        toast.error(err.error || "Erro ao enviar foto")
-        return
-      }
-      toast.success("Foto enviada")
-      recarregar()
-    } catch {
-      toast.error("Erro ao enviar foto")
-    } finally {
-      setUploadingFoto(false)
-      e.target.value = ""
-    }
-  }
-
   function handleExportarDados() {
     const a = document.createElement("a")
     a.href = `/api/lgpd/exportar/${id}`
@@ -222,20 +193,6 @@ export default function LeadDetalhePage() {
       router.push("/leads")
     } catch {
       toast.error("Erro ao anonimizar dados")
-    }
-  }
-
-  async function handleExcluirFoto(fotoId: string) {
-    try {
-      const res = await fetch(`/api/leads/${id}/fotos/${fotoId}`, {
-        method: "DELETE",
-      })
-      if (!res.ok) throw new Error()
-      toast.success("Foto removida")
-      setConfirmFoto(null)
-      recarregar()
-    } catch {
-      toast.error("Erro ao remover foto")
     }
   }
 
@@ -476,54 +433,11 @@ export default function LeadDetalhePage() {
         </TabsContent>
 
         <TabsContent value="fotos" className="mt-4">
-          <div className="mb-4">
-            <Label
-              htmlFor="upload-foto"
-              className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"
-            >
-              <Upload className="h-4 w-4" />
-              {uploadingFoto ? "Enviando..." : "Enviar Foto"}
-            </Label>
-            <input
-              id="upload-foto"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleUploadFoto}
-              disabled={uploadingFoto}
-            />
-          </div>
-
-          {lead.fotos.length === 0 ? (
-            <EmptyState
-              icone={<ImageIcon className="h-12 w-12" />}
-              titulo="Nenhuma foto"
-              descricao="Envie fotos da paciente para acompanhamento."
-            />
-          ) : (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              {lead.fotos.map((foto) => (
-                <div key={foto.id} className="group relative overflow-hidden rounded-lg border">
-                  <img
-                    src={foto.url}
-                    alt={foto.descricao || "Foto do lead"}
-                    className="aspect-square w-full object-cover"
-                  />
-                  {isGestor && (
-                    <button
-                      onClick={() => setConfirmFoto(foto.id)}
-                      className="absolute right-2 top-2 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                  {foto.descricao && (
-                    <p className="p-2 text-xs text-muted-foreground">{foto.descricao}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <GaleriaFotos
+            leadId={lead.id}
+            fotosIniciais={lead.fotos}
+            isGestor={isGestor}
+          />
         </TabsContent>
 
         <TabsContent value="agendamentos" className="mt-4">
@@ -616,16 +530,6 @@ export default function LeadDetalhePage() {
         aberto={confirmExcluir}
         onFechar={() => setConfirmExcluir(false)}
         onConfirmar={handleExcluir}
-        variante="destrutivo"
-        textoBotao="Excluir"
-      />
-
-      <ConfirmDialog
-        titulo="Excluir foto"
-        descricao="Tem certeza que deseja excluir esta foto?"
-        aberto={!!confirmFoto}
-        onFechar={() => setConfirmFoto(null)}
-        onConfirmar={() => confirmFoto && handleExcluirFoto(confirmFoto)}
         variante="destrutivo"
         textoBotao="Excluir"
       />

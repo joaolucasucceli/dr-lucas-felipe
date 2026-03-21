@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAnyRole } from "@/lib/auth-helpers"
-import { registrarAudit, getIpFromHeaders } from "@/lib/audit"
 import { configWhatsappSchema } from "@/lib/validations/whatsapp-config"
 import { testarConexao } from "@/lib/uazapi"
 
@@ -48,15 +47,6 @@ export async function POST(request: NextRequest) {
       data: { uazapiUrl, adminToken },
     })
   }
-
-  await registrarAudit({
-    usuarioId: auth.session.user.id,
-    acao: existente ? "update" : "create",
-    entidade: "ConfigWhatsapp",
-    entidadeId: config.id,
-    dadosDepois: { uazapiUrl },
-    ip: getIpFromHeaders(request.headers),
-  })
 
   return NextResponse.json({ sucesso: true })
 }
