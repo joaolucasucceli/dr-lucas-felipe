@@ -57,9 +57,9 @@ test.describe.serial("UX Mobile", () => {
     await expect(page.getByRole("link", { name: "Voltar ao início" })).toBeVisible()
   })
 
-  test("Kanban tem overflow-x-auto no container (scroll mobile)", async ({ page }) => {
+  test("Atendimentos tem overflow-x-auto no container (scroll mobile)", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/kanban")
+    await page.goto("/atendimentos")
 
     // Aguardar carregamento do board
     await page.waitForSelector(".snap-x", { timeout: 10000 })

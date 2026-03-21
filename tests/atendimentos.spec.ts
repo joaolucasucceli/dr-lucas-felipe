@@ -8,13 +8,13 @@ async function loginComoGestor(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 })
 }
 
-test.describe("Kanban", () => {
-  test("kanban carrega com 9 colunas visíveis", async ({ page }) => {
+test.describe("Atendimentos", () => {
+  test("atendimentos carrega com 9 colunas visíveis", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/kanban")
+    await page.goto("/atendimentos")
 
     await expect(
-      page.getByRole("heading", { name: "Kanban" })
+      page.getByRole("heading", { name: "Atendimentos" })
     ).toBeVisible()
 
     // Verificar que as 9 colunas existem (usar heading para evitar ambiguidade com sidebar)
@@ -32,7 +32,7 @@ test.describe("Kanban", () => {
 
   test("cards dos leads do seed aparecem no board", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/kanban")
+    await page.goto("/atendimentos")
 
     // Seed tem 5 leads distribuídos
     await expect(page.getByText("Ana Silva")).toBeVisible({ timeout: 10000 })
@@ -44,7 +44,7 @@ test.describe("Kanban", () => {
 
   test("filtrar por procedimento filtra os cards", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/kanban")
+    await page.goto("/atendimentos")
 
     // Esperar cards carregarem
     await expect(page.getByText("Ana Silva")).toBeVisible({ timeout: 10000 })
@@ -63,7 +63,7 @@ test.describe("Kanban", () => {
 
   test("clicar em card navega para detalhe do lead", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/kanban")
+    await page.goto("/atendimentos")
 
     await expect(page.getByText("Ana Silva")).toBeVisible({ timeout: 10000 })
     await page.getByText("Ana Silva").click()
@@ -73,22 +73,22 @@ test.describe("Kanban", () => {
 
   test("total de leads é exibido", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/kanban")
+    await page.goto("/atendimentos")
 
     await expect(page.getByText(/\d+ leads? no funil/)).toBeVisible({
       timeout: 10000,
     })
   })
 
-  test("kanban acessível via sidebar", async ({ page }) => {
+  test("atendimentos acessível via sidebar", async ({ page }) => {
     await loginComoGestor(page)
 
-    // Clicar no link Kanban na sidebar
-    await page.getByRole("link", { name: "Kanban" }).click()
-    await expect(page).toHaveURL(/\/kanban/, { timeout: 5000 })
+    // Clicar no link Atendimentos na sidebar
+    await page.getByRole("link", { name: "Atendimentos" }).click()
+    await expect(page).toHaveURL(/\/atendimentos/, { timeout: 5000 })
 
     await expect(
-      page.getByRole("heading", { name: "Kanban" })
+      page.getByRole("heading", { name: "Atendimentos" })
     ).toBeVisible()
   })
 })

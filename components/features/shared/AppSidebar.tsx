@@ -31,8 +31,8 @@ const navItems: NavItem[] = [
     icone: <LayoutDashboard className="h-4 w-4" />,
   },
   {
-    titulo: "Kanban",
-    href: "/kanban",
+    titulo: "Atendimentos",
+    href: "/atendimentos",
     icone: <Kanban className="h-4 w-4" />,
   },
   {

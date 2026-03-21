@@ -3,11 +3,11 @@
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { KanbanView } from "@/components/features/kanban/KanbanView"
 
-export default function KanbanPage() {
+export default function AtendimentosPage() {
   return (
     <div>
       <PageHeader
-        titulo="Kanban"
+        titulo="Atendimentos"
         descricao="Visualize e gerencie o funil de atendimento"
       />
       <KanbanView />
