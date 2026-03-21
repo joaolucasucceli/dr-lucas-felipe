@@ -17,6 +17,7 @@ import { ErrorState } from "@/components/features/shared/ErrorState"
 import { GraficoFunil } from "@/components/features/dashboard/GraficoFunil"
 import { GraficoOrigem } from "@/components/features/dashboard/GraficoOrigem"
 import { LeadsAlerta } from "@/components/features/dashboard/LeadsAlerta"
+import { LeadsFollowUpAtivos } from "@/components/features/dashboard/LeadsFollowUpAtivos"
 import { useDashboard } from "@/hooks/use-dashboard"
 
 export default function DashboardPage() {
@@ -123,7 +124,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center gap-2">
             <Bot className="h-5 w-5 text-muted-foreground" />
@@ -144,6 +145,17 @@ export default function DashboardPage() {
                 <span className="text-sm font-medium">{metricas.confirmacaoEnviadas}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Follow-ups Aguardando Resposta
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LeadsFollowUpAtivos />
           </CardContent>
         </Card>
 

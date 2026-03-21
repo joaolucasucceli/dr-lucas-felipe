@@ -50,7 +50,12 @@ export async function POST(req: NextRequest) {
   const auth = await requireAnyRole(["gestor", "atendente", "desenvolvedor"])
   if (auth.error) return auth.error
 
-  const body = await req.json()
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
+  }
   const { leadId, procedimentoId, dataHora, duracao, observacao, criarNoGoogle } = body
 
   if (!leadId || !dataHora) {

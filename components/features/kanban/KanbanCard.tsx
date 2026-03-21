@@ -4,13 +4,41 @@ import { useRouter } from "next/navigation"
 import { Draggable } from "@hello-pangea/dnd"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, Clock, Bell, DoorOpen } from "lucide-react"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
 import type { KanbanLead } from "@/hooks/use-kanban"
 
 interface KanbanCardProps {
   lead: KanbanLead
   index: number
+}
+
+function FollowUpBadge({ followUpEnviados }: { followUpEnviados: string[] }) {
+  if (followUpEnviados.includes("24h")) {
+    return (
+      <span className="flex items-center gap-0.5 shrink-0 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">
+        <DoorOpen className="h-3 w-3" />
+        24h
+      </span>
+    )
+  }
+  if (followUpEnviados.includes("6h")) {
+    return (
+      <span className="flex items-center gap-0.5 shrink-0 rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+        <Bell className="h-3 w-3" />
+        6h
+      </span>
+    )
+  }
+  if (followUpEnviados.includes("1h")) {
+    return (
+      <span className="flex items-center gap-0.5 shrink-0 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-600">
+        <Clock className="h-3 w-3" />
+        1h
+      </span>
+    )
+  }
+  return null
 }
 
 export function KanbanCard({ lead, index }: KanbanCardProps) {
@@ -37,12 +65,15 @@ export function KanbanCard({ lead, index }: KanbanCardProps) {
             <p className="text-sm font-medium leading-tight truncate">
               {lead.nome}
             </p>
-            {lead.diasNaEtapa > 3 && (
-              <span className="flex items-center gap-0.5 shrink-0 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
-                <AlertTriangle className="h-3 w-3" />
-                {lead.diasNaEtapa}d
-              </span>
-            )}
+            <div className="flex items-center gap-1 shrink-0">
+              <FollowUpBadge followUpEnviados={lead.followUpEnviados} />
+              {lead.diasNaEtapa > 3 && (
+                <span className="flex items-center gap-0.5 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
+                  <AlertTriangle className="h-3 w-3" />
+                  {lead.diasNaEtapa}d
+                </span>
+              )}
+            </div>
           </div>
 
           {lead.procedimentoInteresse && (

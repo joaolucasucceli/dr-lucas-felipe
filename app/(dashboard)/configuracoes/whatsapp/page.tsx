@@ -87,7 +87,9 @@ export default function WhatsAppConfigPage() {
 
       if (!res.ok) {
         const erro = await res.json()
-        toast.error(erro.error || "Erro ao testar conexão")
+        toast.error(erro.error || "Erro ao testar conexão", {
+          description: erro.detalhe,
+        })
         return
       }
 

@@ -6,7 +6,8 @@ async function uazapiFetch(
   token: string,
   options: RequestInit = {}
 ) {
-  const res = await fetch(`${url}${path}`, {
+  const baseUrl = url.replace(/\/$/, "")
+  const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -28,12 +29,12 @@ async function uazapiFetch(
 export async function testarConexao(
   url: string,
   adminToken: string
-): Promise<boolean> {
+): Promise<{ ok: boolean; erro?: string }> {
   try {
     await uazapiFetch(url, "/instance/list", adminToken)
-    return true
-  } catch {
-    return false
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, erro: err instanceof Error ? err.message : "Erro desconhecido" }
   }
 }
 

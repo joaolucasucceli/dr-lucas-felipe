@@ -23,10 +23,11 @@ export async function POST(request: NextRequest) {
   const { uazapiUrl, adminToken } = parsed.data
 
   // Testar conexão com Uazapi
-  const conectou = await testarConexao(uazapiUrl, adminToken)
-  if (!conectou) {
+  const resultado = await testarConexao(uazapiUrl, adminToken)
+  if (!resultado.ok) {
+    console.error("[test-connection] Falha ao conectar ao Uazapi:", resultado.erro)
     return NextResponse.json(
-      { error: "Não foi possível conectar ao Uazapi. Verifique URL e token." },
+      { error: "Não foi possível conectar ao Uazapi.", detalhe: resultado.erro },
       { status: 400 }
     )
   }

@@ -15,6 +15,7 @@ export interface KanbanLead {
   motivoPerda: string | null
   diasNaEtapa: number
   responsavel: { id: string; nome: string } | null
+  followUpEnviados: string[]
 }
 
 interface UseKanbanParams {

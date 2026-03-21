@@ -5,13 +5,10 @@ import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   Kanban,
-  Users,
   UserSearch,
   CalendarDays,
   Stethoscope,
-  Map,
   Settings,
-  Shield,
   BarChart3,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -54,27 +51,9 @@ const navItems: NavItem[] = [
     icone: <Stethoscope className="h-4 w-4" />,
   },
   {
-    titulo: "Usuários",
-    href: "/usuarios",
-    icone: <Users className="h-4 w-4" />,
-    perfis: ["gestor", "desenvolvedor"],
-  },
-  {
     titulo: "Configurações",
     href: "/configuracoes",
     icone: <Settings className="h-4 w-4" />,
-    perfis: ["gestor", "desenvolvedor"],
-  },
-  {
-    titulo: "Roadmap",
-    href: "/roadmap",
-    icone: <Map className="h-4 w-4" />,
-    perfis: ["gestor", "desenvolvedor"],
-  },
-  {
-    titulo: "Auditoria",
-    href: "/auditoria",
-    icone: <Shield className="h-4 w-4" />,
     perfis: ["gestor", "desenvolvedor"],
   },
   {
