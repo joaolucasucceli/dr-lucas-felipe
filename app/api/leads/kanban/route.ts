@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       ultimaMovimentacaoEm: true,
       motivoPerda: true,
       responsavel: { select: { id: true, nome: true } },
-      conversa: { select: { followUpEnviados: true } },
+      conversas: { select: { followUpEnviados: true }, take: 1, orderBy: { criadoEm: "desc" } },
     },
     orderBy: { atualizadoEm: "desc" },
   })
@@ -62,14 +62,14 @@ export async function GET(request: NextRequest) {
     colunas[etapa] = []
   }
 
-  for (const { conversa, ...lead } of leads) {
+  for (const { conversas, ...lead } of leads) {
     const referencia = lead.ultimaMovimentacaoEm || lead.atualizadoEm
     const diasNaEtapa = Math.floor((agora - referencia.getTime()) / 86400000)
 
     colunas[lead.statusFunil].push({
       ...lead,
       diasNaEtapa,
-      followUpEnviados: conversa?.followUpEnviados ?? [],
+      followUpEnviados: conversas[0]?.followUpEnviados ?? [],
     })
   }
 

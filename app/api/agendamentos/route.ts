@@ -56,7 +56,12 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
   }
-  const { leadId, procedimentoId, dataHora, duracao, observacao, criarNoGoogle } = body
+  const leadId = body.leadId as string | undefined
+  const procedimentoId = body.procedimentoId as string | undefined
+  const dataHora = body.dataHora as string | undefined
+  const duracao = body.duracao as number | undefined
+  const observacao = body.observacao as string | undefined
+  const criarNoGoogle = body.criarNoGoogle as boolean | undefined
 
   if (!leadId || !dataHora) {
     return NextResponse.json({ error: "leadId e dataHora são obrigatórios" }, { status: 400 })
