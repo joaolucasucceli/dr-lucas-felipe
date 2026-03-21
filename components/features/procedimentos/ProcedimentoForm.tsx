@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -60,6 +60,7 @@ export function ProcedimentoForm({
   onSucesso,
 }: ProcedimentoFormProps) {
   const editando = !!procedimento
+  const [tipos, setTipos] = useState<{ id: string; nome: string }[]>([])
 
   const {
     register,
@@ -92,7 +93,7 @@ export function ProcedimentoForm({
     } else {
       reset({
         nome: "",
-        tipo: "cirurgico",
+        tipo: "",
         descricao: "",
         valorBase: "",
         duracaoMin: "",
@@ -100,6 +101,14 @@ export function ProcedimentoForm({
       })
     }
   }, [procedimento, reset])
+
+  useEffect(() => {
+    if (!aberto) return
+    fetch("/api/tipos-procedimento")
+      .then((r) => r.json())
+      .then((j) => setTipos((j.dados || []).filter((t: { ativo: boolean }) => t.ativo)))
+      .catch(() => {})
+  }, [aberto])
 
   function handleOpenChange(open: boolean) {
     if (!open) {
@@ -165,16 +174,19 @@ export function ProcedimentoForm({
           <div className="grid gap-2">
             <Label>Tipo</Label>
             <Select
-              defaultValue={procedimento?.tipo || "cirurgico"}
+              defaultValue={procedimento?.tipo || ""}
               onValueChange={(v) => setValue("tipo", v)}
+              disabled={tipos.length === 0}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder={tipos.length === 0 ? "Carregando..." : "Selecione..."} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="cirurgico">Cirúrgico</SelectItem>
-                <SelectItem value="estetico">Estético</SelectItem>
-                <SelectItem value="minimamente-invasivo">Minimamente Invasivo</SelectItem>
+                {tipos.map((t) => (
+                  <SelectItem key={t.id} value={t.nome}>
+                    {t.nome}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

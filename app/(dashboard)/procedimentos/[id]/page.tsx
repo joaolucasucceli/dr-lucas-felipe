@@ -55,8 +55,7 @@ export default function ProcedimentoDetalhePage() {
   const [ativo, setAtivo] = useState(true)
 
   const isGestor =
-    session?.user?.perfil === "gestor" ||
-    session?.user?.perfil === "desenvolvedor"
+    session?.user?.perfil === "gestor"
 
   const buscar = useCallback(async () => {
     setCarregando(true)

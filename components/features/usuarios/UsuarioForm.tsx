@@ -27,7 +27,7 @@ const formSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   email: z.string().email("Email inválido"),
   senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").or(z.literal("")),
-  perfil: z.enum(["gestor", "atendente", "desenvolvedor"]),
+  perfil: z.enum(["gestor", "atendente"]),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -177,7 +177,6 @@ export function UsuarioForm({
               <SelectContent>
                 <SelectItem value="gestor">Gestor</SelectItem>
                 <SelectItem value="atendente">Atendente</SelectItem>
-                <SelectItem value="desenvolvedor">Desenvolvedor</SelectItem>
               </SelectContent>
             </Select>
           </div>

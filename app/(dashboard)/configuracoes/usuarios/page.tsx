@@ -41,7 +41,6 @@ interface Usuario {
 const perfilLabels: Record<string, string> = {
   gestor: "Gestor",
   atendente: "Atendente",
-  desenvolvedor: "Desenvolvedor",
 }
 
 const tipoLabels: Record<string, string> = {
@@ -68,7 +67,7 @@ export default function UsuariosPage() {
     ativo: filtroAtivo || undefined,
   })
 
-  const isGestor = session?.user?.perfil === "gestor" || session?.user?.perfil === "desenvolvedor"
+  const isGestor = session?.user?.perfil === "gestor"
 
   function handleEditar(usuario: Usuario) {
     setUsuarioEditando(usuario)
@@ -109,7 +108,19 @@ export default function UsuariosPage() {
   }
 
   const colunas: ColunaConfig<Usuario>[] = [
-    { chave: "nome", titulo: "Nome", ordenavel: true },
+    {
+      chave: "nome",
+      titulo: "Nome",
+      ordenavel: true,
+      renderizar: (u) => (
+        <div className="flex items-center gap-2">
+          {u.nome}
+          {u.id === session?.user?.id && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">Você</Badge>
+          )}
+        </div>
+      ),
+    },
     {
       chave: "email",
       titulo: "Email",
@@ -250,7 +261,6 @@ export default function UsuariosPage() {
                   <SelectItem value="todos">Todos os perfis</SelectItem>
                   <SelectItem value="gestor">Gestor</SelectItem>
                   <SelectItem value="atendente">Atendente</SelectItem>
-                  <SelectItem value="desenvolvedor">Desenvolvedor</SelectItem>
                 </SelectContent>
               </Select>
 

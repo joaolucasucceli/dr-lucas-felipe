@@ -264,18 +264,24 @@ export default function AgendamentosPage() {
                     <SelectItem value="remarcado">Remarcado</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input
-                  type="date"
-                  value={filtroDataInicio}
-                  onChange={(e) => { setFiltroDataInicio(e.target.value); setPagina(1) }}
-                  className="w-40"
-                />
-                <Input
-                  type="date"
-                  value={filtroDataFim}
-                  onChange={(e) => { setFiltroDataFim(e.target.value); setPagina(1) }}
-                  className="w-40"
-                />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-muted-foreground">De:</span>
+                  <Input
+                    type="date"
+                    value={filtroDataInicio}
+                    onChange={(e) => { setFiltroDataInicio(e.target.value); setPagina(1) }}
+                    className="w-40"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-muted-foreground">Até:</span>
+                  <Input
+                    type="date"
+                    value={filtroDataFim}
+                    onChange={(e) => { setFiltroDataFim(e.target.value); setPagina(1) }}
+                    className="w-40"
+                  />
+                </div>
               </>
             }
           />

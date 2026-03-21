@@ -51,7 +51,7 @@ npx prisma migrate dev --name <nome>   # criar migration
 
 ### Perfis de Usuário e Permissões
 
-Três perfis: **Gestor** (acesso total), **Atendente** (operacional), **Desenvolvedor** (total + técnico). O agente IA é um usuário especial do tipo Atendente (`tipo: "ia"`) que opera exclusivamente via API Routes, nunca pelo painel.
+Dois perfis: **Gestor** (acesso total), **Atendente** (operacional). O agente IA é um usuário especial do tipo Atendente (`tipo: "ia"`) que opera exclusivamente via API Routes, nunca pelo painel.
 
 ### Funil Kanban (9 colunas)
 
@@ -92,6 +92,34 @@ O agente tem 3 etapas no funil: Qualificação → Agendamento → Gestão do Ag
 - `Lead.whatsapp` é único — usado para dedup
 - `MensagemWhatsapp.messageIdWhatsapp` é único — usado para dedup de mensagens do WhatsApp
 - Todos os nomes de campos dos modelos estão em português (camelCase)
+
+## Documentação — Regra Obrigatória
+
+> **CRÍTICO:** A documentação do sistema DEVE ser mantida sempre atualizada.
+
+O arquivo de documentação centralizada fica em:
+```
+lib/documentacao/conteudo.ts
+```
+
+**Toda sprint, feature ou mudança no sistema DEVE atualizar esse arquivo.** O botão "Baixar Documentação" em `/documentacao` gera o `.md` a partir dele — se estiver desatualizado, o documento exportado estará errado.
+
+### O que deve ser atualizado em `lib/documentacao/conteudo.ts`
+
+| Tipo de mudança | O que atualizar |
+|-----------------|-----------------|
+| Nova página/módulo | Adicionar seção completa com funcionalidades, como usar e permissões |
+| Nova funcionalidade | Adicionar na seção do módulo correspondente |
+| Mudança de permissão de perfil | Atualizar tabela de permissões do módulo |
+| Novo modelo de dados | Atualizar seção "Modelo de Dados — Referência Rápida" |
+| Nova rota de API | Atualizar se for relevante para o usuário final |
+| Mudança no funil kanban | Atualizar seção do Módulo 3 — Atendimentos |
+| Nova ferramenta do agente IA | Atualizar tabela de ferramentas no Módulo 6 — Ana Júlia |
+
+### Campos a atualizar sempre
+
+- `VERSAO_DOCUMENTACAO` — incrementar a versão (semver: patch para ajustes, minor para features)
+- `DATA_ATUALIZACAO` — sempre atualizar para a data da mudança (formato `YYYY-MM-DD`)
 
 ## Ordem de Desenvolvimento
 

@@ -255,35 +255,34 @@ async function main() {
     create: { nome: "Ana Júlia — IA", email: "ia@drlucas.com.br", senha: senhaHash, perfil: "atendente", tipo: "ia" },
   })
 
-  await prisma.usuario.upsert({
-    where: { email: "dev@drlucas.com.br" },
-    update: { nome: "Desenvolvedor", senha: senhaHash, ativo: true, deletadoEm: null },
-    create: { nome: "Desenvolvedor", email: "dev@drlucas.com.br", senha: senhaHash, perfil: "desenvolvedor", tipo: "humano" },
-  })
-
   const maria = await prisma.usuario.upsert({
     where: { email: "maria@drlucas.com.br" },
     update: { nome: "Maria Atendente", senha: senhaHash, ativo: true, deletadoEm: null },
     create: { nome: "Maria Atendente", email: "maria@drlucas.com.br", senha: senhaHash, perfil: "atendente", tipo: "humano" },
   })
 
+  // ── TIPOS DE PROCEDIMENTO ──────────────────────────────────────────────────
+  await prisma.tipoProcedimento.upsert({ where: { nome: "Cirúrgico" }, update: {}, create: { nome: "Cirúrgico" } })
+  await prisma.tipoProcedimento.upsert({ where: { nome: "Estético" }, update: {}, create: { nome: "Estético" } })
+  await prisma.tipoProcedimento.upsert({ where: { nome: "Minimamente Invasivo" }, update: {}, create: { nome: "Minimamente Invasivo" } })
+
   // ── PROCEDIMENTOS ─────────────────────────────────────────────────────────
   const miniLipo = await prisma.procedimento.upsert({
     where: { id: "proc-mini-lipo" },
     update: { nome: "Mini Lipo", ativo: true, deletadoEm: null },
-    create: { id: "proc-mini-lipo", nome: "Mini Lipo", tipo: "cirurgico", descricao: "Lipoaspiração de pequenas áreas com anestesia local", valorBase: 8000, duracaoMin: 120, posOperatorio: "Uso de cinta compressiva por 30 dias. Repouso relativo por 7 dias. Drenagem linfática recomendada." },
+    create: { id: "proc-mini-lipo", nome: "Mini Lipo", tipo: "Cirúrgico", descricao: "Lipoaspiração de pequenas áreas com anestesia local", valorBase: 8000, duracaoMin: 120, posOperatorio: "Uso de cinta compressiva por 30 dias. Repouso relativo por 7 dias. Drenagem linfática recomendada." },
   })
 
   const lipoGlutea = await prisma.procedimento.upsert({
     where: { id: "proc-lipo-glutea" },
     update: { nome: "Lipo Enxertia Glútea", ativo: true, deletadoEm: null },
-    create: { id: "proc-lipo-glutea", nome: "Lipo Enxertia Glútea", tipo: "cirurgico", descricao: "Lipoaspiração com transferência de gordura para glúteos (Brazilian Butt Lift)", valorBase: 15000, duracaoMin: 180, posOperatorio: "Evitar sentar diretamente por 15 dias. Cinta compressiva por 45 dias. Drenagem linfática obrigatória." },
+    create: { id: "proc-lipo-glutea", nome: "Lipo Enxertia Glútea", tipo: "Cirúrgico", descricao: "Lipoaspiração com transferência de gordura para glúteos (Brazilian Butt Lift)", valorBase: 15000, duracaoMin: 180, posOperatorio: "Evitar sentar diretamente por 15 dias. Cinta compressiva por 45 dias. Drenagem linfática obrigatória." },
   })
 
   const pmma = await prisma.procedimento.upsert({
     where: { id: "proc-pmma" },
     update: { nome: "PMMA", ativo: true, deletadoEm: null },
-    create: { id: "proc-pmma", nome: "PMMA", tipo: "estetico", descricao: "Preenchimento com polimetilmetacrilato para volumização", valorBase: 3000, duracaoMin: 60, posOperatorio: "Evitar exercícios intensos por 48h. Massagear a região conforme orientação." },
+    create: { id: "proc-pmma", nome: "PMMA", tipo: "Estético", descricao: "Preenchimento com polimetilmetacrilato para volumização", valorBase: 3000, duracaoMin: 60, posOperatorio: "Evitar exercícios intensos por 48h. Massagear a região conforme orientação." },
   })
 
   const procMap = { miniLipo, lipoGlutea, pmma }

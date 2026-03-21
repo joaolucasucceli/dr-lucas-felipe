@@ -26,6 +26,11 @@ import { GraficoFunilRelatorio } from "@/components/features/relatorios/GraficoF
 import { TabelaProcedimentos } from "@/components/features/relatorios/TabelaProcedimentos"
 import { useRelatorio, exportarRelatorio } from "@/hooks/use-relatorio"
 
+function formatarData(iso: string) {
+  const [ano, mes, dia] = iso.split("-")
+  return `${dia}/${mes}/${ano}`
+}
+
 function periodoDefault() {
   const hoje = new Date()
   const trintaDiasAtras = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -41,7 +46,7 @@ export default function RelatoriosPage() {
   const defaultPeriodo = periodoDefault()
 
   const perfil = session?.user?.perfil
-  const autorizado = perfil === "gestor" || perfil === "desenvolvedor"
+  const autorizado = perfil === "gestor"
 
   useEffect(() => {
     if (status === "unauthenticated") router.replace("/login")
@@ -63,6 +68,8 @@ export default function RelatoriosPage() {
   const [atendimentoGerado, setAtendimentoGerado] = useState(false)
   const atendimentoRelatorio = useRelatorio({ tipo: "atendimento", dataInicio: atendimentoInicio, dataFim: atendimentoFim })
 
+  const [abaAtiva, setAbaAtiva] = useState<"funil" | "agendamentos" | "atendimento">("funil")
+
   useEffect(() => {
     funilRelatorio.recarregar()
     setFunilGerado(true)
@@ -73,11 +80,18 @@ export default function RelatoriosPage() {
   const receitaDados = receitaRelatorio.dados
   const atendimentoDados = atendimentoRelatorio.dados
 
+  const [periodoInicio, periodoFim] =
+    abaAtiva === "funil" ? [funilInicio, funilFim] :
+    abaAtiva === "agendamentos" ? [receitaInicio, receitaFim] :
+    [atendimentoInicio, atendimentoFim]
+
+  const subtituloPeriodo = `Exibindo dados de ${formatarData(periodoInicio)} a ${formatarData(periodoFim)}`
+
   return (
     <div>
-      <PageHeader titulo="Relatórios" descricao="Análise de desempenho do negócio" />
+      <PageHeader titulo="Relatórios" descricao={subtituloPeriodo} />
 
-      <Tabs defaultValue="funil" className="mt-6">
+      <Tabs value={abaAtiva} onValueChange={(v) => setAbaAtiva(v as "funil" | "agendamentos" | "atendimento")} className="mt-6">
         <TabsList>
           <TabsTrigger value="funil">
             <Users className="mr-2 h-4 w-4" />
@@ -127,6 +141,7 @@ export default function RelatoriosPage() {
 
           {funilGerado && funilDados && !funilRelatorio.carregando && (
             <>
+              <p className="text-xs text-muted-foreground">Período: {formatarData(funilInicio)} a {formatarData(funilFim)}</p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
                   titulo="Total de Entradas"
@@ -204,6 +219,7 @@ export default function RelatoriosPage() {
 
           {receitaGerado && receitaDados && !receitaRelatorio.carregando && (
             <>
+              <p className="text-xs text-muted-foreground">Período: {formatarData(receitaInicio)} a {formatarData(receitaFim)}</p>
               <div className="grid gap-4 sm:grid-cols-3">
                 <MetricCard
                   titulo="Total de Agendamentos"
@@ -305,6 +321,7 @@ export default function RelatoriosPage() {
 
           {atendimentoGerado && atendimentoDados && !atendimentoRelatorio.carregando && (
             <>
+              <p className="text-xs text-muted-foreground">Período: {formatarData(atendimentoInicio)} a {formatarData(atendimentoFim)}</p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
                   titulo="Total de Mensagens"

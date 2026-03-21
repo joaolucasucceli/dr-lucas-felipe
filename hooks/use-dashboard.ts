@@ -26,6 +26,8 @@ export interface DashboardMetricas {
   followUpsEnviados: number
   confirmacaoEnviadas: number
   leadsEmAlerta: number
+  leadsHoje: number
+  agendamentosSemana: number
   periodo: string
   dataInicio: string | null
   dataFim: string

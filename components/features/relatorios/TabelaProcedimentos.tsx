@@ -1,5 +1,7 @@
 "use client"
 
+import { Stethoscope, BarChart2 } from "lucide-react"
+
 interface ProcedimentoItem {
   nome: string
   quantidade: number
@@ -18,8 +20,8 @@ export function TabelaProcedimentos({ dados }: TabelaProcedimentosProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-muted-foreground">
-            <th className="pb-2 font-medium">Procedimento</th>
-            <th className="pb-2 font-medium text-right">Agendamentos</th>
+            <th className="pb-2 font-medium"><span className="flex items-center gap-1.5"><Stethoscope className="h-4 w-4" />Procedimento</span></th>
+            <th className="pb-2 font-medium text-right"><span className="flex items-center justify-end gap-1.5"><BarChart2 className="h-4 w-4" />Agendamentos</span></th>
             <th className="pb-2 font-medium text-right">% do total</th>
           </tr>
         </thead>

@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -158,12 +159,40 @@ function GoogleAgendaConfigInner() {
         </Button>
       </PageHeader>
 
+      {/* Step indicator */}
+      {(() => {
+        const passo = !configurado ? 1 : !config?.conectado ? 2 : 3
+        const passos = [
+          { num: 1, label: "Credenciais" },
+          { num: 2, label: "Autorizar Google" },
+          { num: 3, label: "Conectado" },
+        ]
+        return (
+          <div className="mt-4 flex items-center gap-1">
+            {passos.map((p, i) => (
+              <div key={p.num} className="flex items-center gap-1">
+                {i > 0 && <div className="h-px w-6 bg-border" />}
+                <div className={cn(
+                  "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                  p.num < passo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                  p.num === passo ? "bg-primary text-primary-foreground" :
+                  "bg-muted text-muted-foreground"
+                )}>
+                  {p.num < passo ? <CheckCircle2 className="h-3 w-3" /> : <span>{p.num}</span>}
+                  {p.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
       <div className="mt-6 grid gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Credenciais de Integração</CardTitle>
             {configurado && config?.conectado ? (
-              <Badge variant="default" className="bg-green-100 text-green-800 flex items-center gap-1">
+              <Badge variant="default" className="flex items-center gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Conectado
               </Badge>

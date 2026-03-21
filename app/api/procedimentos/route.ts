@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
+import { requireRole } from "@/lib/auth-helpers"
 import { criarProcedimentoSchema } from "@/lib/validations/procedimento"
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth()
+  const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const { searchParams } = request.nextUrl
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAnyRole(["gestor", "desenvolvedor"])
+  const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const body = await request.json()

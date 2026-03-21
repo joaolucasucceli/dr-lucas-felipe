@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Select,
   SelectContent,
@@ -88,17 +89,22 @@ export function KanbanFiltros({
       </Select>
 
       {temFiltro && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            onResponsavelChange("")
-            onProcedimentoChange("")
-          }}
-        >
-          <X className="mr-1 h-4 w-4" />
-          Limpar
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onResponsavelChange("")
+                onProcedimentoChange("")
+              }}
+            >
+              <X className="mr-1 h-4 w-4" />
+              Limpar
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Remover todos os filtros</TooltipContent>
+        </Tooltip>
       )}
     </div>
   )

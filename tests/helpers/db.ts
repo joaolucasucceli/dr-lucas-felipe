@@ -14,7 +14,6 @@ const SEED_WHATSAPPS = [
 const SEED_EMAILS = [
   "lucas@drlucas.com.br",
   "ia@drlucas.com.br",
-  "dev@drlucas.com.br",
   "maria@drlucas.com.br",
 ]
 
@@ -118,7 +117,6 @@ export async function restaurarSeed() {
     const usuariosRestore = [
       { email: "lucas@drlucas.com.br", nome: "Dr. Lucas Felipe" },
       { email: "ia@drlucas.com.br", nome: "Ana Júlia — IA" },
-      { email: "dev@drlucas.com.br", nome: "Desenvolvedor" },
       { email: "maria@drlucas.com.br", nome: "Maria Atendente" },
     ]
 

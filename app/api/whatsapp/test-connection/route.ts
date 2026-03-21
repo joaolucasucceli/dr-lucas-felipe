@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { requireAnyRole } from "@/lib/auth-helpers"
+import { requireRole } from "@/lib/auth-helpers"
 import { configWhatsappSchema } from "@/lib/validations/whatsapp-config"
 import { testarConexao } from "@/lib/uazapi"
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAnyRole(["gestor", "desenvolvedor"])
+  const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const body = await request.json()

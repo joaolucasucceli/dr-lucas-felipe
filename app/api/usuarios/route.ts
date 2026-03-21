@@ -2,11 +2,11 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { hash } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
-import { requireAnyRole } from "@/lib/auth-helpers"
+import { requireRole } from "@/lib/auth-helpers"
 import { criarUsuarioSchema } from "@/lib/validations/usuario"
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAnyRole(["gestor", "desenvolvedor"])
+  const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const { searchParams } = request.nextUrl
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAnyRole(["gestor", "desenvolvedor"])
+  const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const body = await request.json()

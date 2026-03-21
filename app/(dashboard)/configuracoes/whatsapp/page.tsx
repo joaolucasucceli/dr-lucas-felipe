@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, CheckCircle, Edit2, Loader2, Wifi, WifiOff } from "lucide-react"
+import { ArrowLeft, CheckCircle, CheckCircle2, Edit2, Loader2, Wifi, WifiOff } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,6 +24,8 @@ export default function WhatsAppConfigPage() {
   const [url, setUrl] = useState("")
   const [token, setToken] = useState("")
   const [qrcode, setQrcode] = useState("")
+  const [qrSegs, setQrSegs] = useState(0)
+  const qrExpiraRef = useRef<number | null>(null)
   const [editandoCredenciais, setEditandoCredenciais] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [confirmarDesconectar, setConfirmarDesconectar] = useState(false)
@@ -160,6 +163,31 @@ export default function WhatsAppConfigPage() {
 
   const aguardandoQr = qrcode !== "" || status === "connecting"
 
+  // Countdown quando QR está visível
+  useEffect(() => {
+    if (qrcode) {
+      qrExpiraRef.current = Date.now() + 120_000
+      setQrSegs(120)
+      const iv = setInterval(() => {
+        const restante = Math.max(0, Math.ceil(((qrExpiraRef.current ?? 0) - Date.now()) / 1000))
+        setQrSegs(restante)
+        if (restante === 0) clearInterval(iv)
+      }, 1000)
+      return () => clearInterval(iv)
+    } else {
+      qrExpiraRef.current = null
+      setQrSegs(0)
+    }
+  }, [qrcode])
+
+  // Step indicator
+  const passo = !configurado ? 1 : !conectado ? 2 : 3
+  const passos = [
+    { num: 1, label: "Credenciais" },
+    { num: 2, label: "Instância" },
+    { num: 3, label: "Conectado" },
+  ]
+
   return (
     <div className="space-y-4">
       <PageHeader titulo="WhatsApp" descricao="Conecte o sistema ao WhatsApp via Uazapi">
@@ -168,6 +196,24 @@ export default function WhatsAppConfigPage() {
           Voltar
         </Button>
       </PageHeader>
+
+      {/* Step indicator */}
+      <div className="flex items-center gap-1 mb-2">
+        {passos.map((p, i) => (
+          <div key={p.num} className="flex items-center gap-1">
+            {i > 0 && <div className="h-px w-6 bg-border" />}
+            <div className={cn(
+              "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+              p.num < passo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+              p.num === passo ? "bg-primary text-primary-foreground" :
+              "bg-muted text-muted-foreground"
+            )}>
+              {p.num < passo ? <CheckCircle2 className="h-3 w-3" /> : <span>{p.num}</span>}
+              {p.label}
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Card 1 — Credenciais (fixas, editáveis) */}
       <Card>
@@ -258,7 +304,7 @@ export default function WhatsAppConfigPage() {
             <CardTitle className="text-base flex items-center gap-2">
               Instância WhatsApp
               {conectado ? (
-                <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                <Badge variant="default" className="text-xs">
                   <Wifi className="mr-1 h-3 w-3" />
                   Conectado
                 </Badge>
@@ -319,6 +365,17 @@ export default function WhatsAppConfigPage() {
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Aguardando leitura do QR Code...
                   </div>
+                  {qrSegs > 0 && (
+                    <p className={cn(
+                      "text-xs font-mono",
+                      qrSegs <= 30 ? "text-red-500" : "text-muted-foreground"
+                    )}>
+                      QR expira em {Math.floor(qrSegs / 60)}:{String(qrSegs % 60).padStart(2, "0")}
+                    </p>
+                  )}
+                  {qrSegs === 0 && qrcode && (
+                    <p className="text-xs text-red-500 font-medium">QR Code expirado — clique em Conectar novamente</p>
+                  )}
                 </div>
               </div>
             )}

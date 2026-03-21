@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { requireAnyRole } from "@/lib/auth-helpers"
+import { requireRole } from "@/lib/auth-helpers"
 import { verificarStatus } from "@/lib/uazapi"
 
 function mascarar(valor: string): string {
@@ -10,7 +10,7 @@ function mascarar(valor: string): string {
 }
 
 export async function GET(_request: NextRequest) {
-  const auth = await requireAnyRole(["gestor", "desenvolvedor"])
+  const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const config = await prisma.configWhatsapp.findFirst({

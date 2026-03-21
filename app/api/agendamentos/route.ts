@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAnyRole(["gestor", "atendente", "desenvolvedor"])
+  const auth = await requireAnyRole(["gestor", "atendente"])
   if (auth.error) return auth.error
 
   let body: Record<string, unknown>
@@ -60,7 +60,6 @@ export async function POST(req: NextRequest) {
   const dataHora = body.dataHora as string | undefined
   const duracao = body.duracao as number | undefined
   const observacao = body.observacao as string | undefined
-  const criarNoGoogle = body.criarNoGoogle as boolean | undefined
 
   if (!leadId || !dataHora) {
     return NextResponse.json({ error: "leadId e dataHora são obrigatórios" }, { status: 400 })
@@ -73,25 +72,26 @@ export async function POST(req: NextRequest) {
   let googleEventUrl: string | undefined
   let sincronizado = false
 
-  if (criarNoGoogle) {
-    const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { nome: true, email: true } })
-    const procedimento = procedimentoId
-      ? await prisma.procedimento.findUnique({ where: { id: procedimentoId }, select: { nome: true } })
-      : null
+  const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { nome: true, email: true } })
+  const procedimento = procedimentoId
+    ? await prisma.procedimento.findUnique({ where: { id: procedimentoId }, select: { nome: true } })
+    : null
 
-    const resultado = await criarEvento({
-      titulo: `Consulta — ${lead?.nome || "Paciente"}${procedimento ? ` (${procedimento.nome})` : ""}`,
-      descricao: observacao,
-      inicio,
-      fim,
-      emailPaciente: lead?.email || undefined,
-    })
+  const resultado = await criarEvento({
+    titulo: `Consulta — ${lead?.nome || "Paciente"}${procedimento ? ` (${procedimento.nome})` : ""}`,
+    descricao: observacao,
+    inicio,
+    fim,
+    emailPaciente: lead?.email || undefined,
+  }).catch((err) => {
+    console.warn("[agendamentos] Falha ao criar evento no Google Calendar:", err)
+    return null
+  })
 
-    if (resultado) {
-      googleEventId = resultado.googleEventId
-      googleEventUrl = resultado.googleEventUrl
-      sincronizado = true
-    }
+  if (resultado) {
+    googleEventId = resultado.googleEventId
+    googleEventUrl = resultado.googleEventUrl
+    sincronizado = true
   }
 
   const agendamento = await prisma.agendamento.create({

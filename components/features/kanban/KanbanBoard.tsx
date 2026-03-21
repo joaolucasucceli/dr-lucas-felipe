@@ -2,9 +2,22 @@
 
 import { useState } from "react"
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
+import { toast } from "sonner"
 import { KanbanColuna } from "./KanbanColuna"
 import { ModalMotivoPerdido } from "./ModalMotivoPerdido"
 import type { KanbanLead } from "@/hooks/use-kanban"
+
+const ETAPA_LABELS: Record<string, string> = {
+  primeiro_atendimento: "Primeiro Atendimento",
+  qualificacao: "Qualificação",
+  agendamento: "Agendamento",
+  consulta_agendada: "Consulta Agendada",
+  consulta_realizada: "Consulta Realizada",
+  sinal_pago: "Sinal Pago",
+  procedimento_agendado: "Procedimento Agendado",
+  concluido: "Concluído",
+  perdido: "Perdido",
+}
 
 const ETAPAS_FUNIL = [
   "primeiro_atendimento",
@@ -52,19 +65,22 @@ export function KanbanBoard({ colunas, moverLead }: KanbanBoardProps) {
       return
     }
 
-    moverLead(draggableId, novoStatus)
+    moverLead(draggableId, novoStatus).then((ok) => {
+      if (ok) toast.success(`Lead movido para ${ETAPA_LABELS[novoStatus] || novoStatus}`)
+    })
   }
 
   async function handleConfirmarPerdido(motivo: string) {
     if (!modalPerdido) return
-    await moverLead(modalPerdido.leadId, "perdido", motivo)
+    const ok = await moverLead(modalPerdido.leadId, "perdido", motivo)
+    if (ok) toast.success("Lead marcado como Perdido")
     setModalPerdido(null)
   }
 
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
+        <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory h-[calc(100svh-232px)]">
           {ETAPAS_FUNIL.map((etapa) => (
             <div key={etapa} className="snap-start min-w-[280px]">
               <KanbanColuna

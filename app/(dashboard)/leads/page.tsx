@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Plus, Download } from "lucide-react"
+import { Plus, Download, X } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -45,6 +46,7 @@ interface Procedimento {
 
 export default function LeadsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { data: session } = useSession()
   const [pagina, setPagina] = useState(1)
   const [busca, setBusca] = useState("")
@@ -52,6 +54,12 @@ export default function LeadsPage() {
   const [mostrarArquivados, setMostrarArquivados] = useState(false)
   const [formAberto, setFormAberto] = useState(false)
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([])
+  const [filtroEspecial, setFiltroEspecial] = useState<"alerta" | "followup" | undefined>(
+    () => {
+      const v = searchParams.get("filtro")
+      return v === "alerta" || v === "followup" ? v : undefined
+    }
+  )
 
   const { dados, total, carregando, erro, recarregar } = useLeads({
     pagina,
@@ -59,12 +67,12 @@ export default function LeadsPage() {
     statusFunil: statusFunil || undefined,
     busca: busca || undefined,
     arquivado: mostrarArquivados ? "true" : undefined,
+    filtroEspecial,
   })
 
   const podecriar =
     session?.user?.perfil === "gestor" ||
-    session?.user?.perfil === "atendente" ||
-    session?.user?.perfil === "desenvolvedor"
+    session?.user?.perfil === "atendente"
 
   useEffect(() => {
     fetch("/api/procedimentos?ativo=true")
@@ -134,6 +142,7 @@ export default function LeadsPage() {
             const params = new URLSearchParams({ tipo: "leads" })
             if (statusFunil) params.set("statusFunil", statusFunil)
             window.open(`/api/relatorios/exportar?${params.toString()}`, "_blank")
+            toast.success("Exportação iniciada")
           }}
         >
           <Download className="mr-2 h-4 w-4" />
@@ -146,6 +155,28 @@ export default function LeadsPage() {
           </Button>
         )}
       </PageHeader>
+
+      {filtroEspecial && (
+        <div className="mt-4 flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm dark:border-yellow-800 dark:bg-yellow-950">
+          <span className="font-medium text-yellow-800 dark:text-yellow-200">
+            {filtroEspecial === "alerta"
+              ? "Leads em Alerta — sem movimentação há 3+ dias"
+              : "Follow-ups Aguardando Resposta"}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-yellow-700 hover:text-yellow-900 dark:text-yellow-300"
+            onClick={() => {
+              setFiltroEspecial(undefined)
+              router.replace("/leads")
+            }}
+          >
+            <X className="mr-1 h-3 w-3" />
+            Limpar
+          </Button>
+        </div>
+      )}
 
       <div className="mt-6">
         {carregando && dados.length === 0 ? (

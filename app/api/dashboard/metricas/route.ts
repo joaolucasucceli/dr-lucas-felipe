@@ -71,7 +71,7 @@ function calcularDataInicio(periodo: string): Date | null {
 }
 
 export async function GET(request: NextRequest) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
   const periodo =
@@ -85,6 +85,14 @@ export async function GET(request: NextRequest) {
     ? { criadoEm: { gte: dataInicio } }
     : {}
 
+  const spHoje = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date())
+  const [diaH, mesH, anoH] = spHoje.split("/")
+  const inicioHoje = new Date(`${anoH}-${mesH}-${diaH}T00:00:00-03:00`)
   const [
     totalLeads,
     leadsNovosNoPeriodo,
@@ -98,6 +106,8 @@ export async function GET(request: NextRequest) {
     confirmacaoEnviadas,
     leadsEmAlerta,
     pacientesRetorno,
+    leadsHoje,
+    agendamentosSemana,
   ] = await Promise.all([
     prisma.lead.count({ where: filtroBase }),
     prisma.lead.count({ where: { ...filtroBase, ...filtroPeriodo } }),
@@ -157,6 +167,15 @@ export async function GET(request: NextRequest) {
     prisma.lead.count({
       where: { ...filtroBase, ehRetorno: true },
     }),
+    prisma.lead.count({
+      where: { ...filtroBase, criadoEm: { gte: inicioHoje } },
+    }),
+    prisma.agendamento.count({
+      where: {
+        status: { not: "cancelado" },
+        dataHora: { gte: new Date(), lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+      },
+    }),
   ])
 
   const taxaConversao =
@@ -186,6 +205,8 @@ export async function GET(request: NextRequest) {
       ? Math.round((pacientesRetorno / totalLeads) * 1000) / 10
       : 0
 
+  const isAtendente = session!.user.perfil === "atendente"
+
   return NextResponse.json({
     totalLeads,
     leadsNovosNoPeriodo,
@@ -194,12 +215,14 @@ export async function GET(request: NextRequest) {
     agendamentosRealizados,
     leadsPorEtapa,
     leadsPorOrigem,
-    mensagensEnviadasPelaIA,
-    followUpsEnviados,
-    confirmacaoEnviadas,
+    mensagensEnviadasPelaIA: isAtendente ? 0 : mensagensEnviadasPelaIA,
+    followUpsEnviados: isAtendente ? 0 : followUpsEnviados,
+    confirmacaoEnviadas: isAtendente ? 0 : confirmacaoEnviadas,
     leadsEmAlerta,
     pacientesRetorno,
     taxaRetorno,
+    leadsHoje,
+    agendamentosSemana,
     periodo,
     dataInicio: dataInicio?.toISOString() ?? null,
     dataFim: dataFim.toISOString(),

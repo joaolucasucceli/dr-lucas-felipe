@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
+import Link from "next/link"
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { User, Stethoscope, Calendar, Clock, Timer, FileText, AlertTriangle } from "lucide-react"
 import type { Agendamento } from "@/hooks/use-agendamentos"
 
 interface Lead {
@@ -58,7 +60,7 @@ export function AgendamentoForm({
   const [hora, setHora] = useState("")
   const [duracao, setDuracao] = useState(String(agendamento?.duracao || 60))
   const [observacao, setObservacao] = useState(agendamento?.observacao || "")
-  const [criarNoGoogle, setCriarNoGoogle] = useState(false)
+  const [googleConfigurado, setGoogleConfigurado] = useState(true)
 
   const [leads, setLeads] = useState<Lead[]>([])
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([])
@@ -82,7 +84,6 @@ export function AgendamentoForm({
     setProcedimentoId(agendamento?.procedimentoId || "")
     setDuracao(String(agendamento?.duracao || 60))
     setObservacao(agendamento?.observacao || "")
-    setCriarNoGoogle(false)
 
     fetch("/api/leads?porPagina=100")
       .then((r) => r.json())
@@ -93,6 +94,11 @@ export function AgendamentoForm({
       .then((r) => r.json())
       .then((j) => setProcedimentos(j.dados || []))
       .catch(() => {})
+
+    fetch("/api/configuracoes/google-agenda/status")
+      .then((r) => r.json())
+      .then((j) => setGoogleConfigurado(j.configurado && j.conectado))
+      .catch(() => setGoogleConfigurado(true))
   }, [aberto, agendamento, leadIdInicial, dataHoraInicial])
 
   async function handleSalvar() {
@@ -110,7 +116,6 @@ export function AgendamentoForm({
         dataHora,
         duracao: Number(duracao),
         observacao: observacao || null,
-        criarNoGoogle,
       }
 
       const url = editando ? `/api/agendamentos/${agendamento.id}` : "/api/agendamentos"
@@ -141,8 +146,24 @@ export function AgendamentoForm({
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
+          {!editando && !googleConfigurado && (
+            <div className="flex items-start gap-2 rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm dark:border-yellow-700 dark:bg-yellow-950">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+              <span className="text-yellow-800 dark:text-yellow-300">
+                Google Calendar não está configurado. O agendamento será salvo, mas não será criado na agenda.{" "}
+                <Link
+                  href="/configuracoes/google-agenda"
+                  className="font-medium underline"
+                  onClick={onFechar}
+                >
+                  Configurar agora →
+                </Link>
+              </span>
+            </div>
+          )}
+
           <div className="grid gap-2">
-            <Label>Paciente</Label>
+            <Label className="flex items-center gap-1.5"><User className="h-4 w-4 text-muted-foreground" />Paciente</Label>
             <Select value={leadId} onValueChange={setLeadId} disabled={!!leadIdInicial && !editando}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o paciente..." />
@@ -158,7 +179,7 @@ export function AgendamentoForm({
           </div>
 
           <div className="grid gap-2">
-            <Label>Procedimento</Label>
+            <Label className="flex items-center gap-1.5"><Stethoscope className="h-4 w-4 text-muted-foreground" />Procedimento</Label>
             <Select value={procedimentoId || "nenhum"} onValueChange={(v) => setProcedimentoId(v === "nenhum" ? "" : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione..." />
@@ -176,17 +197,17 @@ export function AgendamentoForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
-              <Label>Data</Label>
+              <Label className="flex items-center gap-1.5"><Calendar className="h-4 w-4 text-muted-foreground" />Data</Label>
               <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
             </div>
             <div className="grid gap-2">
-              <Label>Hora</Label>
+              <Label className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-muted-foreground" />Hora</Label>
               <Input type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label>Duração</Label>
+            <Label className="flex items-center gap-1.5"><Timer className="h-4 w-4 text-muted-foreground" />Duração</Label>
             <Select value={duracao} onValueChange={setDuracao}>
               <SelectTrigger>
                 <SelectValue />
@@ -201,7 +222,7 @@ export function AgendamentoForm({
           </div>
 
           <div className="grid gap-2">
-            <Label>Observação</Label>
+            <Label className="flex items-center gap-1.5"><FileText className="h-4 w-4 text-muted-foreground" />Observação</Label>
             <Textarea
               value={observacao}
               onChange={(e) => setObservacao(e.target.value)}
@@ -209,18 +230,6 @@ export function AgendamentoForm({
               placeholder="Observações adicionais..."
             />
           </div>
-
-          {!editando && (
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={criarNoGoogle}
-                onChange={(e) => setCriarNoGoogle(e.target.checked)}
-                className="rounded"
-              />
-              Criar no Google Calendar
-            </label>
-          )}
 
           {editando && agendamento?.googleEventUrl && (
             <a

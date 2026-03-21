@@ -11,6 +11,7 @@ import {
   Settings,
   BarChart3,
   Bot,
+  BookOpen,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -50,24 +51,30 @@ const navItems: NavItem[] = [
     titulo: "Procedimentos",
     href: "/procedimentos",
     icone: <Stethoscope className="h-4 w-4" />,
+    perfis: ["gestor"],
   },
   {
     titulo: "Configurações",
     href: "/configuracoes",
     icone: <Settings className="h-4 w-4" />,
-    perfis: ["gestor", "desenvolvedor"],
+    perfis: ["gestor"],
   },
   {
     titulo: "Ana Júlia",
     href: "/ana-julia",
     icone: <Bot className="h-4 w-4" />,
-    perfis: ["gestor", "desenvolvedor"],
+    perfis: ["gestor"],
   },
   {
     titulo: "Relatórios",
     href: "/relatorios",
     icone: <BarChart3 className="h-4 w-4" />,
-    perfis: ["gestor", "desenvolvedor"],
+    perfis: ["gestor"],
+  },
+  {
+    titulo: "Documentação",
+    href: "/documentacao",
+    icone: <BookOpen className="h-4 w-4" />,
   },
 ]
 

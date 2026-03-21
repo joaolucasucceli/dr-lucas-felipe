@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { XCircle, MessageSquare } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -43,14 +44,14 @@ export function ModalMotivoPerdido({
     <Dialog open={aberto} onOpenChange={(open) => !open && handleFechar()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Mover para Perdido</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><XCircle className="h-4 w-4 text-destructive" />Mover para Perdido</DialogTitle>
           <DialogDescription>
             Informe o motivo da perda do lead <strong>{nomeLead}</strong>.
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-2">
-          <Label htmlFor="motivoPerda">Motivo da perda</Label>
+          <Label htmlFor="motivoPerda" className="flex items-center gap-1.5"><MessageSquare className="h-4 w-4 text-muted-foreground" />Motivo da perda</Label>
           <Textarea
             id="motivoPerda"
             placeholder="Ex: Paciente optou por outra clínica..."

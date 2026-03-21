@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { ArrowLeft, Trash2, Archive, ArchiveRestore, Plus } from "lucide-react"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -63,8 +64,7 @@ export default function LeadDetalhePage() {
   const [procedimentos, setProcedimentos] = useState<Array<{ id: string; nome: string }>>([])
 
   const isGestor =
-    session?.user?.perfil === "gestor" ||
-    session?.user?.perfil === "desenvolvedor"
+    session?.user?.perfil === "gestor"
 
   const initialized = useRef(false)
 
@@ -288,15 +288,30 @@ export default function LeadDetalhePage() {
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Nome</Label>
-                <Input value={nome} onChange={(e) => setNome(e.target.value)} />
+                <Input
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  className={cn(statusDados === "pendente" && "border-orange-400 focus-visible:ring-orange-400")}
+                  title="Salva automaticamente"
+                />
               </div>
               <div className="grid gap-2">
                 <Label>WhatsApp</Label>
-                <Input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+                <Input
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  className={cn(statusDados === "pendente" && "border-orange-400 focus-visible:ring-orange-400")}
+                  title="Salva automaticamente"
+                />
               </div>
               <div className="grid gap-2 sm:col-span-2">
                 <Label>Email</Label>
-                <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={cn(statusDados === "pendente" && "border-orange-400 focus-visible:ring-orange-400")}
+                  title="Salva automaticamente"
+                />
               </div>
             </CardContent>
           </Card>

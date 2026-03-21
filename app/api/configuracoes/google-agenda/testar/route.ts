@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { requireAnyRole } from "@/lib/auth-helpers"
+import { requireRole } from "@/lib/auth-helpers"
 import { listarEventos } from "@/lib/google-calendar"
 
 export async function GET() {
-  const auth = await requireAnyRole(["gestor", "desenvolvedor"])
+  const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   try {

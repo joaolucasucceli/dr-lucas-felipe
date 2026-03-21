@@ -1,6 +1,7 @@
 "use client"
 
 import { Droppable } from "@hello-pangea/dnd"
+import { Users } from "lucide-react"
 import { KanbanCard } from "./KanbanCard"
 import type { KanbanLead } from "@/hooks/use-kanban"
 
@@ -44,8 +45,9 @@ export function KanbanColuna({ etapa, leads }: KanbanColunaProps) {
       >
         <h3 className={`text-xs font-semibold ${cores.text}`}>{label}</h3>
         <span
-          className={`flex h-5 min-w-5 items-center justify-center rounded-full ${cores.bg} ${cores.text} text-[10px] font-bold`}
+          className={`flex h-5 min-w-5 items-center justify-center gap-1 rounded-full ${cores.bg} ${cores.text} px-1.5 text-[10px] font-bold`}
         >
+          <Users className="h-3 w-3" />
           {leads.length}
         </span>
       </div>

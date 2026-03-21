@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { requireAnyRole } from "@/lib/auth-helpers"
+import { requireRole } from "@/lib/auth-helpers"
 
 function escapeCsv(valor: unknown): string {
   if (valor === null || valor === undefined) return ""
@@ -19,7 +19,7 @@ function linhasCsv(cabecalho: string[], linhas: unknown[][]): string {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAnyRole(["gestor", "desenvolvedor"])
+  const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const { searchParams } = request.nextUrl

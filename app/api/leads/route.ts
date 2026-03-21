@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
   const origem = searchParams.get("origem")
   const arquivado = searchParams.get("arquivado")
   const busca = searchParams.get("busca")
+  const alerta = searchParams.get("alerta") === "true"
+  const followup = searchParams.get("followup") === "true"
 
   const where: Record<string, unknown> = {
     deletadoEm: null,
@@ -32,6 +34,22 @@ export async function GET(request: NextRequest) {
       { nome: { contains: busca, mode: "insensitive" } },
       { whatsapp: { contains: busca } },
     ]
+  }
+  if (alerta) {
+    const ha3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+    where.statusFunil = { notIn: ["concluido", "perdido"] }
+    where.OR = [
+      { ultimaMovimentacaoEm: { not: null, lt: ha3dias } },
+      { ultimaMovimentacaoEm: null, atualizadoEm: { lt: ha3dias } },
+    ]
+  }
+  if (followup) {
+    where.conversas = {
+      some: {
+        encerradaEm: null,
+        followUpEnviados: { isEmpty: false },
+      },
+    }
   }
 
   const [dados, total] = await Promise.all([
@@ -62,7 +80,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAnyRole(["gestor", "atendente", "desenvolvedor"])
+  const auth = await requireAnyRole(["gestor", "atendente"])
   if (auth.error) return auth.error
 
   const body = await request.json()

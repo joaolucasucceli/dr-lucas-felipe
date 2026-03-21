@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { requireAnyRole } from "@/lib/auth-helpers"
+import { requireRole } from "@/lib/auth-helpers"
 import { supabaseAdmin } from "@/lib/supabase"
 
 type RouteParams = { params: Promise<{ id: string; fotoId: string }> }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const auth = await requireAnyRole(["gestor", "desenvolvedor"])
+  const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const { id, fotoId } = await params

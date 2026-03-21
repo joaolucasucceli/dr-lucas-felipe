@@ -65,15 +65,15 @@ test.describe.serial("Gestão de Usuários", () => {
     await loginComoGestor(page)
     await page.goto("/usuarios")
 
-    // Encontrar a linha do Desenvolvedor e abrir menu
-    const linha = page.getByRole("row").filter({ hasText: "Desenvolvedor" })
+    // Encontrar a linha da Maria Atendente e abrir menu
+    const linha = page.getByRole("row").filter({ hasText: "Maria Atendente" })
     await linha.getByRole("button").last().click()
     await page.getByRole("menuitem", { name: "Editar" }).click()
 
     // Alterar nome
     const nomeInput = page.getByLabel("Nome")
     await nomeInput.clear()
-    await nomeInput.fill("Dev Atualizado")
+    await nomeInput.fill("Maria Atualizada")
 
     await page.getByRole("button", { name: "Salvar" }).click()
 

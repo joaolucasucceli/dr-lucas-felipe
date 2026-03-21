@@ -1,7 +1,9 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Clock, Bell, DoorOpen, MessageSquare } from "lucide-react"
+import { Clock, Bell, DoorOpen, CheckCircle2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useLeadsFollowUpAtivos } from "@/hooks/use-leads-followup-ativos"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 
@@ -32,7 +34,7 @@ function UltimoFollowUp({ followUpEnviados }: { followUpEnviados: string[] }) {
 
 export function LeadsFollowUpAtivos() {
   const router = useRouter()
-  const { leads, carregando } = useLeadsFollowUpAtivos()
+  const { leads, total, carregando } = useLeadsFollowUpAtivos()
 
   if (carregando) {
     return (
@@ -47,8 +49,11 @@ export function LeadsFollowUpAtivos() {
   if (leads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <MessageSquare className="mb-2 h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
+        <CheckCircle2 className="mb-2 h-8 w-8 text-green-500" />
+        <p className="text-sm font-medium text-green-700 dark:text-green-400">
+          Todos os follow-ups foram respondidos!
+        </p>
+        <p className="text-xs text-muted-foreground">
           Nenhum follow-up aguardando resposta
         </p>
       </div>
@@ -70,6 +75,11 @@ export function LeadsFollowUpAtivos() {
           <UltimoFollowUp followUpEnviados={lead.followUpEnviados} />
         </div>
       ))}
+      {total > 5 && (
+        <Button variant="ghost" size="sm" className="w-full mt-1" asChild>
+          <Link href="/leads?filtro=followup">Ver todos ({total})</Link>
+        </Button>
+      )}
     </div>
   )
 }

@@ -41,7 +41,7 @@ export default function AnaJuliaPage() {
   const [periodo, setPeriodo] = useState<Periodo>("semana")
 
   const perfil = session?.user?.perfil
-  const autorizado = perfil === "gestor" || perfil === "desenvolvedor"
+  const autorizado = perfil === "gestor"
 
   useEffect(() => {
     if (status === "unauthenticated") router.replace("/login")
@@ -71,11 +71,20 @@ export default function AnaJuliaPage() {
     mes: "Este Mês",
   }
 
+  function formatarData(iso: string) {
+    const [ano, mes, dia] = iso.split("-")
+    return `${dia}/${mes}/${ano}`
+  }
+
+  const subtituloPeriodo = periodo === "hoje"
+    ? `Exibindo dados de hoje (${formatarData(dataInicio)})`
+    : `Exibindo dados de ${formatarData(dataInicio)} a ${formatarData(dataFim)}`
+
   return (
     <div>
       <PageHeader
         titulo="Ana Júlia"
-        descricao="Desempenho do agente IA de atendimento"
+        descricao={subtituloPeriodo}
       >
         <div className="flex gap-1">
           {(["hoje", "semana", "mes"] as Periodo[]).map((p) => (

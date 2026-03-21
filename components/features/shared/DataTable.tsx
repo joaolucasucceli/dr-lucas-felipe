@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 export interface ColunaConfig<T> {
@@ -32,6 +33,7 @@ interface DataTableProps<T> {
   ordenacao?: { campo: string; direcao: "asc" | "desc" }
   carregando?: boolean
   vazio?: React.ReactNode
+  mensagemVazio?: string
   filtros?: React.ReactNode
   onLinhaClick?: (item: T) => void
 }
@@ -47,6 +49,7 @@ export function DataTable<T extends { id?: string }>({
   ordenacao,
   carregando,
   vazio,
+  mensagemVazio,
   filtros,
   onLinhaClick,
 }: DataTableProps<T>) {
@@ -75,15 +78,20 @@ export function DataTable<T extends { id?: string }>({
                   className={cn(coluna.classesCelula)}
                 >
                   {coluna.ordenavel && onOrdenar ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="-ml-3 h-8"
-                      onClick={() => handleOrdenar(String(coluna.chave))}
-                    >
-                      {coluna.titulo}
-                      <ArrowUpDown className="ml-1 h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="-ml-3 h-8"
+                          onClick={() => handleOrdenar(String(coluna.chave))}
+                        >
+                          {coluna.titulo}
+                          <ArrowUpDown className="ml-1 h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Ordenar por {coluna.titulo}</TooltipContent>
+                    </Tooltip>
                   ) : (
                     coluna.titulo
                   )}
@@ -110,7 +118,7 @@ export function DataTable<T extends { id?: string }>({
                 <TableCell colSpan={colunas.length} className="h-48">
                   {vazio || (
                     <p className="text-center text-sm text-muted-foreground">
-                      Nenhum registro encontrado.
+                      {mensagemVazio || "Nenhum registro encontrado."}
                     </p>
                   )}
                 </TableCell>
@@ -145,25 +153,35 @@ export function DataTable<T extends { id?: string }>({
             Mostrando {inicio}–{fim} de {total}
           </span>
           <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPaginaChange(pagina - 1)}
-              disabled={pagina <= 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPaginaChange(pagina - 1)}
+                  disabled={pagina <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Página anterior</TooltipContent>
+            </Tooltip>
             <span className="px-2">
               {pagina} / {totalPaginas}
             </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPaginaChange(pagina + 1)}
-              disabled={pagina >= totalPaginas}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPaginaChange(pagina + 1)}
+                  disabled={pagina >= totalPaginas}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Próxima página</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       )}

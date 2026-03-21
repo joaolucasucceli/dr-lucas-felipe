@@ -128,7 +128,7 @@ export function LeadForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="lead-whatsapp">WhatsApp</Label>
+            <Label htmlFor="lead-whatsapp">WhatsApp <span className="text-muted-foreground font-normal text-xs">(somente dígitos)</span></Label>
             <Input
               id="lead-whatsapp"
               placeholder="11999998888"
@@ -140,7 +140,7 @@ export function LeadForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="lead-email">Email</Label>
+            <Label htmlFor="lead-email">Email <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
             <Input id="lead-email" type="email" {...register("email")} />
             {errors.email && (
               <p className="text-xs text-destructive">{errors.email.message}</p>
@@ -148,7 +148,7 @@ export function LeadForm({
           </div>
 
           <div className="grid gap-2">
-            <Label>Procedimento de Interesse</Label>
+            <Label>Procedimento de Interesse <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
             <Select
               onValueChange={(v) => setValue("procedimentoInteresse", v === "nenhum" ? "" : v)}
             >
@@ -167,12 +167,19 @@ export function LeadForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="lead-origem">Origem</Label>
-            <Input
-              id="lead-origem"
-              placeholder="whatsapp, instagram, indicação..."
-              {...register("origem")}
-            />
+            <Label>Origem <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
+            <Select onValueChange={(v) => setValue("origem", v === "outro" ? "Outro" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Como nos encontrou?" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                <SelectItem value="Instagram">Instagram</SelectItem>
+                <SelectItem value="Indicação">Indicação</SelectItem>
+                <SelectItem value="Site">Site</SelectItem>
+                <SelectItem value="outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

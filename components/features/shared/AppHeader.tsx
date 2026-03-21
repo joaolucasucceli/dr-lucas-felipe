@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { signOut } from "next-auth/react"
-import { LogOut, Search } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { LogOut, Search, User, Settings } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,10 +40,10 @@ interface AppHeaderProps {
 const perfilLabels: Record<string, string> = {
   gestor: "Gestor",
   atendente: "Atendente",
-  desenvolvedor: "Desenvolvedor",
 }
 
 export function AppHeader({ nome, email, perfil }: AppHeaderProps) {
+  const router = useRouter()
   const [buscaAberta, setBuscaAberta] = useState(false)
 
   useEffect(() => {
@@ -99,6 +100,17 @@ export function AppHeader({ nome, email, perfil }: AppHeaderProps) {
                 {perfilLabels[perfil] || perfil}
               </Badge>
             </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push("/meu-perfil")}>
+              <User className="mr-2 h-4 w-4" />
+              Meu Perfil
+            </DropdownMenuItem>
+            {perfil === "gestor" && (
+              <DropdownMenuItem onClick={() => router.push("/configuracoes")}>
+                <Settings className="mr-2 h-4 w-4" />
+                Configurações
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: "/login" })}

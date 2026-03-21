@@ -17,7 +17,6 @@ datasource db {
 enum Perfil {
   gestor
   atendente
-  desenvolvedor
 }
 
 enum TipoUsuario {
@@ -215,6 +214,15 @@ model FotoLead {
 
   @@index([leadId])
   @@map("fotos_lead")
+}
+
+model TipoProcedimento {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  @@map("tipos_procedimento")
 }
 
 model ConfigGoogleCalendar {

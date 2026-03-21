@@ -21,6 +21,7 @@ interface UseLeadsParams {
   statusFunil?: string
   busca?: string
   arquivado?: string
+  filtroEspecial?: "alerta" | "followup"
 }
 
 interface UseLeadsReturn {
@@ -48,6 +49,8 @@ export function useLeads(params: UseLeadsParams): UseLeadsReturn {
       if (params.statusFunil) searchParams.set("statusFunil", params.statusFunil)
       if (params.busca) searchParams.set("busca", params.busca)
       if (params.arquivado) searchParams.set("arquivado", params.arquivado)
+      if (params.filtroEspecial === "alerta") searchParams.set("alerta", "true")
+      if (params.filtroEspecial === "followup") searchParams.set("followup", "true")
 
       const res = await fetch(`/api/leads?${searchParams.toString()}`)
 
@@ -63,7 +66,7 @@ export function useLeads(params: UseLeadsParams): UseLeadsReturn {
     } finally {
       setCarregando(false)
     }
-  }, [params.pagina, params.porPagina, params.statusFunil, params.busca, params.arquivado])
+  }, [params.pagina, params.porPagina, params.statusFunil, params.busca, params.arquivado, params.filtroEspecial])
 
   useEffect(() => {
     buscar()

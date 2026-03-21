@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Plus, MoreHorizontal, Pencil, UserX, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
+import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { EmptyState } from "@/components/features/shared/EmptyState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
@@ -48,31 +50,46 @@ function formatarValor(valor: number | null): string {
 }
 
 export default function ProcedimentosPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [busca, setBusca] = useState("")
+
+  const autorizado =
+    session?.user?.perfil === "gestor"
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.replace("/login")
+    if (status === "authenticated" && !autorizado) router.replace("/dashboard")
+  }, [status, autorizado, router])
+
+  if (status === "loading" || !autorizado) return null
   const [formAberto, setFormAberto] = useState(false)
   const [procedimentoEditando, setProcedimentoEditando] =
     useState<Procedimento | null>(null)
+  const [confirmToggle, setConfirmToggle] = useState<Procedimento | null>(null)
 
   const { dados, carregando, erro, recarregar } = useProcedimentos({
     busca: busca || undefined,
   })
 
-  const isGestor =
-    session?.user?.perfil === "gestor" ||
-    session?.user?.perfil === "desenvolvedor"
+  const isGestor = autorizado
 
   function handleEditar(procedimento: Procedimento) {
     setProcedimentoEditando(procedimento)
     setFormAberto(true)
   }
 
-  async function handleToggleAtivo(procedimento: Procedimento) {
+  function handleToggleAtivo(procedimento: Procedimento) {
+    setConfirmToggle(procedimento)
+  }
+
+  async function confirmarToggle() {
+    if (!confirmToggle) return
     try {
-      const res = await fetch(`/api/procedimentos/${procedimento.id}`, {
+      const res = await fetch(`/api/procedimentos/${confirmToggle.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ativo: !procedimento.ativo }),
+        body: JSON.stringify({ ativo: !confirmToggle.ativo }),
       })
 
       if (!res.ok) {
@@ -82,11 +99,13 @@ export default function ProcedimentosPage() {
       }
 
       toast.success(
-        procedimento.ativo ? "Procedimento desativado" : "Procedimento ativado"
+        confirmToggle.ativo ? "Procedimento desativado" : "Procedimento ativado"
       )
       recarregar()
     } catch {
       toast.error("Erro ao atualizar procedimento")
+    } finally {
+      setConfirmToggle(null)
     }
   }
 
@@ -239,6 +258,20 @@ export default function ProcedimentosPage() {
           setProcedimentoEditando(null)
           recarregar()
         }}
+      />
+
+      <ConfirmDialog
+        titulo={confirmToggle?.ativo ? "Desativar procedimento" : "Ativar procedimento"}
+        descricao={
+          confirmToggle?.ativo
+            ? `Desativar "${confirmToggle?.nome}"? Ele não aparecerá mais para novos agendamentos.`
+            : `Reativar "${confirmToggle?.nome}"?`
+        }
+        aberto={!!confirmToggle}
+        onFechar={() => setConfirmToggle(null)}
+        onConfirmar={confirmarToggle}
+        variante={confirmToggle?.ativo ? "destrutivo" : "padrao"}
+        textoBotao={confirmToggle?.ativo ? "Desativar" : "Ativar"}
       />
     </div>
   )

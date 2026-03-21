@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { requireAnyRole } from "@/lib/auth-helpers"
+import { requireRole } from "@/lib/auth-helpers"
 import { ehHorarioComercial } from "@/lib/agente/horario-comercial"
 import { buscarConversasParaFollowUp, enviarFollowUp } from "@/lib/agente/followup"
 import {
@@ -9,7 +9,7 @@ import {
 } from "@/lib/agente/confirmacao"
 
 export async function POST() {
-  const { error } = await requireAnyRole(["gestor", "desenvolvedor"])
+  const { error } = await requireRole("gestor")
   if (error) return error
 
   const configWa = await prisma.configWhatsapp.findFirst({

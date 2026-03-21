@@ -6,31 +6,36 @@ export async function GET() {
   const { error } = await requireAuth()
   if (error) return error
 
-  const leads = await prisma.lead.findMany({
-    where: {
-      deletadoEm: null,
-      arquivado: false,
-      conversas: {
-        some: {
-          encerradaEm: null,
-          followUpEnviados: { isEmpty: false },
+  const whereFollowUp = {
+    deletadoEm: null,
+    arquivado: false,
+    conversas: {
+      some: {
+        encerradaEm: null,
+        followUpEnviados: { isEmpty: false },
+      },
+    },
+  }
+
+  const [leads, total] = await Promise.all([
+    prisma.lead.findMany({
+      where: whereFollowUp,
+      select: {
+        id: true,
+        nome: true,
+        statusFunil: true,
+        procedimentoInteresse: true,
+        conversas: {
+          where: { encerradaEm: null, followUpEnviados: { isEmpty: false } },
+          select: { followUpEnviados: true, ultimaMensagemEm: true },
+          take: 1,
+          orderBy: { criadoEm: "desc" },
         },
       },
-    },
-    select: {
-      id: true,
-      nome: true,
-      statusFunil: true,
-      procedimentoInteresse: true,
-      conversas: {
-        where: { encerradaEm: null, followUpEnviados: { isEmpty: false } },
-        select: { followUpEnviados: true, ultimaMensagemEm: true },
-        take: 1,
-        orderBy: { criadoEm: "desc" },
-      },
-    },
-    take: 10,
-  })
+      take: 5,
+    }),
+    prisma.lead.count({ where: whereFollowUp }),
+  ])
 
   const resultado = leads
     .map((lead) => ({
@@ -47,5 +52,5 @@ export async function GET() {
       return new Date(a.ultimaMensagemEm).getTime() - new Date(b.ultimaMensagemEm).getTime()
     })
 
-  return NextResponse.json({ leads: resultado })
+  return NextResponse.json({ leads: resultado, total })
 }

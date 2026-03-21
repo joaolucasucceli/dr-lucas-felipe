@@ -14,7 +14,7 @@ export interface LeadFollowUpAtivo {
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function useLeadsFollowUpAtivos() {
-  const { data, error, isLoading } = useSWR<{ leads: LeadFollowUpAtivo[] }>(
+  const { data, error, isLoading } = useSWR<{ leads: LeadFollowUpAtivo[]; total: number }>(
     "/api/dashboard/follow-ups-ativos",
     fetcher,
     { refreshInterval: 60000, revalidateOnFocus: true }
@@ -22,6 +22,7 @@ export function useLeadsFollowUpAtivos() {
 
   return {
     leads: data?.leads ?? [],
+    total: data?.total ?? 0,
     carregando: isLoading,
     erro: error ? "Erro ao carregar follow-ups ativos" : null,
   }

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { CalendarDays, MessageCircle, ArrowRight, Zap, Loader2, Users, Clock } from "lucide-react"
+import { CalendarDays, MessageCircle, ArrowRight, Zap, Loader2, Users, Clock, Stethoscope } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -84,7 +84,7 @@ export default function ConfiguracoesPage() {
           </CardHeader>
           <CardContent className="flex items-center justify-between">
             {googleConfigurado ? (
-              <Badge variant="default" className="bg-green-100 text-green-800">
+              <Badge variant="default">
                 Configurado
               </Badge>
             ) : (
@@ -109,7 +109,7 @@ export default function ConfiguracoesPage() {
           </CardHeader>
           <CardContent className="flex items-center justify-between">
             {whatsappConectado ? (
-              <Badge variant="default" className="bg-green-100 text-green-800">
+              <Badge variant="default">
                 Conectado
               </Badge>
             ) : (
@@ -140,6 +140,24 @@ export default function ConfiguracoesPage() {
           </CardContent>
         </Card>
 
+        <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => router.push("/configuracoes/tipos-procedimento")}>
+          <CardHeader className="flex flex-row items-center gap-3">
+            <Stethoscope className="h-8 w-8 text-muted-foreground" />
+            <div className="flex-1">
+              <CardTitle className="text-base">Tipos de Procedimento</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Categorias personalizáveis para procedimentos
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="flex items-center justify-end">
+            <Button variant="ghost" size="sm">
+              Gerenciar
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center gap-3">
             <Zap className="h-8 w-8 text-muted-foreground" />
@@ -155,7 +173,7 @@ export default function ConfiguracoesPage() {
             </div>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <Badge variant="default" className="bg-green-100 text-green-800">
+            <Badge variant="default">
               Ativo
             </Badge>
             <Button

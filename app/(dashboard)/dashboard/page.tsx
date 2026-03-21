@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Users, UserPlus, Calendar, TrendingUp, Bot } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { Users, UserPlus, Calendar, TrendingUp, Bot, GitBranch, PieChart, Clock, Bell } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
@@ -21,6 +22,9 @@ import { LeadsFollowUpAtivos } from "@/components/features/dashboard/LeadsFollow
 import { useDashboard } from "@/hooks/use-dashboard"
 
 export default function DashboardPage() {
+  const { data: session } = useSession()
+  const perfil = session?.user?.perfil
+  const isAtendente = perfil === "atendente"
   const [periodo, setPeriodo] = useState("mes")
   const { metricas, carregando, erro, recarregar } = useDashboard(periodo)
 
@@ -96,17 +100,27 @@ export default function DashboardPage() {
           descricao={`${metricas.agendamentosRealizados} realizados`}
           icone={<Calendar className="h-5 w-5" />}
         />
-        <MetricCard
-          titulo="Taxa de Conversão"
-          valor={`${metricas.taxaConversao}%`}
-          descricao="Leads que agendaram ou além"
-          icone={<TrendingUp className="h-5 w-5" />}
-        />
+        {isAtendente ? (
+          <MetricCard
+            titulo="Leads do Dia"
+            valor={metricas.leadsHoje}
+            descricao="Novos leads criados hoje"
+            icone={<UserPlus className="h-5 w-5" />}
+          />
+        ) : (
+          <MetricCard
+            titulo="Taxa de Conversão"
+            valor={`${metricas.taxaConversao}%`}
+            descricao="Leads que agendaram ou além"
+            icone={<TrendingUp className="h-5 w-5" />}
+          />
+        )}
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center gap-2">
+            <GitBranch className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">Funil por Etapa</CardTitle>
           </CardHeader>
           <CardContent>
@@ -114,42 +128,61 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Leads por Origem</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <GraficoOrigem dados={metricas.leadsPorOrigem} />
-          </CardContent>
-        </Card>
+        {isAtendente ? (
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base">Agendamentos da Semana</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between py-4">
+                <span className="text-sm text-muted-foreground">Agendamentos nos próximos 7 dias</span>
+                <span className="text-2xl font-bold">{metricas.agendamentosSemana}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2">
+              <PieChart className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base">Leads por Origem</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GraficoOrigem dados={metricas.leadsPorOrigem} />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2">
-            <Bot className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-base">Atividade do Agente IA</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Mensagens enviadas</span>
-                <span className="text-sm font-medium">{metricas.mensagensEnviadasPelaIA}</span>
+      <div className={`mt-4 grid gap-4 ${isAtendente ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+        {!isAtendente && (
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2">
+              <Bot className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-base">Atividade do Agente IA</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Mensagens enviadas</span>
+                  <span className="text-sm font-medium">{metricas.mensagensEnviadasPelaIA}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Follow-ups enviados</span>
+                  <span className="text-sm font-medium">{metricas.followUpsEnviados}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Confirmações enviadas</span>
+                  <span className="text-sm font-medium">{metricas.confirmacaoEnviadas}</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Follow-ups enviados</span>
-                <span className="text-sm font-medium">{metricas.followUpsEnviados}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Confirmações enviadas</span>
-                <span className="text-sm font-medium">{metricas.confirmacaoEnviadas}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">
               Follow-ups Aguardando Resposta
             </CardTitle>
@@ -160,7 +193,8 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center gap-2">
+            <Bell className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">
               Leads em Alerta ({metricas.leadsEmAlerta})
             </CardTitle>

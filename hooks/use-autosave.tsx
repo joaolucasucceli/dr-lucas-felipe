@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Loader2, Check, AlertCircle } from "lucide-react"
 
-type StatusSalvamento = "idle" | "salvando" | "salvo" | "erro"
+type StatusSalvamento = "idle" | "pendente" | "salvando" | "salvo" | "erro"
 
 interface UseAutosaveParams<T> {
   valor: T
@@ -52,6 +52,8 @@ export function useAutosave<T>({
       return
     }
 
+    setStatus("pendente")
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
@@ -76,6 +78,12 @@ export function IndicadorSalvamento({ status }: { status: StatusSalvamento }) {
 
   return (
     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+      {status === "pendente" && (
+        <>
+          <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse" />
+          Não salvo
+        </>
+      )}
       {status === "salvando" && (
         <>
           <Loader2 className="h-3 w-3 animate-spin" />

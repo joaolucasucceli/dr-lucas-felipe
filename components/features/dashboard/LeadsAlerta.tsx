@@ -1,7 +1,9 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useLeadsAlerta } from "@/hooks/use-leads-alerta"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 
@@ -15,7 +17,7 @@ function diasAtras(data: string): string {
 
 export function LeadsAlerta() {
   const router = useRouter()
-  const { leads, carregando } = useLeadsAlerta()
+  const { leads, total, carregando } = useLeadsAlerta()
 
   if (carregando) {
     return (
@@ -30,9 +32,12 @@ export function LeadsAlerta() {
   if (leads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <AlertTriangle className="mb-2 h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          Nenhum lead em alerta
+        <CheckCircle2 className="mb-2 h-8 w-8 text-green-500" />
+        <p className="text-sm font-medium text-green-700 dark:text-green-400">
+          Tudo certo!
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Nenhum lead sem movimentação
         </p>
       </div>
     )
@@ -40,6 +45,7 @@ export function LeadsAlerta() {
 
   return (
     <div className="space-y-2">
+      <p className="text-xs text-muted-foreground mb-2">Sem movimentação há 3+ dias</p>
       {leads.map((lead) => (
         <div
           key={lead.id}
@@ -55,6 +61,11 @@ export function LeadsAlerta() {
           </span>
         </div>
       ))}
+      {total > 5 && (
+        <Button variant="ghost" size="sm" className="w-full mt-1" asChild>
+          <Link href="/leads?filtro=alerta">Ver todos ({total})</Link>
+        </Button>
+      )}
     </div>
   )
 }
