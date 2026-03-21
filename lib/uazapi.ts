@@ -25,29 +25,17 @@ async function uazapiFetch(
   return text ? JSON.parse(text) : null
 }
 
-/** Testa conexão com credenciais de admin — GET /instance/list */
+/** Testa conexão com token da instância — GET /instance/status */
 export async function testarConexao(
   url: string,
-  adminToken: string
+  instanceToken: string
 ): Promise<{ ok: boolean; erro?: string }> {
   try {
-    await uazapiFetch(url, "/instance/list", adminToken)
+    await uazapiFetch(url, "/instance/status", instanceToken)
     return { ok: true }
   } catch (err) {
     return { ok: false, erro: err instanceof Error ? err.message : "Erro desconhecido" }
   }
-}
-
-/** Cria nova instância — POST /instance/create */
-export async function criarInstancia(
-  url: string,
-  adminToken: string
-): Promise<{ id: string; token: string }> {
-  const data = await uazapiFetch(url, "/instance/create", adminToken, {
-    method: "POST",
-    body: JSON.stringify({}),
-  })
-  return { id: data.id || data.instanceId, token: data.token || data.instanceToken }
 }
 
 /** Configura webhook da instância — POST /webhook/set */
@@ -62,13 +50,16 @@ export async function configurarWebhook(
   })
 }
 
-/** Obtém QR code para conexão — GET /instance/connect */
+/** Inicia conexão e obtém QR code — POST /instance/connect */
 export async function obterQrCode(
   url: string,
   instanceToken: string
 ): Promise<{ qrcode: string }> {
-  const data = await uazapiFetch(url, "/instance/connect", instanceToken)
-  return { qrcode: data.qrcode || data.base64 || "" }
+  const data = await uazapiFetch(url, "/instance/connect", instanceToken, {
+    method: "POST",
+    body: JSON.stringify({}),
+  })
+  return { qrcode: data.instance?.qrcode || data.qrcode || "" }
 }
 
 /** Verifica status da instância — GET /instance/status */
@@ -78,28 +69,17 @@ export async function verificarStatus(
 ): Promise<{ status: string; jid?: string }> {
   const data = await uazapiFetch(url, "/instance/status", instanceToken)
   return {
-    status: data.status || "unknown",
-    jid: data.jid || data.user?.id,
+    status: data.instance?.status || (data.status?.connected ? "connected" : "disconnected"),
+    jid: data.status?.jid || undefined,
   }
 }
 
-/** Desconecta instância — DELETE /instance/logout */
+/** Desconecta e remove instância — DELETE /instance */
 export async function desconectar(
   url: string,
   instanceToken: string
 ): Promise<void> {
-  await uazapiFetch(url, "/instance/logout", instanceToken, {
-    method: "DELETE",
-  })
-}
-
-/** Deleta instância — DELETE /instance/delete/{id} */
-export async function deletarInstancia(
-  url: string,
-  instanceId: string,
-  adminToken: string
-): Promise<void> {
-  await uazapiFetch(url, `/instance/delete/${instanceId}`, adminToken, {
+  await uazapiFetch(url, "/instance", instanceToken, {
     method: "DELETE",
   })
 }

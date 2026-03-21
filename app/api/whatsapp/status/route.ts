@@ -25,8 +25,10 @@ export async function GET(_request: NextRequest) {
     })
   }
 
-  // Se não tem instância, retornar configurado mas não conectado
-  if (!config.instanceToken) {
+  const instanceToken = config.instanceToken || config.adminToken
+
+  // Se não tem token de instância, retornar configurado mas não conectado
+  if (!instanceToken) {
     return NextResponse.json({
       configurado: true,
       ativo: false,
@@ -41,7 +43,7 @@ export async function GET(_request: NextRequest) {
   try {
     const resultado = await verificarStatus(
       config.uazapiUrl,
-      config.instanceToken
+      instanceToken
     )
 
     // Se conectado, atualizar numero e ativo

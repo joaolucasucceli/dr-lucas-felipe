@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAnyRole } from "@/lib/auth-helpers"
-import { desconectar, deletarInstancia } from "@/lib/uazapi"
+import { desconectar } from "@/lib/uazapi"
 
 export async function POST(request: NextRequest) {
   const auth = await requireAnyRole(["gestor", "desenvolvedor"])
@@ -12,7 +12,9 @@ export async function POST(request: NextRequest) {
     orderBy: { criadoEm: "desc" },
   })
 
-  if (!config || !config.instanceToken) {
+  const instanceToken = config?.instanceToken || config?.adminToken
+
+  if (!config || !instanceToken) {
     return NextResponse.json(
       { error: "Nenhuma instância ativa" },
       { status: 404 }
@@ -20,16 +22,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Desconectar e deletar instância no Uazapi
-    await desconectar(config.uazapiUrl, config.instanceToken).catch(() => {})
-
-    if (config.instanceId) {
-      await deletarInstancia(
-        config.uazapiUrl,
-        config.instanceId,
-        config.adminToken
-      ).catch(() => {})
-    }
+    // DELETE /instance desconecta e remove a instância no Uazapi v2
+    await desconectar(config.uazapiUrl, instanceToken).catch(() => {})
   } catch {
     // Ignorar erros do Uazapi — limpar config local mesmo assim
   }

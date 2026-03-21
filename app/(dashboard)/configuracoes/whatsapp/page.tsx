@@ -221,22 +221,25 @@ export default function WhatsAppConfigPage() {
             <CardTitle className="text-base">Credenciais Uazapi</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Crie a instância no painel Uazapi (uazapi.dev) e cole aqui a URL do servidor e o token gerado.
+            </p>
             <div>
-              <Label htmlFor="uazapiUrl">URL do Uazapi</Label>
+              <Label htmlFor="uazapiUrl">URL do Servidor</Label>
               <Input
                 id="uazapiUrl"
-                placeholder="https://api.uazapi.com"
+                placeholder="https://producao.uazapi.com"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 className="mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="adminToken">Admin Token</Label>
+              <Label htmlFor="adminToken">Token da Instância</Label>
               <Input
                 id="adminToken"
                 type="password"
-                placeholder="Token de administrador"
+                placeholder="Token da instância no painel Uazapi"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 onFocus={() => {
@@ -264,11 +267,11 @@ export default function WhatsAppConfigPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Clique no botão abaixo para criar uma instância e gerar o QR Code para conexão.
+              Clique no botão abaixo para gerar o QR Code e conectar a instância ao WhatsApp.
             </p>
             <Button onClick={handleCriarInstancia} disabled={salvando}>
               {salvando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Criar Instância
+              Gerar QR Code
             </Button>
           </CardContent>
         </Card>
