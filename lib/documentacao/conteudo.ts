@@ -419,17 +419,16 @@ Cada item é um módulo independente — é possível contratar qualquer combina
 | # | Feature | Categoria | O que faz | Por que contratar |
 |---|---------|-----------|-----------|-------------------|
 | 1 | Site Institucional Integrado | Marketing | Landing page profissional conectada ao sistema; formulário captura leads direto no kanban | Aumenta captação orgânica e elimina perda de leads do site |
-| 2 | Atendimento via Instagram | IA | Ana Júlia responde DMs do Instagram com a mesma inteligência do WhatsApp | Dobra o alcance do atendimento automatizado sem aumentar equipe |
+| 2 | Agente IA para Instagram | IA | Ana Júlia equivalente para Instagram DMs: qualifica leads e move pelo kanban integrado | Dobra o alcance do atendimento automatizado sem aumentar equipe |
 | 3 | Campanhas de Disparo em Massa | Marketing | Mensagens segmentadas para aniversariantes, inativos, pós-procedimento ou por interesse | Reativa pacientes inativos e gera agendamentos sem esforço manual |
 | 4 | Portal do Paciente | Expansão | Área exclusiva do paciente com histórico, documentos e agendamentos | Profissionaliza a experiência e reduz chamadas para informações básicas |
 | 5 | Captação via Google Ads & Meta Ads | Marketing | Leads das campanhas entram automaticamente no kanban com ROI por campanha | Mostra exatamente quanto cada real investido gerou de receita |
 | 6 | NPS e Pesquisa de Satisfação | Clínica | Pesquisa automática pós-procedimento via WhatsApp com dashboard de NPS | Identifica pontos de melhoria antes que se tornem reclamações |
-| 7 | Prescrições e Laudos Digitais | Clínica | Emissão com assinatura digital e envio automático ao paciente | Elimina papel e eleva a percepção de modernidade da clínica |
-| 8 | App Mobile para a Equipe | Expansão | Painel nativo para iOS/Android para gestão em campo | Acelera o ciclo de resposta sem depender do computador |
-| 9 | Multi-clínica | Expansão | Múltiplas unidades em um único login com relatórios consolidados | Prepara a operação para crescimento sem sistemas separados |
-| 10 | Integração com Planos de Saúde | Clínica | Elegibilidade em tempo real, guias e faturamento automático | Reduz glosas e transforma horas de trabalho em minutos |
-| 11 | Prontuário Eletrônico | Clínica | Registro clínico completo: anamnese, evolução, fotos e documentos | Elimina prontuários físicos e facilita a continuidade do cuidado |
-| 12 | Chatbot Google Business | IA | Ana Júlia atende mensagens do Google Meu Negócio | Captura pacientes com alta intenção de compra no momento da pesquisa |
+| 7 | App Mobile para Pacientes | Expansão | App nativo iOS/Android para o paciente ver histórico, agendamentos e documentos | Eleva a experiência do paciente e cria canal direto fora do WhatsApp |
+| 8 | Chatbot Google Business | IA | Agente IA no Google Meu Negócio que responde, coleta dados e encaminha ao kanban | Captura pacientes com alta intenção de compra no momento da pesquisa |
+| 9 | Automação de Carrossel Instagram | Marketing | IA gera carrosséis prontos para postar sobre procedimentos, tendências e conteúdo educativo | Produz conteúdo profissional sem agência ou designer, com consistência |
+| 10 | Automação de Artigo de Blog | Marketing | IA gera artigos SEO e publica automaticamente no site da clínica | Aumenta tráfego orgânico e posiciona o Dr. Lucas como referência |
+| 11 | Agente de Cobrança IA | IA | Agente WhatsApp que lembra vencimentos, negocia parcelamentos e registra acordos | Reduz inadimplência sem desgaste da equipe nem constrangimento ao paciente |
 
 ---
 

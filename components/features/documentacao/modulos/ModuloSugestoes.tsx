@@ -7,11 +7,10 @@ import {
   Target,
   Star,
   Smartphone,
-  Building2,
-  HeartPulse,
-  ClipboardList,
   MessageSquare,
-  FileEdit,
+  LayoutGrid,
+  Newspaper,
+  BadgeDollarSign,
 } from "lucide-react"
 import { HeroBanner } from "../HeroBanner"
 import { DicaImportante } from "../DicaImportante"
@@ -55,11 +54,11 @@ const sugestoes: Sugestao[] = [
   {
     icone: <Instagram className="h-6 w-6" />,
     categoria: "IA",
-    titulo: "Atendimento via Instagram",
+    titulo: "Agente IA para Instagram",
     descricao:
-      "Ana Júlia expande para responder mensagens diretas do Instagram com a mesma inteligência do WhatsApp. Todos os atendimentos unificados em um único painel.",
+      "Uma Ana Júlia dedicada ao Instagram: responde mensagens diretas com a mesma inteligência do WhatsApp, qualifica leads e move pacientes pelo kanban — tudo integrado ao sistema.",
     valorDeNegocio:
-      "Dobra o alcance do atendimento automatizado sem aumentar a equipe.",
+      "Atinge pacientes onde eles estão e dobra o alcance do atendimento automatizado sem aumentar a equipe.",
   },
   {
     icone: <Megaphone className="h-6 w-6" />,
@@ -98,58 +97,49 @@ const sugestoes: Sugestao[] = [
       "Identifica pontos de melhoria antes que se tornem reclamações públicas.",
   },
   {
-    icone: <FileEdit className="h-6 w-6" />,
-    categoria: "Clínica",
-    titulo: "Prescrições e Laudos Digitais",
-    descricao:
-      "Emissão de prescrições, atestados e laudos diretamente no sistema, com assinatura digital e envio automático ao paciente via WhatsApp.",
-    valorDeNegocio:
-      "Elimina papel, agiliza o pós-consulta e eleva a percepção de modernidade da clínica.",
-  },
-  {
     icone: <Smartphone className="h-6 w-6" />,
     categoria: "Expansão",
-    titulo: "App Mobile para a Equipe",
+    titulo: "App Mobile para Pacientes",
     descricao:
-      "Versão mobile nativa do painel para iOS e Android. Atendentes e gestores gerenciam o kanban, agendamentos e leads de qualquer lugar.",
+      "Aplicativo nativo para iOS e Android onde o paciente acompanha agendamentos, recebe lembretes, vê histórico de procedimentos e troca documentos com a clínica.",
     valorDeNegocio:
-      "Acelera o ciclo de resposta sem depender do computador.",
-  },
-  {
-    icone: <Building2 className="h-6 w-6" />,
-    categoria: "Expansão",
-    titulo: "Multi-clínica",
-    descricao:
-      "Expansão do sistema para gerenciar múltiplas unidades em um único login. Relatórios consolidados e segmentados por unidade.",
-    valorDeNegocio:
-      "Prepara a operação para crescimento sem precisar de sistemas separados para cada unidade.",
-  },
-  {
-    icone: <HeartPulse className="h-6 w-6" />,
-    categoria: "Clínica",
-    titulo: "Integração com Planos de Saúde",
-    descricao:
-      "Verificação de elegibilidade em tempo real, controle de guias e faturamento automático integrado às principais operadoras.",
-    valorDeNegocio:
-      "Reduz glosas e transforma horas de trabalho administrativo em minutos.",
-  },
-  {
-    icone: <ClipboardList className="h-6 w-6" />,
-    categoria: "Clínica",
-    titulo: "Prontuário Eletrônico",
-    descricao:
-      "Registro clínico completo por paciente: anamnese, evolução, fotos de procedimentos, histórico e documentos anexos tudo em um só lugar.",
-    valorDeNegocio:
-      "Elimina prontuários físicos e facilita a continuidade do cuidado.",
+      "Eleva a experiência do paciente e cria um canal direto de comunicação fora do WhatsApp.",
   },
   {
     icone: <MessageSquare className="h-6 w-6" />,
     categoria: "IA",
     titulo: "Chatbot Google Business",
     descricao:
-      "Ana Júlia passa a atender mensagens enviadas pelo Google Meu Negócio, captando leads que pesquisam a clínica diretamente no Google.",
+      "Agente IA de atendimento integrado ao Google Meu Negócio. Responde automaticamente dúvidas, coleta dados e encaminha o lead para o kanban.",
     valorDeNegocio:
-      "Captura pacientes com alta intenção de compra no exato momento em que pesquisam pelo serviço.",
+      "Captura pacientes com alta intenção de compra no exato momento em que pesquisam pelo serviço no Google.",
+  },
+  {
+    icone: <LayoutGrid className="h-6 w-6" />,
+    categoria: "Marketing",
+    titulo: "Automação de Carrossel Instagram",
+    descricao:
+      "IA que gera automaticamente carrosséis prontos para postar: sobre os procedimentos da clínica, tendências de mercado estético e conteúdo educativo para o público-alvo.",
+    valorDeNegocio:
+      "Produz conteúdo profissional sem precisar de agência ou designer — mantém o perfil ativo e com consistência.",
+  },
+  {
+    icone: <Newspaper className="h-6 w-6" />,
+    categoria: "Marketing",
+    titulo: "Automação de Artigo de Blog",
+    descricao:
+      "IA que gera artigos otimizados para SEO e os publica automaticamente no site da clínica: sobre procedimentos, saúde, novidades da área e perguntas frequentes.",
+    valorDeNegocio:
+      "Aumenta o tráfego orgânico do Google e posiciona o Dr. Lucas como referência na especialidade.",
+  },
+  {
+    icone: <BadgeDollarSign className="h-6 w-6" />,
+    categoria: "IA",
+    titulo: "Agente de Cobrança IA",
+    descricao:
+      "Agente inteligente que conduz conversas de cobrança via WhatsApp: lembra vencimentos, negocia parcelamentos de forma natural e registra acordos automaticamente no sistema.",
+    valorDeNegocio:
+      "Reduz inadimplência sem desgaste da equipe e sem constrangimento para o paciente.",
   },
 ]
 
