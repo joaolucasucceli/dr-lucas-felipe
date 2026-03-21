@@ -365,7 +365,7 @@ async function main() {
     for (const msg of mensagens) {
       await prisma.mensagemWhatsapp.upsert({
         where: { messageIdWhatsapp: msg.messageIdWhatsapp },
-        update: { conteudo: msg.conteudo },
+        update: { conteudo: msg.conteudo, remetente: msg.remetente },
         create: {
           id: msg.id,
           conversaId: conversa.id,
