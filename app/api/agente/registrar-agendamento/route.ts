@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { validarApiSecret } from "@/lib/api-auth"
-import { sincronizarFunil, avancarEtapa } from "@/lib/agente/kanban-sync"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -43,10 +42,6 @@ export async function POST(request: NextRequest) {
   // TODO: Criar evento Google Calendar quando lib estiver disponível
   // const configGoogle = await prisma.configGoogleCalendar.findFirst({ where: { ativo: true } })
   // if (configGoogle) { ... }
-
-  // Avançar funil
-  await sincronizarFunil(leadId, "consulta_agendada")
-  await avancarEtapa(conversaId, "consulta_agendada")
 
   return NextResponse.json({ agendamento })
 }

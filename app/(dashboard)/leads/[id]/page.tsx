@@ -400,46 +400,68 @@ export default function LeadDetalhePage() {
               titulo="Sem conversas ainda"
               descricao="O histórico de conversas será exibido quando o agente IA iniciar atendimentos."
             />
-          ) : (
-            <div className="space-y-4">
-              {lead.conversas.map((conversa) => (
-                <Card key={conversa.id}>
-                  <CardHeader>
-                    <CardTitle className="text-sm">
-                      Conversa — <StatusBadge status={conversa.etapa} />
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {conversa.mensagens.map((msg) => {
-                      const ehAgente = msg.remetente === "agente"
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex ${ehAgente ? "justify-end" : "justify-start"}`}
-                        >
-                          <div
-                            className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                              ehAgente
-                                ? "bg-primary text-primary-foreground rounded-tr-sm"
-                                : "bg-muted text-foreground rounded-tl-sm"
-                            }`}
-                          >
-                            <p className={`text-xs mb-1 font-medium ${ehAgente ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                              {ehAgente ? "Ana Júlia" : lead.nome.split(" ")[0]}
-                            </p>
-                            <p>{msg.conteudo}</p>
-                            <p className={`text-xs mt-1 text-right ${ehAgente ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                              {new Date(msg.criadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          ) : (() => {
+            // Agrupar conversas por ciclo
+            const ciclosMap = new Map<number, typeof lead.conversas>()
+            for (const conversa of lead.conversas) {
+              const ciclo = conversa.ciclo ?? 1
+              if (!ciclosMap.has(ciclo)) ciclosMap.set(ciclo, [])
+              ciclosMap.get(ciclo)!.push(conversa)
+            }
+            const ciclosOrdenados = Array.from(ciclosMap.entries()).sort((a, b) => b[0] - a[0])
+
+            return (
+              <div className="space-y-6">
+                {ciclosOrdenados.map(([ciclo, conversas]) => (
+                  <div key={ciclo}>
+                    {lead.ciclosCompletos > 0 && (
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                        {ciclo === 1 ? "1º Atendimento" : `${ciclo}º Atendimento (Retorno)`}
+                      </p>
+                    )}
+                    <div className="space-y-4">
+                      {conversas.map((conversa) => (
+                        <Card key={conversa.id}>
+                          <CardHeader>
+                            <CardTitle className="text-sm">
+                              Conversa — <StatusBadge status={conversa.etapa} />
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            {conversa.mensagens.map((msg) => {
+                              const ehAgente = msg.remetente === "agente"
+                              return (
+                                <div
+                                  key={msg.id}
+                                  className={`flex ${ehAgente ? "justify-end" : "justify-start"}`}
+                                >
+                                  <div
+                                    className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
+                                      ehAgente
+                                        ? "bg-primary text-primary-foreground rounded-tr-sm"
+                                        : "bg-muted text-foreground rounded-tl-sm"
+                                    }`}
+                                  >
+                                    <p className={`text-xs mb-1 font-medium ${ehAgente ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                      {ehAgente ? "Ana Júlia" : lead.nome.split(" ")[0]}
+                                    </p>
+                                    <p>{msg.conteudo}</p>
+                                    <p className={`text-xs mt-1 text-right ${ehAgente ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                                      {new Date(msg.criadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </TabsContent>
 
         <TabsContent value="fotos" className="mt-4">
@@ -463,57 +485,68 @@ export default function LeadDetalhePage() {
               titulo="Sem agendamentos"
               descricao="Clique em Novo Agendamento para criar o primeiro."
             />
-          ) : (
-            <div className="space-y-3">
-              {agendamentos.map((a) => (
-                <Card key={a.id}>
-                  <CardContent className="pt-4 flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={a.status} variante="agendamento" />
-                        <span className="text-sm font-medium">
-                          {new Date(a.dataHora).toLocaleString("pt-BR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                        <span className="text-sm text-muted-foreground">{a.duracao} min</span>
-                      </div>
-                      {a.procedimento && (
-                        <p className="text-sm text-muted-foreground">{a.procedimento.nome}</p>
-                      )}
-                      {a.observacao && (
-                        <p className="text-sm">{a.observacao}</p>
-                      )}
-                      {a.googleEventUrl && (
-                        <a
-                          href={a.googleEventUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-primary underline"
-                        >
-                          Ver no Google Calendar
-                        </a>
-                      )}
-                    </div>
-                    {a.status !== "cancelado" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0 text-destructive"
-                        onClick={() => setConfirmCancelarAgendamento(a.id)}
-                      >
-                        Cancelar
-                      </Button>
+          ) : (() => {
+            // Agrupar agendamentos por ciclo
+            const ciclosMap = new Map<number, typeof agendamentos>()
+            for (const ag of agendamentos) {
+              const ciclo = ag.ciclo ?? 1
+              if (!ciclosMap.has(ciclo)) ciclosMap.set(ciclo, [])
+              ciclosMap.get(ciclo)!.push(ag)
+            }
+            const ciclosOrdenados = Array.from(ciclosMap.entries()).sort((a, b) => b[0] - a[0])
+
+            return (
+              <div className="space-y-6">
+                {ciclosOrdenados.map(([ciclo, ags]) => (
+                  <div key={ciclo}>
+                    {ciclosMap.size > 1 && (
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                        {ciclo === 1 ? "1º Atendimento" : `${ciclo}º Atendimento (Retorno)`}
+                      </p>
                     )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                    <div className="space-y-3">
+                      {ags.map((a) => (
+                        <Card key={a.id}>
+                          <CardContent className="pt-4 flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <StatusBadge status={a.status} variante="agendamento" />
+                                <span className="text-sm font-medium">
+                                  {new Date(a.dataHora).toLocaleString("pt-BR", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                              {a.procedimento && (
+                                <p className="text-sm text-muted-foreground">{a.procedimento.nome}</p>
+                              )}
+                              {a.observacao && (
+                                <p className="text-sm">{a.observacao}</p>
+                              )}
+                            </div>
+                            {a.status !== "cancelado" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0 text-destructive"
+                                onClick={() => setConfirmCancelarAgendamento(a.id)}
+                              >
+                                Cancelar
+                              </Button>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </TabsContent>
       </Tabs>
 

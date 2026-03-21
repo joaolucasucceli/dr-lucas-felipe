@@ -13,6 +13,8 @@ export interface KanbanLead {
   atualizadoEm: string
   ultimaMovimentacaoEm: string | null
   motivoPerda: string | null
+  ehRetorno: boolean
+  cicloAtual: number
   diasNaEtapa: number
   responsavel: { id: string; nome: string } | null
   followUpEnviados: string[]

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { validarApiSecret } from "@/lib/api-auth"
-import { sincronizarFunil, avancarEtapa } from "@/lib/agente/kanban-sync"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -52,10 +51,6 @@ export async function POST(request: NextRequest) {
     where: { id: leadId },
     data: dadosAtualizar,
   })
-
-  // Avançar funil
-  await sincronizarFunil(leadId, "agendamento")
-  await avancarEtapa(conversaId, "agendamento")
 
   return NextResponse.json({ sucesso: true })
 }

@@ -105,6 +105,9 @@ model Lead {
   motivoPerda           String?
   ultimaMovimentacaoEm  DateTime?
   deletadoEm            DateTime?
+  cicloAtual            Int          @default(1)
+  ciclosCompletos       Int          @default(0)
+  ehRetorno             Boolean      @default(false)
 
   responsavel   Usuario?           @relation("ResponsavelLead", fields: [responsavelId], references: [id])
   conversas     Conversa[]
@@ -125,6 +128,7 @@ model Conversa {
   ultimaMensagemEm  DateTime?
   followUpEnviados  String[]      @default([])
   encerradaEm       DateTime?
+  ciclo             Int           @default(1)
   criadoEm          DateTime      @default(now())
   atualizadoEm      DateTime      @updatedAt
 
@@ -167,6 +171,7 @@ model Agendamento {
   duracao               Int               @default(60)
   observacao            String?           @db.Text
   confirmacoesEnviadas  String[]          @default([])
+  ciclo                 Int               @default(1)
   criadoEm              DateTime          @default(now())
   atualizadoEm          DateTime          @updatedAt
 
@@ -203,6 +208,7 @@ model FotoLead {
   url         String
   descricao   String?
   tipoAnalise String?
+  ciclo       Int      @default(1)
   criadoEm    DateTime @default(now())
 
   lead Lead @relation(fields: [leadId], references: [id])

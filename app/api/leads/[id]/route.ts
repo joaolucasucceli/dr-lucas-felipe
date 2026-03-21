@@ -27,8 +27,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         },
       },
       conversas: {
-        orderBy: { atualizadoEm: "desc" },
-        take: 5,
+        orderBy: [{ ciclo: "desc" }, { atualizadoEm: "desc" }],
         include: {
           mensagens: {
             orderBy: { criadoEm: "asc" },

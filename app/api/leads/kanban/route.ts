@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
       atualizadoEm: true,
       ultimaMovimentacaoEm: true,
       motivoPerda: true,
+      ehRetorno: true,
+      cicloAtual: true,
       responsavel: { select: { id: true, nome: true } },
       conversas: { where: { encerradaEm: null }, select: { followUpEnviados: true }, take: 1, orderBy: { criadoEm: "desc" } },
     },

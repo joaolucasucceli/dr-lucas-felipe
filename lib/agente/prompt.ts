@@ -3,6 +3,10 @@ interface ContextoLead {
   procedimento?: string
   etapa?: string
   sobreOPaciente?: string
+  ehRetorno?: boolean
+  cicloAtual?: number
+  ciclosCompletos?: number
+  ultimoProcedimento?: string | null
 }
 
 /** Gera o system prompt da Ana Júlia com contexto dinâmico do lead */
@@ -15,6 +19,13 @@ export function gerarSystemPrompt(contexto?: ContextoLead): string {
     if (contexto.procedimento) partes.push(`Procedimento de interesse: ${contexto.procedimento}`)
     if (contexto.etapa) partes.push(`Etapa atual no funil: ${contexto.etapa}`)
     if (contexto.sobreOPaciente) partes.push(`Informações coletadas:\n${contexto.sobreOPaciente}`)
+
+    if (contexto.ehRetorno) {
+      partes.push(`⚠️ PACIENTE DE RETORNO — Este é o ${contexto.cicloAtual}º atendimento desta paciente. Ela já fez ${contexto.ciclosCompletos} procedimento(s) anteriormente.`)
+      if (contexto.ultimoProcedimento) {
+        partes.push(`Último procedimento realizado: ${contexto.ultimoProcedimento}`)
+      }
+    }
 
     if (partes.length > 0) {
       contextoStr = `\n\n## Contexto do Paciente Atual\n${partes.join("\n")}`
@@ -61,6 +72,14 @@ Objetivo: Gerenciar o agendamento existente.
 - Responder dúvidas sobre a consulta
 - Permitir remarcação ou cancelamento via \`atualizar_agendamento\`
 - Reforçar a importância da consulta
+
+### Paciente de Retorno (ehRetorno = true)
+Quando o contexto indicar que é um paciente de retorno:
+- Cumprimentar reconhecendo que já é paciente da clínica: "Que bom ter você de volta!" ou "Que alegria falar com você de novo!"
+- Se tiver ultimoProcedimento, mencionar: "Espero que o(a) [procedimento] tenha ficado incrível!"
+- PULAR a etapa de qualificação básica (nome já conhecido, histórico disponível)
+- Ir direto para entender o novo interesse: "O que você gostaria de fazer dessa vez?"
+- Usar \`salvar_qualificacao\` para registrar o novo interesse antes de agendar
 
 ## Uso das Ferramentas
 

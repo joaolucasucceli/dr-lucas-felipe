@@ -450,6 +450,119 @@ async function main() {
     }
   }
 
+  // ── LEAD DE RETORNO (2º CICLO) — exemplo de paciente com múltiplos procedimentos ──
+  const leadRetorno = await prisma.lead.upsert({
+    where: { whatsapp: "5511988880099" },
+    update: {
+      nome: "Camila Retorno",
+      statusFunil: "agendamento",
+      procedimentoInteresse: "Mini Lipo",
+      cicloAtual: 2,
+      ciclosCompletos: 1,
+      ehRetorno: true,
+      sobreOPaciente: "32 anos, saudável. Fez PMMA em out/2025 com ótimo resultado.\n\n[Ciclo 2 iniciado em 21/03/2026]: Paciente retornou via WhatsApp. Status anterior: concluido.",
+      responsavelId: anaJulia.id,
+      ultimaMovimentacaoEm: ago(1),
+    },
+    create: {
+      nome: "Camila Retorno",
+      whatsapp: "5511988880099",
+      procedimentoInteresse: "Mini Lipo",
+      statusFunil: "agendamento",
+      origem: "whatsapp",
+      cicloAtual: 2,
+      ciclosCompletos: 1,
+      ehRetorno: true,
+      sobreOPaciente: "32 anos, saudável. Fez PMMA em out/2025 com ótimo resultado.\n\n[Ciclo 2 iniciado em 21/03/2026]: Paciente retornou via WhatsApp. Status anterior: concluido.",
+      responsavelId: anaJulia.id,
+      consentimentoLgpd: true,
+      consentimentoLgpdEm: ago(200),
+      ultimaMovimentacaoEm: ago(1),
+      criadoEm: ago(200),
+    },
+  })
+
+  // Conversa do ciclo 1 (PMMA — concluído)
+  const conversaRetornoCiclo1 = await prisma.conversa.upsert({
+    where: { id: "conv-retorno-c1" },
+    update: { etapa: "concluido" },
+    create: {
+      id: "conv-retorno-c1",
+      leadId: leadRetorno.id,
+      etapa: "concluido",
+      ciclo: 1,
+      criadoEm: ago(200),
+      ultimaMensagemEm: ago(150),
+    },
+  })
+
+  // Conversa do ciclo 2 (Mini Lipo — agendamento)
+  const conversaRetornoCiclo2 = await prisma.conversa.upsert({
+    where: { id: "conv-retorno-c2" },
+    update: { etapa: "agendamento" },
+    create: {
+      id: "conv-retorno-c2",
+      leadId: leadRetorno.id,
+      etapa: "agendamento",
+      ciclo: 2,
+      criadoEm: ago(2),
+      ultimaMensagemEm: ago(1),
+    },
+  })
+
+  // Mensagens ciclo 1
+  await prisma.mensagemWhatsapp.upsert({
+    where: { messageIdWhatsapp: "ret-c1-msg01" },
+    update: {},
+    create: { conversaId: conversaRetornoCiclo1.id, leadId: leadRetorno.id, messageIdWhatsapp: "ret-c1-msg01", tipo: "texto", conteudo: "Oi! Vi sobre o Dr. Lucas no Instagram e tenho interesse em PMMA", remetente: "paciente", criadoEm: ago(200) },
+  })
+  await prisma.mensagemWhatsapp.upsert({
+    where: { messageIdWhatsapp: "ret-c1-msg02" },
+    update: {},
+    create: { conversaId: conversaRetornoCiclo1.id, leadId: leadRetorno.id, messageIdWhatsapp: "ret-c1-msg02", tipo: "texto", conteudo: "Olá, Camila! Fico feliz que tenha nos encontrado! Sou a Ana Júlia. Me conta mais — você tem interesse em PMMA para quê área?", remetente: "agente", criadoEm: ago(199) },
+  })
+
+  // Agendamento ciclo 1 (PMMA — realizado)
+  await prisma.agendamento.upsert({
+    where: { id: "ag-retorno-c1-proc" },
+    update: {},
+    create: {
+      id: "ag-retorno-c1-proc",
+      leadId: leadRetorno.id,
+      procedimentoId: pmma.id,
+      dataHora: atHour(ago(160), 11),
+      status: "realizado",
+      duracao: 60,
+      ciclo: 1,
+      observacao: "PMMA — 1ª sessão",
+      criadoEm: ago(200),
+    },
+  })
+
+  // Fotos ciclo 1
+  await prisma.fotoLead.upsert({
+    where: { id: "foto-retorno-c1-pre" },
+    update: {},
+    create: { id: "foto-retorno-c1-pre", leadId: leadRetorno.id, url: "https://placehold.co/800x600/f5f5f5/999999?text=Ciclo1+Pre-Op+Camila", descricao: "Pré-op PMMA (Ciclo 1)", tipoAnalise: "pre_op", ciclo: 1, criadoEm: ago(200) },
+  })
+  await prisma.fotoLead.upsert({
+    where: { id: "foto-retorno-c1-pos" },
+    update: {},
+    create: { id: "foto-retorno-c1-pos", leadId: leadRetorno.id, url: "https://placehold.co/800x600/f5f5f5/999999?text=Ciclo1+Pos-Op+Camila", descricao: "Pós-op PMMA (Ciclo 1)", tipoAnalise: "pos_op", ciclo: 1, criadoEm: ago(155) },
+  })
+
+  // Mensagens ciclo 2 (retorno)
+  await prisma.mensagemWhatsapp.upsert({
+    where: { messageIdWhatsapp: "ret-c2-msg01" },
+    update: {},
+    create: { conversaId: conversaRetornoCiclo2.id, leadId: leadRetorno.id, messageIdWhatsapp: "ret-c2-msg01", tipo: "texto", conteudo: "Oi! Quero fazer uma Mini Lipo agora", remetente: "paciente", criadoEm: ago(2) },
+  })
+  await prisma.mensagemWhatsapp.upsert({
+    where: { messageIdWhatsapp: "ret-c2-msg02" },
+    update: {},
+    create: { conversaId: conversaRetornoCiclo2.id, leadId: leadRetorno.id, messageIdWhatsapp: "ret-c2-msg02", tipo: "texto", conteudo: "Camila! Que alegria te ver de volta! 🎉 Espero que o resultado do PMMA tenha ficado incrível. Quer fazer uma Mini Lipo agora?", remetente: "agente", criadoEm: ago(2) },
+  })
+
   // ── CONFIGURAÇÕES ─────────────────────────────────────────────────────────
   await prisma.configGoogleCalendar.upsert({
     where: { id: "config-gcal-01" },

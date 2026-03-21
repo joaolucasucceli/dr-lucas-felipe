@@ -12,6 +12,7 @@ export interface Agendamento {
   observacao: string | null
   googleEventId: string | null
   googleEventUrl: string | null
+  ciclo: number
   sincronizado: boolean
   criadoEm: string
   atualizadoEm: string

@@ -41,11 +41,27 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // Buscar conversa ativa (mais recente)
+  // Buscar conversa ativa do ciclo atual (mais recente)
   const conversa = await prisma.conversa.findFirst({
-    where: { leadId: lead.id },
+    where: { leadId: lead.id, ciclo: lead.cicloAtual },
     orderBy: { criadoEm: "desc" },
   })
+
+  // Buscar último procedimento realizado (ciclo anterior, se retorno)
+  let ultimoProcedimento: string | null = null
+  if (lead.ehRetorno && lead.ciclosCompletos > 0) {
+    const agendamentoCicloAnterior = await prisma.agendamento.findFirst({
+      where: {
+        leadId: lead.id,
+        ciclo: lead.cicloAtual - 1,
+        status: "realizado",
+        procedimentoId: { not: null },
+      },
+      include: { procedimento: { select: { nome: true } } },
+      orderBy: { dataHora: "desc" },
+    })
+    ultimoProcedimento = agendamentoCicloAnterior?.procedimento?.nome || null
+  }
 
   return NextResponse.json({
     lead: {
@@ -55,10 +71,14 @@ export async function POST(request: NextRequest) {
       statusFunil: lead.statusFunil,
       procedimentoInteresse: lead.procedimentoInteresse,
       origem: lead.origem,
+      ehRetorno: lead.ehRetorno,
+      cicloAtual: lead.cicloAtual,
+      ciclosCompletos: lead.ciclosCompletos,
     },
     conversa: conversa
       ? { id: conversa.id, etapa: conversa.etapa }
       : null,
     sobreOPaciente: lead.sobreOPaciente || null,
+    ultimoProcedimento,
   })
 }

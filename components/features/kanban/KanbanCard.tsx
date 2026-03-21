@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { Draggable } from "@hello-pangea/dnd"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { AlertTriangle, Clock, Bell, DoorOpen } from "lucide-react"
+import { AlertTriangle, Clock, Bell, DoorOpen, Repeat2 } from "lucide-react"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
 import type { KanbanLead } from "@/hooks/use-kanban"
 
@@ -66,6 +66,12 @@ export function KanbanCard({ lead, index }: KanbanCardProps) {
               {lead.nome}
             </p>
             <div className="flex items-center gap-1 shrink-0">
+              {lead.ehRetorno && (
+                <span className="flex items-center gap-0.5 shrink-0 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400" title={`Ciclo ${lead.cicloAtual}`}>
+                  <Repeat2 className="h-3 w-3" />
+                  {lead.cicloAtual}º
+                </span>
+              )}
               <FollowUpBadge followUpEnviados={lead.followUpEnviados} />
               {lead.diasNaEtapa > 3 && (
                 <span className="flex items-center gap-0.5 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">

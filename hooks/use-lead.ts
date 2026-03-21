@@ -16,17 +16,22 @@ interface Lead {
   arquivadoEm: string | null
   criadoEm: string
   atualizadoEm: string
+  cicloAtual: number
+  ciclosCompletos: number
+  ehRetorno: boolean
   responsavel: { id: string; nome: string } | null
   agendamentos: Array<{
     id: string
     dataHora: string
     status: string
     observacao: string | null
+    ciclo: number
     procedimento: { id: string; nome: string } | null
   }>
   conversas: Array<{
     id: string
     etapa: string
+    ciclo: number
     mensagens: Array<{
       id: string
       tipo: string
@@ -40,6 +45,7 @@ interface Lead {
     url: string
     descricao: string | null
     tipoAnalise: string | null
+    ciclo: number
     criadoEm: string
   }>
 }

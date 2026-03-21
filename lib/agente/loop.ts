@@ -4,10 +4,18 @@ import { obterELimparBuffer } from "@/lib/agente/buffer"
 import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
 import { gerarSystemPrompt } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
+import { abrirNovoCiclo } from "@/lib/agente/kanban-sync"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
+import { classificarEtapaConversa } from "@/lib/agente/classificador-etapa"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
 const MAX_TOOL_ITERATIONS = 10
+
+/** Statuses em que a IA fica em silêncio — humano está conduzindo */
+const STATUSES_SILENCIO = ["consulta_realizada", "sinal_pago", "procedimento_agendado"]
+
+/** Statuses que indicam paciente retornando — IA abre novo ciclo */
+const STATUSES_RETORNO = ["concluido", "perdido", "arquivado"]
 
 /** Segmenta resposta longa em mensagens curtas para WhatsApp */
 export function segmentarResposta(texto: string): string[] {
@@ -72,7 +80,16 @@ export async function processarMensagens(chatId: string): Promise<void> {
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
 
   // 5. Consultar paciente para contexto
-  let contextoLead: { nome?: string; procedimento?: string; etapa?: string; sobreOPaciente?: string } = {}
+  let contextoLead: {
+    nome?: string
+    procedimento?: string
+    etapa?: string
+    sobreOPaciente?: string
+    ehRetorno?: boolean
+    cicloAtual?: number
+    ciclosCompletos?: number
+    ultimoProcedimento?: string | null
+  } = {}
   let leadId: string | null = null
   let conversaId: string | null = null
 
@@ -81,14 +98,64 @@ export async function processarMensagens(chatId: string): Promise<void> {
       await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
     )
     if (resultadoPaciente.lead) {
-      contextoLead = {
-        nome: resultadoPaciente.lead.nome,
-        procedimento: resultadoPaciente.lead.procedimentoInteresse,
-        etapa: resultadoPaciente.lead.statusFunil,
-        sobreOPaciente: resultadoPaciente.sobreOPaciente,
+      const statusAtual: string = resultadoPaciente.lead.statusFunil
+
+      // 5a. Silêncio: humano está conduzindo — IA não responde
+      if (STATUSES_SILENCIO.includes(statusAtual)) {
+        console.log(`[Agente] Silêncio: lead ${resultadoPaciente.lead.id} está em ${statusAtual}`)
+        return
       }
-      leadId = resultadoPaciente.lead.id
-      conversaId = resultadoPaciente.conversa?.id || null
+
+      // 5b. Retorno: paciente voltou após concluido/perdido — abrir novo ciclo
+      if (STATUSES_RETORNO.includes(statusAtual)) {
+        console.log(`[Agente] Retorno detectado: lead ${resultadoPaciente.lead.id} (${statusAtual}) — abrindo novo ciclo`)
+        try {
+          const novoCiclo = await abrirNovoCiclo(resultadoPaciente.lead.id)
+          conversaId = novoCiclo.conversaId
+          // Rebuscar dados atualizados do lead
+          const leadAtualizado = JSON.parse(
+            await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
+          )
+          if (leadAtualizado.lead) {
+            contextoLead = {
+              nome: leadAtualizado.lead.nome,
+              procedimento: leadAtualizado.lead.procedimentoInteresse,
+              etapa: leadAtualizado.lead.statusFunil,
+              sobreOPaciente: leadAtualizado.sobreOPaciente,
+              ehRetorno: true,
+              cicloAtual: leadAtualizado.lead.cicloAtual,
+              ciclosCompletos: leadAtualizado.lead.ciclosCompletos,
+              ultimoProcedimento: leadAtualizado.ultimoProcedimento,
+            }
+            leadId = leadAtualizado.lead.id
+          }
+        } catch (err) {
+          console.error("[Agente] Erro ao abrir novo ciclo:", err)
+          // Se falhar abertura de ciclo, continua com dados originais
+          contextoLead = {
+            nome: resultadoPaciente.lead.nome,
+            procedimento: resultadoPaciente.lead.procedimentoInteresse,
+            etapa: resultadoPaciente.lead.statusFunil,
+            sobreOPaciente: resultadoPaciente.sobreOPaciente,
+          }
+          leadId = resultadoPaciente.lead.id
+          conversaId = resultadoPaciente.conversa?.id || null
+        }
+      } else {
+        // 5c. Fluxo normal (colunas 1–4)
+        contextoLead = {
+          nome: resultadoPaciente.lead.nome,
+          procedimento: resultadoPaciente.lead.procedimentoInteresse,
+          etapa: resultadoPaciente.lead.statusFunil,
+          sobreOPaciente: resultadoPaciente.sobreOPaciente,
+          ehRetorno: resultadoPaciente.lead.ehRetorno,
+          cicloAtual: resultadoPaciente.lead.cicloAtual,
+          ciclosCompletos: resultadoPaciente.lead.ciclosCompletos,
+          ultimoProcedimento: resultadoPaciente.ultimoProcedimento,
+        }
+        leadId = resultadoPaciente.lead.id
+        conversaId = resultadoPaciente.conversa?.id || null
+      }
     }
   } catch (error) {
     console.error("[Agente] Erro ao consultar paciente:", error)
@@ -210,6 +277,15 @@ export async function processarMensagens(chatId: string): Promise<void> {
     // 13. Salvar na memória
     await adicionarAMemoria(chatId, { role: "user", content: textoBuffer })
     await adicionarAMemoria(chatId, { role: "assistant", content: textoResposta })
+
+    // 14. Classificar etapa automaticamente
+    if (leadId && conversaId) {
+      try {
+        await classificarEtapaConversa(conversaId, leadId)
+      } catch (err) {
+        console.error("[classificador-etapa] Erro silencioso:", err)
+      }
+    }
   } catch (error) {
     console.error("[Agente] Erro no loop de resposta:", error)
   } finally {

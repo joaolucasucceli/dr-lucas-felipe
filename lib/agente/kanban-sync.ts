@@ -25,3 +25,59 @@ export async function avancarEtapa(
     data: { etapa: novaEtapa },
   })
 }
+
+interface ResultadoNovoCiclo {
+  conversaId: string
+  cicloAtual: number
+  statusAnterior: StatusFunil
+}
+
+/**
+ * Abre um novo ciclo de atendimento para um lead que retornou (concluido ou perdido).
+ * Incrementa cicloAtual, reseta statusFunil e cria nova conversa vinculada ao ciclo.
+ */
+export async function abrirNovoCiclo(leadId: string): Promise<ResultadoNovoCiclo> {
+  const lead = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } })
+
+  const statusAnterior = lead.statusFunil
+  const novoCiclo = lead.cicloAtual + 1
+  const dataFormatada = new Date().toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo",
+  })
+
+  const notaRetorno = `\n\n[Ciclo ${novoCiclo} iniciado em ${dataFormatada}]: Paciente retornou via WhatsApp. Status anterior: ${statusAnterior}.`
+
+  const [novaConversa] = await prisma.$transaction([
+    prisma.conversa.create({
+      data: {
+        leadId,
+        etapa: "qualificacao",
+        ciclo: novoCiclo,
+      },
+    }),
+    prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        cicloAtual: novoCiclo,
+        ciclosCompletos: lead.ciclosCompletos + 1,
+        ehRetorno: true,
+        statusFunil: "qualificacao",
+        ultimaMovimentacaoEm: new Date(),
+        arquivado: false,
+        arquivadoEm: null,
+        sobreOPaciente: lead.sobreOPaciente
+          ? `${lead.sobreOPaciente}${notaRetorno}`
+          : notaRetorno.trim(),
+      },
+    }),
+  ])
+
+  return {
+    conversaId: novaConversa.id,
+    cicloAtual: novoCiclo,
+    statusAnterior,
+  }
+}

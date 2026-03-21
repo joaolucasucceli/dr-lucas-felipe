@@ -97,6 +97,7 @@ export async function GET(request: NextRequest) {
     followUpsEnviados,
     confirmacaoEnviadas,
     leadsEmAlerta,
+    pacientesRetorno,
   ] = await Promise.all([
     prisma.lead.count({ where: filtroBase }),
     prisma.lead.count({ where: { ...filtroBase, ...filtroPeriodo } }),
@@ -153,6 +154,9 @@ export async function GET(request: NextRequest) {
         ],
       },
     }),
+    prisma.lead.count({
+      where: { ...filtroBase, ehRetorno: true },
+    }),
   ])
 
   const taxaConversao =
@@ -177,6 +181,11 @@ export async function GET(request: NextRequest) {
     total: g._count?.id ?? 0,
   }))
 
+  const taxaRetorno =
+    totalLeads > 0
+      ? Math.round((pacientesRetorno / totalLeads) * 1000) / 10
+      : 0
+
   return NextResponse.json({
     totalLeads,
     leadsNovosNoPeriodo,
@@ -189,6 +198,8 @@ export async function GET(request: NextRequest) {
     followUpsEnviados,
     confirmacaoEnviadas,
     leadsEmAlerta,
+    pacientesRetorno,
+    taxaRetorno,
     periodo,
     dataInicio: dataInicio?.toISOString() ?? null,
     dataFim: dataFim.toISOString(),
