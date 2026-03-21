@@ -62,7 +62,6 @@ const MSG_COUNTS: Record<string, number> = {
 // ── gerador de mensagens por estágio ──────────────────────────────────────────
 function buildMsgs(
   pfx: string,
-  whatsapp: string,
   nome: string,
   procNome: string,
   proc: "miniLipo" | "lipoGlutea" | "pmma",
@@ -87,26 +86,26 @@ function buildMsgs(
   })
 
   const all = [
-    mk(1, `Olá! ${contato} ${procNome}. Poderia me dar mais informações?`, whatsapp),
-    mk(2, `Olá, ${fn}! 😊 Aqui é a Ana Júlia, assistente virtual da clínica do Dr. Lucas Felipe. Que bom que você entrou em contato! Para te ajudar melhor, me conta: quantos anos você tem e qual é seu objetivo com ${procNome}?`, "bot"),
-    mk(3, `Tenho ${idade} anos e ${obj}.`, whatsapp),
-    mk(4, `Perfeito, ${fn}! O Dr. Lucas trabalha com uma abordagem muito natural e personalizada. Antes de prosseguirmos, você tem alguma condição de saúde como diabetes, hipertensão, problemas cardíacos ou de coagulação?`, "bot"),
-    mk(5, `Não, sou saudável. Nunca tive nenhum problema de saúde relevante.`, whatsapp),
-    mk(6, `Ótimo! 😊 Temos disponibilidade para consulta presencial com o Dr. Lucas. Você prefere horário de manhã ou à tarde?`, "bot"),
-    mk(7, `Prefiro de manhã, antes das 11h.`, whatsapp),
-    mk(8, `Vou verificar os horários disponíveis para você. Pode aguardar um instante?`, "bot"),
-    mk(9, `Pode sim, fico no aguardo!`, whatsapp),
-    mk(10, `Consulta confirmada! ✅ Dr. Lucas te aguarda. Nosso endereço: Av. Paulista, 1000 — Sala 810, Bela Vista, São Paulo. Qualquer dúvida, pode me chamar aqui!`, "bot"),
-    mk(11, `Olá ${fn}! 😊 Passando para confirmar sua consulta de amanhã com o Dr. Lucas. Tudo certo?`, "bot"),
-    mk(12, `Confirmado! Estarei lá. Preciso levar algum documento?`, whatsapp),
-    mk(13, `Pode trazer RG ou CNH e, se tiver, exames recentes (hemograma, coagulação). Até amanhã! 💙`, "bot"),
-    mk(14, `Olá ${fn}! 😊 Como foi a consulta com o Dr. Lucas? Espero que tudo tenha corrido bem!`, "bot"),
-    mk(15, `Foi incrível! Dr. Lucas foi super atencioso e esclareceu todas as minhas dúvidas. Adorei a clínica!`, whatsapp),
-    mk(16, `Que ótimo! 💙 O Dr. Lucas ficou muito satisfeito com seu perfil. Para reservarmos sua data, o valor do sinal é de R$ 2.000 (descontado do total do procedimento). Posso te passar as formas de pagamento?`, "bot"),
-    mk(17, `Pode sim! Quero confirmar logo minha data. Qual é a chave do PIX?`, whatsapp),
-    mk(18, `PIX: CNPJ 12.345.678/0001-90. Assim que confirmarmos o recebimento, envio o contrato e todas as orientações pré-operatórias. 🎉`, "bot"),
-    mk(19, `Enviei o comprovante agora! Pode confirmar o recebimento?`, whatsapp),
-    mk(20, `Recebemos, ${fn}! 🎉 Seu procedimento está reservado. Em breve enviarei as orientações pré-operatórias completas. Qualquer dúvida, estou aqui!`, "bot"),
+    mk(1, `Olá! ${contato} ${procNome}. Poderia me dar mais informações?`, "paciente"),
+    mk(2, `Olá, ${fn}! 😊 Aqui é a Ana Júlia, assistente virtual da clínica do Dr. Lucas Felipe. Que bom que você entrou em contato! Para te ajudar melhor, me conta: quantos anos você tem e qual é seu objetivo com ${procNome}?`, "agente"),
+    mk(3, `Tenho ${idade} anos e ${obj}.`, "paciente"),
+    mk(4, `Perfeito, ${fn}! O Dr. Lucas trabalha com uma abordagem muito natural e personalizada. Antes de prosseguirmos, você tem alguma condição de saúde como diabetes, hipertensão, problemas cardíacos ou de coagulação?`, "agente"),
+    mk(5, `Não, sou saudável. Nunca tive nenhum problema de saúde relevante.`, "paciente"),
+    mk(6, `Ótimo! 😊 Temos disponibilidade para consulta presencial com o Dr. Lucas. Você prefere horário de manhã ou à tarde?`, "agente"),
+    mk(7, `Prefiro de manhã, antes das 11h.`, "paciente"),
+    mk(8, `Vou verificar os horários disponíveis para você. Pode aguardar um instante?`, "agente"),
+    mk(9, `Pode sim, fico no aguardo!`, "paciente"),
+    mk(10, `Consulta confirmada! ✅ Dr. Lucas te aguarda. Nosso endereço: Av. Paulista, 1000 — Sala 810, Bela Vista, São Paulo. Qualquer dúvida, pode me chamar aqui!`, "agente"),
+    mk(11, `Olá ${fn}! 😊 Passando para confirmar sua consulta de amanhã com o Dr. Lucas. Tudo certo?`, "agente"),
+    mk(12, `Confirmado! Estarei lá. Preciso levar algum documento?`, "paciente"),
+    mk(13, `Pode trazer RG ou CNH e, se tiver, exames recentes (hemograma, coagulação). Até amanhã! 💙`, "agente"),
+    mk(14, `Olá ${fn}! 😊 Como foi a consulta com o Dr. Lucas? Espero que tudo tenha corrido bem!`, "agente"),
+    mk(15, `Foi incrível! Dr. Lucas foi super atencioso e esclareceu todas as minhas dúvidas. Adorei a clínica!`, "paciente"),
+    mk(16, `Que ótimo! 💙 O Dr. Lucas ficou muito satisfeito com seu perfil. Para reservarmos sua data, o valor do sinal é de R$ 2.000 (descontado do total do procedimento). Posso te passar as formas de pagamento?`, "agente"),
+    mk(17, `Pode sim! Quero confirmar logo minha data. Qual é a chave do PIX?`, "paciente"),
+    mk(18, `PIX: CNPJ 12.345.678/0001-90. Assim que confirmarmos o recebimento, envio o contrato e todas as orientações pré-operatórias. 🎉`, "agente"),
+    mk(19, `Enviei o comprovante agora! Pode confirmar o recebimento?`, "paciente"),
+    mk(20, `Recebemos, ${fn}! 🎉 Seu procedimento está reservado. Em breve enviarei as orientações pré-operatórias completas. Qualquer dúvida, estou aqui!`, "agente"),
   ]
 
   return all.slice(0, MSG_COUNTS[status] ?? 3)
@@ -362,7 +361,7 @@ async function main() {
     })
 
     // Mensagens
-    const mensagens = buildMsgs(pfx, ld.whatsapp, ld.nome, procNome, ld.proc, ld.origem, ld.status, criadoEm, ld.num)
+    const mensagens = buildMsgs(pfx, ld.nome, procNome, ld.proc, ld.origem, ld.status, criadoEm, ld.num)
     for (const msg of mensagens) {
       await prisma.mensagemWhatsapp.upsert({
         where: { messageIdWhatsapp: msg.messageIdWhatsapp },

@@ -410,21 +410,31 @@ export default function LeadDetalhePage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {conversa.mensagens.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`rounded-lg p-3 text-sm ${
-                          msg.remetente === "agente"
-                            ? "bg-primary/10 ml-8"
-                            : "bg-muted mr-8"
-                        }`}
-                      >
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {msg.remetente} — {new Date(msg.criadoEm).toLocaleString("pt-BR")}
-                        </p>
-                        <p>{msg.conteudo}</p>
-                      </div>
-                    ))}
+                    {conversa.mensagens.map((msg) => {
+                      const ehAgente = msg.remetente === "agente"
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex ${ehAgente ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
+                              ehAgente
+                                ? "bg-primary text-primary-foreground rounded-tr-sm"
+                                : "bg-muted text-foreground rounded-tl-sm"
+                            }`}
+                          >
+                            <p className={`text-xs mb-1 font-medium ${ehAgente ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                              {ehAgente ? "Ana Júlia" : lead.nome.split(" ")[0]}
+                            </p>
+                            <p>{msg.conteudo}</p>
+                            <p className={`text-xs mt-1 text-right ${ehAgente ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                              {new Date(msg.criadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </CardContent>
                 </Card>
               ))}

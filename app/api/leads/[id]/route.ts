@@ -31,8 +31,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         take: 5,
         include: {
           mensagens: {
-            orderBy: { criadoEm: "desc" },
-            take: 10,
+            orderBy: { criadoEm: "asc" },
           },
         },
       },
