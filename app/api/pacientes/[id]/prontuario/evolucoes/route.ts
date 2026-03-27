@@ -42,6 +42,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         procedimento: {
           select: { id: true, nome: true },
         },
+        registroCirurgico: true,
       },
     }),
     prisma.evolucao.count({ where }),
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       procedimento: {
         select: { id: true, nome: true },
       },
+      registroCirurgico: true,
     },
   })
 

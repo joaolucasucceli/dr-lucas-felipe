@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.8.0"
+export const VERSAO_DOCUMENTACAO = "1.9.0"
 export const DATA_ATUALIZACAO = "2026-03-27"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -285,6 +285,55 @@ Gestão completa de pacientes clínicos com prontuário médico estruturado. Mó
 3. Clique em um paciente para abrir o detalhe com abas: Dados, Prontuário, Agendamentos, Timeline
 4. Na aba **Prontuário**, preencha a anamnese (salva automaticamente) e registre evoluções clínicas
 5. Use "Nova Evolução" para registrar consultas, procedimentos e observações
+6. Na seção **Sinais Vitais**, registre aferições (PA, FC, temperatura, SpO₂, glicemia) com alertas visuais
+7. Em evoluções tipo "Procedimento", clique em **Registrar Detalhes Cirúrgicos** para adicionar a ficha cirúrgica completa
+8. Na **Galeria de Fotos**, use o botão **Comparar** para visualizar antes/depois com slider interativo
+
+### Sinais Vitais
+
+Sistema de registro e monitoramento de sinais vitais com alertas visuais por limiar.
+
+| Sinal | Unidade | Normal | Atenção | Crítico |
+|-------|---------|--------|---------|---------|
+| Pressão Arterial | mmHg | ≤ 130/85 | 131-139/86-89 | ≥ 140/90 |
+| Frequência Cardíaca | bpm | 60-100 | <60 ou >100 | <50 ou >120 |
+| Temperatura | °C | 36.0-37.5 | >37.5 ou <36 | >38.5 ou <35 |
+| SpO₂ | % | ≥ 95% | 90-94% | < 90% |
+| Glicemia | mg/dL | 70-100 | >100 | <70 ou >200 |
+
+- Dashboard com último valor de cada tipo + badge colorido (Normal/Atenção/Crítico)
+- Tabela histórica com filtro por tipo
+- Botão "Registrar" abre formulário com tipo, valor, data/hora e observação
+
+### Comparação de Fotos (Antes × Depois)
+
+Ferramenta visual para comparar fotos pré-operatórias e pós-operatórias do paciente.
+
+- Botão "Comparar" na galeria (ativo quando há pelo menos 1 foto pré-op e 1 pós-op)
+- Seleção independente de foto de antes e depois via dropdown
+- Slider interativo que revela antes/depois arrastando o divisor
+- Zoom com scroll do mouse
+- Labels "Antes" e "Depois" fixos na imagem
+
+### Registro Cirúrgico
+
+Ficha cirúrgica detalhada vinculada a evoluções do tipo "Procedimento".
+
+| Campo | Descrição |
+|-------|-----------|
+| Tipo de Anestesia | Local, Sedação, Geral, Raquidiana, Peridural, Bloqueio Regional |
+| Anestesista | Nome do profissional (opcional) |
+| Duração | Tempo cirúrgico em minutos |
+| Sangramento | Classificação (mínimo, moderado, etc.) |
+| Técnica Utilizada | Descrição da técnica cirúrgica (obrigatório) |
+| Materiais | Lista de materiais utilizados |
+| Complicações | Registro de intercorrências durante o procedimento |
+| Orientações Pós-op | Cuidados e orientações ao paciente |
+| Marcos de Recuperação | Timeline de milestones com checkbox (ex: retirada de pontos, retorno) |
+
+- Ao expandir uma evolução tipo "Procedimento", o registro cirúrgico é exibido inline
+- Se não existe, aparece botão "Registrar Detalhes Cirúrgicos"
+- Marcos de recuperação com status: Concluído (verde), Pendente (amarelo), Atrasado (vermelho)
 
 ### Permissões
 

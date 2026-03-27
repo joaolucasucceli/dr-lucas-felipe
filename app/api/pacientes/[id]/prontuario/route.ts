@@ -27,6 +27,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
               procedimento: {
                 select: { id: true, nome: true },
               },
+              registroCirurgico: true,
             },
           },
           _count: {

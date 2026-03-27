@@ -3,13 +3,15 @@
 import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Plus, ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react"
+import { Plus, ChevronDown, ChevronUp, Pencil, Trash2, Stethoscope } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { FormEvolucao } from "./FormEvolucao"
+import { DetalheRegistroCirurgico } from "./DetalheRegistroCirurgico"
+import { FormRegistroCirurgico } from "./FormRegistroCirurgico"
 import type { Evolucao } from "@/hooks/use-prontuario"
 
 interface TimelineEvolucaoProps {
@@ -23,6 +25,7 @@ export function TimelineEvolucao({ evolucoes, pacienteId, onAtualizar }: Timelin
   const [formAberto, setFormAberto] = useState(false)
   const [editando, setEditando] = useState<Evolucao | null>(null)
   const [confirmExcluir, setConfirmExcluir] = useState<string | null>(null)
+  const [regCirurgicoAberto, setRegCirurgicoAberto] = useState<string | null>(null)
 
   function toggleExpand(id: string) {
     setExpandido(expandido === id ? null : id)
@@ -154,6 +157,31 @@ export function TimelineEvolucao({ evolucoes, pacienteId, onAtualizar }: Timelin
                             <p className="text-sm">{ev.procedimento.nome}</p>
                           </div>
                         )}
+
+                        {/* Registro Cirúrgico — só para evoluções tipo "procedimento" */}
+                        {ev.tipo === "procedimento" && ev.registroCirurgico && (
+                          <DetalheRegistroCirurgico
+                            registro={ev.registroCirurgico}
+                            pacienteId={pacienteId}
+                            evolucaoId={ev.id}
+                            onAtualizar={onAtualizar}
+                          />
+                        )}
+
+                        {ev.tipo === "procedimento" && !ev.registroCirurgico && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setRegCirurgicoAberto(ev.id)
+                            }}
+                          >
+                            <Stethoscope className="mr-2 h-3.5 w-3.5" />
+                            Registrar Detalhes Cirúrgicos
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -171,6 +199,16 @@ export function TimelineEvolucao({ evolucoes, pacienteId, onAtualizar }: Timelin
         evolucao={editando}
         onSalvar={onAtualizar}
       />
+
+      {regCirurgicoAberto && (
+        <FormRegistroCirurgico
+          aberto={true}
+          onFechar={() => setRegCirurgicoAberto(null)}
+          pacienteId={pacienteId}
+          evolucaoId={regCirurgicoAberto}
+          onSalvar={onAtualizar}
+        />
+      )}
 
       <ConfirmDialog
         aberto={!!confirmExcluir}
