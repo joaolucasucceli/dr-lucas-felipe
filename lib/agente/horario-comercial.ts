@@ -46,20 +46,3 @@ export function ehHorarioComercial(data?: Date): boolean {
   // Seg-Sex — 8h-18h
   return hora >= 8 && hora < 18
 }
-
-/**
- * Retorna o próximo horário comercial válido.
- * Se já está em horário comercial, retorna a data atual.
- */
-export function proximoHorarioComercial(data?: Date): Date {
-  const d = new Date(data || new Date())
-
-  // Tentar até 7 dias à frente
-  for (let i = 0; i < 7 * 24; i++) {
-    if (ehHorarioComercial(d)) return d
-    d.setHours(d.getHours() + 1)
-    d.setMinutes(0, 0, 0)
-  }
-
-  return d
-}
