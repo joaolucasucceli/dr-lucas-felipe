@@ -121,9 +121,9 @@ lib/documentacao/conteudo.ts
 - `VERSAO_DOCUMENTACAO` — incrementar a versão (semver: patch para ajustes, minor para features)
 - `DATA_ATUALIZACAO` — sempre atualizar para a data da mudança (formato `YYYY-MM-DD`)
 
-## Ordem de Desenvolvimento
+## Estado do Projeto
 
-Seguir o roadmap de 13 sprints (Sprint 0-12) em `ROADMAP.md`. Estado atual: fase de setup do projeto.
+Sistema em produção com todos os módulos core implementados. Novo ciclo de sprints será planejado conforme demanda.
 
 ## Idioma
 

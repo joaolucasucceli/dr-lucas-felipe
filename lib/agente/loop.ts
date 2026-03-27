@@ -102,13 +102,11 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
       // 5a. Silêncio: humano está conduzindo — IA não responde
       if (STATUSES_SILENCIO.includes(statusAtual)) {
-        console.log(`[Agente] Silêncio: lead ${resultadoPaciente.lead.id} está em ${statusAtual}`)
         return
       }
 
       // 5b. Retorno: paciente voltou após concluido/perdido — abrir novo ciclo
       if (STATUSES_RETORNO.includes(statusAtual)) {
-        console.log(`[Agente] Retorno detectado: lead ${resultadoPaciente.lead.id} (${statusAtual}) — abrindo novo ciclo`)
         try {
           const novoCiclo = await abrirNovoCiclo(resultadoPaciente.lead.id)
           conversaId = novoCiclo.conversaId
