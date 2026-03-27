@@ -15,6 +15,15 @@ const funilConfig: Record<string, { label: string; classes: string; descricao: s
   perdido: { label: "Perdido", classes: "bg-red-100 text-red-800", descricao: "Lead não convertido — saiu do funil" },
 }
 
+const evolucaoConfig: Record<string, { label: string; classes: string; descricao: string }> = {
+  consulta: { label: "Consulta", classes: "bg-blue-100 text-blue-800", descricao: "Registro de consulta médica" },
+  procedimento: { label: "Procedimento", classes: "bg-purple-100 text-purple-800", descricao: "Registro de procedimento realizado" },
+  retorno: { label: "Retorno", classes: "bg-green-100 text-green-800", descricao: "Consulta de retorno pós-procedimento" },
+  prescricao: { label: "Prescrição", classes: "bg-amber-100 text-amber-800", descricao: "Prescrição médica emitida" },
+  intercorrencia: { label: "Intercorrência", classes: "bg-red-100 text-red-800", descricao: "Intercorrência ou complicação registrada" },
+  observacao: { label: "Observação", classes: "bg-zinc-100 text-zinc-800", descricao: "Observação geral sobre o paciente" },
+}
+
 const agendamentoConfig: Record<string, { label: string; classes: string; descricao: string }> = {
   agendado: { label: "Agendado", classes: "bg-blue-100 text-blue-800", descricao: "Agendamento confirmado, aguardando a data" },
   confirmado: { label: "Confirmado", classes: "bg-green-100 text-green-800", descricao: "Paciente confirmou presença" },
@@ -25,12 +34,13 @@ const agendamentoConfig: Record<string, { label: string; classes: string; descri
 
 interface StatusBadgeProps {
   status: string
-  variante?: "funil" | "agendamento"
+  variante?: "funil" | "agendamento" | "evolucao"
   className?: string
 }
 
 export function StatusBadge({ status, variante = "funil", className }: StatusBadgeProps) {
-  const config = variante === "funil" ? funilConfig : agendamentoConfig
+  const configs = { funil: funilConfig, agendamento: agendamentoConfig, evolucao: evolucaoConfig }
+  const config = configs[variante]
   const item = config[status]
 
   if (!item) {

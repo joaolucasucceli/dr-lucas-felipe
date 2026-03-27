@@ -37,6 +37,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       fotos: {
         orderBy: { criadoEm: "desc" },
       },
+      paciente: {
+        select: { id: true, nome: true },
+      },
     },
   })
 

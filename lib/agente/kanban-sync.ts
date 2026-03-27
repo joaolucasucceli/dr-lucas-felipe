@@ -37,6 +37,17 @@ interface ResultadoNovoCiclo {
  * Incrementa cicloAtual, reseta statusFunil e cria nova conversa vinculada ao ciclo.
  */
 export async function abrirNovoCiclo(leadId: string): Promise<ResultadoNovoCiclo> {
+  // Bloquear se lead já foi convertido em paciente
+  const pacienteVinculado = await prisma.paciente.findUnique({
+    where: { leadOrigemId: leadId },
+    select: { id: true },
+  })
+  if (pacienteVinculado) {
+    throw new Error(
+      `Lead ${leadId} já foi convertido em paciente (${pacienteVinculado.id}). Novo ciclo bloqueado.`
+    )
+  }
+
   const lead = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } })
 
   const statusAnterior = lead.statusFunil

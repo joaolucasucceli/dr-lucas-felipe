@@ -169,11 +169,12 @@ test.describe("Ferramentas do Agente — API", () => {
       }
     )
     const verificado = await resVerifica.json()
-    expect(verificado.lead.statusFunil).toBe("agendamento")
+    // salvar-qualificacao NÃO faz sync de kanban — status permanece inalterado
+    expect(verificado.lead.statusFunil).toBe("primeiro_atendimento")
     expect(verificado.sobreOPaciente).toContain("rinoplastia")
   })
 
-  test("registrar-agendamento: cria agendamento e muda status", async ({
+  test("registrar-agendamento: cria agendamento", async ({
     request,
   }) => {
     // Setup: lead + conversa + qualificação
@@ -228,6 +229,7 @@ test.describe("Ferramentas do Agente — API", () => {
       }
     )
     const verificado = await resVerifica.json()
-    expect(verificado.lead.statusFunil).toBe("consulta_agendada")
+    // registrar-agendamento NÃO faz sync de kanban — status permanece inalterado
+    expect(verificado.lead.statusFunil).toBe("primeiro_atendimento")
   })
 })

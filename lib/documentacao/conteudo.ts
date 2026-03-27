@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.4.0"
+export const VERSAO_DOCUMENTACAO = "1.7.0"
 export const DATA_ATUALIZACAO = "2026-03-27"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -209,7 +209,69 @@ Catálogo de procedimentos da clínica com valores e duração.
 
 ---
 
-## Módulo 6 — Ana Júlia (Agente IA)
+## Módulo 6 — Pacientes & Prontuário
+
+Gestão completa de pacientes clínicos com prontuário médico estruturado. Módulo exclusivo do Gestor.
+
+### Funcionalidades
+
+- **Cadastro de pacientes** — Dados pessoais, endereço, contato de emergência, consentimento LGPD
+- **Conversão Lead → Paciente** — Automática ao concluir funil ou manual via botão. Idempotente e atômica
+- **Prontuário médico** — Criado automaticamente com número sequencial ao cadastrar paciente
+- **Anamnese estruturada** — 5 seções com autosave: queixa principal, histórico médico, alergias/medicamentos, hábitos de vida, medidas e sinais vitais
+- **Evolução clínica** — Timeline cronológica com 6 tipos: consulta, procedimento, retorno, prescrição, intercorrência, observação
+- **IMC automático** — Calculado ao informar peso e altura (server-side e client-side)
+- **Audit trail completo** — Toda operação de leitura, escrita e exclusão é registrada no AuditLog
+
+### Anamnese — Seções do Formulário
+
+| Seção | Campos |
+|-------|--------|
+| Queixa Principal | Texto livre com autosave |
+| Histórico Médico | Histórico geral, doenças pré-existentes, cirurgias anteriores |
+| Alergias e Medicamentos | Alergias, medicamentos em uso |
+| Hábitos de Vida | Tabagismo, etilismo, atividade física, gestações, anticoncepcional |
+| Medidas e Sinais Vitais | Peso (kg), altura (cm), IMC (auto), pressão arterial, observações |
+
+### Evolução Clínica — Tipos
+
+| Tipo | Descrição |
+|------|-----------|
+| Consulta | Atendimento clínico regular |
+| Procedimento | Registro de procedimento realizado |
+| Retorno | Consulta de acompanhamento |
+| Prescrição | Prescrição médica |
+| Intercorrência | Evento adverso ou complicação |
+| Observação | Nota geral no prontuário |
+
+### Conversão Lead → Paciente
+
+1. Quando um lead atinge o status "Concluído" (movido manualmente), o sistema converte automaticamente
+2. Também disponível via botão "Converter em Paciente" na página do lead (somente Gestor)
+3. A conversão é **idempotente** — se o lead já foi convertido, retorna o paciente existente
+4. O lead é **arquivado** automaticamente após a conversão
+5. O agente IA (Ana Júlia) **não reabre ciclos** de leads já convertidos em pacientes
+
+### Como usar
+
+1. Acesse "Pacientes" no menu lateral (visível apenas para Gestor)
+2. Cadastre manualmente ou aguarde a conversão automática de leads concluídos
+3. Clique em um paciente para abrir o detalhe com abas: Dados, Prontuário, Agendamentos, Timeline
+4. Na aba **Prontuário**, preencha a anamnese (salva automaticamente) e registre evoluções clínicas
+5. Use "Nova Evolução" para registrar consultas, procedimentos e observações
+
+### Permissões
+
+| Perfil | Acesso |
+|--------|--------|
+| Gestor | Total — CRUD completo de pacientes, prontuário, anamnese e evolução |
+| Atendente | Sem acesso — módulo não aparece no sidebar |
+
+> Todos os dados de pacientes são sensíveis (LGPD). O módulo registra audit log em toda operação — visualização, edição e exclusão.
+
+---
+
+## Módulo 7 — Ana Júlia (Agente IA)
 
 Painel de desempenho e monitoramento do agente de atendimento IA.
 
@@ -267,9 +329,47 @@ POST /api/webhooks/whatsapp
 
 > A Ana Júlia opera 24/7. Configure o WhatsApp em Configurações para ela funcionar.
 
+### Abordagem Proativa (Leads do Site)
+
+Quando um visitante preenche o formulário de captação na landing page:
+
+1. O sistema cria o Lead com \`origem: "site"\` e uma Conversa vinculada
+2. Uma mensagem sintética é injetada no buffer Redis do agente
+3. A Ana Júlia processa e envia uma mensagem proativa no WhatsApp do lead em ~30 segundos
+4. A conversa segue o fluxo normal de qualificação → agendamento
+
+Endpoint público (sem autenticação): \`POST /api/site/captar-lead\`
+
+Proteções:
+- Rate limit: 3 submissões por IP por hora
+- Honeypot para detecção de bots
+- Consentimento LGPD obrigatório
+- Dedup por número de WhatsApp (se já existe, sucesso silencioso)
+
 ---
 
-## Módulo 7 — Relatórios
+## Landing Page (Página de Venda)
+
+Site institucional do Dr. Lucas Felipe (\`/\`) com foco em contorno corporal.
+
+### Seções
+
+1. **Hero** — Foto profissional + CTA WhatsApp
+2. **Sobre** — Biografia + diferenciais rápidos
+3. **Procedimentos** — 5 cards (Lipo Fracionada, Mini Lipo, Hidrolipo, Lipo com Enxerto Glúteo, Preenchimento Glúteo)
+4. **Diferenciais** — 4 cards numerados
+5. **Formulário de Captação** — Nome, WhatsApp, procedimento + disparo automático da Ana Júlia
+6. **CTA Final** — Foto + botão WhatsApp
+7. **Footer** — Links, contato, disclaimer
+
+### Configuração
+
+Todos os dados editáveis (WhatsApp, CRM, Instagram, contato) ficam em:
+\`app/(site)/components/site-config.ts\`
+
+---
+
+## Módulo 8 — Relatórios
 
 Análise de desempenho do negócio com exportação de dados.
 
@@ -298,7 +398,7 @@ Análise de desempenho do negócio com exportação de dados.
 
 ---
 
-## Módulo 8 — Configurações
+## Módulo 9 — Configurações
 
 Integrações, automações e configurações gerais do sistema.
 
@@ -319,6 +419,12 @@ Integrações, automações e configurações gerais do sistema.
 - Configuração: Configurações → Tipos de Procedimento
 - Tipos padrão do sistema: Cirúrgico, Estético, Minimamente Invasivo
 
+#### Site (Landing Page)
+- Dados de contato, WhatsApp, informações do médico e redes sociais exibidos na landing page
+- Configuração: Configurações → Site → preencher campos → Salvar
+- Campos: número WhatsApp, mensagem padrão, nome/CRM/especialidade do médico, telefone, endereço, cidade, Instagram
+- A landing page usa os dados do banco; se não cadastrados, exibe dados de exemplo (fallback)
+
 #### Automações CRON
 - Follow-ups e confirmações executados a cada hora
 - Botão "Forçar execução" para testar manualmente
@@ -327,14 +433,14 @@ Integrações, automações e configurações gerais do sistema.
 
 | Perfil | Acesso |
 |--------|--------|
-| Gestor | Total — configura integrações, automações e tipos de procedimento |
+| Gestor | Total — configura integrações, automações, site e tipos de procedimento |
 | Atendente | Sem acesso (exceto leitura de tipos para formulários) |
 
 > Sem Google Agenda configurado, agendamentos não sincronizam. Sem WhatsApp conectado, a Ana Júlia fica silenciosa.
 
 ---
 
-## Módulo 9 — Usuários e Permissões
+## Módulo 10 — Usuários e Permissões
 
 Gerenciamento de acesso e perfis dos usuários da plataforma.
 
@@ -342,7 +448,7 @@ Gerenciamento de acesso e perfis dos usuários da plataforma.
 
 | Perfil | Módulos com Acesso |
 |--------|-------------------|
-| **Gestor** | Dashboard (completo), Atendimentos, Leads, Agendamentos, Procedimentos, Configurações, Ana Júlia, Relatórios, Documentação |
+| **Gestor** | Dashboard (completo), Atendimentos, Leads, Agendamentos, Procedimentos, Pacientes & Prontuário, Configurações, Ana Júlia, Relatórios, Documentação |
 | **Atendente** | Dashboard (simplificado), Atendimentos, Leads, Agendamentos, Documentação |
 
 ### Como usar
@@ -385,6 +491,40 @@ id | leadId | etapa | ciclo | ultimaMensagemEm | followUpEnviados[]
 ### MensagemWhatsapp
 \`\`\`
 id | conversaId | messageIdWhatsapp (único) | tipo | conteudo | remetente
+\`\`\`
+
+### Paciente
+\`\`\`
+id | nome | whatsapp | email | cpf (único) | dataNascimento | sexo
+endereco | cidade | estado | contatoEmergencia | contatoEmergenciaTel
+observacoes | consentimentoLgpd | leadOrigemId (único) | ativo | deletadoEm
+\`\`\`
+
+### Prontuario
+\`\`\`
+id | pacienteId (único) | numero (sequencial)
+→ anamnese (1:1) | evolucoes (1:N) | documentos (1:N) | fotos (1:N)
+\`\`\`
+
+### Anamnese
+\`\`\`
+id | prontuarioId (único) | queixaPrincipal | historicoMedico
+cirurgiasAnteriores | alergias | medicamentosEmUso | doencasPreExistentes
+tabagismo | etilismo | atividadeFisica | gestacoes | anticoncepcional
+pesoKg | alturaCm | imc (auto) | pressaoArterial | observacoes
+\`\`\`
+
+### Evolucao
+\`\`\`
+id | prontuarioId | tipo (TipoEvolucao) | dataRegistro | titulo
+conteudo | prescricao | orientacoes | procedimentoId | deletadoEm
+\`\`\`
+
+### ConfigSite
+\`\`\`
+id | whatsappNumero | whatsappMensagem | medicoNome | medicoEspecialidade
+medicoCrm | instagramUrl | contatoTelefone | contatoEndereco | contatoCidade
+ativo | criadoEm | atualizadoEm
 \`\`\`
 
 ---

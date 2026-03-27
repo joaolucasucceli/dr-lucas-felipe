@@ -23,8 +23,8 @@ test.describe.serial("Gestão de Usuários", () => {
     await expect(
       page.getByRole("heading", { name: "Usuários" })
     ).toBeVisible()
-    await expect(page.getByText("Dr. Lucas Felipe")).toBeVisible()
-    await expect(page.getByText("Ana Júlia — IA")).toBeVisible()
+    await expect(page.getByRole("table").getByText("Dr. Lucas Felipe")).toBeVisible()
+    await expect(page.getByRole("table").getByText("Ana Júlia — IA")).toBeVisible()
   })
 
   test("criar novo usuário com dados válidos", async ({ page }) => {

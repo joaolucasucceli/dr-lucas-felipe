@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { CalendarDays, MessageCircle, ArrowRight, Zap, Loader2, Users, Clock, Stethoscope } from "lucide-react"
+import { CalendarDays, MessageCircle, ArrowRight, Zap, Loader2, Users, Clock, Stethoscope, Globe } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,11 +12,13 @@ import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { useConfigGoogle } from "@/hooks/use-config-google"
 import { useConfigWhatsapp } from "@/hooks/use-config-whatsapp"
+import { useConfigSite } from "@/hooks/use-config-site"
 
 export default function ConfiguracoesPage() {
   const router = useRouter()
   const { configurado: googleConfigurado, carregando: googleCarregando, erro: googleErro, recarregar: recarregarGoogle } = useConfigGoogle()
   const { conectado: whatsappConectado, carregando: whatsappCarregando, erro: whatsappErro, recarregar: recarregarWhatsapp } = useConfigWhatsapp()
+  const { configurado: siteConfigurado, carregando: siteCarregando, erro: siteErro, recarregar: recarregarSite } = useConfigSite()
   const [executandoCron, setExecutandoCron] = useState(false)
 
   async function handleExecutarCron() {
@@ -39,7 +41,7 @@ export default function ConfiguracoesPage() {
     }
   }
 
-  const carregando = googleCarregando || whatsappCarregando
+  const carregando = googleCarregando || whatsappCarregando || siteCarregando
 
   if (carregando) {
     return (
@@ -50,14 +52,14 @@ export default function ConfiguracoesPage() {
     )
   }
 
-  if (googleErro || whatsappErro) {
+  if (googleErro || whatsappErro || siteErro) {
     return (
       <div>
         <PageHeader titulo="Configurações" descricao="Gerencie as integrações e configurações do sistema" />
         <div className="mt-6">
           <ErrorState
-            mensagem={googleErro || whatsappErro || "Erro ao carregar configurações"}
-            onTentar={() => { recarregarGoogle(); recarregarWhatsapp() }}
+            mensagem={googleErro || whatsappErro || siteErro || "Erro ao carregar configurações"}
+            onTentar={() => { recarregarGoogle(); recarregarWhatsapp(); recarregarSite() }}
           />
         </div>
       </div>
@@ -153,6 +155,31 @@ export default function ConfiguracoesPage() {
           <CardContent className="flex items-center justify-end">
             <Button variant="ghost" size="sm">
               Gerenciar
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => router.push("/configuracoes/site")}>
+          <CardHeader className="flex flex-row items-center gap-3">
+            <Globe className="h-8 w-8 text-muted-foreground" />
+            <div className="flex-1">
+              <CardTitle className="text-base">Site</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Dados de contato e informações da landing page
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            {siteConfigurado ? (
+              <Badge variant="default">
+                Configurado
+              </Badge>
+            ) : (
+              <Badge variant="secondary">Pendente</Badge>
+            )}
+            <Button variant="ghost" size="sm">
+              Configurar
               <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </CardContent>

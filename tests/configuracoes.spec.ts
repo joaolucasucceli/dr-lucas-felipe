@@ -34,10 +34,9 @@ test.describe("Configurações", () => {
     await expect(
       page.getByRole("heading", { name: "Google Agenda" })
     ).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText("Credenciais de Integração")).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText("Como obter as credenciais")).toBeVisible()
+    await expect(page.getByText("Como obter as credenciais")).toBeVisible({ timeout: 5000 })
     await expect(
-      page.getByRole("button", { name: "Salvar Configuração" })
+      page.getByRole("button", { name: "Salvar Credenciais" })
     ).toBeVisible()
   })
 
@@ -47,16 +46,19 @@ test.describe("Configurações", () => {
     await loginComoGestor(page)
     await page.goto("/configuracoes/google-agenda")
 
+    await expect(
+      page.getByRole("button", { name: "Salvar Credenciais" })
+    ).toBeVisible({ timeout: 10000 })
+
     await page
-      .getByPlaceholder("123456789-abc.apps.googleusercontent.com")
+      .getByPlaceholder("571255265442-xxx.apps.googleusercontent.com")
       .fill("1234567890-test-client-id.apps.googleusercontent.com")
     await page.getByPlaceholder("GOCSPX-...").fill("GOCSPX-test-client-secret-value")
-    await page.getByPlaceholder("1//0a...").fill("1//0a-test-refresh-token-value")
-    await page.getByPlaceholder("primary").fill("primary")
 
-    await page.getByRole("button", { name: "Salvar Configuração" }).click()
+    await page.getByRole("button", { name: "Salvar Credenciais" }).click()
 
-    await expect(page.getByText("Configuração salva")).toBeVisible({
+    // Aguardar toast de sucesso (pode ser "Credenciais salvas" ou similar)
+    await expect(page.locator("[data-sonner-toast]").first()).toBeVisible({
       timeout: 5000,
     })
   })

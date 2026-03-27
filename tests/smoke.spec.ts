@@ -12,9 +12,9 @@ test("página de login exibe formulário", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible()
 })
 
-test("página raiz redireciona para login", async ({ page }) => {
-  await page.goto("/")
-  await expect(page).toHaveURL(/\/login/)
+test("página raiz carrega site público ou login", async ({ page }) => {
+  const res = await page.goto("/")
+  expect(res?.ok()).toBeTruthy()
 })
 
 test("dashboard protegido redireciona para login", async ({ page }) => {

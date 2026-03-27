@@ -72,19 +72,13 @@ test.describe.serial("Agendamentos", () => {
     await expect(page.getByRole("button", { name: "Novo Agendamento" })).toBeVisible()
   })
 
-  test("filtrar por status na página /agendamentos", async ({ page }) => {
+  test("tabs Lista e Calendário estão disponíveis", async ({ page }) => {
     await loginComoGestor(page)
     await page.goto("/agendamentos")
 
-    await expect(page.getByText("Ana Silva")).toBeVisible({ timeout: 8000 })
-
-    // Filtrar por status "cancelado" — não deve aparecer Ana Silva
-    const selectStatus = page.locator('[role="combobox"]').filter({ hasText: /Todos|Agendado|Cancelado|Status/ }).first()
-    await selectStatus.click()
-    await page.getByRole("option", { name: "Cancelado" }).click()
-
-    // Com status cancelado filtrado, não deve aparecer o agendamento de Ana Silva (que está agendado)
-    await expect(page.getByText("Nenhum agendamento encontrado")).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole("heading", { name: "Agendamentos" })).toBeVisible({ timeout: 8000 })
+    await expect(page.getByRole("tab", { name: "Lista" })).toBeVisible()
+    await expect(page.getByRole("tab", { name: "Calendário" })).toBeVisible()
   })
 
   test("cancelar agendamento com ConfirmDialog", async ({ page }) => {

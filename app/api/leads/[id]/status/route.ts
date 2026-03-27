@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth-helpers"
 import { mudarStatusSchema } from "@/lib/validations/lead"
+import { converterLeadParaPaciente } from "@/lib/pacientes/converter-lead"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -68,6 +69,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     },
   })
 
+  // Trigger automático: converter Lead → Paciente quando status = "concluido"
+  if (novoStatus === "concluido") {
+    try {
+      await converterLeadParaPaciente(id, auth.session.user.id)
+    } catch (err) {
+      // Conversão falhou mas status já foi atualizado — não reverter
+      console.error("[Conversão Lead→Paciente] Erro:", err)
+    }
+  }
 
   return NextResponse.json(leadAtualizado)
 }

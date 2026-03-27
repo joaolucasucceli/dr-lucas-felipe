@@ -327,6 +327,7 @@ model AuditLog {
   usuario     Usuario? @relation(fields: [usuarioId], references: [id])
 
   @@index([entidade, entidadeId])
+  @@index([usuarioId])
   @@map("audit_logs")
 }
 
@@ -450,6 +451,7 @@ model Evolucao {
 
   @@index([prontuarioId])
   @@index([dataRegistro])
+  @@index([procedimentoId])
   @@map("evolucoes")
 }
 
@@ -502,6 +504,7 @@ model AgendamentoPaciente {
 
   @@index([pacienteId])
   @@index([dataHora])
+  @@index([procedimentoId])
   @@map("agendamentos_paciente")
 }
 

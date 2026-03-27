@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Kanban,
   UserSearch,
+  Users,
   CalendarDays,
   Stethoscope,
   Settings,
@@ -41,6 +42,12 @@ const navItems: NavItem[] = [
     titulo: "Leads",
     href: "/leads",
     icone: <UserSearch className="h-4 w-4" />,
+  },
+  {
+    titulo: "Pacientes",
+    href: "/pacientes",
+    icone: <Users className="h-4 w-4" />,
+    perfis: ["gestor"],
   },
   {
     titulo: "Agendamentos",

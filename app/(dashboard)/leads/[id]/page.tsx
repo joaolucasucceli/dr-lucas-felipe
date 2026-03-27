@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { ArrowLeft, Trash2, Archive, ArchiveRestore, Plus } from "lucide-react"
+import { ArrowLeft, Trash2, Archive, ArchiveRestore, Plus, Users, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -49,6 +49,8 @@ export default function LeadDetalhePage() {
 
   const [confirmExcluir, setConfirmExcluir] = useState(false)
   const [confirmAnonimizar, setConfirmAnonimizar] = useState(false)
+  const [confirmConverter, setConfirmConverter] = useState(false)
+  const [convertendo, setConvertendo] = useState(false)
   const [formAgendamento, setFormAgendamento] = useState(false)
   const [confirmCancelarAgendamento, setConfirmCancelarAgendamento] = useState<string | null>(null)
 
@@ -176,6 +178,30 @@ export default function LeadDetalhePage() {
     }
   }
 
+  async function handleConverter() {
+    setConvertendo(true)
+    try {
+      const res = await fetch("/api/pacientes/converter-lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId: id }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Erro ao converter")
+      }
+      const data = await res.json()
+      toast.success(data.jaCriado ? "Paciente já existente" : "Lead convertido em paciente!")
+      recarregar()
+      router.push(`/pacientes/${data.paciente.id}`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao converter lead")
+    } finally {
+      setConvertendo(false)
+      setConfirmConverter(false)
+    }
+  }
+
   function handleExportarDados() {
     const a = document.createElement("a")
     a.href = `/api/lgpd/exportar/${id}`
@@ -262,6 +288,18 @@ export default function LeadDetalhePage() {
               </>
             )}
           </Button>
+          {/* Botão Converter/Ver Paciente */}
+          {lead.paciente ? (
+            <Button variant="outline" onClick={() => router.push(`/pacientes/${lead.paciente!.id}`)}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Ver Paciente
+            </Button>
+          ) : isGestor ? (
+            <Button variant="outline" onClick={() => setConfirmConverter(true)} disabled={convertendo}>
+              <Users className="mr-2 h-4 w-4" />
+              Converter em Paciente
+            </Button>
+          ) : null}
           {isGestor && (
             <Button variant="destructive" onClick={() => setConfirmExcluir(true)}>
               <Trash2 className="mr-2 h-4 w-4" />
@@ -600,6 +638,15 @@ export default function LeadDetalhePage() {
         onConfirmar={handleAnonimizar}
         variante="destrutivo"
         textoBotao="Anonimizar permanentemente"
+      />
+
+      <ConfirmDialog
+        titulo="Converter em Paciente"
+        descricao={`Converter "${lead.nome}" em paciente? O lead será arquivado automaticamente e um prontuário será criado.`}
+        aberto={confirmConverter}
+        onFechar={() => setConfirmConverter(false)}
+        onConfirmar={handleConverter}
+        textoBotao={convertendo ? "Convertendo..." : "Converter"}
       />
     </div>
   )

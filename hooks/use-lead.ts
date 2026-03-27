@@ -48,6 +48,7 @@ interface Lead {
     ciclo: number
     criadoEm: string
   }>
+  paciente: { id: string; nome: string } | null
 }
 
 interface UseLeadReturn {
