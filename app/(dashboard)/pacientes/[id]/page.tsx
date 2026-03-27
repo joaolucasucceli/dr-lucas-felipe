@@ -37,6 +37,7 @@ import { FormAnamnese } from "@/components/features/prontuario/FormAnamnese"
 import { TimelineEvolucao } from "@/components/features/prontuario/TimelineEvolucao"
 import { ListaDocumentos } from "@/components/features/prontuario/ListaDocumentos"
 import { GaleriaFotosProntuario } from "@/components/features/prontuario/GaleriaFotosProntuario"
+import { SinaisVitais } from "@/components/features/prontuario/SinaisVitais"
 
 export default function PacienteDetalhePage() {
   const params = useParams()
@@ -357,6 +358,7 @@ export default function PacienteDetalhePage() {
                   onAtualizar={recarregarProntuario}
                 />
               )}
+              <SinaisVitais pacienteId={id} />
               <TimelineEvolucao
                 evolucoes={prontuario.evolucoes}
                 pacienteId={id}

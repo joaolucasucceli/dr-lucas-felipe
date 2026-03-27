@@ -24,6 +24,29 @@ interface Anamnese {
   atualizadoEm: string
 }
 
+interface MarcoRecuperacao {
+  descricao: string
+  dataPrevista: string
+  dataConcluida?: string | null
+  concluido: boolean
+}
+
+interface RegistroCirurgico {
+  id: string
+  evolucaoId: string
+  tipoAnestesia: string
+  anestesista: string | null
+  tempoCircurgicoMinutos: number
+  sangramento: string | null
+  complicacoes: string | null
+  tecnicaUtilizada: string
+  materiaisUtilizados: string | null
+  orientacoesPosOp: string | null
+  marcosRecuperacao: MarcoRecuperacao[] | null
+  criadoEm: string
+  atualizadoEm: string
+}
+
 interface Evolucao {
   id: string
   tipo: string
@@ -36,6 +59,7 @@ interface Evolucao {
   criadoEm: string
   atualizadoEm: string
   procedimento: { id: string; nome: string } | null
+  registroCirurgico?: RegistroCirurgico | null
 }
 
 interface Prontuario {
@@ -91,4 +115,4 @@ export function useProntuario(pacienteId: string): UseProntuarioReturn {
   return { prontuario, carregando, erro, recarregar: buscar }
 }
 
-export type { Prontuario, Anamnese, Evolucao }
+export type { Prontuario, Anamnese, Evolucao, RegistroCirurgico, MarcoRecuperacao }

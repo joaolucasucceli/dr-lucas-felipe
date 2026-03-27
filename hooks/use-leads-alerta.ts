@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR from "swr"
+import { useRealtimeTabela } from "@/lib/realtime"
 
 export interface LeadAlerta {
   id: string
@@ -14,11 +15,14 @@ export interface LeadAlerta {
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function useLeadsAlerta() {
-  const { data, error, isLoading } = useSWR<{ leads: LeadAlerta[]; total: number }>(
+  const { data, error, isLoading, mutate } = useSWR<{ leads: LeadAlerta[]; total: number }>(
     "/api/dashboard/leads-alerta",
     fetcher,
-    { refreshInterval: 60000, revalidateOnFocus: true }
+    { refreshInterval: 300000, revalidateOnFocus: true }
   )
+
+  // Realtime: atualizar quando leads mudarem
+  useRealtimeTabela("leads", () => mutate())
 
   return {
     leads: data?.leads ?? [],

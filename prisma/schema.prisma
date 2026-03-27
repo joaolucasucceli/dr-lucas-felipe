@@ -353,6 +353,23 @@ enum TipoDocumentoProntuario {
   outro
 }
 
+enum TipoSinalVital {
+  pressao_arterial
+  frequencia_cardiaca
+  temperatura
+  saturacao_o2
+  glicemia
+}
+
+enum TipoAnestesia {
+  local
+  sedacao
+  geral
+  raquidiana
+  peridural
+  bloqueio_regional
+}
+
 // ==========================================
 // Models — Pacientes & Prontuário
 // ==========================================
@@ -396,11 +413,12 @@ model Prontuario {
   criadoEm      DateTime @default(now())
   atualizadoEm  DateTime @updatedAt
 
-  paciente    Paciente               @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
-  anamnese    Anamnese?
-  evolucoes   Evolucao[]
-  documentos  DocumentoProntuario[]
-  fotos       FotoProntuario[]
+  paciente      Paciente               @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  anamnese      Anamnese?
+  evolucoes     Evolucao[]
+  documentos    DocumentoProntuario[]
+  fotos         FotoProntuario[]
+  sinaisVitais  SinalVital[]
 
   @@map("prontuarios")
 }
@@ -446,8 +464,9 @@ model Evolucao {
   atualizadoEm    DateTime      @updatedAt
   deletadoEm      DateTime?
 
-  prontuario    Prontuario    @relation(fields: [prontuarioId], references: [id], onDelete: Cascade)
-  procedimento  Procedimento? @relation(fields: [procedimentoId], references: [id])
+  prontuario         Prontuario          @relation(fields: [prontuarioId], references: [id], onDelete: Cascade)
+  procedimento       Procedimento?       @relation(fields: [procedimentoId], references: [id])
+  registroCirurgico  RegistroCirurgico?
 
   @@index([prontuarioId])
   @@index([dataRegistro])
@@ -506,5 +525,48 @@ model AgendamentoPaciente {
   @@index([dataHora])
   @@index([procedimentoId])
   @@map("agendamentos_paciente")
+}
+
+// ==========================================
+// Models — Sinais Vitais & Registro Cirúrgico
+// ==========================================
+
+model SinalVital {
+  id            String          @id @default(cuid())
+  prontuarioId  String
+  tipo          TipoSinalVital
+  valor         String
+  unidade       String
+  dataRegistro  DateTime        @default(now())
+  observacao    String?
+  criadoEm      DateTime        @default(now())
+
+  prontuario  Prontuario @relation(fields: [prontuarioId], references: [id], onDelete: Cascade)
+
+  @@index([prontuarioId])
+  @@index([tipo])
+  @@index([dataRegistro])
+  @@map("sinais_vitais")
+}
+
+model RegistroCirurgico {
+  id                      String         @id @default(cuid())
+  evolucaoId              String         @unique
+  tipoAnestesia           TipoAnestesia
+  anestesista             String?
+  tempoCircurgicoMinutos  Int
+  sangramento             String?
+  complicacoes            String?        @db.Text
+  tecnicaUtilizada        String         @db.Text
+  materiaisUtilizados     String?        @db.Text
+  orientacoesPosOp        String?        @db.Text
+  marcosRecuperacao       Json?
+  criadoEm                DateTime       @default(now())
+  atualizadoEm            DateTime       @updatedAt
+
+  evolucao  Evolucao @relation(fields: [evolucaoId], references: [id], onDelete: Cascade)
+
+  @@index([evolucaoId])
+  @@map("registros_cirurgicos")
 }
 

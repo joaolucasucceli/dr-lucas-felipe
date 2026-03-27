@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Plus, Trash2, Upload } from "lucide-react"
+import { Plus, Trash2, Upload, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
+import { ComparacaoFotos } from "./ComparacaoFotos"
 
 interface FotoProntuario {
   id: string
@@ -64,6 +65,7 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
   const [filtroTipo, setFiltroTipo] = useState("todos")
   const [uploadAberto, setUploadAberto] = useState(false)
   const [confirmExcluir, setConfirmExcluir] = useState<string | null>(null)
+  const [comparacaoAberta, setComparacaoAberta] = useState(false)
 
   // Upload state
   const [arquivo, setArquivo] = useState<File | null>(null)
@@ -182,6 +184,18 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setComparacaoAberta(true)}
+              disabled={
+                !fotos.some((f) => f.tipoFoto === "pre_operatorio") ||
+                !fotos.some((f) => f.tipoFoto === "pos_operatorio")
+              }
+            >
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Comparar
+            </Button>
             <Button size="sm" onClick={() => setUploadAberto(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Nova Foto
@@ -341,6 +355,12 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ComparacaoFotos
+        fotos={fotos}
+        aberto={comparacaoAberta}
+        onFechar={() => setComparacaoAberta(false)}
+      />
 
       <ConfirmDialog
         aberto={!!confirmExcluir}

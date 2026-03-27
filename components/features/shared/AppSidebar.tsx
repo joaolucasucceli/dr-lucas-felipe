@@ -27,61 +27,91 @@ interface NavItem {
   perfis?: string[]
 }
 
-const navItems: NavItem[] = [
+interface NavGroup {
+  label: string
+  itens: NavItem[]
+}
+
+const navGroups: NavGroup[] = [
   {
-    titulo: "Dashboard",
-    href: "/dashboard",
-    icone: <LayoutDashboard className="h-4 w-4" />,
+    label: "Geral",
+    itens: [
+      {
+        titulo: "Dashboard",
+        href: "/dashboard",
+        icone: <LayoutDashboard className="h-4 w-4" />,
+      },
+    ],
   },
   {
-    titulo: "Atendimentos",
-    href: "/atendimentos",
-    icone: <Kanban className="h-4 w-4" />,
+    label: "Operacional",
+    itens: [
+      {
+        titulo: "Atendimentos",
+        href: "/atendimentos",
+        icone: <Kanban className="h-4 w-4" />,
+      },
+      {
+        titulo: "Leads",
+        href: "/leads",
+        icone: <UserSearch className="h-4 w-4" />,
+      },
+      {
+        titulo: "Pacientes",
+        href: "/pacientes",
+        icone: <Users className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "Agendamentos",
+        href: "/agendamentos",
+        icone: <CalendarDays className="h-4 w-4" />,
+      },
+    ],
   },
   {
-    titulo: "Leads",
-    href: "/leads",
-    icone: <UserSearch className="h-4 w-4" />,
+    label: "Clínica",
+    itens: [
+      {
+        titulo: "Procedimentos",
+        href: "/procedimentos",
+        icone: <Stethoscope className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+    ],
   },
   {
-    titulo: "Pacientes",
-    href: "/pacientes",
-    icone: <Users className="h-4 w-4" />,
-    perfis: ["gestor"],
+    label: "Inteligência",
+    itens: [
+      {
+        titulo: "Ana Júlia",
+        href: "/ana-julia",
+        icone: <Bot className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "Relatórios",
+        href: "/relatorios",
+        icone: <BarChart3 className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+    ],
   },
   {
-    titulo: "Agendamentos",
-    href: "/agendamentos",
-    icone: <CalendarDays className="h-4 w-4" />,
-  },
-  {
-    titulo: "Procedimentos",
-    href: "/procedimentos",
-    icone: <Stethoscope className="h-4 w-4" />,
-    perfis: ["gestor"],
-  },
-  {
-    titulo: "Configurações",
-    href: "/configuracoes",
-    icone: <Settings className="h-4 w-4" />,
-    perfis: ["gestor"],
-  },
-  {
-    titulo: "Ana Júlia",
-    href: "/ana-julia",
-    icone: <Bot className="h-4 w-4" />,
-    perfis: ["gestor"],
-  },
-  {
-    titulo: "Relatórios",
-    href: "/relatorios",
-    icone: <BarChart3 className="h-4 w-4" />,
-    perfis: ["gestor"],
-  },
-  {
-    titulo: "Documentação",
-    href: "/documentacao",
-    icone: <BookOpen className="h-4 w-4" />,
+    label: "Sistema",
+    itens: [
+      {
+        titulo: "Configurações",
+        href: "/configuracoes",
+        icone: <Settings className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "Documentação",
+        href: "/documentacao",
+        icone: <BookOpen className="h-4 w-4" />,
+      },
+    ],
   },
 ]
 
@@ -92,28 +122,39 @@ interface AppSidebarProps {
 function NavContent({ perfil }: { perfil: string }) {
   const pathname = usePathname()
 
-  const itensVisiveis = navItems.filter(
-    (item) => !item.perfis || item.perfis.includes(perfil)
-  )
-
   return (
     <nav className="grid gap-1 p-2">
-      {itensVisiveis.map((item) => {
-        const ativo = pathname === item.href || pathname.startsWith(item.href + "/")
+      {navGroups.map((grupo, index) => {
+        const itensVisiveis = grupo.itens.filter(
+          (item) => !item.perfis || item.perfis.includes(perfil)
+        )
+
+        if (itensVisiveis.length === 0) return null
+
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              ativo
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            )}
-          >
-            {item.icone}
-            {item.titulo}
-          </Link>
+          <div key={grupo.label} className={cn(index > 0 && "mt-4")}>
+            <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {grupo.label}
+            </span>
+            {itensVisiveis.map((item) => {
+              const ativo = pathname === item.href || pathname.startsWith(item.href + "/")
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    ativo
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  {item.icone}
+                  {item.titulo}
+                </Link>
+              )
+            })}
+          </div>
         )
       })}
     </nav>

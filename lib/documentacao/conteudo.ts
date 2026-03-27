@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.7.0"
+export const VERSAO_DOCUMENTACAO = "1.8.0"
 export const DATA_ATUALIZACAO = "2026-03-27"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -36,6 +36,32 @@ Dois módulos integrados em uma única aplicação Next.js:
 | Calendário | Google Calendar API |
 | Deploy | Vercel |
 | Testes E2E | Playwright |
+| Real-time | Supabase Realtime (postgres_changes) |
+
+---
+
+## Atualizações em Tempo Real
+
+O sistema utiliza **Supabase Realtime** para manter os dados atualizados automaticamente em todas as telas, sem necessidade de recarregar a página.
+
+### Como funciona
+- Um canal WebSocket conecta o navegador ao banco de dados via Supabase
+- Quando qualquer dado é criado, atualizado ou removido, a tela se atualiza automaticamente
+- Debounce de 300ms evita múltiplas atualizações simultâneas
+- Polling de fallback continua ativo em intervalos maiores (2-5 minutos)
+
+### Tabelas monitoradas em tempo real
+| Tabela | Páginas afetadas |
+|--------|-----------------|
+| leads | Kanban, Dashboard, Lista de Leads, Alertas, Follow-ups |
+| mensagens_whatsapp | Notificações |
+| agendamentos | Agendamentos, Dashboard, Notificações |
+| conversas | Kanban (preview de mensagens) |
+| pacientes | Lista de Pacientes, Detalhe do Paciente |
+
+### Notificações automáticas (toasts)
+- **Novo lead recebido** — quando um lead é criado (ex: pelo agente IA)
+- **Nova mensagem recebida** — quando um paciente envia mensagem via WhatsApp
 
 ---
 

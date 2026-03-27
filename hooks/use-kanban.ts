@@ -2,6 +2,7 @@
 
 import useSWR from "swr"
 import { toast } from "sonner"
+import { useRealtimeTabela } from "@/lib/realtime"
 
 export interface KanbanLead {
   id: string
@@ -44,9 +45,13 @@ export function useKanban(params: UseKanbanParams = {}) {
   const url = buildUrl(params)
 
   const { data, error, isLoading, mutate } = useSWR<KanbanData>(url, fetcher, {
-    refreshInterval: 30000,
+    refreshInterval: 120000,
     revalidateOnFocus: true,
   })
+
+  // Realtime: atualizar quando leads ou conversas mudarem
+  useRealtimeTabela("leads", () => mutate())
+  useRealtimeTabela("conversas", () => mutate())
 
   async function moverLead(
     leadId: string,

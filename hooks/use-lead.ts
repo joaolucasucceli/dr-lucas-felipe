@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useRealtimeTabela } from "@/lib/realtime"
 
 interface Lead {
   id: string
@@ -86,6 +87,9 @@ export function useLead(id: string): UseLeadReturn {
   useEffect(() => {
     buscar()
   }, [buscar])
+
+  // Realtime: atualizar quando leads mudarem
+  useRealtimeTabela("leads", buscar)
 
   return { lead, carregando, erro, recarregar: buscar }
 }

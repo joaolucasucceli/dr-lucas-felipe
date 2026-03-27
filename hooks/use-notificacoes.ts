@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useRealtimeTabela } from "@/lib/realtime"
 
 interface LeadAlerta {
   id: string
@@ -59,9 +60,13 @@ export function useNotificacoes() {
 
   useEffect(() => {
     buscar()
-    const interval = setInterval(buscar, 60000)
+    const interval = setInterval(buscar, 300000)
     return () => clearInterval(interval)
   }, [buscar])
+
+  // Realtime: atualizar quando mensagens ou agendamentos mudarem
+  useRealtimeTabela("mensagens", buscar)
+  useRealtimeTabela("agendamentos", buscar)
 
   return {
     notificacoes,

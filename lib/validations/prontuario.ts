@@ -59,3 +59,69 @@ export const atualizarEvolucaoSchema = z.object({
 
 export type CriarEvolucaoInput = z.infer<typeof criarEvolucaoSchema>
 export type AtualizarEvolucaoInput = z.infer<typeof atualizarEvolucaoSchema>
+
+// ==========================================
+// Sinal Vital
+// ==========================================
+
+const tiposSinalVital = [
+  "pressao_arterial",
+  "frequencia_cardiaca",
+  "temperatura",
+  "saturacao_o2",
+  "glicemia",
+] as const
+
+export const criarSinalVitalSchema = z.object({
+  tipo: z.enum(tiposSinalVital, { message: "Tipo de sinal vital inválido" }),
+  valor: z.string().min(1, "Valor é obrigatório"),
+  unidade: z.string().min(1, "Unidade é obrigatória"),
+  observacao: z.string().optional(),
+  dataRegistro: z.string().datetime().optional(),
+})
+
+export type CriarSinalVitalInput = z.infer<typeof criarSinalVitalSchema>
+
+// ==========================================
+// Registro Cirúrgico
+// ==========================================
+
+const tiposAnestesia = [
+  "local",
+  "sedacao",
+  "geral",
+  "raquidiana",
+  "peridural",
+  "bloqueio_regional",
+] as const
+
+const marcoRecuperacaoSchema = z.object({
+  descricao: z.string().min(2, "Descrição é obrigatória"),
+  dataPrevista: z.string(),
+  dataConcluida: z.string().nullable().optional(),
+  concluido: z.boolean().default(false),
+})
+
+export const criarRegistroCirurgicoSchema = z.object({
+  tipoAnestesia: z.enum(tiposAnestesia, { message: "Tipo de anestesia inválido" }),
+  anestesista: z.string().optional(),
+  tempoCircurgicoMinutos: z.number().int().positive("Tempo deve ser positivo"),
+  sangramento: z.string().optional(),
+  complicacoes: z.string().optional(),
+  tecnicaUtilizada: z.string().min(5, "Técnica deve ter pelo menos 5 caracteres"),
+  materiaisUtilizados: z.string().optional(),
+  orientacoesPosOp: z.string().optional(),
+  marcosRecuperacao: z.array(marcoRecuperacaoSchema).optional(),
+})
+
+export const atualizarRegistroCirurgicoSchema = criarRegistroCirurgicoSchema.partial()
+
+export const atualizarMarcoSchema = z.object({
+  indice: z.number().int().min(0),
+  concluido: z.boolean(),
+  dataConcluida: z.string().nullable().optional(),
+})
+
+export type CriarRegistroCirurgicoInput = z.infer<typeof criarRegistroCirurgicoSchema>
+export type AtualizarRegistroCirurgicoInput = z.infer<typeof atualizarRegistroCirurgicoSchema>
+export type MarcoRecuperacao = z.infer<typeof marcoRecuperacaoSchema>

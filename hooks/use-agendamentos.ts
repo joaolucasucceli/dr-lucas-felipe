@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useRealtimeTabela } from "@/lib/realtime"
 
 export interface Agendamento {
   id: string
@@ -73,6 +74,9 @@ export function useAgendamentos(params?: UseAgendamentosParams) {
   useEffect(() => {
     buscar()
   }, [buscar])
+
+  // Realtime: atualizar quando agendamentos mudarem
+  useRealtimeTabela("agendamentos", buscar)
 
   return { dados, total, totalPaginas, carregando, erro, recarregar: buscar }
 }

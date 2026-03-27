@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR from "swr"
+import { useRealtimeTabela } from "@/lib/realtime"
 
 export interface LeadFollowUpAtivo {
   id: string
@@ -14,11 +15,14 @@ export interface LeadFollowUpAtivo {
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function useLeadsFollowUpAtivos() {
-  const { data, error, isLoading } = useSWR<{ leads: LeadFollowUpAtivo[]; total: number }>(
+  const { data, error, isLoading, mutate } = useSWR<{ leads: LeadFollowUpAtivo[]; total: number }>(
     "/api/dashboard/follow-ups-ativos",
     fetcher,
-    { refreshInterval: 60000, revalidateOnFocus: true }
+    { refreshInterval: 300000, revalidateOnFocus: true }
   )
+
+  // Realtime: atualizar quando leads mudarem
+  useRealtimeTabela("leads", () => mutate())
 
   return {
     leads: data?.leads ?? [],

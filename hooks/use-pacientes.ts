@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useRealtimeTabela } from "@/lib/realtime"
 
 interface Paciente {
   id: string
@@ -65,6 +66,9 @@ export function usePacientes(params: UsePacientesParams): UsePacientesReturn {
   useEffect(() => {
     buscar()
   }, [buscar])
+
+  // Realtime: atualizar quando pacientes mudarem
+  useRealtimeTabela("pacientes", buscar)
 
   return { dados, total, carregando, erro, recarregar: buscar }
 }

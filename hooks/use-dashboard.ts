@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR from "swr"
+import { useRealtimeTabela } from "@/lib/realtime"
 
 interface EtapaFunil {
   etapa: string
@@ -39,8 +40,12 @@ export function useDashboard(periodo: string = "mes") {
   const { data, error, isLoading, mutate } = useSWR<DashboardMetricas>(
     `/api/dashboard/metricas?periodo=${periodo}`,
     fetcher,
-    { refreshInterval: 60000, revalidateOnFocus: true }
+    { refreshInterval: 300000, revalidateOnFocus: true }
   )
+
+  // Realtime: atualizar métricas quando leads ou agendamentos mudarem
+  useRealtimeTabela("leads", () => mutate())
+  useRealtimeTabela("agendamentos", () => mutate())
 
   return {
     metricas: data ?? null,
