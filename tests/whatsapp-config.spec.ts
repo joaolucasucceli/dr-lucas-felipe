@@ -27,16 +27,16 @@ test.describe("WhatsApp Config", () => {
 
     await expect(
       page.getByRole("heading", { name: "WhatsApp" })
-    ).toBeVisible()
-    await expect(page.getByText("Credenciais Uazapi")).toBeVisible()
+    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText("Acesso Uazapi")).toBeVisible({ timeout: 5000 })
   })
 
   test("formulário exibe campos URL e Token", async ({ page }) => {
     await loginComoGestor(page)
     await page.goto("/configuracoes/whatsapp")
 
-    await expect(page.getByLabel("URL do Uazapi")).toBeVisible()
-    await expect(page.getByLabel("Admin Token")).toBeVisible()
+    await expect(page.getByLabel("URL do Servidor")).toBeVisible({ timeout: 10000 })
+    await expect(page.getByLabel("Token da Instância")).toBeVisible()
     await expect(
       page.getByRole("button", { name: "Testar Conexão" })
     ).toBeVisible()

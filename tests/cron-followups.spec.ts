@@ -76,7 +76,7 @@ test.describe("Cron — Follow-ups e Confirmações", () => {
       page.getByText("Follow-ups e confirmações de consulta")
     ).toBeVisible()
     await expect(
-      page.getByRole("button", { name: "Executar agora" })
+      page.getByRole("button", { name: "Forçar execução" })
     ).toBeVisible()
   })
 })

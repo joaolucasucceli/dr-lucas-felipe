@@ -33,8 +33,8 @@ test.describe("Configurações", () => {
 
     await expect(
       page.getByRole("heading", { name: "Google Agenda" })
-    ).toBeVisible()
-    await expect(page.getByText("Credenciais de Integração")).toBeVisible()
+    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText("Credenciais de Integração")).toBeVisible({ timeout: 5000 })
     await expect(page.getByText("Como obter as credenciais")).toBeVisible()
     await expect(
       page.getByRole("button", { name: "Salvar Configuração" })

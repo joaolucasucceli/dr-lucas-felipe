@@ -18,7 +18,7 @@ test.describe.serial("Gestão de Usuários", () => {
 
   test("listar usuários exibe tabela com dados do seed", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/usuarios")
+    await page.goto("/configuracoes/usuarios")
 
     await expect(
       page.getByRole("heading", { name: "Usuários" })
@@ -29,7 +29,7 @@ test.describe.serial("Gestão de Usuários", () => {
 
   test("criar novo usuário com dados válidos", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/usuarios")
+    await page.goto("/configuracoes/usuarios")
 
     await page.getByRole("button", { name: "Novo Usuário" }).click()
 
@@ -46,7 +46,7 @@ test.describe.serial("Gestão de Usuários", () => {
 
   test("criar usuário com email duplicado mostra erro", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/usuarios")
+    await page.goto("/configuracoes/usuarios")
 
     await page.getByRole("button", { name: "Novo Usuário" }).click()
 
@@ -63,7 +63,7 @@ test.describe.serial("Gestão de Usuários", () => {
 
   test("editar usuário altera dados", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/usuarios")
+    await page.goto("/configuracoes/usuarios")
 
     // Encontrar a linha da Maria Atendente e abrir menu
     const linha = page.getByRole("row").filter({ hasText: "Maria Atendente" })
@@ -96,10 +96,10 @@ test.describe.serial("Gestão de Usuários", () => {
 
   test("desativar usuário com confirmação", async ({ page }) => {
     await loginComoGestor(page)
-    await page.goto("/usuarios")
+    await page.goto("/configuracoes/usuarios")
 
-    // Encontrar Maria Atendente e abrir menu
-    const linha = page.getByRole("row").filter({ hasText: "Maria Atendente" })
+    // Encontrar Maria Atualizada (renomeada no teste "editar") e abrir menu
+    const linha = page.getByRole("row").filter({ hasText: "Maria Atualizada" })
     await linha.getByRole("button").last().click()
     await page.getByRole("menuitem", { name: "Desativar" }).click()
 

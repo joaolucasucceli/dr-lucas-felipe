@@ -64,6 +64,12 @@ enum TipoMensagem {
   video
 }
 
+enum StatusSprint {
+  planejada
+  em_andamento
+  concluida
+}
+
 // ==========================================
 // Models
 // ==========================================
@@ -81,6 +87,7 @@ model Usuario {
   deletadoEm  DateTime?
 
   leads       Lead[]       @relation("ResponsavelLead")
+  auditLogs   AuditLog[]
 
   @@map("usuarios")
 }
@@ -113,6 +120,7 @@ model Lead {
   agendamentos  Agendamento[]
   mensagens     MensagemWhatsapp[]
   fotos         FotoLead[]
+  paciente      Paciente?
 
   @@index([responsavelId])
   @@index([statusFunil])
@@ -180,6 +188,7 @@ model Agendamento {
   @@index([leadId])
   @@index([criadoEm])
   @@index([dataHora])
+  @@index([procedimentoId])
   @@map("agendamentos")
 }
 
@@ -196,7 +205,9 @@ model Procedimento {
   atualizadoEm   DateTime  @updatedAt
   deletadoEm     DateTime?
 
-  agendamentos Agendamento[]
+  agendamentos         Agendamento[]
+  evolucoes            Evolucao[]
+  agendamentosPaciente AgendamentoPaciente[]
 
   @@map("procedimentos")
 }
@@ -251,5 +262,246 @@ model ConfigWhatsapp {
   atualizadoEm    DateTime  @updatedAt
 
   @@map("config_whatsapp")
+}
+
+model ConfigSite {
+  id                  String   @id @default(cuid())
+  whatsappNumero      String?
+  whatsappMensagem    String?
+  medicoNome          String?
+  medicoEspecialidade String?
+  medicoCrm           String?
+  instagramUrl        String?
+  contatoTelefone     String?
+  contatoEndereco     String?
+  contatoCidade       String?
+  ativo               Boolean  @default(true)
+  criadoEm            DateTime @default(now())
+  atualizadoEm        DateTime @updatedAt
+
+  @@map("config_site")
+}
+
+model Sprint {
+  id            String        @id @default(cuid())
+  nome          String
+  descricao     String?       @db.Text
+  status        StatusSprint  @default(planejada)
+  dataInicio    DateTime?
+  dataFim       DateTime?
+  ordem         Int           @default(0)
+  criadoEm      DateTime      @default(now())
+  atualizadoEm  DateTime      @updatedAt
+  deletadoEm    DateTime?
+
+  itens         SprintItem[]
+
+  @@map("sprints")
+}
+
+model SprintItem {
+  id          String   @id @default(cuid())
+  sprintId    String
+  titulo      String
+  concluido   Boolean  @default(false)
+  ordem       Int      @default(0)
+  criadoEm    DateTime @default(now())
+
+  sprint      Sprint   @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+
+  @@index([sprintId])
+  @@map("sprint_itens")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  usuarioId   String?
+  acao        String
+  entidade    String
+  entidadeId  String?
+  dadosAntes  Json?
+  dadosDepois Json?
+  ip          String?
+  criadoEm    DateTime @default(now())
+
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([entidade, entidadeId])
+  @@map("audit_logs")
+}
+
+// ==========================================
+// Enums — Prontuário
+// ==========================================
+
+enum TipoEvolucao {
+  consulta
+  procedimento
+  retorno
+  prescricao
+  intercorrencia
+  observacao
+}
+
+enum TipoDocumentoProntuario {
+  exame_laboratorial
+  laudo
+  termo_consentimento
+  receita
+  atestado
+  outro
+}
+
+// ==========================================
+// Models — Pacientes & Prontuário
+// ==========================================
+
+model Paciente {
+  id                    String    @id @default(cuid())
+  nome                  String
+  whatsapp              String?
+  email                 String?
+  cpf                   String?   @unique
+  dataNascimento        DateTime?
+  sexo                  String?
+  endereco              String?
+  cidade                String?
+  estado                String?
+  contatoEmergencia     String?
+  contatoEmergenciaTel  String?
+  observacoes           String?   @db.Text
+  consentimentoLgpd     Boolean   @default(false)
+  consentimentoLgpdEm   DateTime?
+  leadOrigemId          String?   @unique
+  ativo                 Boolean   @default(true)
+  criadoEm              DateTime  @default(now())
+  atualizadoEm          DateTime  @updatedAt
+  deletadoEm            DateTime?
+
+  leadOrigem    Lead?                  @relation(fields: [leadOrigemId], references: [id])
+  prontuario    Prontuario?
+  agendamentos  AgendamentoPaciente[]
+
+  @@index([nome])
+  @@index([whatsapp])
+  @@index([cpf])
+  @@map("pacientes")
+}
+
+model Prontuario {
+  id            String   @id @default(cuid())
+  pacienteId    String   @unique
+  numero        Int
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  paciente    Paciente               @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  anamnese    Anamnese?
+  evolucoes   Evolucao[]
+  documentos  DocumentoProntuario[]
+  fotos       FotoProntuario[]
+
+  @@map("prontuarios")
+}
+
+model Anamnese {
+  id                    String    @id @default(cuid())
+  prontuarioId          String    @unique
+  queixaPrincipal       String?   @db.Text
+  historicoMedico       String?   @db.Text
+  cirurgiasAnteriores   String?   @db.Text
+  alergias              String?   @db.Text
+  medicamentosEmUso     String?   @db.Text
+  doencasPreExistentes  String?   @db.Text
+  tabagismo             Boolean?
+  etilismo              Boolean?
+  atividadeFisica       String?
+  gestacoes             String?
+  anticoncepcional      String?
+  pesoKg                Decimal?
+  alturaCm              Decimal?
+  imc                   Decimal?
+  pressaoArterial       String?
+  observacoes           String?   @db.Text
+  criadoEm              DateTime  @default(now())
+  atualizadoEm          DateTime  @updatedAt
+
+  prontuario  Prontuario @relation(fields: [prontuarioId], references: [id], onDelete: Cascade)
+
+  @@map("anamneses")
+}
+
+model Evolucao {
+  id              String        @id @default(cuid())
+  prontuarioId    String
+  tipo            TipoEvolucao
+  dataRegistro    DateTime      @default(now())
+  titulo          String
+  conteudo        String        @db.Text
+  prescricao      String?       @db.Text
+  orientacoes     String?       @db.Text
+  procedimentoId  String?
+  criadoEm        DateTime      @default(now())
+  atualizadoEm    DateTime      @updatedAt
+  deletadoEm      DateTime?
+
+  prontuario    Prontuario    @relation(fields: [prontuarioId], references: [id], onDelete: Cascade)
+  procedimento  Procedimento? @relation(fields: [procedimentoId], references: [id])
+
+  @@index([prontuarioId])
+  @@index([dataRegistro])
+  @@map("evolucoes")
+}
+
+model DocumentoProntuario {
+  id              String                    @id @default(cuid())
+  prontuarioId    String
+  tipo            TipoDocumentoProntuario
+  nome            String
+  descricao       String?
+  storagePath     String
+  tamanhoBytes    Int?
+  mimeType        String?
+  criadoEm        DateTime                  @default(now())
+
+  prontuario  Prontuario @relation(fields: [prontuarioId], references: [id], onDelete: Cascade)
+
+  @@index([prontuarioId])
+  @@map("documentos_prontuario")
+}
+
+model FotoProntuario {
+  id              String    @id @default(cuid())
+  prontuarioId    String
+  url             String
+  descricao       String?
+  tipoFoto        String?
+  dataRegistro    DateTime  @default(now())
+  criadoEm        DateTime  @default(now())
+
+  prontuario  Prontuario @relation(fields: [prontuarioId], references: [id], onDelete: Cascade)
+
+  @@index([prontuarioId])
+  @@index([dataRegistro])
+  @@map("fotos_prontuario")
+}
+
+model AgendamentoPaciente {
+  id              String             @id @default(cuid())
+  pacienteId      String
+  procedimentoId  String?
+  dataHora        DateTime
+  status          StatusAgendamento  @default(agendado)
+  tipo            String?
+  observacao      String?            @db.Text
+  criadoEm        DateTime           @default(now())
+  atualizadoEm    DateTime           @updatedAt
+
+  paciente      Paciente      @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  procedimento  Procedimento? @relation(fields: [procedimentoId], references: [id])
+
+  @@index([pacienteId])
+  @@index([dataHora])
+  @@map("agendamentos_paciente")
 }
 

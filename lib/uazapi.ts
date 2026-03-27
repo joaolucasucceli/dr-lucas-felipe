@@ -7,14 +7,22 @@ async function uazapiFetch(
   options: RequestInit = {}
 ) {
   const baseUrl = url.replace(/\/$/, "")
-  const res = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      token: token,
-      ...options.headers,
-    },
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5000)
+  let res: Response
+  try {
+    res = await fetch(`${baseUrl}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        token: token,
+        ...options.headers,
+      },
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "")
