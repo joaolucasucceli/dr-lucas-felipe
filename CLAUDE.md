@@ -123,12 +123,12 @@ lib/documentacao/conteudo.ts
 
 | Métrica | Quantidade |
 |---------|-----------|
-| Páginas | 24 (19 dashboard + 4 públicas + 1 root) |
-| Endpoints API | 69 |
-| Models Prisma | 19+ |
-| Enums | 10 |
-| Componentes | 96 (26 UI + 68 features + 2 providers) |
-| Hooks customizados | 19 |
+| Páginas | 22 (19 dashboard + 2 públicas + 1 root) |
+| Endpoints API | 87 |
+| Models Prisma | 23 |
+| Enums | 12 |
+| Componentes | 105 (28 UI + 77 features) |
+| Hooks customizados | 21 |
 
 ## Issues Conhecidas
 
@@ -141,7 +141,7 @@ lib/documentacao/conteudo.ts
 
 ## Estado do Projeto
 
-Sistema em produção com todos os módulos core implementados. Sprint 1 (validação do agente IA) planejada no ClickUp com 22 tasks de teste end-to-end.
+Sistema em produção com todos os módulos core implementados. Sprint 2 (chat atendente + gestão de instâncias) concluída em 2026-04-04 — 18 tasks implementadas. Sprint 1 (validação do agente IA) planejada no ClickUp com 22 tasks de teste end-to-end.
 
 ## Idioma
 

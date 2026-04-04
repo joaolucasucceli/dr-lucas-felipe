@@ -4,11 +4,12 @@ async function uazapiFetch(
   url: string,
   path: string,
   token: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  timeoutMs = 10000
 ) {
   const baseUrl = url.replace(/\/$/, "")
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 5000)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
   let res: Response
   try {
     res = await fetch(`${baseUrl}${path}`, {
@@ -55,7 +56,7 @@ export async function configurarWebhook(
   await uazapiFetch(url, "/webhook/set", instanceToken, {
     method: "POST",
     body: JSON.stringify({ url: webhookUrl }),
-  })
+  }, 15000)
 }
 
 /** Inicia conexão e obtém QR code — POST /instance/connect */
@@ -66,7 +67,7 @@ export async function obterQrCode(
   const data = await uazapiFetch(url, "/instance/connect", instanceToken, {
     method: "POST",
     body: JSON.stringify({}),
-  })
+  }, 30000)
   return { qrcode: data.instance?.qrcode || data.qrcode || "" }
 }
 
