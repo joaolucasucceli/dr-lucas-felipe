@@ -77,7 +77,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "salvar_qualificacao",
       description:
-        "Salva informações de qualificação do paciente e avança o funil para a etapa de agendamento. Use quando tiver coletado nome, procedimento de interesse e informações relevantes.",
+        "Salva informações de qualificação do paciente. Se o lead estiver em 'acolhimento', avança automaticamente para 'qualificacao'. Também atualiza o nome do lead se informado via nomePaciente. Use sempre que coletar informações novas.",
       parameters: {
         type: "object",
         properties: {
@@ -97,6 +97,10 @@ export const ferramentasAgente: ChatCompletionTool[] = [
             type: "string",
             description: "Procedimento de interesse do paciente (opcional)",
           },
+          nomePaciente: {
+            type: "string",
+            description: "Nome real do paciente, informado por ele na conversa. Atualiza o nome do lead se o atual é genérico.",
+          },
         },
         required: ["leadId", "conversaId", "sobreOPaciente"],
       },
@@ -107,7 +111,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "registrar_agendamento",
       description:
-        "Cria um agendamento de consulta para o paciente e avança o funil para consulta_agendada.",
+        "Cria um agendamento de consulta para o paciente. Avança automaticamente o funil para 'consulta_agendada'.",
       parameters: {
         type: "object",
         properties: {

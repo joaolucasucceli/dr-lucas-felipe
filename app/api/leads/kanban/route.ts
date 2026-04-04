@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth-helpers"
 import type { StatusFunil } from "@/generated/prisma/client"
 
 const ETAPAS_FUNIL: StatusFunil[] = [
-  "primeiro_atendimento",
+  "acolhimento",
   "qualificacao",
   "agendamento",
   "consulta_agendada",

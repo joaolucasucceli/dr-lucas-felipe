@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const funilConfig: Record<string, { label: string; classes: string; descricao: string }> = {
-  primeiro_atendimento: { label: "Primeiro Atendimento", classes: "bg-zinc-100 text-zinc-800", descricao: "Etapa 1 — Lead acabou de entrar no funil" },
+  acolhimento: { label: "Acolhimento", classes: "bg-zinc-100 text-zinc-800", descricao: "Etapa 1 — Lead acabou de entrar no funil" },
   qualificacao: { label: "Qualificação", classes: "bg-blue-100 text-blue-800", descricao: "Etapa 2 — Agente coletando informações do paciente" },
   agendamento: { label: "Agendamento", classes: "bg-indigo-100 text-indigo-800", descricao: "Etapa 3 — Agente tentando marcar a consulta" },
   consulta_agendada: { label: "Consulta Agendada", classes: "bg-purple-100 text-purple-800", descricao: "Etapa 4 — Consulta marcada, aguardando realização" },

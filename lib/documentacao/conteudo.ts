@@ -143,7 +143,7 @@ Visualização em kanban do funil de atendimento com 9 etapas.
 
 | # | Etapa | Movimentação |
 |---|-------|-------------|
-| 1 | Primeiro Atendimento | Automática (Ana Júlia) |
+| 1 | Acolhimento | Automática (Ana Júlia) |
 | 2 | Qualificação | Automática (Ana Júlia) |
 | 3 | Agendamento | Automática (Ana Júlia) |
 | 4 | Consulta Agendada | Automática (Ana Júlia) |

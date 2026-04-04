@@ -4,7 +4,7 @@ import { sincronizarFunil, avancarEtapa } from "@/lib/agente/kanban-sync"
 import type { StatusFunil, EtapaConversa } from "@/generated/prisma/client"
 
 const ETAPAS_CLASSIFICAVEIS: StatusFunil[] = [
-  "primeiro_atendimento",
+  "acolhimento",
   "qualificacao",
   "agendamento",
 ]
@@ -13,7 +13,7 @@ const LIMITE_CLASSIFICAVEL: StatusFunil = "consulta_agendada"
 
 function etapaIndex(etapa: StatusFunil): number {
   const ordem: StatusFunil[] = [
-    "primeiro_atendimento",
+    "acolhimento",
     "qualificacao",
     "agendamento",
     "consulta_agendada",
@@ -28,7 +28,7 @@ function etapaIndex(etapa: StatusFunil): number {
 
 /**
  * Analisa o histórico de conversa e avança automaticamente a etapa do funil.
- * Só opera nas etapas 1-4 (primeiro_atendimento até consulta_agendada).
+ * Só opera nas etapas 1-4 (acolhimento até consulta_agendada).
  * Nunca regride — só avança.
  */
 export async function classificarEtapaConversa(
@@ -87,11 +87,11 @@ export async function classificarEtapaConversa(
           content: `Analise o histórico de conversa de atendimento de uma clínica médica estética e classifique em qual etapa a conversa está.
 
 Etapas possíveis:
-- "primeiro_atendimento": Apenas saudações iniciais, o paciente ainda não compartilhou informações substantivas sobre si ou seu interesse.
+- "acolhimento": Apenas saudações iniciais, o paciente ainda não compartilhou informações substantivas sobre si ou seu interesse.
 - "qualificacao": Paciente está compartilhando informações sobre si (nome, interesse, procedimento, histórico, expectativas), mas datas ou horários ainda não foram discutidos.
 - "agendamento": A conversa está ativamente discutindo disponibilidade, datas ou horários específicos para marcar uma consulta.
 
-Responda APENAS com JSON válido: { "etapa": "primeiro_atendimento" | "qualificacao" | "agendamento", "motivo": "explicação curta" }`,
+Responda APENAS com JSON válido: { "etapa": "acolhimento" | "qualificacao" | "agendamento", "motivo": "explicação curta" }`,
         },
         {
           role: "user",

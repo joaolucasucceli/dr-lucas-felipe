@@ -221,7 +221,7 @@ export default function LeadsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todas as etapas</SelectItem>
-                    <SelectItem value="primeiro_atendimento">Primeiro Atendimento</SelectItem>
+                    <SelectItem value="acolhimento">Acolhimento</SelectItem>
                     <SelectItem value="qualificacao">Qualificação</SelectItem>
                     <SelectItem value="agendamento">Agendamento</SelectItem>
                     <SelectItem value="consulta_agendada">Consulta Agendada</SelectItem>

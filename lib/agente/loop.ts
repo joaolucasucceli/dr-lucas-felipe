@@ -6,7 +6,8 @@ import { gerarSystemPrompt } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
 import { abrirNovoCiclo } from "@/lib/agente/kanban-sync"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
-import { classificarEtapaConversa } from "@/lib/agente/classificador-etapa"
+// Transições de etapa agora são feitas diretamente nas ferramentas
+// (salvar_qualificacao → qualificacao, registrar_agendamento → consulta_agendada)
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
 const MAX_TOOL_ITERATIONS = 10
@@ -294,14 +295,9 @@ export async function processarMensagens(chatId: string): Promise<void> {
     await adicionarAMemoria(chatId, { role: "user", content: textoBuffer })
     await adicionarAMemoria(chatId, { role: "assistant", content: textoResposta })
 
-    // 14. Classificar etapa automaticamente
-    if (leadId && conversaId) {
-      try {
-        await classificarEtapaConversa(conversaId, leadId)
-      } catch (err) {
-        console.error("[classificador-etapa] Erro silencioso:", err)
-      }
-    }
+    // Transições de etapa são feitas pelas ferramentas:
+    // salvar_qualificacao → acolhimento → qualificacao
+    // registrar_agendamento → qualquer → consulta_agendada
   } catch (error) {
     console.error("[Agente] Erro no loop de resposta:", error)
   } finally {

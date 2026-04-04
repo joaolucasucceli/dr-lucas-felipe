@@ -20,7 +20,7 @@ export function ModuloAtendimentos() {
           {
             icone: <Columns2 />,
             titulo: "9 etapas do funil",
-            descricao: "Primeiro Atendimento → Qualificação → Agendamento → Consulta Agendada → Consulta Realizada → Sinal Pago → Procedimento Agendado → Concluído → Perdido.",
+            descricao: "Acolhimento → Qualificação → Agendamento → Consulta Agendada → Consulta Realizada → Sinal Pago → Procedimento Agendado → Concluído → Perdido.",
           },
           {
             icone: <Bot />,

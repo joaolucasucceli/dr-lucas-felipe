@@ -25,7 +25,7 @@ enum TipoUsuario {
 }
 
 enum StatusFunil {
-  primeiro_atendimento
+  acolhimento
   qualificacao
   agendamento
   consulta_agendada
@@ -37,7 +37,7 @@ enum StatusFunil {
 }
 
 enum EtapaConversa {
-  primeiro_atendimento
+  acolhimento
   qualificacao
   agendamento
   consulta_agendada
@@ -105,7 +105,7 @@ model Lead {
   whatsapp              String       @unique
   email                 String?
   procedimentoInteresse String?
-  statusFunil           StatusFunil  @default(primeiro_atendimento)
+  statusFunil           StatusFunil  @default(acolhimento)
   origem                String?
   sobreOPaciente        String?      @db.Text
   responsavelId         String?
@@ -138,7 +138,7 @@ model Lead {
 model Conversa {
   id                String        @id @default(cuid())
   leadId            String
-  etapa             EtapaConversa @default(primeiro_atendimento)
+  etapa             EtapaConversa @default(acolhimento)
   modoConversa      ModoConversa  @default(ia)
   atendenteId       String?
   ultimaMensagemEm  DateTime?

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         nome: `WhatsApp ${whatsapp}`,
         whatsapp,
         origem: "whatsapp",
-        statusFunil: "primeiro_atendimento",
+        statusFunil: "acolhimento",
         responsavelId: usuarioIa?.id || null,
       },
     })

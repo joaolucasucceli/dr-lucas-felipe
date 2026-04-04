@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
         cicloAtual: novoCiclo,
         ciclosCompletos: { increment: 1 },
         ehRetorno: true,
-        statusFunil: "primeiro_atendimento",
+        statusFunil: "acolhimento",
         motivoPerda: null,
         ultimaMovimentacaoEm: new Date(),
       },
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       data: {
         leadId,
         ciclo: novoCiclo,
-        etapa: "primeiro_atendimento",
+        etapa: "acolhimento",
       },
     }),
   ])

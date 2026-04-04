@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-helpers"
 
 const labelsFunil: Record<string, string> = {
-  primeiro_atendimento: "Primeiro Atendimento",
+  acolhimento: "Acolhimento",
   qualificacao: "Qualificação",
   agendamento: "Agendamento",
   consulta_agendada: "Consulta Agendada",
@@ -16,7 +16,7 @@ const labelsFunil: Record<string, string> = {
 }
 
 const coresFunil: Record<string, string> = {
-  primeiro_atendimento: "#a1a1aa",
+  acolhimento: "#a1a1aa",
   qualificacao: "#93c5fd",
   agendamento: "#a5b4fc",
   consulta_agendada: "#c4b5fd",
@@ -28,7 +28,7 @@ const coresFunil: Record<string, string> = {
 }
 
 const ordemFunil = [
-  "primeiro_atendimento",
+  "acolhimento",
   "qualificacao",
   "agendamento",
   "consulta_agendada",

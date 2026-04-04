@@ -8,7 +8,7 @@ export const criarLeadSchema = z.object({
   origem: z.string().optional(),
   statusFunil: z
     .enum([
-      "primeiro_atendimento",
+      "acolhimento",
       "qualificacao",
       "agendamento",
       "consulta_agendada",
@@ -18,7 +18,7 @@ export const criarLeadSchema = z.object({
       "concluido",
       "perdido",
     ])
-    .default("primeiro_atendimento"),
+    .default("acolhimento"),
   responsavelId: z.string().cuid().optional(),
 })
 
@@ -30,7 +30,7 @@ export const atualizarLeadSchema = z.object({
   origem: z.string().optional(),
   statusFunil: z
     .enum([
-      "primeiro_atendimento",
+      "acolhimento",
       "qualificacao",
       "agendamento",
       "consulta_agendada",
@@ -48,7 +48,7 @@ export const atualizarLeadSchema = z.object({
 export const mudarStatusSchema = z
   .object({
     statusFunil: z.enum([
-      "primeiro_atendimento",
+      "acolhimento",
       "qualificacao",
       "agendamento",
       "consulta_agendada",

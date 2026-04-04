@@ -39,9 +39,21 @@ export async function POST(request: NextRequest) {
     },
   })
 
+  // Avançar etapa → consulta_agendada (em transação)
+  await prisma.$transaction(async (tx) => {
+    await tx.lead.update({
+      where: { id: leadId },
+      data: { statusFunil: "consulta_agendada", ultimaMovimentacaoEm: new Date() },
+    })
+    if (conversaId) {
+      await tx.conversa.update({
+        where: { id: conversaId },
+        data: { etapa: "consulta_agendada" },
+      })
+    }
+  })
+
   // TODO: Criar evento Google Calendar quando lib estiver disponível
-  // const configGoogle = await prisma.configGoogleCalendar.findFirst({ where: { ativo: true } })
-  // if (configGoogle) { ... }
 
   return NextResponse.json({ agendamento })
 }

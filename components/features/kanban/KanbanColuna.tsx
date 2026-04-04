@@ -6,7 +6,7 @@ import { KanbanCard } from "./KanbanCard"
 import type { KanbanLead } from "@/hooks/use-kanban"
 
 const coresColuna: Record<string, { bg: string; text: string; border: string }> = {
-  primeiro_atendimento: { bg: "bg-zinc-100", text: "text-zinc-800", border: "border-zinc-300" },
+  acolhimento: { bg: "bg-zinc-100", text: "text-zinc-800", border: "border-zinc-300" },
   qualificacao: { bg: "bg-blue-50", text: "text-blue-800", border: "border-blue-300" },
   agendamento: { bg: "bg-indigo-50", text: "text-indigo-800", border: "border-indigo-300" },
   consulta_agendada: { bg: "bg-purple-50", text: "text-purple-800", border: "border-purple-300" },
@@ -18,7 +18,7 @@ const coresColuna: Record<string, { bg: string; text: string; border: string }> 
 }
 
 const labelsColuna: Record<string, string> = {
-  primeiro_atendimento: "Primeiro Atendimento",
+  acolhimento: "Acolhimento",
   qualificacao: "Qualificação",
   agendamento: "Agendamento",
   consulta_agendada: "Consulta Agendada",
@@ -35,7 +35,7 @@ interface KanbanColunaProps {
 }
 
 export function KanbanColuna({ etapa, leads }: KanbanColunaProps) {
-  const cores = coresColuna[etapa] || coresColuna.primeiro_atendimento
+  const cores = coresColuna[etapa] || coresColuna.acolhimento
   const label = labelsColuna[etapa] || etapa
 
   return (

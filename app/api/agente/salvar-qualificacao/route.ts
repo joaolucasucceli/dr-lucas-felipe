@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     conversaId?: string
     sobreOPaciente?: string
     procedimentoInteresse?: string
+    nomePaciente?: string
   }
   try {
     body = await request.json()
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  const { leadId, conversaId, sobreOPaciente, procedimentoInteresse } = body
+  const { leadId, conversaId, sobreOPaciente, procedimentoInteresse, nomePaciente } = body
 
   if (!leadId || !conversaId || !sobreOPaciente) {
     return NextResponse.json(
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
   // APPEND em sobreOPaciente — NUNCA sobrescrever
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
-    select: { sobreOPaciente: true },
+    select: { sobreOPaciente: true, nome: true, statusFunil: true },
   })
 
   const textoExistente = lead?.sobreOPaciente || ""
@@ -47,10 +48,32 @@ export async function POST(request: NextRequest) {
     dadosAtualizar.procedimentoInteresse = procedimentoInteresse
   }
 
+  // Atualizar nome do lead se informado e o atual é genérico (WhatsApp XXXXX)
+  if (nomePaciente) {
+    const nomeAtual = lead?.nome || ""
+    if (nomeAtual.startsWith("WhatsApp ") || !nomeAtual) {
+      dadosAtualizar.nome = nomePaciente
+    }
+  }
+
   await prisma.lead.update({
     where: { id: leadId },
     data: dadosAtualizar,
   })
+
+  // Avançar etapa: acolhimento → qualificacao (se ainda estiver em acolhimento)
+  if (lead?.statusFunil === "acolhimento") {
+    await prisma.$transaction([
+      prisma.lead.update({
+        where: { id: leadId },
+        data: { statusFunil: "qualificacao", ultimaMovimentacaoEm: new Date() },
+      }),
+      prisma.conversa.update({
+        where: { id: conversaId },
+        data: { etapa: "qualificacao" },
+      }),
+    ])
+  }
 
   return NextResponse.json({ sucesso: true })
 }

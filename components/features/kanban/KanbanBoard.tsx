@@ -8,7 +8,7 @@ import { ModalMotivoPerdido } from "./ModalMotivoPerdido"
 import type { KanbanLead } from "@/hooks/use-kanban"
 
 const ETAPA_LABELS: Record<string, string> = {
-  primeiro_atendimento: "Primeiro Atendimento",
+  acolhimento: "Acolhimento",
   qualificacao: "Qualificação",
   agendamento: "Agendamento",
   consulta_agendada: "Consulta Agendada",
@@ -20,7 +20,7 @@ const ETAPA_LABELS: Record<string, string> = {
 }
 
 const ETAPAS_FUNIL = [
-  "primeiro_atendimento",
+  "acolhimento",
   "qualificacao",
   "agendamento",
   "consulta_agendada",

@@ -48,7 +48,7 @@ const PRIMEIROS_CONTATOS: Record<string, string> = {
 
 // ── contagem de mensagens por estágio (usada em buildMsgs e no cálculo de datas) ──
 const MSG_COUNTS: Record<string, number> = {
-  primeiro_atendimento: 3,
+  acolhimento: 3,
   qualificacao: 5,
   agendamento: 8,
   consulta_agendada: 10,
@@ -118,7 +118,7 @@ type LeadSeed = {
   whatsapp: string
   email?: string
   proc: "miniLipo" | "lipoGlutea" | "pmma"
-  status: "concluido" | "procedimento_agendado" | "sinal_pago" | "consulta_realizada" | "consulta_agendada" | "agendamento" | "qualificacao" | "primeiro_atendimento" | "perdido"
+  status: "concluido" | "procedimento_agendado" | "sinal_pago" | "consulta_realizada" | "consulta_agendada" | "agendamento" | "qualificacao" | "acolhimento" | "perdido"
   origem: string
   sobreOPaciente: string
   diasAtras: number
@@ -206,22 +206,22 @@ const LEADS: LeadSeed[] = [
   { num: 60, nome: "Wanda Yunes", whatsapp: "11991120060", email: "wanda.yunes@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "30 anos, IMC 22. BBL. Em qualificação.", diasAtras: 5, lgpd: true, resp: "ia" },
   { num: 61, nome: "Xênia Zanini", whatsapp: "11991120061", proc: "pmma", status: "qualificacao", origem: "google", sobreOPaciente: "28 anos, saudável. PMMA. Em qualificação pelo agente.", diasAtras: 5, lgpd: true, resp: "maria" },
 
-  // ── PRIMEIRO ATENDIMENTO (15) ── created 0-5 days ago ───────────────────────
-  { num: 62, nome: "Yasmin Abreu", whatsapp: "11991120062", proc: "lipoGlutea", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "24 anos. Primeiro contato: interesse em BBL.", diasAtras: 5, lgpd: false, resp: "ia" },
-  { num: 63, nome: "Zilmara Batista", whatsapp: "11991120063", proc: "miniLipo", status: "primeiro_atendimento", origem: "indicacao", sobreOPaciente: "29 anos. Primeiro contato: interesse em mini lipo.", diasAtras: 4, lgpd: false, resp: "ia" },
-  { num: 64, nome: "Aline Cabral", whatsapp: "11991120064", email: "aline.cabral@gmail.com", proc: "lipoGlutea", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "26 anos. Primeiro contato via Instagram.", diasAtras: 4, lgpd: false, resp: "ia" },
-  { num: 65, nome: "Brenda Dantas", whatsapp: "11991120065", proc: "miniLipo", status: "primeiro_atendimento", origem: "google", sobreOPaciente: "31 anos. Primeiro contato via Google.", diasAtras: 3, lgpd: false, resp: "ia" },
-  { num: 66, nome: "Catarina Estrada", whatsapp: "11991120066", email: "catarina.estrada@gmail.com", proc: "lipoGlutea", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "28 anos. Primeiro contato: perguntou sobre BBL.", diasAtras: 3, lgpd: false, resp: "ia" },
-  { num: 67, nome: "Diana Fonseca", whatsapp: "11991120067", proc: "pmma", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "35 anos. Primeiro contato: PMMA.", diasAtras: 3, lgpd: false, resp: "ia" },
-  { num: 68, nome: "Eduarda Galvão", whatsapp: "11991120068", email: "eduarda.galvao@hotmail.com", proc: "lipoGlutea", status: "primeiro_atendimento", origem: "google", sobreOPaciente: "27 anos. Primeiro contato via Google.", diasAtras: 2, lgpd: false, resp: "ia" },
-  { num: 69, nome: "Fernanda Horta", whatsapp: "11991120069", proc: "miniLipo", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "30 anos. Primeiro contato no Instagram.", diasAtras: 2, lgpd: false, resp: "ia" },
-  { num: 70, nome: "Graziella Ivo", whatsapp: "11991120070", email: "graziella.ivo@gmail.com", proc: "lipoGlutea", status: "primeiro_atendimento", origem: "indicacao", sobreOPaciente: "33 anos. Indicada por paciente da clínica.", diasAtras: 2, lgpd: false, resp: "ia" },
-  { num: 71, nome: "Heloísa Janez", whatsapp: "11991120071", proc: "pmma", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "25 anos. Primeiro contato via Instagram.", diasAtras: 1, lgpd: false, resp: "ia" },
-  { num: 72, nome: "Isabelly Kowalski", whatsapp: "11991120072", email: "isabelly.kowalski@outlook.com", proc: "lipoGlutea", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "29 anos. Primeiro contato: interesse em BBL.", diasAtras: 1, lgpd: false, resp: "ia" },
-  { num: 73, nome: "Jéssica Lago", whatsapp: "11991120073", proc: "miniLipo", status: "primeiro_atendimento", origem: "google", sobreOPaciente: "26 anos. Primeiro contato via Google.", diasAtras: 1, lgpd: false, resp: "ia" },
-  { num: 74, nome: "Kamilla Mota", whatsapp: "11991120074", email: "kamilla.mota@gmail.com", proc: "lipoGlutea", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "32 anos. Primeiro contato hoje via Instagram.", diasAtras: 0, lgpd: false, resp: "ia" },
-  { num: 75, nome: "Lorena Navarro", whatsapp: "11991120075", proc: "miniLipo", status: "primeiro_atendimento", origem: "indicacao", sobreOPaciente: "28 anos. Indicada por amiga. Primeiro contato hoje.", diasAtras: 0, lgpd: false, resp: "ia" },
-  { num: 76, nome: "Manuela Ouro", whatsapp: "11991120076", email: "manuela.ouro@hotmail.com", proc: "lipoGlutea", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "27 anos. Primeiro contato hoje via Instagram Stories.", diasAtras: 0, lgpd: false, resp: "ia" },
+  // ── ACOLHIMENTO (15) ── created 0-5 days ago ────────────────────────────────
+  { num: 62, nome: "Yasmin Abreu", whatsapp: "11991120062", proc: "lipoGlutea", status: "acolhimento", origem: "instagram", sobreOPaciente: "24 anos. Primeiro contato: interesse em BBL.", diasAtras: 5, lgpd: false, resp: "ia" },
+  { num: 63, nome: "Zilmara Batista", whatsapp: "11991120063", proc: "miniLipo", status: "acolhimento", origem: "indicacao", sobreOPaciente: "29 anos. Primeiro contato: interesse em mini lipo.", diasAtras: 4, lgpd: false, resp: "ia" },
+  { num: 64, nome: "Aline Cabral", whatsapp: "11991120064", email: "aline.cabral@gmail.com", proc: "lipoGlutea", status: "acolhimento", origem: "instagram", sobreOPaciente: "26 anos. Primeiro contato via Instagram.", diasAtras: 4, lgpd: false, resp: "ia" },
+  { num: 65, nome: "Brenda Dantas", whatsapp: "11991120065", proc: "miniLipo", status: "acolhimento", origem: "google", sobreOPaciente: "31 anos. Primeiro contato via Google.", diasAtras: 3, lgpd: false, resp: "ia" },
+  { num: 66, nome: "Catarina Estrada", whatsapp: "11991120066", email: "catarina.estrada@gmail.com", proc: "lipoGlutea", status: "acolhimento", origem: "instagram", sobreOPaciente: "28 anos. Primeiro contato: perguntou sobre BBL.", diasAtras: 3, lgpd: false, resp: "ia" },
+  { num: 67, nome: "Diana Fonseca", whatsapp: "11991120067", proc: "pmma", status: "acolhimento", origem: "instagram", sobreOPaciente: "35 anos. Primeiro contato: PMMA.", diasAtras: 3, lgpd: false, resp: "ia" },
+  { num: 68, nome: "Eduarda Galvão", whatsapp: "11991120068", email: "eduarda.galvao@hotmail.com", proc: "lipoGlutea", status: "acolhimento", origem: "google", sobreOPaciente: "27 anos. Primeiro contato via Google.", diasAtras: 2, lgpd: false, resp: "ia" },
+  { num: 69, nome: "Fernanda Horta", whatsapp: "11991120069", proc: "miniLipo", status: "acolhimento", origem: "instagram", sobreOPaciente: "30 anos. Primeiro contato no Instagram.", diasAtras: 2, lgpd: false, resp: "ia" },
+  { num: 70, nome: "Graziella Ivo", whatsapp: "11991120070", email: "graziella.ivo@gmail.com", proc: "lipoGlutea", status: "acolhimento", origem: "indicacao", sobreOPaciente: "33 anos. Indicada por paciente da clínica.", diasAtras: 2, lgpd: false, resp: "ia" },
+  { num: 71, nome: "Heloísa Janez", whatsapp: "11991120071", proc: "pmma", status: "acolhimento", origem: "instagram", sobreOPaciente: "25 anos. Primeiro contato via Instagram.", diasAtras: 1, lgpd: false, resp: "ia" },
+  { num: 72, nome: "Isabelly Kowalski", whatsapp: "11991120072", email: "isabelly.kowalski@outlook.com", proc: "lipoGlutea", status: "acolhimento", origem: "instagram", sobreOPaciente: "29 anos. Primeiro contato: interesse em BBL.", diasAtras: 1, lgpd: false, resp: "ia" },
+  { num: 73, nome: "Jéssica Lago", whatsapp: "11991120073", proc: "miniLipo", status: "acolhimento", origem: "google", sobreOPaciente: "26 anos. Primeiro contato via Google.", diasAtras: 1, lgpd: false, resp: "ia" },
+  { num: 74, nome: "Kamilla Mota", whatsapp: "11991120074", email: "kamilla.mota@gmail.com", proc: "lipoGlutea", status: "acolhimento", origem: "instagram", sobreOPaciente: "32 anos. Primeiro contato hoje via Instagram.", diasAtras: 0, lgpd: false, resp: "ia" },
+  { num: 75, nome: "Lorena Navarro", whatsapp: "11991120075", proc: "miniLipo", status: "acolhimento", origem: "indicacao", sobreOPaciente: "28 anos. Indicada por amiga. Primeiro contato hoje.", diasAtras: 0, lgpd: false, resp: "ia" },
+  { num: 76, nome: "Manuela Ouro", whatsapp: "11991120076", email: "manuela.ouro@hotmail.com", proc: "lipoGlutea", status: "acolhimento", origem: "instagram", sobreOPaciente: "27 anos. Primeiro contato hoje via Instagram Stories.", diasAtras: 0, lgpd: false, resp: "ia" },
 
   // ── PERDIDO (4) ── created various dates ────────────────────────────────────
   { num: 77, nome: "Marília Dantes", whatsapp: "11991120077", proc: "lipoGlutea", status: "perdido", origem: "instagram", sobreOPaciente: "33 anos. Consultou mas não avançou.", diasAtras: 105, lgpd: true, resp: "ia", motivoPerda: "Preço acima do esperado — optou por outro médico com menor custo", consultaDias: -80 },
@@ -232,7 +232,7 @@ const LEADS: LeadSeed[] = [
 
 // ── leads originais (enriquecidos) ────────────────────────────────────────────
 const LEADS_ORIGINAIS: LeadSeed[] = [
-  { num: 81, nome: "Ana Silva", whatsapp: "11991110001", email: "ana.silva@gmail.com", proc: "miniLipo", status: "primeiro_atendimento", origem: "instagram", sobreOPaciente: "26 anos. Primeiro contato: interesse em Mini Lipo. Aguardando qualificação.", diasAtras: 1, lgpd: false, resp: "ia" },
+  { num: 81, nome: "Ana Silva", whatsapp: "11991110001", email: "ana.silva@gmail.com", proc: "miniLipo", status: "acolhimento", origem: "instagram", sobreOPaciente: "26 anos. Primeiro contato: interesse em Mini Lipo. Aguardando qualificação.", diasAtras: 1, lgpd: false, resp: "ia" },
   { num: 82, nome: "Bruna Costa", whatsapp: "11991110002", email: "bruna.costa@hotmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "30 anos, saudável. Interesse em Lipo Glútea. Em qualificação pelo agente.", diasAtras: 6, lgpd: false, resp: "ia" },
   { num: 83, nome: "Carla Souza", whatsapp: "11991110003", email: "carla.souza@gmail.com", proc: "pmma", status: "agendamento", origem: "google", sobreOPaciente: "34 anos, saudável. PMMA qualificada. Em processo de agendamento de consulta.", diasAtras: 14, lgpd: true, resp: "maria" },
   { num: 84, nome: "Diana Lima", whatsapp: "11991110004", email: "diana.lima@outlook.com", proc: "miniLipo", status: "consulta_agendada", origem: "indicacao", sobreOPaciente: "28 anos, IMC 23, saudável. Consulta agendada para 22/03/2026 às 10h.", diasAtras: 22, lgpd: true, resp: "ia", consultaDias: 1 },
