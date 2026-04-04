@@ -37,7 +37,8 @@ export async function POST(req: Request) {
   const webhookUrl = `${baseUrl}/api/webhooks/whatsapp`
 
   try {
-    await configurarWebhook(config.uazapiUrl, config.instanceToken, webhookUrl)
+    const webhookToken = process.env.WEBHOOK_SECRET || process.env.API_SECRET || ""
+    await configurarWebhook(config.uazapiUrl, config.instanceToken, webhookUrl, webhookToken)
     await prisma.configWhatsapp.update({
       where: { id: config.id },
       data: { webhookUrl },

@@ -112,7 +112,8 @@ export async function testarConexao(
 export async function configurarWebhook(
   url: string,
   instanceToken: string,
-  webhookUrl: string
+  webhookUrl: string,
+  webhookToken?: string
 ): Promise<void> {
   await uazapiFetch(url, "/webhook", instanceToken, {
     method: "POST",
@@ -121,6 +122,7 @@ export async function configurarWebhook(
       enabled: true,
       events: ["messages", "messages_update", "connection"],
       excludeMessages: ["wasSentByApi", "isGroupYes"],
+      token: webhookToken || "",
     }),
   }, 15000)
 }

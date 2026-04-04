@@ -107,6 +107,14 @@ async function downloadEUploadMidia(
 }
 
 export async function POST(request: NextRequest) {
+  console.log("[Webhook] Requisição recebida", {
+    headers: {
+      "x-webhook-token": request.headers.get("x-webhook-token"),
+      "x-api-secret": request.headers.get("x-api-secret"),
+      "content-type": request.headers.get("content-type"),
+    },
+  })
+
   // Validar origem: aceitar apenas se WEBHOOK_SECRET estiver configurado e coincidir
   const webhookSecret = process.env.WEBHOOK_SECRET || process.env.API_SECRET
   if (webhookSecret) {
@@ -114,6 +122,7 @@ export async function POST(request: NextRequest) {
       request.headers.get("x-webhook-token") ??
       request.headers.get("x-api-secret")
     if (tokenRecebido !== webhookSecret) {
+      console.warn("[Webhook] 401 — token inválido ou ausente", { tokenRecebido })
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
   }
@@ -126,8 +135,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  // Filtrar: apenas messages.upsert
-  if (payload.event !== "messages.upsert") {
+  console.log("[Webhook] Payload recebido", {
+    event: payload.event,
+    dataKeys: payload.data ? Object.keys(payload.data) : [],
+    messagesCount: payload.data?.messages?.length ?? 0,
+  })
+
+  // Filtrar: apenas messages.upsert ou messages
+  const eventosValidos = ["messages.upsert", "messages"]
+  if (!eventosValidos.includes(payload.event)) {
     return NextResponse.json({ ok: true })
   }
 
