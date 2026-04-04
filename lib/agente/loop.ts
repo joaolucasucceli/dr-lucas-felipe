@@ -266,9 +266,10 @@ export async function processarMensagens(chatId: string): Promise<void> {
         }
       }
 
-      // Delay de 1s entre mensagens (exceto última)
+      // Delay aleatório de 3-5s entre mensagens (exceto última)
       if (i < segmentos.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        const delay = Math.floor(Math.random() * 2001) + 3000
+        await new Promise((resolve) => setTimeout(resolve, delay))
       }
     }
 

@@ -7,8 +7,8 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.9.0"
-export const DATA_ATUALIZACAO = "2026-03-27"
+export const VERSAO_DOCUMENTACAO = "1.11.2"
+export const DATA_ATUALIZACAO = "2026-04-04"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
 > Versão ${VERSAO_DOCUMENTACAO} · Atualizado em ${DATA_ATUALIZACAO}
@@ -24,11 +24,11 @@ Dois módulos integrados em uma única aplicação Next.js:
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Framework | Next.js 14+ (App Router) |
-| UI | shadcn/ui (preset b1Ymqvi3U) |
-| Estilização | Tailwind CSS |
+| Framework | Next.js 16 (App Router + Turbopack) |
+| UI | shadcn/ui 4 (preset b1Ymqvi3U) |
+| Estilização | Tailwind CSS 4 |
 | Banco de dados | PostgreSQL via Supabase |
-| ORM | Prisma |
+| ORM | Prisma 7 |
 | Autenticação | NextAuth.js (Credentials Provider) |
 | Cache/Buffer | Redis (Upstash) |
 | IA | OpenAI GPT-4o (chat), Whisper (áudio), GPT-4o-mini (visão) |
@@ -335,6 +335,24 @@ Ficha cirúrgica detalhada vinculada a evoluções do tipo "Procedimento".
 - Se não existe, aparece botão "Registrar Detalhes Cirúrgicos"
 - Marcos de recuperação com status: Concluído (verde), Pendente (amarelo), Atrasado (vermelho)
 
+### Documentos do Prontuário
+
+Upload e gestão de documentos clínicos vinculados ao prontuário do paciente.
+
+| Tipo | Descrição |
+|------|-----------|
+| Exame Laboratorial | Resultados de exames de sangue, imagem, etc. |
+| Laudo | Laudos médicos e pareceres |
+| Termo de Consentimento | Termos assinados pelo paciente |
+| Receita | Prescrições médicas |
+| Atestado | Atestados médicos |
+| Outro | Documentos não categorizados |
+
+- Upload via botão "Novo Documento" na aba Prontuário
+- Visualização em lista com tipo, nome, data e opção de download
+- Exclusão com confirmação (soft delete)
+- Tipos de arquivo aceitos: PDF, imagens e documentos comuns
+
 ### Permissões
 
 | Perfil | Acesso |
@@ -360,7 +378,7 @@ POST /api/webhooks/whatsapp
   → concatenar mensagens
   → GPT-4o (system prompt + memória Redis, 20 msgs, chave: {chat_id}_mem_dr-lucas)
   → segmentar resposta
-  → enviar via Uazapi (delay 1s entre mensagens)
+  → enviar via Uazapi (delay aleatório 3-5s entre mensagens)
 \`\`\`
 
 ### 3 Fases do Atendimento
@@ -455,10 +473,11 @@ Análise de desempenho do negócio com exportação de dados.
 | **Funil** | Taxa de conversão, tempo médio entre etapas, distribuição por etapa |
 | **Agendamentos** | Total, taxa de realização, conversão por procedimento e origem |
 | **Atendimento IA** | Volume de mensagens, conversas ativas, efetividade de follow-ups |
+| **Receita** | Receita por período, gráfico temporal, procedimentos mais rentáveis |
 
 ### Como usar
 
-1. Selecione a aba desejada
+1. Selecione a aba desejada (Funil, Agendamentos, Atendimento IA ou Receita)
 2. Informe data de início e fim e clique em "Gerar Relatório"
 3. Use "Exportar CSV" para baixar os dados
 
@@ -595,12 +614,84 @@ id | prontuarioId | tipo (TipoEvolucao) | dataRegistro | titulo
 conteudo | prescricao | orientacoes | procedimentoId | deletadoEm
 \`\`\`
 
+### Usuario
+\`\`\`
+id | nome | email (único) | senha (bcrypt) | perfil (gestor/atendente)
+tipo (humano/ia) | ativo | criadoEm | atualizadoEm | deletadoEm
+\`\`\`
+
+### Procedimento
+\`\`\`
+id | nome | tipo | descricao | valorBase (BRL) | duracaoMin
+posOperatorio | ativo | criadoEm | atualizadoEm | deletadoEm
+\`\`\`
+
+### TipoProcedimento
+\`\`\`
+id | nome (único) | ativo | criadoEm
+\`\`\`
+
+### FotoLead
+\`\`\`
+id | leadId | url | descricao | tipoAnalise | ciclo | criadoEm
+\`\`\`
+
+### DocumentoProntuario
+\`\`\`
+id | prontuarioId | tipo (exame/laudo/termo/receita/atestado/outro)
+nome | descricao | storagePath | tamanhoBytes | mimeType | criadoEm
+\`\`\`
+
+### FotoProntuario
+\`\`\`
+id | prontuarioId | url | descricao | tipoFoto (pre/pos-operatorio)
+dataRegistro | criadoEm
+\`\`\`
+
+### SinalVital
+\`\`\`
+id | prontuarioId | tipo (pressao/FC/temp/saturacao/glicemia)
+valor | unidade | dataRegistro | observacao | criadoEm
+\`\`\`
+
+### RegistroCirurgico
+\`\`\`
+id | evolucaoId (único) | tipoAnestesia | anestesista | tempoCircurgicoMinutos
+sangramento | complicacoes | tecnicaUtilizada | materiaisUtilizados
+orientacoesPosOp | marcosRecuperacao (JSON) | criadoEm | atualizadoEm
+\`\`\`
+
+### AgendamentoPaciente
+\`\`\`
+id | pacienteId | procedimentoId | dataHora | status
+tipo | observacao | criadoEm | atualizadoEm
+\`\`\`
+
+### ConfigGoogleCalendar
+\`\`\`
+id | clientId | clientSecret | refreshToken | calendarId | ativo
+\`\`\`
+
+### ConfigWhatsapp
+\`\`\`
+id | uazapiUrl | adminToken | instanceId | instanceToken
+numeroWhatsapp | webhookUrl | ativo
+\`\`\`
+
 ### ConfigSite
 \`\`\`
 id | whatsappNumero | whatsappMensagem | medicoNome | medicoEspecialidade
 medicoCrm | instagramUrl | contatoTelefone | contatoEndereco | contatoCidade
 ativo | criadoEm | atualizadoEm
 \`\`\`
+
+### AuditLog
+\`\`\`
+id | usuarioId | acao | entidade | entidadeId
+dadosAntes (JSON) | dadosDepois (JSON) | ip | criadoEm
+\`\`\`
+
+> **Sprint** e **SprintItem** são models internos de roadmap usados apenas na administração do sistema.
 
 ---
 

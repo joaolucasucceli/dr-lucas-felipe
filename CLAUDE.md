@@ -11,17 +11,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Stack Tecnológica
 
-- **Framework:** Next.js 14+ (App Router)
-- **UI:** shadcn/ui exclusivamente (preset `b1Ymqvi3U`) — nunca criar botões, inputs ou cards do zero
-- **Estilização:** Tailwind CSS
-- **Banco de Dados:** PostgreSQL via Supabase, ORM: Prisma
-- **Autenticação:** NextAuth.js (Credentials Provider)
+- **Framework:** Next.js 16 (App Router + Turbopack)
+- **UI:** shadcn/ui 4 exclusivamente (preset `b1Ymqvi3U`) — nunca criar botões, inputs ou cards do zero
+- **Estilização:** Tailwind CSS 4
+- **Banco de Dados:** PostgreSQL via Supabase, ORM: Prisma 7
+- **Autenticação:** NextAuth.js 4 (Credentials Provider + JWT)
 - **Cache/Buffer:** Redis (Upstash)
-- **IA:** OpenAI GPT-4o (chat), Whisper (áudio), GPT-4o-mini (visão)
-- **WhatsApp:** Uazapi (gateway)
+- **Realtime:** Supabase Realtime (WebSocket)
+- **IA:** OpenAI GPT-4o (chat), Whisper (áudio), GPT-4o-mini (visão/classificação)
+- **WhatsApp:** Uazapi v2 (gateway)
 - **Calendário:** Google Calendar API
+- **Data Fetching:** SWR
+- **Validação:** Zod
 - **Deploy:** Vercel
-- **Testes E2E:** Playwright
 
 ## Comandos Comuns
 
@@ -37,10 +39,6 @@ npx prisma db seed
 
 # Desenvolvimento
 npm run dev
-
-# Testes
-npx playwright test                    # todos os testes E2E
-npx playwright test tests/leads.spec   # arquivo de teste específico
 
 # Prisma
 npx prisma studio                      # visualizador do banco
@@ -59,7 +57,7 @@ Colunas 1-4 são movidas automaticamente pelo agente IA. Colunas 5-8 exigem aç�
 
 ### Arquitetura do Agente IA
 
-Fluxo do webhook: `POST /api/webhooks/whatsapp` → detectar tipo de conteúdo → processar mídia se necessário → buffer Redis (debounce 20s, chave: `{chat_id}_buf_dr-lucas`) → concatenar mensagens → GPT-4o com system prompt + memória Redis (20 msgs, chave: `{chat_id}_mem_dr-lucas`) → segmentar resposta → enviar via Uazapi com delay de 1s entre mensagens.
+Fluxo do webhook: `POST /api/webhooks/whatsapp` → detectar tipo de conteúdo → processar mídia se necessário → buffer Redis (debounce 20s, chave: `{chat_id}_buf_dr-lucas`) → concatenar mensagens → GPT-4o com system prompt + memória Redis (20 msgs, chave: `{chat_id}_mem_dr-lucas`) → segmentar resposta → enviar via Uazapi com delay aleatório de 3-5s entre mensagens.
 
 O agente tem 3 etapas no funil: Qualificação → Agendamento → Gestão do Agendamento, usando 6 ferramentas em `/api/agente/*`.
 
@@ -121,9 +119,29 @@ lib/documentacao/conteudo.ts
 - `VERSAO_DOCUMENTACAO` — incrementar a versão (semver: patch para ajustes, minor para features)
 - `DATA_ATUALIZACAO` — sempre atualizar para a data da mudança (formato `YYYY-MM-DD`)
 
+## Números do Sistema
+
+| Métrica | Quantidade |
+|---------|-----------|
+| Páginas | 24 (19 dashboard + 4 públicas + 1 root) |
+| Endpoints API | 69 |
+| Models Prisma | 19+ |
+| Enums | 10 |
+| Componentes | 96 (26 UI + 68 features + 2 providers) |
+| Hooks customizados | 19 |
+
+## Issues Conhecidas
+
+| Severidade | Issue | Arquivo |
+|-----------|-------|---------|
+| Crítica | Google Calendar sync ausente nas rotas do agente (TODO) | `app/api/agente/registrar-agendamento/route.ts`, `atualizar-agendamento/route.ts` |
+| Média | Sem timeout na execução de ferramentas do agente | `lib/agente/ferramentas.ts` |
+| Média | Race condition na dedup de mensagens webhook | `app/api/webhooks/whatsapp/route.ts` |
+| Média | Webhook secret opcional (aceita qualquer webhook se não configurado) | `app/api/webhooks/whatsapp/route.ts` |
+
 ## Estado do Projeto
 
-Sistema em produção com todos os módulos core implementados. Novo ciclo de sprints será planejado conforme demanda.
+Sistema em produção com todos os módulos core implementados. Sprint 1 (validação do agente IA) planejada no ClickUp com 22 tasks de teste end-to-end.
 
 ## Idioma
 

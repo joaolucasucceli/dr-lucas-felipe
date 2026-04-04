@@ -151,18 +151,6 @@ export default function WhatsAppConfigPage() {
     }
   }
 
-  if (carregando) return <LoadingState />
-  if (erro) {
-    return (
-      <div>
-        <PageHeader titulo="WhatsApp" />
-        <div className="mt-6"><ErrorState mensagem={erro} onTentar={recarregar} /></div>
-      </div>
-    )
-  }
-
-  const aguardandoQr = qrcode !== "" || status === "connecting"
-
   // Countdown quando QR está visível
   useEffect(() => {
     if (qrcode) {
@@ -179,6 +167,18 @@ export default function WhatsAppConfigPage() {
       setQrSegs(0)
     }
   }, [qrcode])
+
+  if (carregando) return <LoadingState />
+  if (erro) {
+    return (
+      <div>
+        <PageHeader titulo="WhatsApp" />
+        <div className="mt-6"><ErrorState mensagem={erro} onTentar={recarregar} /></div>
+      </div>
+    )
+  }
+
+  const aguardandoQr = qrcode !== "" || status === "connecting"
 
   // Step indicator
   const passo = !configurado ? 1 : !conectado ? 2 : 3
