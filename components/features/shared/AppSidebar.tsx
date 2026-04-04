@@ -10,8 +10,6 @@ import {
   CalendarDays,
   Stethoscope,
   Settings,
-  BarChart3,
-  Bot,
   BookOpen,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -78,23 +76,6 @@ const navGroups: NavGroup[] = [
         titulo: "Procedimentos",
         href: "/procedimentos",
         icone: <Stethoscope className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
-    ],
-  },
-  {
-    label: "Inteligência",
-    itens: [
-      {
-        titulo: "Ana Júlia",
-        href: "/ana-julia",
-        icone: <Bot className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
-      {
-        titulo: "Relatórios",
-        href: "/relatorios",
-        icone: <BarChart3 className="h-4 w-4" />,
         perfis: ["gestor"],
       },
     ],

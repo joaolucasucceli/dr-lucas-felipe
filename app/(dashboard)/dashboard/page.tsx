@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, UserPlus, Calendar, TrendingUp, Bot, GitBranch, PieChart, Clock, Bell } from "lucide-react"
+import { Users, UserPlus, Calendar, TrendingUp, GitBranch, Bell, Download } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -11,20 +12,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { MetricCard } from "@/components/features/shared/MetricCard"
 import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { GraficoFunil } from "@/components/features/dashboard/GraficoFunil"
-import { GraficoOrigem } from "@/components/features/dashboard/GraficoOrigem"
 import { LeadsAlerta } from "@/components/features/dashboard/LeadsAlerta"
-import { LeadsFollowUpAtivos } from "@/components/features/dashboard/LeadsFollowUpAtivos"
+import { CardResumoAnaJulia } from "@/components/features/dashboard/CardResumoAnaJulia"
 import { useDashboard } from "@/hooks/use-dashboard"
+import { exportarRelatorio } from "@/hooks/use-relatorio"
 
 export default function DashboardPage() {
   const { data: session } = useSession()
   const perfil = session?.user?.perfil
-  const isAtendente = perfil === "atendente"
+  const isGestor = perfil === "gestor"
   const [periodo, setPeriodo] = useState("mes")
   const { metricas, carregando, erro, recarregar } = useDashboard(periodo)
 
@@ -80,8 +87,30 @@ export default function DashboardPage() {
             <SelectItem value="total">Total</SelectItem>
           </SelectContent>
         </Select>
+
+        {isGestor && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Download className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportarRelatorio("leads")}>
+                Exportar Leads
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportarRelatorio("agendamentos")}>
+                Exportar Agendamentos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportarRelatorio("conversas")}>
+                Exportar Conversas
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </PageHeader>
 
+      {/* Metric Cards */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           titulo="Total de Leads"
@@ -100,23 +129,24 @@ export default function DashboardPage() {
           descricao={`${metricas.agendamentosRealizados} realizados`}
           icone={<Calendar className="h-5 w-5" />}
         />
-        {isAtendente ? (
-          <MetricCard
-            titulo="Leads do Dia"
-            valor={metricas.leadsHoje}
-            descricao="Novos leads criados hoje"
-            icone={<UserPlus className="h-5 w-5" />}
-          />
-        ) : (
+        {isGestor ? (
           <MetricCard
             titulo="Taxa de Conversão"
             valor={`${metricas.taxaConversao}%`}
             descricao="Leads que agendaram ou além"
             icone={<TrendingUp className="h-5 w-5" />}
           />
+        ) : (
+          <MetricCard
+            titulo="Leads do Dia"
+            valor={metricas.leadsHoje}
+            descricao="Novos leads criados hoje"
+            icone={<UserPlus className="h-5 w-5" />}
+          />
         )}
       </div>
 
+      {/* Funil + Ana Júlia / Leads em Alerta */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center gap-2">
@@ -128,81 +158,27 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {isAtendente ? (
+        <div className="grid gap-4">
+          {isGestor && (
+            <CardResumoAnaJulia
+              mensagensEnviadas={metricas.mensagensEnviadasPelaIA}
+              followUpsEnviados={metricas.followUpsEnviados}
+              confirmacaoEnviadas={metricas.confirmacaoEnviadas}
+            />
+          )}
+
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-base">Agendamentos da Semana</CardTitle>
+              <Bell className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base">
+                Leads em Alerta ({metricas.leadsEmAlerta})
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between py-4">
-                <span className="text-sm text-muted-foreground">Agendamentos nos próximos 7 dias</span>
-                <span className="text-2xl font-bold">{metricas.agendamentosSemana}</span>
-              </div>
+              <LeadsAlerta />
             </CardContent>
           </Card>
-        ) : (
-          <Card>
-            <CardHeader className="flex flex-row items-center gap-2">
-              <PieChart className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-base">Leads por Origem</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <GraficoOrigem dados={metricas.leadsPorOrigem} />
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <div className={`mt-4 grid gap-4 ${isAtendente ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
-        {!isAtendente && (
-          <Card>
-            <CardHeader className="flex flex-row items-center gap-2">
-              <Bot className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-base">Atividade do Agente IA</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Mensagens enviadas</span>
-                  <span className="text-sm font-medium">{metricas.mensagensEnviadasPelaIA}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Follow-ups enviados</span>
-                  <span className="text-sm font-medium">{metricas.followUpsEnviados}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Confirmações enviadas</span>
-                  <span className="text-sm font-medium">{metricas.confirmacaoEnviadas}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">
-              Follow-ups Aguardando Resposta
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LeadsFollowUpAtivos />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2">
-            <Bell className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">
-              Leads em Alerta ({metricas.leadsEmAlerta})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LeadsAlerta />
-          </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   )
