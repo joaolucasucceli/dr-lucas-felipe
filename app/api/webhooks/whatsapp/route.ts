@@ -16,6 +16,7 @@ interface MensagemNormalizada {
   fromMe: boolean
   isGroup: boolean
   numero: string
+  nomeContato: string | null
   tipo: TipoMensagem
   conteudo: string
   mediaUrl: string | null
@@ -110,6 +111,10 @@ function normalizarUazapiV2(payload: any): MensagemNormalizada | null {
   // Conteúdo de texto
   const conteudo = msg.content || msg.body || ""
 
+  // Nome do contato — vem do chat do Uazapi
+  const chat = payload.chat || {}
+  const nomeContato = chat.name || chat.wa_name || null
+
   if (!chatId || !messageId) {
     console.warn("[Webhook] UazapiGO — faltam chatId ou messageId", { chatId, messageId })
     return null
@@ -121,6 +126,7 @@ function normalizarUazapiV2(payload: any): MensagemNormalizada | null {
     fromMe: isFromMe,
     isGroup,
     numero: extrairNumero(chatId),
+    nomeContato,
     tipo: tipoMsg,
     conteudo,
     mediaUrl,
@@ -159,6 +165,7 @@ function normalizarBaileys(payload: any): MensagemNormalizada[] {
         fromMe: false,
         isGroup: false,
         numero: extrairNumero(msg.key.remoteJid),
+        nomeContato: null,
         tipo,
         conteudo,
         mediaUrl,
@@ -264,7 +271,7 @@ export async function POST(request: NextRequest) {
     if (!lead) {
       lead = await prisma.lead.create({
         data: {
-          nome: `WhatsApp ${msg.numero}`,
+          nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
           whatsapp: msg.numero,
           origem: "whatsapp",
         },
