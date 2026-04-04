@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, CheckCircle, CheckCircle2, Edit2, Loader2, Wifi, WifiOff } from "lucide-react"
+import { ArrowLeft, CheckCircle, CheckCircle2, Edit2, Loader2, Plus, RefreshCw, Trash2, Wifi, WifiOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -23,13 +23,32 @@ export default function WhatsAppConfigPage() {
 
   const [url, setUrl] = useState("")
   const [token, setToken] = useState("")
+  const [nome, setNome] = useState("")
   const [qrcode, setQrcode] = useState("")
   const [qrSegs, setQrSegs] = useState(0)
   const qrExpiraRef = useRef<number | null>(null)
   const [editandoCredenciais, setEditandoCredenciais] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [confirmarDesconectar, setConfirmarDesconectar] = useState(false)
+  const [reconfigurandoWebhook, setReconfigurandoWebhook] = useState(false)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Countdown quando QR está visível
+  useEffect(() => {
+    if (qrcode) {
+      qrExpiraRef.current = Date.now() + 120_000
+      setQrSegs(120)
+      const iv = setInterval(() => {
+        const restante = Math.max(0, Math.ceil(((qrExpiraRef.current ?? 0) - Date.now()) / 1000))
+        setQrSegs(restante)
+        if (restante === 0) clearInterval(iv)
+      }, 1000)
+      return () => clearInterval(iv)
+    } else {
+      qrExpiraRef.current = null
+      setQrSegs(0)
+    }
+  }, [qrcode])
 
   // Inicializar estado de credenciais
   useEffect(() => {
@@ -75,6 +94,16 @@ export default function WhatsAppConfigPage() {
       }
     }
   }, [qrcode, status, recarregar])
+
+  if (carregando) return <LoadingState />
+  if (erro) {
+    return (
+      <div>
+        <PageHeader titulo="WhatsApp" />
+        <div className="mt-6"><ErrorState mensagem={erro} onTentar={recarregar} /></div>
+      </div>
+    )
+  }
 
   async function handleSalvarCredenciais() {
     setSalvando(true)
@@ -151,31 +180,39 @@ export default function WhatsAppConfigPage() {
     }
   }
 
-  // Countdown quando QR está visível
-  useEffect(() => {
-    if (qrcode) {
-      qrExpiraRef.current = Date.now() + 120_000
-      setQrSegs(120)
-      const iv = setInterval(() => {
-        const restante = Math.max(0, Math.ceil(((qrExpiraRef.current ?? 0) - Date.now()) / 1000))
-        setQrSegs(restante)
-        if (restante === 0) clearInterval(iv)
-      }, 1000)
-      return () => clearInterval(iv)
-    } else {
-      qrExpiraRef.current = null
-      setQrSegs(0)
-    }
-  }, [qrcode])
+  async function handleReconfigurarWebhook() {
+    setReconfigurandoWebhook(true)
+    try {
+      const res = await fetch("/api/whatsapp/reconfigure-webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ configId: config?.instanceId ? undefined : "" }),
+      })
 
-  if (carregando) return <LoadingState />
-  if (erro) {
-    return (
-      <div>
-        <PageHeader titulo="WhatsApp" />
-        <div className="mt-6"><ErrorState mensagem={erro} onTentar={recarregar} /></div>
-      </div>
-    )
+      // Buscar configId real
+      const instRes = await fetch("/api/whatsapp/instances")
+      const instData = await instRes.json()
+      const instancia = instData.instancias?.[0]
+
+      if (instancia) {
+        const res2 = await fetch("/api/whatsapp/reconfigure-webhook", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ configId: instancia.id }),
+        })
+        if (res2.ok) {
+          toast.success("Webhook reconfigurado!")
+          recarregar()
+        } else {
+          const erro = await res2.json()
+          toast.error(erro.error || "Erro ao reconfigurar webhook")
+        }
+      }
+    } catch {
+      toast.error("Erro ao reconfigurar webhook")
+    } finally {
+      setReconfigurandoWebhook(false)
+    }
   }
 
   const aguardandoQr = qrcode !== "" || status === "connecting"
@@ -190,7 +227,7 @@ export default function WhatsAppConfigPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader titulo="WhatsApp" descricao="Conecte o sistema ao WhatsApp via Uazapi">
+      <PageHeader titulo="WhatsApp" descricao="Gerencie a conexão com o WhatsApp via Uazapi">
         <Button variant="outline" size="sm" onClick={() => router.push("/configuracoes")}>
           <ArrowLeft className="mr-1 h-4 w-4" />
           Voltar
@@ -215,7 +252,7 @@ export default function WhatsAppConfigPage() {
         ))}
       </div>
 
-      {/* Card 1 — Credenciais (fixas, editáveis) */}
+      {/* Card 1 — Credenciais */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-base">Acesso Uazapi</CardTitle>
@@ -297,7 +334,7 @@ export default function WhatsAppConfigPage() {
         </CardContent>
       </Card>
 
-      {/* Card 2 — Instância (só aparece se credenciais configuradas) */}
+      {/* Card 2 — Instância */}
       {configurado && (
         <Card>
           <CardHeader className="pb-3">
@@ -330,14 +367,25 @@ export default function WhatsAppConfigPage() {
                 <p className="text-sm text-muted-foreground">
                   O sistema está recebendo mensagens do WhatsApp.
                 </p>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setConfirmarDesconectar(true)}
-                  disabled={salvando}
-                >
-                  Desconectar
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReconfigurarWebhook}
+                    disabled={reconfigurandoWebhook}
+                  >
+                    {reconfigurandoWebhook ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
+                    Reconfigurar Webhook
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setConfirmarDesconectar(true)}
+                    disabled={salvando}
+                  >
+                    Desconectar
+                  </Button>
+                </div>
               </div>
             )}
 

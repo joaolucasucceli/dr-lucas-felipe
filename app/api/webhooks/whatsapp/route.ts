@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import type { TipoMensagem } from "@/generated/prisma/enums"
 import { adicionarAoBuffer, agendarProcessamento } from "@/lib/agente/buffer"
 import { transcreverAudio, descreverImagem } from "@/lib/agente/processar-midia"
+import { createClient } from "@supabase/supabase-js"
 
 interface UazapiMessage {
   key: {
@@ -64,6 +65,47 @@ function extrairMediaUrl(message: UazapiMessage["message"]): string | null {
   )
 }
 
+const MIME_MAP: Record<string, string> = {
+  imagem: "image/jpeg",
+  audio: "audio/ogg",
+  documento: "application/octet-stream",
+  video: "video/mp4",
+}
+
+async function downloadEUploadMidia(
+  mediaUrl: string,
+  tipo: TipoMensagem,
+  messageId: string
+): Promise<string | null> {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceKey) return null
+
+    const supabase = createClient(supabaseUrl, serviceKey)
+    const res = await fetch(mediaUrl)
+    if (!res.ok) return null
+
+    const buffer = Buffer.from(await res.arrayBuffer())
+    const ext = tipo === "imagem" ? "jpg" : tipo === "audio" ? "ogg" : tipo === "video" ? "mp4" : "bin"
+    const path = `webhook/${messageId}.${ext}`
+
+    const { error } = await supabase.storage
+      .from("atendimento-midias")
+      .upload(path, buffer, {
+        contentType: MIME_MAP[tipo] || "application/octet-stream",
+        upsert: true,
+      })
+
+    if (error) return null
+
+    const { data } = supabase.storage.from("atendimento-midias").getPublicUrl(path)
+    return data.publicUrl
+  } catch {
+    return null
+  }
+}
+
 export async function POST(request: NextRequest) {
   // Validar origem: aceitar apenas se WEBHOOK_SECRET estiver configurado e coincidir
   const webhookSecret = process.env.WEBHOOK_SECRET || process.env.API_SECRET
@@ -113,6 +155,7 @@ export async function POST(request: NextRequest) {
     const mediaUrl = extrairMediaUrl(msg.message)
 
     // Processar mídia
+    let storedMediaUrl: string | null = null
     try {
       if (tipo === "audio" && mediaUrl) {
         conteudo = `[Áudio transcrito]: ${await transcreverAudio(mediaUrl)}`
@@ -127,6 +170,11 @@ export async function POST(request: NextRequest) {
       if (!conteudo) {
         conteudo = `[${tipo} não processado]`
       }
+    }
+
+    // Download mídia e upload para Storage
+    if (mediaUrl && tipo !== "texto") {
+      storedMediaUrl = await downloadEUploadMidia(mediaUrl, tipo, msg.key.id)
     }
 
     // Encontrar ou criar lead pelo whatsapp
@@ -165,6 +213,8 @@ export async function POST(request: NextRequest) {
         tipo,
         conteudo,
         remetente: "paciente",
+        mediaUrl: storedMediaUrl,
+        mediaType: tipo !== "texto" ? tipo : null,
       },
     })
 

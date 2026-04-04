@@ -159,6 +159,18 @@ export async function processarMensagens(chatId: string): Promise<void> {
     console.error("[Agente] Erro ao consultar paciente:", error)
   }
 
+  // 5d. Checar modo de conversa — se humano está atendendo, IA não responde
+  if (conversaId) {
+    const conversa = await prisma.conversa.findUnique({
+      where: { id: conversaId },
+      select: { modoConversa: true },
+    })
+    if (conversa?.modoConversa === "humano") {
+      console.log(`[Agente] Conversa ${conversaId} em modo humano — IA não responde`)
+      return
+    }
+  }
+
   // 6. Enviar "digitando"
   try {
     await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)

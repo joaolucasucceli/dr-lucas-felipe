@@ -97,11 +97,39 @@ export async function enviarMensagem(
   url: string,
   instanceToken: string,
   numero: string,
-  mensagem: string
+  mensagem: string,
+  replyId?: string
 ): Promise<void> {
+  const payload: Record<string, string> = { to: numero, text: mensagem }
+  if (replyId) payload.replyid = replyId
   await uazapiFetch(url, "/message/text", instanceToken, {
     method: "POST",
-    body: JSON.stringify({ to: numero, text: mensagem }),
+    body: JSON.stringify(payload),
+  })
+}
+
+/** Envia mídia — POST /send/media */
+export async function enviarMidia(
+  url: string,
+  instanceToken: string,
+  numero: string,
+  mediaUrl: string,
+  tipo: "image" | "audio" | "document" | "video" | "ptt",
+  legenda?: string,
+  replyId?: string,
+  nomeDocumento?: string
+): Promise<void> {
+  const payload: Record<string, string> = {
+    to: numero,
+    url: mediaUrl,
+    type: tipo,
+  }
+  if (legenda) payload.caption = legenda
+  if (replyId) payload.replyid = replyId
+  if (nomeDocumento) payload.docName = nomeDocumento
+  await uazapiFetch(url, "/send/media", instanceToken, {
+    method: "POST",
+    body: JSON.stringify(payload),
   })
 }
 

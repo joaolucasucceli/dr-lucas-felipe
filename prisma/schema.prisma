@@ -64,6 +64,12 @@ enum TipoMensagem {
   video
 }
 
+enum ModoConversa {
+  ia
+  humano
+  hibrido
+}
+
 enum StatusSprint {
   planejada
   em_andamento
@@ -87,6 +93,7 @@ model Usuario {
   deletadoEm  DateTime?
 
   leads       Lead[]       @relation("ResponsavelLead")
+  conversas   Conversa[]   @relation("AtendenteConversa")
   auditLogs   AuditLog[]
 
   @@map("usuarios")
@@ -132,6 +139,8 @@ model Conversa {
   id                String        @id @default(cuid())
   leadId            String
   etapa             EtapaConversa @default(primeiro_atendimento)
+  modoConversa      ModoConversa  @default(ia)
+  atendenteId       String?
   ultimaMensagemEm  DateTime?
   followUpEnviados  String[]      @default([])
   encerradaEm       DateTime?
@@ -140,29 +149,38 @@ model Conversa {
   atualizadoEm      DateTime      @updatedAt
 
   lead       Lead                @relation(fields: [leadId], references: [id])
+  atendente  Usuario?            @relation("AtendenteConversa", fields: [atendenteId], references: [id])
   mensagens  MensagemWhatsapp[]
 
   @@index([leadId])
   @@index([etapa])
+  @@index([atendenteId])
   @@map("conversas")
 }
 
 model MensagemWhatsapp {
-  id                  String   @id @default(cuid())
+  id                  String        @id @default(cuid())
   conversaId          String
   leadId              String
-  messageIdWhatsapp   String       @unique
+  messageIdWhatsapp   String        @unique
   tipo                TipoMensagem
-  conteudo            String       @db.Text
+  conteudo            String        @db.Text
   remetente           String
-  criadoEm            DateTime @default(now())
+  mediaUrl            String?
+  mediaType           String?
+  lidaEm              DateTime?
+  replyToId           String?
+  criadoEm            DateTime      @default(now())
 
-  conversa  Conversa @relation(fields: [conversaId], references: [id])
-  lead      Lead     @relation(fields: [leadId], references: [id])
+  conversa  Conversa          @relation(fields: [conversaId], references: [id])
+  lead      Lead              @relation(fields: [leadId], references: [id])
+  replyTo   MensagemWhatsapp? @relation("MensagemReply", fields: [replyToId], references: [id])
+  replies   MensagemWhatsapp[] @relation("MensagemReply")
 
   @@index([leadId])
   @@index([conversaId])
   @@index([criadoEm])
+  @@index([replyToId])
   @@map("mensagens_whatsapp")
 }
 
@@ -251,6 +269,7 @@ model ConfigGoogleCalendar {
 
 model ConfigWhatsapp {
   id              String    @id @default(cuid())
+  nome            String?
   uazapiUrl       String
   adminToken      String
   instanceId      String?
