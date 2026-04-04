@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Configurar webhook
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+    const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
     const webhookUrl = `${baseUrl}/api/webhooks/whatsapp`
     let webhookConfigurado = false
 

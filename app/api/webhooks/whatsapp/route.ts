@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
       await agendarProcessamento(chatId)
 
       // Agendar processamento após debounce (21s > 20s TTL)
-      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+      const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
       setTimeout(() => {
         fetch(`${baseUrl}/api/agente/processar`, {
           method: "POST",

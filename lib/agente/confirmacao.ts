@@ -114,7 +114,7 @@ export async function enviarConfirmacao(
   )
 
   // Registrar no banco
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+  const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
   try {
     await fetch(`${baseUrl}/api/agente/registrar-mensagem`, {
       method: "POST",

@@ -108,7 +108,7 @@ export async function enviarFollowUp(
   )
 
   // Registrar no banco via API interna
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+  const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
   try {
     await fetch(`${baseUrl}/api/agente/registrar-mensagem`, {
       method: "POST",
