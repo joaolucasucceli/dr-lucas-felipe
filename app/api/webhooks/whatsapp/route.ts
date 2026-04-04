@@ -280,11 +280,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (!lead) {
+      const usuarioIa = await prisma.usuario.findFirst({
+        where: { tipo: "ia", ativo: true, deletadoEm: null },
+      })
       lead = await prisma.lead.create({
         data: {
           nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
           whatsapp: msg.numero,
           origem: "whatsapp",
+          responsavelId: usuarioIa?.id || null,
         },
       })
     }
@@ -339,15 +343,15 @@ export async function POST(request: NextRequest) {
       })
 
       const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
-      fetch(`${baseUrl}/api/agente/processar`, {
+      await fetch(`${baseUrl}/api/agente/processar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-api-secret": process.env.API_SECRET || "",
         },
         body: JSON.stringify({ chatId: msg.chatId }),
-      }).catch(() => {
-        // Ignorar erro de trigger — processamento pode ser feito por cron
+      }).catch((err) => {
+        console.error("[Webhook] Erro ao acionar processar:", err)
       })
     } catch {
       // Redis não configurado — mensagem já salva no banco, ok

@@ -20,9 +20,13 @@ export async function POST(request: NextRequest) {
   }
 
   // Processar mensagens do buffer (obterELimparBuffer é atômico — previne duplicatas)
-  processarMensagens(chatId).catch((err) => {
+  // Precisa ser await — em serverless, fire-and-forget é terminado antes de completar
+  try {
+    await processarMensagens(chatId)
+  } catch (err) {
     console.error("[Agente] Erro ao processar mensagens:", err)
-  })
+    return NextResponse.json({ error: "Erro no processamento" }, { status: 500 })
+  }
 
-  return NextResponse.json({ status: "processando" })
+  return NextResponse.json({ status: "processado" })
 }
