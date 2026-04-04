@@ -141,8 +141,13 @@ export async function processarMensagens(chatId: string): Promise<void> {
         }
       } else {
         // 5c. Fluxo normal (colunas 1–4)
+        // Só incluir nome no contexto se já foi confirmado pelo paciente
+        // (sobreOPaciente contém dados coletados → paciente já informou nome)
+        const nomeConfirmado = resultadoPaciente.sobreOPaciente
+          ? resultadoPaciente.lead.nome
+          : undefined
         contextoLead = {
-          nome: resultadoPaciente.lead.nome,
+          nome: nomeConfirmado,
           procedimento: resultadoPaciente.lead.procedimentoInteresse,
           etapa: resultadoPaciente.lead.statusFunil,
           sobreOPaciente: resultadoPaciente.sobreOPaciente,
