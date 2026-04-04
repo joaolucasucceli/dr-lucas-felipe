@@ -342,13 +342,21 @@ export default function LeadDetalhePage() {
                   title="Salva automaticamente"
                 />
               </div>
-              <div className="grid gap-2 sm:col-span-2">
+              <div className="grid gap-2">
                 <Label>Email</Label>
                 <Input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={cn(statusDados === "pendente" && "border-orange-400 focus-visible:ring-orange-400")}
                   title="Salva automaticamente"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Responsável</Label>
+                <Input
+                  value={lead?.responsavel?.nome || "Sem responsável"}
+                  readOnly
+                  className="bg-muted cursor-default"
                 />
               </div>
             </CardContent>

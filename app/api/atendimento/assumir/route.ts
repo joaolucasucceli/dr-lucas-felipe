@@ -29,13 +29,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Conversa já está em modo humano" }, { status: 400 })
   }
 
-  await prisma.conversa.update({
-    where: { id: conversa.id },
-    data: {
-      modoConversa: "humano",
-      atendenteId: auth.session.user.id,
-    },
-  })
+  await prisma.$transaction([
+    prisma.conversa.update({
+      where: { id: conversa.id },
+      data: {
+        modoConversa: "humano",
+        atendenteId: auth.session.user.id,
+      },
+    }),
+    prisma.lead.update({
+      where: { id: conversa.leadId },
+      data: { responsavelId: auth.session.user.id },
+    }),
+  ])
 
   return NextResponse.json({ sucesso: true, modoConversa: "humano" })
 }

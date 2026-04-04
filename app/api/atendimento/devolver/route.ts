@@ -29,13 +29,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Conversa já está em modo IA" }, { status: 400 })
   }
 
-  await prisma.conversa.update({
-    where: { id: conversa.id },
-    data: {
-      modoConversa: "ia",
-      atendenteId: null,
-    },
+  const usuarioIa = await prisma.usuario.findFirst({
+    where: { tipo: "ia", ativo: true, deletadoEm: null },
   })
+
+  await prisma.$transaction([
+    prisma.conversa.update({
+      where: { id: conversa.id },
+      data: {
+        modoConversa: "ia",
+        atendenteId: null,
+      },
+    }),
+    prisma.lead.update({
+      where: { id: conversa.leadId },
+      data: { responsavelId: usuarioIa?.id || null },
+    }),
+  ])
 
   return NextResponse.json({ sucesso: true, modoConversa: "ia" })
 }
