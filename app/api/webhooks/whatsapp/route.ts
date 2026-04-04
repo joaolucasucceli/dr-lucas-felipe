@@ -115,8 +115,9 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  // Validar origem: aceitar apenas se WEBHOOK_SECRET estiver configurado e coincidir
-  const webhookSecret = process.env.WEBHOOK_SECRET || process.env.API_SECRET
+  // Validar origem: apenas se WEBHOOK_SECRET estiver explicitamente configurado
+  // API_SECRET NÃO é usado aqui — ele é para rotas internas do agente (/api/agente/*)
+  const webhookSecret = process.env.WEBHOOK_SECRET
   if (webhookSecret) {
     const tokenRecebido =
       request.headers.get("x-webhook-token") ??
