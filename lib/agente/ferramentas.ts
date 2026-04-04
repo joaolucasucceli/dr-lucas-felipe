@@ -101,6 +101,11 @@ export const ferramentasAgente: ChatCompletionTool[] = [
             type: "string",
             description: "Nome real do paciente, informado por ele na conversa. Atualiza o nome do lead se o atual é genérico.",
           },
+          avancarPara: {
+            type: "string",
+            enum: ["qualificacao", "agendamento"],
+            description: "Avança a etapa do funil. Use 'agendamento' quando a qualificação estiver completa e for hora de agendar a consulta.",
+          },
         },
         required: ["leadId", "conversaId", "sobreOPaciente"],
       },

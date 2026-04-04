@@ -2,6 +2,14 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { validarApiSecret } from "@/lib/api-auth"
+import type { StatusFunil, EtapaConversa } from "@/generated/prisma/client"
+
+// Transições permitidas a partir de cada etapa
+const TRANSICOES_PERMITIDAS: Record<string, string[]> = {
+  acolhimento: ["qualificacao"],
+  qualificacao: ["agendamento"],
+  agendamento: ["consulta_agendada"],
+}
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -13,6 +21,7 @@ export async function POST(request: NextRequest) {
     sobreOPaciente?: string
     procedimentoInteresse?: string
     nomePaciente?: string
+    avancarPara?: string
   }
   try {
     body = await request.json()
@@ -20,7 +29,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  const { leadId, conversaId, sobreOPaciente, procedimentoInteresse, nomePaciente } = body
+  const { leadId, conversaId, sobreOPaciente, procedimentoInteresse, nomePaciente, avancarPara } = body
 
   if (!leadId || !conversaId || !sobreOPaciente) {
     return NextResponse.json(
@@ -61,19 +70,33 @@ export async function POST(request: NextRequest) {
     data: dadosAtualizar,
   })
 
-  // Avançar etapa: acolhimento → qualificacao (se ainda estiver em acolhimento)
-  if (lead?.statusFunil === "acolhimento") {
+  // Avançar etapa se solicitado ou se estiver em acolhimento (auto-avança para qualificacao)
+  const etapaAtual = lead?.statusFunil || "acolhimento"
+  let novaEtapa: string | null = null
+
+  if (avancarPara) {
+    // IA solicitou avanço explícito — validar se é permitido
+    const permitidas = TRANSICOES_PERMITIDAS[etapaAtual] || []
+    if (permitidas.includes(avancarPara)) {
+      novaEtapa = avancarPara
+    }
+  } else if (etapaAtual === "acolhimento") {
+    // Auto-avança acolhimento → qualificacao na primeira salvar_qualificacao
+    novaEtapa = "qualificacao"
+  }
+
+  if (novaEtapa) {
     await prisma.$transaction([
       prisma.lead.update({
         where: { id: leadId },
-        data: { statusFunil: "qualificacao", ultimaMovimentacaoEm: new Date() },
+        data: { statusFunil: novaEtapa as StatusFunil, ultimaMovimentacaoEm: new Date() },
       }),
       prisma.conversa.update({
         where: { id: conversaId },
-        data: { etapa: "qualificacao" },
+        data: { etapa: novaEtapa as EtapaConversa },
       }),
     ])
   }
 
-  return NextResponse.json({ sucesso: true })
+  return NextResponse.json({ sucesso: true, etapaAvancada: novaEtapa })
 }

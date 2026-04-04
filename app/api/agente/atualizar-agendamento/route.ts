@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { validarApiSecret } from "@/lib/api-auth"
-import { sincronizarFunil, avancarEtapa } from "@/lib/agente/kanban-sync"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -73,16 +72,24 @@ export async function POST(request: NextRequest) {
 
   // TODO: Deletar evento Google Calendar quando lib estiver disponível
 
-  // Buscar conversa ativa do lead para regredir funil
+  // Regredir funil: consulta_agendada → agendamento (em transação)
   const conversa = await prisma.conversa.findFirst({
     where: { leadId: agendamentoExistente.leadId },
     orderBy: { criadoEm: "desc" },
   })
 
-  await sincronizarFunil(agendamentoExistente.leadId, "agendamento")
-  if (conversa) {
-    await avancarEtapa(conversa.id, "agendamento")
-  }
+  await prisma.$transaction(async (tx) => {
+    await tx.lead.update({
+      where: { id: agendamentoExistente.leadId },
+      data: { statusFunil: "agendamento", ultimaMovimentacaoEm: new Date() },
+    })
+    if (conversa) {
+      await tx.conversa.update({
+        where: { id: conversa.id },
+        data: { etapa: "agendamento" },
+      })
+    }
+  })
 
   return NextResponse.json({ agendamento })
 }
