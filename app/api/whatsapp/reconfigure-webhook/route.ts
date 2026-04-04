@@ -26,12 +26,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Instância não encontrada" }, { status: 404 })
   }
 
-  const instanceToken = config.instanceToken || config.adminToken
+  if (!config.instanceToken) {
+    return NextResponse.json(
+      { error: "Instância sem token — conecte primeiro via QR Code" },
+      { status: 400 }
+    )
+  }
+
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
   const webhookUrl = `${baseUrl}/api/webhooks/whatsapp`
 
   try {
-    await configurarWebhook(config.uazapiUrl, instanceToken, webhookUrl)
+    await configurarWebhook(config.uazapiUrl, config.instanceToken, webhookUrl)
     await prisma.configWhatsapp.update({
       where: { id: config.id },
       data: { webhookUrl },

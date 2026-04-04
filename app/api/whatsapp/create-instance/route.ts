@@ -46,9 +46,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Configurar webhook (não-fatal se falhar)
+    // Configurar webhook
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
     const webhookUrl = `${baseUrl}/api/webhooks/whatsapp`
+    let webhookConfigurado = false
 
     try {
       await configurarWebhook(config.uazapiUrl, instanceToken, webhookUrl)
@@ -56,14 +57,15 @@ export async function POST(request: NextRequest) {
         where: { id: config.id },
         data: { webhookUrl },
       })
-    } catch {
-      console.warn("[create-instance] Webhook não configurado via API — configure manualmente no painel Uazapi")
+      webhookConfigurado = true
+    } catch (webhookErr) {
+      console.error("[create-instance] Falha ao configurar webhook:", webhookErr instanceof Error ? webhookErr.message : webhookErr)
     }
 
     // Iniciar conexão e obter QR code
     const { qrcode } = await obterQrCode(config.uazapiUrl, instanceToken)
 
-    return NextResponse.json({ sucesso: true, qrcode })
+    return NextResponse.json({ sucesso: true, qrcode, webhookConfigurado })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Erro ao conectar instância" },

@@ -108,15 +108,20 @@ export async function testarConexao(
   }
 }
 
-/** Configura webhook da instância — POST /webhook/set */
+/** Configura webhook da instância — POST /webhook (modo simples) */
 export async function configurarWebhook(
   url: string,
   instanceToken: string,
   webhookUrl: string
 ): Promise<void> {
-  await uazapiFetch(url, "/webhook/set", instanceToken, {
+  await uazapiFetch(url, "/webhook", instanceToken, {
     method: "POST",
-    body: JSON.stringify({ url: webhookUrl }),
+    body: JSON.stringify({
+      url: webhookUrl,
+      enabled: true,
+      events: ["messages", "messages_update", "connection"],
+      excludeMessages: ["wasSentByApi", "isGroupYes"],
+    }),
   }, 15000)
 }
 
