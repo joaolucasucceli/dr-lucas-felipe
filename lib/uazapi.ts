@@ -161,7 +161,7 @@ export async function desconectar(
   })
 }
 
-/** Envia mensagem de texto — POST /message/text */
+/** Envia mensagem de texto — POST /send/text (UazapiGO v2) */
 export async function enviarMensagem(
   url: string,
   instanceToken: string,
@@ -169,15 +169,15 @@ export async function enviarMensagem(
   mensagem: string,
   replyId?: string
 ): Promise<void> {
-  const payload: Record<string, string> = { to: numero, text: mensagem }
+  const payload: Record<string, string> = { number: numero, text: mensagem }
   if (replyId) payload.replyid = replyId
-  await uazapiFetch(url, "/message/text", instanceToken, {
+  await uazapiFetch(url, "/send/text", instanceToken, {
     method: "POST",
     body: JSON.stringify(payload),
   })
 }
 
-/** Envia mídia — POST /send/media */
+/** Envia mídia — POST /send/media (UazapiGO v2) */
 export async function enviarMidia(
   url: string,
   instanceToken: string,
@@ -189,11 +189,11 @@ export async function enviarMidia(
   nomeDocumento?: string
 ): Promise<void> {
   const payload: Record<string, string> = {
-    to: numero,
-    url: mediaUrl,
+    number: numero,
+    file: mediaUrl,
     type: tipo,
   }
-  if (legenda) payload.caption = legenda
+  if (legenda) payload.text = legenda
   if (replyId) payload.replyid = replyId
   if (nomeDocumento) payload.docName = nomeDocumento
   await uazapiFetch(url, "/send/media", instanceToken, {
