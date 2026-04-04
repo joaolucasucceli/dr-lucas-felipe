@@ -268,6 +268,17 @@ export async function POST(request: NextRequest) {
       where: { whatsapp: msg.numero },
     })
 
+    if (lead && lead.deletadoEm) {
+      // Lead foi deletado mas recebeu nova mensagem — reativar
+      lead = await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          deletadoEm: null,
+          nome: msg.nomeContato?.trim() || lead.nome,
+        },
+      })
+    }
+
     if (!lead) {
       lead = await prisma.lead.create({
         data: {
