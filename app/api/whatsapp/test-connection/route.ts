@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-helpers"
 import { configWhatsappSchema } from "@/lib/validations/whatsapp-config"
-import { listarInstancias } from "@/lib/uazapi"
+import { validarAdminToken } from "@/lib/uazapi"
 
 export async function POST(request: NextRequest) {
   const auth = await requireRole("gestor")
@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
 
   const { uazapiUrl, adminToken } = parsed.data
 
-  // Validar admin token via endpoint admin (GET /admin/users)
-  const resultado = await listarInstancias(uazapiUrl, adminToken)
+  // Validar admin token via GET /status
+  const resultado = await validarAdminToken(uazapiUrl, adminToken)
   if (!resultado.ok) {
     console.error("[test-connection] Falha ao conectar ao Uazapi:", resultado.erro)
     return NextResponse.json(
@@ -31,29 +31,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Verificar se já existe instância criada — salvar instance token se encontrar
-  const instanciaExistente = resultado.instancias?.find((i) => i.Token)
-  const instanceToken = instanciaExistente?.Token || null
-
-  // Upsert config
+  // Upsert config — salvar credenciais admin
   const existente = await prisma.configWhatsapp.findFirst({
     orderBy: { criadoEm: "desc" },
   })
 
-  const dados = {
-    uazapiUrl,
-    adminToken,
-    ...(instanceToken ? { instanceToken } : {}),
-  }
-
   if (existente) {
     await prisma.configWhatsapp.update({
       where: { id: existente.id },
-      data: dados,
+      data: { uazapiUrl, adminToken },
     })
   } else {
     await prisma.configWhatsapp.create({
-      data: { uazapiUrl, adminToken, instanceToken: instanceToken || adminToken },
+      data: { uazapiUrl, adminToken, instanceToken: "" },
     })
   }
 

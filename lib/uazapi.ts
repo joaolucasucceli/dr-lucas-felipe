@@ -1,8 +1,8 @@
 // Cliente REST para API UazapiGO (gateway WhatsApp)
 //
-// UazapiGO tem 2 níveis de autenticação:
-//   - Admin:    header "Authorization" → endpoints /admin/*
-//   - Instância: header "token"         → endpoints /instance/*, /message/*, /chat/*, etc.
+// Autenticação:
+//   - Admin:     header "admintoken" → POST /instance/create, GET /status
+//   - Instância: header "token"      → /instance/*, /message/*, /chat/*, etc.
 
 type TokenType = "instance" | "admin"
 
@@ -22,12 +22,11 @@ async function uazapiFetch(
     "Content-Type": "application/json",
   }
   if (tokenType === "admin") {
-    headers["Authorization"] = token
+    headers["admintoken"] = token
   } else {
     headers["token"] = token
   }
 
-  // Merge headers adicionais de options
   if (options.headers) {
     const extra = options.headers as Record<string, string>
     Object.assign(headers, extra)
@@ -53,48 +52,42 @@ async function uazapiFetch(
   return text ? JSON.parse(text) : null
 }
 
-// ── Admin endpoints (Authorization header) ──────────────────────────
+// ── Admin endpoints (admintoken header) ─────────────────────────────
 
-/** Lista instâncias existentes — GET /admin/users */
-export async function listarInstancias(
+/** Valida admin token e obtém status do servidor — GET /status */
+export async function validarAdminToken(
   url: string,
   adminToken: string
-): Promise<{ ok: boolean; instancias?: Array<{ Name: string; Token: string; Webhook: string; Jid: string }>; erro?: string }> {
+): Promise<{ ok: boolean; erro?: string }> {
   try {
-    const data = await uazapiFetch(url, "/admin/users", adminToken, {}, 10000, "admin")
-    const lista = Array.isArray(data) ? data : data?.Users || data?.users || []
-    return { ok: true, instancias: lista }
+    // GET /status aceita o admin token via header "token" para health check
+    await uazapiFetch(url, "/status", adminToken, {}, 10000, "instance")
+    return { ok: true }
   } catch (err) {
     return { ok: false, erro: err instanceof Error ? err.message : "Erro desconhecido" }
   }
 }
 
-/** Cria nova instância — POST /admin/users */
+/** Cria nova instância — POST /instance/create */
 export async function criarInstancia(
   url: string,
   adminToken: string,
-  nome: string,
-  instanceToken: string,
-  webhook?: string
-): Promise<{ ok: boolean; erro?: string }> {
+  nome: string
+): Promise<{ ok: boolean; instanceToken?: string; erro?: string }> {
   try {
-    await uazapiFetch(
+    const data = await uazapiFetch(
       url,
-      "/admin/users",
+      "/instance/create",
       adminToken,
       {
         method: "POST",
-        body: JSON.stringify({
-          name: nome,
-          token: instanceToken,
-          webhook: webhook || "",
-          events: "All",
-        }),
+        body: JSON.stringify({ Name: nome }),
       },
       15000,
       "admin"
     )
-    return { ok: true }
+    const instanceToken = data?.token || data?.instance?.token || ""
+    return { ok: true, instanceToken }
   } catch (err) {
     return { ok: false, erro: err instanceof Error ? err.message : "Erro desconhecido" }
   }

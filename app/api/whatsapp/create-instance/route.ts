@@ -1,9 +1,8 @@
-import { randomBytes } from "crypto"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-helpers"
-import { criarInstancia, listarInstancias, configurarWebhook, obterQrCode } from "@/lib/uazapi"
+import { criarInstancia, configurarWebhook, obterQrCode } from "@/lib/uazapi"
 
 export async function POST(request: NextRequest) {
   const auth = await requireRole("gestor")
@@ -22,33 +21,22 @@ export async function POST(request: NextRequest) {
 
   let instanceToken = config.instanceToken
 
-  // Se não tem instance token ou é igual ao admin token, criar instância via admin API
-  if (!instanceToken || instanceToken === config.adminToken) {
-    // Verificar se já existe instância criada
-    const lista = await listarInstancias(config.uazapiUrl, config.adminToken)
-    const existente = lista.instancias?.find((i) => i.Token)
+  // Se não tem instance token, criar instância via admin API
+  if (!instanceToken) {
+    const resultado = await criarInstancia(
+      config.uazapiUrl,
+      config.adminToken,
+      "dr-lucas"
+    )
 
-    if (existente) {
-      instanceToken = existente.Token
-    } else {
-      // Criar nova instância
-      const novoToken = randomBytes(32).toString("hex")
-      const resultado = await criarInstancia(
-        config.uazapiUrl,
-        config.adminToken,
-        "dr-lucas",
-        novoToken
+    if (!resultado.ok) {
+      return NextResponse.json(
+        { error: resultado.erro || "Erro ao criar instância" },
+        { status: 500 }
       )
-
-      if (!resultado.ok) {
-        return NextResponse.json(
-          { error: resultado.erro || "Erro ao criar instância" },
-          { status: 500 }
-        )
-      }
-
-      instanceToken = novoToken
     }
+
+    instanceToken = resultado.instanceToken || ""
 
     // Salvar instance token no banco
     await prisma.configWhatsapp.update({
