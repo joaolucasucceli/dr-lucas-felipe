@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { validarApiSecret } from "@/lib/api-auth"
-import { deveProcessar } from "@/lib/agente/buffer"
 import { processarMensagens } from "@/lib/agente/loop"
 
 export async function POST(request: NextRequest) {
@@ -20,13 +19,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "chatId é obrigatório" }, { status: 400 })
   }
 
-  // Verificar se debounce expirou
-  const pronto = await deveProcessar(chatId)
-  if (!pronto) {
-    return NextResponse.json({ status: "aguardando_debounce" })
-  }
-
-  // Processar mensagens (fire-and-forget em background)
+  // Processar mensagens do buffer (obterELimparBuffer é atômico — previne duplicatas)
   processarMensagens(chatId).catch((err) => {
     console.error("[Agente] Erro ao processar mensagens:", err)
   })

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import type { TipoMensagem } from "@/generated/prisma/enums"
-import { adicionarAoBuffer, agendarProcessamento } from "@/lib/agente/buffer"
+import { adicionarAoBuffer } from "@/lib/agente/buffer"
 import { transcreverAudio, descreverImagem } from "@/lib/agente/processar-midia"
 import { createClient } from "@supabase/supabase-js"
 
@@ -310,7 +310,8 @@ export async function POST(request: NextRequest) {
       conteudo: conteudo.slice(0, 100),
     })
 
-    // Adicionar ao buffer Redis + debounce
+    // Adicionar ao buffer Redis e acionar processamento imediatamente
+    // (setTimeout não funciona em serverless — a função é congelada após response)
     try {
       await adicionarAoBuffer(msg.chatId, {
         tipo: msg.tipo,
@@ -318,22 +319,18 @@ export async function POST(request: NextRequest) {
         timestamp: msg.timestamp,
         messageId: msg.id,
       })
-      await agendarProcessamento(msg.chatId)
 
-      // Agendar processamento após debounce (21s > 20s TTL)
       const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
-      setTimeout(() => {
-        fetch(`${baseUrl}/api/agente/processar`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-secret": process.env.API_SECRET || "",
-          },
-          body: JSON.stringify({ chatId: msg.chatId }),
-        }).catch(() => {
-          // Ignorar erro de trigger — processamento pode ser feito por cron
-        })
-      }, 21000)
+      fetch(`${baseUrl}/api/agente/processar`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-secret": process.env.API_SECRET || "",
+        },
+        body: JSON.stringify({ chatId: msg.chatId }),
+      }).catch(() => {
+        // Ignorar erro de trigger — processamento pode ser feito por cron
+      })
     } catch {
       // Redis não configurado — mensagem já salva no banco, ok
     }
