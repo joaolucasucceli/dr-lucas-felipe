@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, MessageSquare, Users, Calendar, Send } from "lucide-react"
+import { Bot, MessageSquare, Send, CheckCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface CardResumoAnaJuliaProps {
@@ -18,7 +18,7 @@ export function CardResumoAnaJulia({
     <Card>
       <CardHeader className="flex flex-row items-center gap-2">
         <Bot className="h-5 w-5 text-muted-foreground" />
-        <CardTitle className="text-base">Ana Julia</CardTitle>
+        <CardTitle className="text-base">Ana Júlia</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-4">
@@ -33,7 +33,7 @@ export function CardResumoAnaJulia({
             <p className="text-xs text-muted-foreground">Follow-ups</p>
           </div>
           <div className="text-center">
-            <Calendar className="mx-auto mb-1 h-4 w-4 text-muted-foreground" />
+            <CheckCircle className="mx-auto mb-1 h-4 w-4 text-muted-foreground" />
             <p className="text-2xl font-bold">{confirmacaoEnviadas}</p>
             <p className="text-xs text-muted-foreground">Confirmações</p>
           </div>

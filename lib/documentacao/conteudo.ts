@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.11.2"
+export const VERSAO_DOCUMENTACAO = "1.12.0"
 export const DATA_ATUALIZACAO = "2026-04-04"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -78,27 +78,29 @@ O sistema utiliza **Supabase Realtime** para manter os dados atualizados automat
 
 ## Módulo 1 — Dashboard
 
-Central de métricas e acompanhamento do funil em tempo real.
+Dashboard unificado com todas as métricas do sistema em página única com scroll. Substitui as páginas separadas de Ana Júlia e Relatórios.
 
 ### Funcionalidades
 
-- **Métricas principais** — Total de leads, agendamentos no período, taxa de conversão e atividade do dia
-- **Funil por etapa** — Gráfico de barras com a distribuição dos leads nas 9 etapas
-- **Leads por origem** — Distribuição por canal de aquisição (Instagram, indicação, Google, etc.)
-- **Alertas e follow-ups** — Leads em alerta por inatividade e follow-ups pendentes
+- **Métricas principais** — Total de leads, novos no período, agendamentos e taxa de conversão (gestor) / leads do dia (atendente)
+- **Funil por etapa** — Gráfico de barras com a distribuição dos leads nas 9 etapas do kanban
+- **Resumo Ana Júlia** (gestor) — Card compacto com mensagens enviadas, follow-ups e confirmações da IA
+- **Leads em alerta** — Leads sem movimentação há 3+ dias com link direto para o perfil
+- **Exportar CSV** (gestor) — Botão para exportar leads, agendamentos ou conversas em CSV
 
 ### Como usar
 
 1. Selecione o período (Hoje / Última semana / Último mês / Total) no seletor superior
 2. Analise os KPIs nos cards do topo
-3. Verifique os widgets de Follow-ups Ativos e Leads em Alerta
+3. Verifique o card de resumo da Ana Júlia e os leads em alerta
+4. Use o botão de download para exportar dados em CSV (3 tipos disponíveis)
 
 ### Permissões
 
 | Perfil | Acesso |
 |--------|--------|
-| Gestor | Total — vê taxa de conversão, atividade da IA e gráfico de origem |
-| Atendente | Parcial — vê leads do dia e agendamentos da semana |
+| Gestor | Total — vê taxa de conversão, resumo da IA, leads em alerta e pode exportar CSV |
+| Atendente | Parcial — vê leads do dia, funil e leads em alerta |
 
 > O Dashboard é atualizado a cada acesso. Recarregue para ver dados frescos.
 
@@ -406,19 +408,9 @@ POST /api/webhooks/whatsapp
 | Confirmações | A cada hora | Lembretes 6h, 3h e 30min antes da consulta |
 | Auto-close | A cada hora | Fecha conversas inativas por mais de 48h |
 
-### Painel de Métricas
+### Métricas
 
-- Mensagens enviadas e recebidas no período
-- Leads atendidos, agendamentos marcados
-- Follow-ups enviados e taxa de resposta
-- Progresso no funil (leads por etapa automatizada)
-
-### Permissões
-
-| Perfil | Acesso |
-|--------|--------|
-| Gestor | Total — visualiza todas as métricas |
-| Atendente | Sem acesso |
+As métricas da Ana Júlia (mensagens, follow-ups, confirmações) estão no **Dashboard** — card "Ana Júlia".
 
 > A Ana Júlia opera 24/7. Configure o WhatsApp em Configurações para ela funcionar.
 
@@ -462,33 +454,30 @@ Todos os dados editáveis (WhatsApp, CRM, Instagram, contato) ficam em:
 
 ---
 
-## Módulo 8 — Relatórios
+## Módulo 8 — Exportação de Dados
 
-Análise de desempenho do negócio com exportação de dados.
+Exportação de relatórios em CSV, disponível no Dashboard (botão de download).
 
-### Abas Disponíveis
+### Tipos de Exportação
 
-| Aba | Conteúdo |
-|-----|---------|
-| **Funil** | Taxa de conversão, tempo médio entre etapas, distribuição por etapa |
-| **Agendamentos** | Total, taxa de realização, conversão por procedimento e origem |
-| **Atendimento IA** | Volume de mensagens, conversas ativas, efetividade de follow-ups |
-| **Receita** | Receita por período, gráfico temporal, procedimentos mais rentáveis |
+| Tipo | Conteúdo |
+|------|---------|
+| **Leads** | ID, nome, WhatsApp, e-mail, origem, status no funil, procedimento, datas |
+| **Agendamentos** | ID, lead, WhatsApp, procedimento, data/hora, duração, status |
+| **Conversas** | ID, lead, total de mensagens, última atualização, encerramento |
 
 ### Como usar
 
-1. Selecione a aba desejada (Funil, Agendamentos, Atendimento IA ou Receita)
-2. Informe data de início e fim e clique em "Gerar Relatório"
-3. Use "Exportar CSV" para baixar os dados
+1. No Dashboard, clique no ícone de download (canto superior direito)
+2. Selecione o tipo de exportação desejado
+3. O arquivo CSV será baixado automaticamente
 
 ### Permissões
 
 | Perfil | Acesso |
 |--------|--------|
-| Gestor | Total — gera e exporta todos os relatórios |
+| Gestor | Total — exporta todos os tipos |
 | Atendente | Sem acesso |
-
-> Períodos superiores a 6 meses podem ter carregamento lento. Prefira exportar e analisar offline.
 
 ---
 
@@ -542,7 +531,7 @@ Gerenciamento de acesso e perfis dos usuários da plataforma.
 
 | Perfil | Módulos com Acesso |
 |--------|-------------------|
-| **Gestor** | Dashboard (completo), Atendimentos, Leads, Agendamentos, Procedimentos, Pacientes & Prontuário, Configurações, Ana Júlia, Relatórios, Documentação |
+| **Gestor** | Dashboard (completo + resumo IA + export CSV), Atendimentos, Leads, Agendamentos, Procedimentos, Pacientes & Prontuário, Configurações, Documentação |
 | **Atendente** | Dashboard (simplificado), Atendimentos, Leads, Agendamentos, Documentação |
 
 ### Como usar

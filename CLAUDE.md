@@ -123,12 +123,12 @@ lib/documentacao/conteudo.ts
 
 | Métrica | Quantidade |
 |---------|-----------|
-| Páginas | 22 (19 dashboard + 2 públicas + 1 root) |
+| Páginas | 20 (17 dashboard + 2 públicas + 1 root) |
 | Endpoints API | 87 |
 | Models Prisma | 23 |
 | Enums | 12 |
-| Componentes | 105 (28 UI + 77 features) |
-| Hooks customizados | 21 |
+| Componentes | 97 (28 UI + 69 features) |
+| Hooks customizados | 20 |
 
 ## Issues Conhecidas
 
