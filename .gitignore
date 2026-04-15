@@ -48,3 +48,5 @@ next-env.d.ts
 # materiais de origem (recebidos do cliente — ja convertidos para public/)
 /Materiais
 /public/images/dr-lucas/backup
+
+.env.production

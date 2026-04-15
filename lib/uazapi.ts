@@ -202,6 +202,39 @@ export async function enviarMidia(
   })
 }
 
+/** Baixa midia pelo messageId — POST /message/download (fallback confiavel).
+ *  Retorna base64Data + mimetype quando disponivel, ou null se falhar. */
+export async function baixarMidia(
+  url: string,
+  instanceToken: string,
+  messageId: string
+): Promise<{ base64: string; mimetype: string } | null> {
+  try {
+    const data = await uazapiFetch(
+      url,
+      "/message/download",
+      instanceToken,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          id: messageId,
+          return_base64: true,
+          return_link: false,
+        }),
+      },
+      20000
+    )
+    const base64 =
+      data?.base64Data || data?.base64 || data?.data || data?.Body || ""
+    const mimetype = data?.mimetype || data?.mimeType || "application/octet-stream"
+    if (!base64) return null
+    return { base64, mimetype }
+  } catch (err) {
+    console.error("[uazapi] baixarMidia falhou:", err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
 /** Envia indicador de digitação — POST /chat/presence */
 export async function enviarDigitando(
   url: string,

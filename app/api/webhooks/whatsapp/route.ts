@@ -3,7 +3,13 @@ import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import type { TipoMensagem } from "@/generated/prisma/enums"
 import { adicionarAoBuffer } from "@/lib/agente/buffer"
-import { transcreverAudio, descreverImagem } from "@/lib/agente/processar-midia"
+import {
+  transcreverAudio,
+  transcreverAudioBase64,
+  descreverImagem,
+  descreverImagemBase64,
+} from "@/lib/agente/processar-midia"
+import { baixarMidia } from "@/lib/uazapi"
 import { createClient } from "@supabase/supabase-js"
 
 // ── Tipos UazapiGO v2 ─────────────────────────────────────────────
@@ -244,19 +250,81 @@ export async function POST(request: NextRequest) {
     let conteudo = msg.conteudo
     let storedMediaUrl: string | null = null
 
-    // Processar mídia
-    try {
-      if (msg.tipo === "audio" && msg.mediaUrl) {
-        conteudo = `[Áudio transcrito]: ${await transcreverAudio(msg.mediaUrl)}`
-      } else if (msg.tipo === "imagem" && msg.mediaUrl) {
-        const descricao = await descreverImagem(msg.mediaUrl)
-        conteudo = conteudo
-          ? `${conteudo}\n[Imagem]: ${descricao}`
-          : `[Imagem]: ${descricao}`
+    // Processar mídia — estratégia em cascata:
+    //   1) URL direta → Whisper/vision
+    //   2) POST /message/download da Uazapi → base64 → Whisper/vision
+    //   3) Fallback amigavel pra nao deixar o LLM dizer "nao processo audio/imagem"
+    if (msg.tipo === "audio" || msg.tipo === "imagem") {
+      let transcricao: string | null = null
+      let descricao: string | null = null
+
+      if (msg.mediaUrl) {
+        try {
+          if (msg.tipo === "audio") {
+            transcricao = await transcreverAudio(msg.mediaUrl)
+          } else {
+            descricao = await descreverImagem(msg.mediaUrl)
+          }
+        } catch (err) {
+          console.error(
+            `[Webhook] Falha via URL direta (${msg.tipo}):`,
+            err instanceof Error ? err.message : err
+          )
+        }
       }
-    } catch {
-      if (!conteudo) {
-        conteudo = `[${msg.tipo} não processado]`
+
+      if (!transcricao && !descricao) {
+        // Fallback: baixar via Uazapi /message/download
+        try {
+          const configWa = await prisma.configWhatsapp.findFirst({
+            where: { ativo: true },
+          })
+          if (configWa?.uazapiUrl && configWa?.instanceToken) {
+            const baixado = await baixarMidia(
+              configWa.uazapiUrl,
+              configWa.instanceToken,
+              msg.id
+            )
+            if (baixado) {
+              if (msg.tipo === "audio") {
+                transcricao = await transcreverAudioBase64(
+                  baixado.base64,
+                  baixado.mimetype
+                )
+              } else {
+                descricao = await descreverImagemBase64(
+                  baixado.base64,
+                  baixado.mimetype
+                )
+              }
+            }
+          }
+        } catch (err) {
+          console.error(
+            `[Webhook] Falha via /message/download (${msg.tipo}):`,
+            err instanceof Error ? err.message : err
+          )
+        }
+      }
+
+      if (msg.tipo === "audio") {
+        if (transcricao) {
+          conteudo = `[Áudio transcrito]: ${transcricao}`
+        } else {
+          conteudo = conteudo
+            ? `${conteudo}\n[áudio recebido — transcrição indisponível]`
+            : "[áudio recebido — transcrição indisponível]"
+        }
+      } else {
+        if (descricao) {
+          conteudo = conteudo
+            ? `${conteudo}\n[Imagem]: ${descricao}`
+            : `[Imagem]: ${descricao}`
+        } else {
+          conteudo = conteudo
+            ? `${conteudo}\n[imagem recebida — descrição indisponível]`
+            : "[imagem recebida — descrição indisponível]"
+        }
       }
     }
 
