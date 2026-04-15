@@ -32,37 +32,33 @@ export function DiferenciaisSection() {
   return (
     <section
       id="diferenciais"
-      className="relative overflow-hidden bg-site-dark py-24 lg:py-32"
+      className="relative bg-site-light py-24 lg:py-32"
     >
-      {/* Background accents */}
-      <div className="absolute top-1/2 left-0 h-[500px] w-[500px] -translate-y-1/2 rounded-full bg-site-green/8 blur-[120px]" />
-      <div className="absolute right-0 bottom-0 h-[300px] w-[300px] rounded-full bg-site-gold/5 blur-[100px]" />
-
-      <div className="relative z-10 mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-7xl px-6">
         <SectionHeader
           eyebrow="Por que escolher o Dr. Lucas Ferreira"
           titulo="O diferencial está nos"
           destaque="detalhes"
-          tema="dark"
+          tema="light"
           align="center"
         />
 
         <div className="grid gap-8 sm:grid-cols-2">
           {DIFERENCIAIS.map((item, i) => (
             <AnimateOnScroll key={item.numero} delay={Math.min(i, 3) as 0 | 1 | 2 | 3}>
-              <div className="group relative rounded-2xl border border-white/8 bg-white/[0.03] p-8 backdrop-blur-sm transition-all hover:border-site-gold/20 hover:bg-white/[0.06]">
+              <div className="group relative rounded-2xl border border-site-text/8 bg-white p-8 transition-all hover:border-site-gold/30 hover:shadow-lg hover:shadow-site-gold/5">
                 {/* Number accent */}
-                <span className="mb-4 block text-4xl font-bold text-site-gold/15 transition-colors group-hover:text-site-gold/30">
+                <span className="mb-4 block text-4xl font-bold text-site-gold/20 transition-colors group-hover:text-site-gold/40">
                   {item.numero}
                 </span>
-                <h3 className="mb-3 text-xl font-semibold text-white">
+                <h3 className="mb-3 text-xl font-semibold text-site-text">
                   {item.titulo}
                 </h3>
-                <p className="text-sm leading-relaxed text-white/50">
+                <p className="text-sm leading-relaxed text-site-text/60">
                   {item.descricao}
                 </p>
                 {/* Bottom accent line */}
-                <div className="absolute bottom-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-site-gold/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                <div className="absolute bottom-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-site-gold/30 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
             </AnimateOnScroll>
           ))}

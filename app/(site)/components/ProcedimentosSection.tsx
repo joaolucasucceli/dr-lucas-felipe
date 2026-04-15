@@ -61,8 +61,12 @@ interface ProcedimentosSectionProps {
 
 export function ProcedimentosSection({ whatsappLink }: ProcedimentosSectionProps) {
   return (
-    <section id="procedimentos" className="relative bg-site-light py-24 lg:py-32">
-      <div className="mx-auto max-w-7xl px-6">
+    <section id="procedimentos" className="relative overflow-hidden bg-site-dark py-24 lg:py-32">
+      {/* Background accents */}
+      <div className="absolute top-0 right-0 h-[400px] w-[400px] rounded-full bg-site-gold/5 blur-[120px]" />
+      <div className="absolute bottom-0 left-0 h-[300px] w-[300px] rounded-full bg-site-green/5 blur-[100px]" />
+
+      <div className="relative z-10 mx-auto max-w-7xl px-6">
         {/* Header com foto: header padronizado a esquerda + foto a direita */}
         <div className="mb-16 grid items-center gap-12 lg:grid-cols-2">
           <SectionHeader
@@ -70,7 +74,7 @@ export function ProcedimentosSection({ whatsappLink }: ProcedimentosSectionProps
             titulo="Referência em"
             destaque="contorno corporal"
             descricao="Cada procedimento é conduzido de forma personalizada, desde a avaliação inicial até o pós-procedimento, com foco em definição corporal com elegância e precisão."
-            tema="light"
+            tema="dark"
             align="left"
           />
 
@@ -92,21 +96,21 @@ export function ProcedimentosSection({ whatsappLink }: ProcedimentosSectionProps
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {PROCEDIMENTOS.map((proc, i) => (
             <AnimateOnScroll key={proc.titulo} delay={Math.min(i % 3, 3) as 0 | 1 | 2 | 3}>
-              <div className="group rounded-2xl border border-site-text/8 bg-white p-8 transition-all hover:border-site-gold/30 hover:shadow-lg hover:shadow-site-gold/5">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-site-green/10 text-site-green transition-colors group-hover:bg-site-green group-hover:text-white">
+              <div className="group rounded-2xl border border-white/8 bg-white/[0.03] p-8 backdrop-blur-sm transition-all hover:border-site-gold/30 hover:bg-white/[0.06]">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-site-gold/10 text-site-gold transition-colors group-hover:bg-site-gold group-hover:text-white">
                   {proc.icone}
                 </div>
-                <h3 className="mb-3 text-lg font-semibold text-site-text">
+                <h3 className="mb-3 text-lg font-semibold text-white">
                   {proc.titulo}
                 </h3>
-                <p className="mb-6 text-sm leading-relaxed text-site-text/60">
+                <p className="mb-6 text-sm leading-relaxed text-white/60">
                   {proc.descricao}
                 </p>
                 <a
                   href={whatsappLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-site-green transition-colors hover:text-site-green-hover"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-site-gold transition-colors hover:text-site-gold/80"
                 >
                   Saiba mais
                   <svg
