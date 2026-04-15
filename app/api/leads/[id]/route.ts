@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth, requireAnyRole, requireRole } from "@/lib/auth-helpers"
 import { atualizarLeadSchema } from "@/lib/validations/lead"
+import { limparMemoria } from "@/lib/agente/memoria"
+import { obterELimparBuffer } from "@/lib/agente/buffer"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -136,6 +138,18 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       deletadoEm: new Date(),
     },
   })
+
+  // Limpar estado do Redis (memoria 48h + buffer) para que o mesmo numero,
+  // se voltar, nao reencontre o contexto da conversa anterior.
+  if (lead.whatsapp) {
+    const chatId = `${lead.whatsapp}@s.whatsapp.net`
+    try {
+      await limparMemoria(chatId)
+      await obterELimparBuffer(chatId)
+    } catch (err) {
+      console.error("[leads.DELETE] Falha ao limpar Redis:", err)
+    }
+  }
 
   return NextResponse.json({ mensagem: "Lead removido" })
 }
