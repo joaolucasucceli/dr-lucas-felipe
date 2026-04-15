@@ -123,21 +123,20 @@ lib/documentacao/conteudo.ts
 
 | Métrica | Quantidade |
 |---------|-----------|
-| Páginas | 20 (17 dashboard + 2 públicas + 1 root) |
-| Endpoints API | 87 |
-| Models Prisma | 23 |
+| Páginas | 21 (18 dashboard + 2 públicas + 1 root) |
+| Endpoints API | 91 |
+| Models Prisma | 24 |
 | Enums | 12 |
-| Componentes | 97 (28 UI + 69 features) |
-| Hooks customizados | 20 |
+| Componentes | 98 (28 UI + 70 features) |
+| Hooks customizados | 21 |
 
 ## Issues Conhecidas
 
-| Severidade | Issue | Arquivo |
-|-----------|-------|---------|
-| Crítica | Google Calendar sync ausente nas rotas do agente (TODO) | `app/api/agente/registrar-agendamento/route.ts`, `atualizar-agendamento/route.ts` |
-| Média | Sem timeout na execução de ferramentas do agente | `lib/agente/ferramentas.ts` |
-| Média | Race condition na dedup de mensagens webhook | `app/api/webhooks/whatsapp/route.ts` |
-| Média | Webhook secret opcional (aceita qualquer webhook se não configurado) | `app/api/webhooks/whatsapp/route.ts` |
+| Severidade | Issue | Arquivo | Linear |
+|-----------|-------|---------|--------|
+| Crítica | Google Calendar sync ausente nas rotas do agente (TODO) | `app/api/agente/registrar-agendamento/route.ts`, `atualizar-agendamento/route.ts` | CLIENTE-252 |
+| Média | Race condition na dedup de mensagens webhook | `app/api/webhooks/whatsapp/route.ts` | CLIENTE-254 |
+| Média | Webhook secret opcional (aceita qualquer webhook se não configurado) | `app/api/webhooks/whatsapp/route.ts` | CLIENTE-253 |
 
 ## Estado do Projeto
 
