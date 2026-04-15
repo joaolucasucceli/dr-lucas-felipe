@@ -1,4 +1,5 @@
 import { AnimateOnScroll } from "./AnimateOnScroll"
+import { SectionHeader } from "./SectionHeader"
 
 const PROTOCOLOS = [
   {
@@ -65,27 +66,15 @@ interface ProtocolosSectionProps {
 export function ProtocolosSection({ whatsappLink }: ProtocolosSectionProps) {
   return (
     <section id="protocolos" className="relative bg-site-light py-24 lg:py-32">
-      {/* Decorative line */}
-      <div className="absolute top-0 left-1/2 h-px w-40 -translate-x-1/2 bg-gradient-to-r from-transparent via-site-gold to-transparent" />
-
       <div className="mx-auto max-w-7xl px-6">
-        {/* Header */}
-        <AnimateOnScroll>
-          <div className="mb-16 text-center">
-            <span className="mb-4 inline-block text-xs font-semibold tracking-[0.25em] uppercase text-site-gold">
-              Protocolos Exclusivos
-            </span>
-            <h2 className="mb-4 text-3xl font-bold tracking-tight text-site-text md:text-4xl">
-              Transformação completa com{" "}
-              <span className="text-site-green">segurança</span>
-            </h2>
-            <p className="mx-auto max-w-2xl text-base leading-relaxed text-site-text/60">
-              Protocolos desenvolvidos pelo Dr. Lucas Ferreira para resultados
-              superiores, combinando técnica avançada com acompanhamento
-              personalizado em cada etapa.
-            </p>
-          </div>
-        </AnimateOnScroll>
+        <SectionHeader
+          eyebrow="Protocolos Exclusivos"
+          titulo="Transformação completa com"
+          destaque="segurança"
+          descricao="Protocolos desenvolvidos pelo Dr. Lucas Ferreira para resultados superiores, combinando técnica avançada com acompanhamento personalizado em cada etapa."
+          tema="light"
+          align="center"
+        />
 
         {/* Protocol cards */}
         <div className="grid gap-8 lg:grid-cols-2">

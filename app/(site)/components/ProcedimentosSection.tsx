@@ -1,5 +1,6 @@
 import Image from "next/image"
 import { AnimateOnScroll } from "./AnimateOnScroll"
+import { SectionHeader } from "./SectionHeader"
 
 const PROCEDIMENTOS = [
   {
@@ -62,24 +63,18 @@ export function ProcedimentosSection({ whatsappLink }: ProcedimentosSectionProps
   return (
     <section id="procedimentos" className="relative bg-site-light py-24 lg:py-32">
       <div className="mx-auto max-w-7xl px-6">
-        {/* Header with photo */}
-        <AnimateOnScroll>
-          <div className="mb-16 grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <span className="mb-4 inline-block text-xs font-semibold tracking-[0.25em] uppercase text-site-gold">
-                Procedimentos
-              </span>
-              <h2 className="mb-6 text-3xl font-bold tracking-tight text-site-text md:text-4xl">
-                Referência em{" "}
-                <span className="text-site-green">contorno corporal</span>
-              </h2>
-              <p className="max-w-lg text-base leading-relaxed text-site-text/70">
-                Cada procedimento é conduzido de forma personalizada, desde a
-                avaliação inicial até o pós-procedimento, com foco em definição
-                corporal com elegância e precisão.
-              </p>
-            </div>
+        {/* Header com foto: header padronizado a esquerda + foto a direita */}
+        <div className="mb-16 grid items-center gap-12 lg:grid-cols-2">
+          <SectionHeader
+            eyebrow="Procedimentos"
+            titulo="Referência em"
+            destaque="contorno corporal"
+            descricao="Cada procedimento é conduzido de forma personalizada, desde a avaliação inicial até o pós-procedimento, com foco em definição corporal com elegância e precisão."
+            tema="light"
+            align="left"
+          />
 
+          <AnimateOnScroll>
             <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
               <Image
                 src="/images/dr-lucas/foto-2.jpeg"
@@ -90,8 +85,8 @@ export function ProcedimentosSection({ whatsappLink }: ProcedimentosSectionProps
               />
               <div className="absolute inset-0 bg-gradient-to-t from-site-dark/30 via-transparent to-transparent" />
             </div>
-          </div>
-        </AnimateOnScroll>
+          </AnimateOnScroll>
+        </div>
 
         {/* Procedure cards */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

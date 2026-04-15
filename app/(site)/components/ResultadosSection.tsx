@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import Image from "next/image"
 import { AnimateOnScroll } from "./AnimateOnScroll"
+import { SectionHeader } from "./SectionHeader"
 import {
   Carousel,
   CarouselContent,
@@ -100,23 +101,14 @@ export function ResultadosSection() {
         <div className="absolute top-1/2 right-0 h-[500px] w-[500px] -translate-y-1/2 rounded-full bg-site-gold/5 blur-[120px]" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-6">
-          {/* Header */}
-          <AnimateOnScroll>
-            <div className="mb-12 text-center">
-              <span className="mb-4 inline-block text-xs font-semibold tracking-[0.25em] uppercase text-site-gold">
-                Resultados Reais
-              </span>
-              <h2 className="mb-4 text-3xl font-bold tracking-tight text-white md:text-4xl">
-                Antes e depois dos nossos{" "}
-                <span className="text-site-gold">pacientes</span>
-              </h2>
-              <p className="mx-auto max-w-2xl text-base leading-relaxed text-white/50">
-                Resultados reais de pacientes atendidos pelo Dr. Lucas Ferreira.
-                Cada procedimento é personalizado para valorizar a
-                individualidade de cada pessoa.
-              </p>
-            </div>
-          </AnimateOnScroll>
+          <SectionHeader
+            eyebrow="Resultados Reais"
+            titulo="Resultados que"
+            destaque="falam por si"
+            descricao="Pacientes reais atendidos pelo Dr. Lucas Ferreira. Cada procedimento é personalizado para valorizar a individualidade de cada pessoa."
+            tema="dark"
+            align="center"
+          />
 
           {/* Filter tabs */}
           <div className="mb-10 flex flex-wrap justify-center gap-2">

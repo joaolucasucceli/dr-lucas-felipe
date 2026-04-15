@@ -1,5 +1,6 @@
 import { Shield, Sparkles, UserCheck } from "lucide-react"
 import { AnimateOnScroll } from "./AnimateOnScroll"
+import { SectionHeader } from "./SectionHeader"
 
 const DIFERENCIAIS_RAPIDOS = [
   {
@@ -22,22 +23,17 @@ const DIFERENCIAIS_RAPIDOS = [
 export function SobreSection() {
   return (
     <section id="sobre" className="relative bg-site-light py-24 lg:py-32">
-      {/* Decorative line */}
-      <div className="absolute top-0 left-1/2 h-px w-40 -translate-x-1/2 bg-gradient-to-r from-transparent via-site-gold to-transparent" />
-
       <div className="mx-auto max-w-7xl px-6">
+        <SectionHeader
+          eyebrow="Sobre o Dr. Lucas Ferreira"
+          titulo="Mais de 10 anos dedicados à"
+          destaque="medicina e à estética"
+          tema="light"
+          align="center"
+        />
+
         <AnimateOnScroll>
           <div className="mx-auto max-w-3xl text-center">
-            {/* Label */}
-            <span className="mb-4 inline-block text-xs font-semibold tracking-[0.25em] uppercase text-site-gold">
-              Sobre o Dr. Lucas Ferreira
-            </span>
-
-            <h2 className="mb-8 text-3xl font-bold tracking-tight text-site-text md:text-4xl">
-              Mais de 10 anos dedicados à{" "}
-              <span className="text-site-green">medicina e à estética</span>
-            </h2>
-
             <div className="space-y-5 text-base leading-relaxed text-site-text/70">
               <p>
                 Sou um médico dedicado, profundamente comprometido com a

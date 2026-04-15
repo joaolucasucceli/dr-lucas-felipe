@@ -7,6 +7,7 @@ import { ProcedimentosSection } from "./(site)/components/ProcedimentosSection"
 import { ProtocolosSection } from "./(site)/components/ProtocolosSection"
 import { ResultadosSection } from "./(site)/components/ResultadosSection"
 import { DiferenciaisSection } from "./(site)/components/DiferenciaisSection"
+import { SectionDivider } from "./(site)/components/SectionDivider"
 import { FooterSite } from "./(site)/components/FooterSite"
 import { WhatsappFab } from "./(site)/components/WhatsappFab"
 import { buildFallbackConfig, type SiteConfigProps } from "./(site)/components/site-config"
@@ -96,10 +97,15 @@ export default async function HomePage() {
       <Navbar whatsappLink={config.whatsappLink} />
       <main id="conteudo">
         <HeroSection whatsappLink={config.whatsappLink} />
+        <SectionDivider tema="light" estilo="transition" />
         <SobreSection />
+        <SectionDivider tema="light" estilo="subtle" />
         <ProcedimentosSection whatsappLink={config.whatsappLink} />
+        <SectionDivider tema="light" estilo="subtle" />
         <ProtocolosSection whatsappLink={config.whatsappLink} />
+        <SectionDivider tema="dark" estilo="transition" />
         <ResultadosSection />
+        <SectionDivider tema="dark" estilo="subtle" />
         <DiferenciaisSection />
       </main>
       <FooterSite config={config} />

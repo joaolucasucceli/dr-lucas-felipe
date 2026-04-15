@@ -1,4 +1,5 @@
 import { AnimateOnScroll } from "./AnimateOnScroll"
+import { SectionHeader } from "./SectionHeader"
 
 const DIFERENCIAIS = [
   {
@@ -38,17 +39,13 @@ export function DiferenciaisSection() {
       <div className="absolute right-0 bottom-0 h-[300px] w-[300px] rounded-full bg-site-gold/5 blur-[100px]" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-6">
-        <AnimateOnScroll>
-          <div className="mb-16 text-center">
-            <span className="mb-4 inline-block text-xs font-semibold tracking-[0.25em] uppercase text-site-gold">
-              Por que escolher o Dr. Lucas Ferreira
-            </span>
-            <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-              O diferencial está nos{" "}
-              <span className="text-site-gold">detalhes</span>
-            </h2>
-          </div>
-        </AnimateOnScroll>
+        <SectionHeader
+          eyebrow="Por que escolher o Dr. Lucas Ferreira"
+          titulo="O diferencial está nos"
+          destaque="detalhes"
+          tema="dark"
+          align="center"
+        />
 
         <div className="grid gap-8 sm:grid-cols-2">
           {DIFERENCIAIS.map((item, i) => (
