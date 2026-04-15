@@ -132,10 +132,7 @@ lib/documentacao/conteudo.ts
 
 ## Issues Conhecidas
 
-| Severidade | Issue | Arquivo | Linear |
-|-----------|-------|---------|--------|
-| Média | Race condition na dedup de mensagens webhook | `app/api/webhooks/whatsapp/route.ts` | CLIENTE-254 |
-| Média | Webhook secret opcional (aceita qualquer webhook se não configurado) | `app/api/webhooks/whatsapp/route.ts` | CLIENTE-253 |
+_Nenhuma issue técnica conhecida no momento. Issues abertas no Linear são entregas de produto, não bugs estruturais._
 
 ## Estado do Projeto
 

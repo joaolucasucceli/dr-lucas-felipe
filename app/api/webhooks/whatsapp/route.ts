@@ -177,14 +177,24 @@ function normalizarBaileys(payload: any): MensagemNormalizada[] {
 // ── Handler principal ─────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  // Validar origem: apenas se WEBHOOK_SECRET estiver explicitamente configurado
+  // Validar origem: WEBHOOK_SECRET e obrigatorio em producao
   const webhookSecret = process.env.WEBHOOK_SECRET
+  const ehProducao = process.env.NODE_ENV === "production"
+
+  if (ehProducao && !webhookSecret) {
+    console.error("[webhook] WEBHOOK_SECRET nao configurado em producao — rejeitando request")
+    return NextResponse.json(
+      { error: "Configuracao invalida do servidor" },
+      { status: 500 }
+    )
+  }
+
   if (webhookSecret) {
     const tokenRecebido =
       request.headers.get("x-webhook-token") ??
       request.headers.get("x-api-secret")
     if (tokenRecebido !== webhookSecret) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+      return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
     }
   }
 
@@ -283,14 +293,30 @@ export async function POST(request: NextRequest) {
       const usuarioIa = await prisma.usuario.findFirst({
         where: { tipo: "ia", ativo: true, deletadoEm: null },
       })
-      lead = await prisma.lead.create({
-        data: {
-          nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
-          whatsapp: msg.numero,
-          origem: "whatsapp",
-          responsavelId: usuarioIa?.id || null,
-        },
-      })
+      try {
+        lead = await prisma.lead.create({
+          data: {
+            nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
+            whatsapp: msg.numero,
+            origem: "whatsapp",
+            responsavelId: usuarioIa?.id || null,
+          },
+        })
+      } catch (err) {
+        // P2002 = lead com mesmo whatsapp criado por request paralelo
+        if ((err as { code?: string }).code === "P2002") {
+          lead = await prisma.lead.findUnique({ where: { whatsapp: msg.numero } })
+          if (lead?.deletadoEm) {
+            lead = await prisma.lead.update({
+              where: { id: lead.id },
+              data: { deletadoEm: null, nome: msg.nomeContato?.trim() || lead.nome },
+            })
+          }
+          if (!lead) throw err
+        } else {
+          throw err
+        }
+      }
     }
 
     // Encontrar ou criar conversa
@@ -306,18 +332,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Salvar mensagem
-    await prisma.mensagemWhatsapp.create({
-      data: {
-        conversaId: conversa.id,
-        leadId: lead.id,
-        messageIdWhatsapp: msg.id,
-        tipo: msg.tipo,
-        conteudo,
-        remetente: "paciente",
-        mediaUrl: storedMediaUrl,
-        mediaType: msg.tipo !== "texto" ? msg.tipo : null,
-      },
-    })
+    try {
+      await prisma.mensagemWhatsapp.create({
+        data: {
+          conversaId: conversa.id,
+          leadId: lead.id,
+          messageIdWhatsapp: msg.id,
+          tipo: msg.tipo,
+          conteudo,
+          remetente: "paciente",
+          mediaUrl: storedMediaUrl,
+          mediaType: msg.tipo !== "texto" ? msg.tipo : null,
+        },
+      })
+    } catch (err) {
+      // P2002 = outro request paralelo ja salvou essa messageIdWhatsapp
+      // entre nosso findUnique e o create. Skip silencioso.
+      if ((err as { code?: string }).code === "P2002") continue
+      throw err
+    }
 
     // Atualizar ultimaMensagemEm na conversa
     await prisma.conversa.update({
