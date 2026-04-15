@@ -18,17 +18,10 @@ test.describe("CLIENTE-218 — Fotos profissionais atualizadas", () => {
     await expect(procImg).toBeVisible()
   })
 
-  test("CTA carrega foto-3.jpeg", async ({ page }) => {
-    const ctaImg = page.locator('img[src*="foto-3"]')
-    await ctaImg.scrollIntoViewIfNeeded()
-    await expect(ctaImg).toBeVisible()
-  })
-
   test("Imagens retornam HTTP 200", async ({ page }) => {
     const urls = [
       "/images/dr-lucas/foto-1.jpeg",
       "/images/dr-lucas/foto-2.jpeg",
-      "/images/dr-lucas/foto-3.jpeg",
     ]
     for (const url of urls) {
       const resp = await page.request.get(url)

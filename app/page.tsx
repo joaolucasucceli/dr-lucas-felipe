@@ -8,7 +8,6 @@ import { ProtocolosSection } from "./(site)/components/ProtocolosSection"
 import { ResultadosSection } from "./(site)/components/ResultadosSection"
 import { DiferenciaisSection } from "./(site)/components/DiferenciaisSection"
 import { FormularioSection } from "./(site)/components/FormularioSection"
-import { CtaSection } from "./(site)/components/CtaSection"
 import { FooterSite } from "./(site)/components/FooterSite"
 import { WhatsappFab } from "./(site)/components/WhatsappFab"
 import { buildFallbackConfig, type SiteConfigProps } from "./(site)/components/site-config"
@@ -104,7 +103,6 @@ export default async function HomePage() {
         <ResultadosSection />
         <DiferenciaisSection />
         <FormularioSection />
-        <CtaSection whatsappLink={config.whatsappLink} />
       </main>
       <FooterSite config={config} />
       <WhatsappFab whatsappLink={config.whatsappLink} />

@@ -3,6 +3,13 @@
 import { useState, useCallback, useEffect } from "react"
 import Image from "next/image"
 import { AnimateOnScroll } from "./AnimateOnScroll"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
 
 // ── Tipos e dados ────────────────────────────────────────────────────────────
 
@@ -52,6 +59,13 @@ const RESULTADOS: Resultado[] = [
     categoria: "preenchimento-panturrilha" as const,
     label: "Preenchimento Panturrilha",
   },
+]
+
+const VIDEOS = [
+  { src: "/videos/reel-01.mp4", label: "Procedimento 1" },
+  { src: "/videos/reel-02.mp4", label: "Procedimento 2" },
+  { src: "/videos/reel-03.mp4", label: "Procedimento 3" },
+  { src: "/videos/reel-04.mp4", label: "Procedimento 4" },
 ]
 
 // ── Componente ───────────────────────────────────────────────────────────────
@@ -121,65 +135,89 @@ export function ResultadosSection() {
             ))}
           </div>
 
-          {/* Gallery grid */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtrados.map((resultado, i) => (
-              <AnimateOnScroll
-                key={resultado.imagem}
-                delay={Math.min(i % 3, 3) as 0 | 1 | 2 | 3}
-              >
-                <button
-                  onClick={() => setLightbox(resultado.imagem)}
-                  className="group relative w-full overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-site-gold"
+          {/* Gallery — carrossel deslizante */}
+          <Carousel
+            opts={{ align: "start", loop: filtrados.length > 3 }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4">
+              {filtrados.map((resultado) => (
+                <CarouselItem
+                  key={resultado.imagem}
+                  className="basis-full pl-4 sm:basis-1/2 lg:basis-1/3"
                 >
-                  <Image
-                    src={resultado.imagem}
-                    alt={`Resultado — ${resultado.label}`}
-                    width={400}
-                    height={500}
-                    className="h-auto w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <span className="m-4 rounded-full bg-site-gold/90 px-3 py-1 text-xs font-medium text-white">
-                      {resultado.label}
-                    </span>
-                  </div>
-                </button>
-              </AnimateOnScroll>
-            ))}
-          </div>
+                  <button
+                    onClick={() => setLightbox(resultado.imagem)}
+                    className="group relative w-full overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-site-gold"
+                  >
+                    <Image
+                      src={resultado.imagem}
+                      alt={`Resultado — ${resultado.label}`}
+                      width={400}
+                      height={500}
+                      className="h-auto w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                      <span className="m-4 rounded-full bg-site-gold/90 px-3 py-1 text-xs font-medium text-white">
+                        {resultado.label}
+                      </span>
+                    </div>
+                  </button>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious
+              variant="outline"
+              className="-left-2 hidden border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:flex"
+            />
+            <CarouselNext
+              variant="outline"
+              className="-right-2 hidden border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:flex"
+            />
+          </Carousel>
 
-          {/* Videos */}
+          {/* Videos — carrossel */}
           <div className="mt-16">
             <AnimateOnScroll>
               <h3 className="mb-8 text-center text-xl font-bold text-white">
                 Vídeos dos procedimentos
               </h3>
             </AnimateOnScroll>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                { src: "/videos/reel-01.mp4", label: "Procedimento 1" },
-                { src: "/videos/reel-02.mp4", label: "Procedimento 2" },
-                { src: "/videos/reel-03.mp4", label: "Procedimento 3" },
-                { src: "/videos/reel-04.mp4", label: "Procedimento 4" },
-              ].map((video) => (
-                <AnimateOnScroll key={video.src}>
-                  <div className="overflow-hidden rounded-xl bg-white/[0.04]">
-                    <video
-                      src={video.src}
-                      controls
-                      preload="metadata"
-                      playsInline
-                      className="h-auto w-full"
-                      aria-label={video.label}
-                    >
-                      Seu navegador não suporta o elemento de vídeo.
-                    </video>
-                  </div>
-                </AnimateOnScroll>
-              ))}
-            </div>
+            <Carousel
+              opts={{ align: "start", loop: VIDEOS.length > 2 }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-4">
+                {VIDEOS.map((video) => (
+                  <CarouselItem
+                    key={video.src}
+                    className="basis-full pl-4 sm:basis-1/2 lg:basis-1/3"
+                  >
+                    <div className="overflow-hidden rounded-xl bg-white/[0.04]">
+                      <video
+                        src={video.src}
+                        controls
+                        preload="metadata"
+                        playsInline
+                        className="h-auto w-full"
+                        aria-label={video.label}
+                      >
+                        Seu navegador não suporta o elemento de vídeo.
+                      </video>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious
+                variant="outline"
+                className="-left-2 hidden border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:flex"
+              />
+              <CarouselNext
+                variant="outline"
+                className="-right-2 hidden border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:flex"
+              />
+            </Carousel>
           </div>
 
           {/* Disclaimer */}
