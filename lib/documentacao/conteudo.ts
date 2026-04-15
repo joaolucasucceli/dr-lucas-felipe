@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.16.0"
+export const VERSAO_DOCUMENTACAO = "1.16.1"
 export const DATA_ATUALIZACAO = "2026-04-15"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -399,6 +399,8 @@ POST /api/webhooks/whatsapp
 | \`/api/agente/registrar-agendamento\` | Cria agendamento no sistema |
 | \`/api/agente/atualizar-agendamento\` | Atualiza status do agendamento |
 | \`/api/agente/registrar-mensagem\` | Persiste mensagem no banco |
+
+> Todas as chamadas de ferramentas têm timeout de **30 segundos**. Se o endpoint não responder, o agente recebe um erro explícito e segue a conversa sem travar.
 
 ### Automações CRON
 

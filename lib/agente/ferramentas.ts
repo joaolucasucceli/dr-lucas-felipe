@@ -174,7 +174,10 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   },
 ]
 
-/** Executa uma ferramenta do agente via fetch interno */
+/** Timeout maximo para execucao de uma ferramenta (evita agente travado) */
+const TIMEOUT_FERRAMENTA_MS = 30_000
+
+/** Executa uma ferramenta do agente via fetch interno com timeout de 30s */
 export async function executarFerramenta(
   nome: string,
   args: Record<string, unknown>,
@@ -182,6 +185,9 @@ export async function executarFerramenta(
 ): Promise<string> {
   const nomeRota = nome.replace(/_/g, "-")
   const url = `${baseUrl}/api/agente/${nomeRota}`
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_FERRAMENTA_MS)
 
   try {
     const res = await fetch(url, {
@@ -191,6 +197,7 @@ export async function executarFerramenta(
         "x-api-secret": process.env.API_SECRET || "",
       },
       body: JSON.stringify(args),
+      signal: controller.signal,
     })
 
     const data = await res.json()
@@ -201,8 +208,15 @@ export async function executarFerramenta(
 
     return JSON.stringify(data)
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return JSON.stringify({
+        erro: `Ferramenta "${nome}" demorou mais de ${TIMEOUT_FERRAMENTA_MS / 1000}s — timeout`,
+      })
+    }
     return JSON.stringify({
       erro: error instanceof Error ? error.message : "Erro ao executar ferramenta",
     })
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
