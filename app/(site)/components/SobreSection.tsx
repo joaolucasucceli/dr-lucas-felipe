@@ -30,34 +30,42 @@ export function SobreSection() {
           <div className="mx-auto max-w-3xl text-center">
             {/* Label */}
             <span className="mb-4 inline-block text-xs font-semibold tracking-[0.25em] uppercase text-site-gold">
-              Sobre o Médico
+              Sobre o Dr. Lucas Ferreira
             </span>
 
             <h2 className="mb-8 text-3xl font-bold tracking-tight text-site-text md:text-4xl">
-              Excelência técnica com{" "}
-              <span className="text-site-green">compromisso humano</span>
+              Mais de 10 anos dedicados à{" "}
+              <span className="text-site-green">medicina e à estética</span>
             </h2>
 
             <div className="space-y-5 text-base leading-relaxed text-site-text/70">
               <p>
-                Dr. Lucas Felipe P. Ferreira é médico com atuação destacada na
-                área da estética e pós-graduando em cirurgia plástica. Sua
-                trajetória é marcada pela busca constante por aperfeiçoamento
-                técnico, aliando conhecimento científico, senso estético apurado e
-                foco absoluto na satisfação e segurança de seus pacientes.
+                Sou um médico dedicado, profundamente comprometido com a
+                excelência no cuidado ao paciente. Atualmente curso especialização
+                em cirurgia geral e plástica, com atuação focada em lipoaspiração
+                fracionada, preenchimento corporal e preenchimento glúteo
+                definitivo.
               </p>
               <p>
-                Com experiência sólida na medicina de urgência e emergência —
-                tanto no atendimento adulto quanto pediátrico — desenvolveu
+                Com mais de 10 anos de trajetória na medicina, meu percurso é
+                marcado pela atualização constante e busca por inovação. Minha
+                jornada começou na medicina de urgência e emergência — onde atuei
+                como diretor médico e coordenador médico — desenvolvendo
                 habilidades essenciais como agilidade, precisão e tomada de
-                decisão em cenários críticos. Essa base fortalece ainda mais sua
-                prática na estética, garantindo procedimentos conduzidos com alto
-                nível de segurança e responsabilidade.
+                decisão em cenários críticos. Essa base fortalece cada
+                procedimento que realizo hoje.
               </p>
               <p>
-                Também possui forte atuação na gestão em saúde, exercendo funções
-                como coordenador médico e diretor técnico, sempre com foco em
-                eficiência, qualidade e excelência no atendimento.
+                Na estética, sou referência em contorno corporal: lipoaspiração
+                fracionada, mini lipo, hidrolipo e lipo com enxerto glúteo. Meu
+                diferencial está em entregar resultados naturais e harmônicos,
+                valorizando a individualidade de cada paciente.
+              </p>
+              <p>
+                Mais do que procedimentos, meu propósito é cuidar de pessoas —
+                sempre pautado pelo respeito, ética e amor ao próximo. Cada
+                atendimento é conduzido de forma personalizada, da avaliação
+                inicial ao pós-procedimento.
               </p>
             </div>
           </div>

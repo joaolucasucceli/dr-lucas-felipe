@@ -13,7 +13,7 @@ export default function LgpdPage() {
           <section>
             <h2 className="text-xl font-semibold mb-3">1. Sobre este documento</h2>
             <p>
-              Esta Política de Privacidade descreve como a clínica do Dr. Lucas Felipe
+              Esta Política de Privacidade descreve como a clínica do Dr. Lucas Ferreira
               coleta, utiliza e protege seus dados pessoais em conformidade com a
               Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).
             </p>
@@ -107,7 +107,7 @@ export default function LgpdPage() {
               Para exercer qualquer um dos direitos acima, entre em contato:
             </p>
             <div className="rounded-lg border bg-muted/40 p-4">
-              <p className="font-medium">Dr. Lucas Felipe — Clínica de Estética</p>
+              <p className="font-medium">Dr. Lucas Ferreira — Clínica de Estética</p>
               <p className="mt-1 text-muted-foreground">
                 E-mail:{" "}
                 <a

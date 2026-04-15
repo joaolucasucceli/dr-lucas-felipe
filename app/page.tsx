@@ -4,6 +4,8 @@ import { Navbar } from "./(site)/components/Navbar"
 import { HeroSection } from "./(site)/components/HeroSection"
 import { SobreSection } from "./(site)/components/SobreSection"
 import { ProcedimentosSection } from "./(site)/components/ProcedimentosSection"
+import { ProtocolosSection } from "./(site)/components/ProtocolosSection"
+import { ResultadosSection } from "./(site)/components/ResultadosSection"
 import { DiferenciaisSection } from "./(site)/components/DiferenciaisSection"
 import { FormularioSection } from "./(site)/components/FormularioSection"
 import { CtaSection } from "./(site)/components/CtaSection"
@@ -12,11 +14,11 @@ import { WhatsappFab } from "./(site)/components/WhatsappFab"
 import { buildFallbackConfig, type SiteConfigProps } from "./(site)/components/site-config"
 
 export const metadata: Metadata = {
-  title: "Dr. Lucas Felipe | Medicina Estética — Contorno Corporal",
+  title: "Dr. Lucas Ferreira | Estética Avançada — Contorno Corporal",
   description:
     "Especialista em contorno corporal com resultados naturais e harmônicos. Lipoaspiração, hidrolipo, mini lipo e preenchimento glúteo. Agende sua avaliação.",
   openGraph: {
-    title: "Dr. Lucas Felipe | Medicina Estética",
+    title: "Dr. Lucas Ferreira | Estética Avançada",
     description:
       "Contorno corporal com resultados naturais e harmônicos. Agende sua avaliação personalizada.",
     type: "website",
@@ -26,7 +28,7 @@ export const metadata: Metadata = {
         url: "/images/dr-lucas/foto-1.jpeg",
         width: 800,
         height: 1000,
-        alt: "Dr. Lucas Felipe — Médico Estética",
+        alt: "Dr. Lucas Ferreira — Estética Avançada",
       },
     ],
   },
@@ -46,7 +48,7 @@ async function getSiteConfig(): Promise<SiteConfigProps> {
     const numero = dbConfig.whatsappNumero
     const mensagem =
       dbConfig.whatsappMensagem ||
-      "Olá! Gostaria de agendar uma avaliação com o Dr. Lucas Felipe."
+      "Olá! Gostaria de agendar uma avaliação com o Dr. Lucas Ferreira."
     const whatsappLink = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`
 
     const fallback = buildFallbackConfig()
@@ -98,6 +100,8 @@ export default async function HomePage() {
         <HeroSection whatsappLink={config.whatsappLink} />
         <SobreSection />
         <ProcedimentosSection whatsappLink={config.whatsappLink} />
+        <ProtocolosSection whatsappLink={config.whatsappLink} />
+        <ResultadosSection />
         <DiferenciaisSection />
         <FormularioSection />
         <CtaSection whatsappLink={config.whatsappLink} />

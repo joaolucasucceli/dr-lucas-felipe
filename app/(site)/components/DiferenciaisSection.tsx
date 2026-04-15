@@ -41,7 +41,7 @@ export function DiferenciaisSection() {
         <AnimateOnScroll>
           <div className="mb-16 text-center">
             <span className="mb-4 inline-block text-xs font-semibold tracking-[0.25em] uppercase text-site-gold">
-              Por que escolher o Dr. Lucas
+              Por que escolher o Dr. Lucas Ferreira
             </span>
             <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
               O diferencial está nos{" "}

@@ -31,7 +31,7 @@ export function HeroSection({ whatsappLink }: HeroSectionProps) {
           </h1>
 
           <p className="mb-10 max-w-lg text-lg leading-relaxed text-white/60">
-            Dr. Lucas Felipe — médico especialista em estética corporal.
+            Dr. Lucas Ferreira — médico especialista em estética corporal.
             Lipoaspiração, hidrolipo e preenchimento glúteo com segurança,
             técnica e resultados que valorizam a sua individualidade.
           </p>
@@ -85,7 +85,7 @@ export function HeroSection({ whatsappLink }: HeroSectionProps) {
             <div className="relative overflow-hidden rounded-2xl">
               <Image
                 src="/images/dr-lucas/foto-1.jpeg"
-                alt="Dr. Lucas Felipe — Médico especialista em estética corporal"
+                alt="Dr. Lucas Ferreira — Médico especialista em estética corporal"
                 width={500}
                 height={625}
                 className="h-auto w-full object-cover"

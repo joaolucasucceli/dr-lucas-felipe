@@ -1,5 +1,5 @@
 // ============================================================
-// Configuração centralizada do site — Dr. Lucas Felipe
+// Configuração centralizada do site — Dr. Lucas Ferreira
 // Estes valores são usados como FALLBACK quando o banco de dados
 // não tem ConfigSite cadastrada. Os dados reais são gerenciados
 // pelo painel em /configuracoes/site.
@@ -8,13 +8,13 @@
 const config = {
   whatsapp: {
     numero: "5511999999999",
-    mensagem: "Olá! Gostaria de agendar uma avaliação com o Dr. Lucas Felipe.",
+    mensagem: "Olá! Gostaria de agendar uma avaliação com o Dr. Lucas Ferreira.",
   },
 
   medico: {
-    nome: "Dr. Lucas Felipe P. Ferreira",
-    nomeCompleto: "Dr. Lucas Felipe P. Ferreira",
-    especialidade: "Medicina Estética — Contorno Corporal",
+    nome: "Dr. Lucas Ferreira",
+    nomeCompleto: "Dr. Lucas Ferreira",
+    especialidade: "Estética Avançada — Contorno Corporal",
     crm: "CRM/SP 123456",
   },
 

@@ -5,8 +5,9 @@ import { useState, useEffect } from "react"
 const NAV_LINKS = [
   { label: "Sobre", href: "#sobre" },
   { label: "Procedimentos", href: "#procedimentos" },
-  { label: "Diferenciais", href: "#diferenciais" },
-  { label: "Formulário", href: "#formulario" },
+  { label: "Protocolos", href: "#protocolos" },
+  { label: "Resultados", href: "#resultados" },
+  { label: "Contato", href: "#formulario" },
 ]
 
 interface NavbarProps {
@@ -44,10 +45,10 @@ export function Navbar({ whatsappLink }: NavbarProps) {
           {/* Logo / Nome */}
           <a href="#" className="flex flex-col leading-tight">
             <span className="text-lg font-bold tracking-wide text-white">
-              Dr. Lucas Felipe
+              Dr. Lucas Ferreira
             </span>
             <span className="text-[11px] font-medium tracking-[0.2em] uppercase text-site-gold">
-              Medicina Estética
+              Estética Avançada
             </span>
           </a>
 

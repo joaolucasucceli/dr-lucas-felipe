@@ -151,7 +151,7 @@ export default function SiteConfigPage() {
               <Input
                 value={medicoNome}
                 onChange={(e) => setMedicoNome(e.target.value)}
-                placeholder="Dr. Lucas Felipe P. Ferreira"
+                placeholder="Dr. Lucas Ferreira"
               />
             </div>
             <div className="grid gap-2">
@@ -167,7 +167,7 @@ export default function SiteConfigPage() {
               <Input
                 value={medicoEspecialidade}
                 onChange={(e) => setMedicoEspecialidade(e.target.value)}
-                placeholder="Medicina Estética — Contorno Corporal"
+                placeholder="Estética Avançada — Contorno Corporal"
               />
             </div>
           </CardContent>

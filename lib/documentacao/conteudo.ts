@@ -7,13 +7,13 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.12.0"
-export const DATA_ATUALIZACAO = "2026-04-04"
+export const VERSAO_DOCUMENTACAO = "1.14.0"
+export const DATA_ATUALIZACAO = "2026-04-15"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
 > Versão ${VERSAO_DOCUMENTACAO} · Atualizado em ${DATA_ATUALIZACAO}
 
-Sistema web para gestão de atendimento da clínica do Dr. Lucas Felipe.
+Sistema web para gestão de atendimento da clínica do Dr. Lucas Ferreira.
 Dois módulos integrados em uma única aplicação Next.js:
 - **Painel de Gestão** — kanban, leads, agendamentos, procedimentos, métricas
 - **Agente IA WhatsApp (Ana Júlia)** — atendimento autônomo de pacientes via WhatsApp
@@ -435,7 +435,7 @@ Proteções:
 
 ## Landing Page (Página de Venda)
 
-Site institucional do Dr. Lucas Felipe (\`/\`) com foco em contorno corporal.
+Site institucional do Dr. Lucas Ferreira (\`/\`) com foco em contorno corporal.
 
 ### Seções
 

@@ -73,9 +73,9 @@ async function gerarMensagemFollowUp(
 
   try {
     const prompts: Record<string, string> = {
-      "1h": `Escreva uma mensagem curta de follow-up leve e amigável no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas parou de responder há 1 hora. Tom acolhedor, informal, máximo 2 linhas. Não mencione preços. Você é Ana Júlia, assistente da clínica do Dr. Lucas Felipe.`,
-      "6h": `Escreva uma mensagem de follow-up com valor no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas parou de responder há 6 horas. Mencione brevemente um benefício do procedimento e reforce que a pré-consulta é gratuita. Tom acolhedor, máximo 3 linhas. Você é Ana Júlia, assistente da clínica do Dr. Lucas Felipe.`,
-      "24h": `Escreva uma mensagem de encerramento gentil no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas não responde há 24 horas. Deixe a porta aberta para retorno. Tom empático, máximo 2 linhas. Você é Ana Júlia, assistente da clínica do Dr. Lucas Felipe.`,
+      "1h": `Escreva uma mensagem curta de follow-up leve e amigável no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas parou de responder há 1 hora. Tom acolhedor, informal, máximo 2 linhas. Não mencione preços. Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira.`,
+      "6h": `Escreva uma mensagem de follow-up com valor no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas parou de responder há 6 horas. Mencione brevemente um benefício do procedimento e reforce que a pré-consulta é gratuita. Tom acolhedor, máximo 3 linhas. Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira.`,
+      "24h": `Escreva uma mensagem de encerramento gentil no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas não responde há 24 horas. Deixe a porta aberta para retorno. Tom empático, máximo 2 linhas. Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira.`,
     }
 
     const resposta = await openai.chat.completions.create({

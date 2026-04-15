@@ -87,7 +87,7 @@ function buildMsgs(
 
   const all = [
     mk(1, `Olá! ${contato} ${procNome}. Poderia me dar mais informações?`, "paciente"),
-    mk(2, `Olá, ${fn}! 😊 Aqui é a Ana Júlia, assistente virtual da clínica do Dr. Lucas Felipe. Que bom que você entrou em contato! Para te ajudar melhor, me conta: quantos anos você tem e qual é seu objetivo com ${procNome}?`, "agente"),
+    mk(2, `Olá, ${fn}! 😊 Aqui é a Ana Júlia, assistente virtual da clínica do Dr. Lucas Ferreira. Que bom que você entrou em contato! Para te ajudar melhor, me conta: quantos anos você tem e qual é seu objetivo com ${procNome}?`, "agente"),
     mk(3, `Tenho ${idade} anos e ${obj}.`, "paciente"),
     mk(4, `Perfeito, ${fn}! O Dr. Lucas trabalha com uma abordagem muito natural e personalizada. Antes de prosseguirmos, você tem alguma condição de saúde como diabetes, hipertensão, problemas cardíacos ou de coagulação?`, "agente"),
     mk(5, `Não, sou saudável. Nunca tive nenhum problema de saúde relevante.`, "paciente"),
@@ -245,8 +245,8 @@ async function main() {
   // ── USUÁRIOS ───────────────────────────────────────────────────────────────
   await prisma.usuario.upsert({
     where: { email: "lucas@drlucas.com.br" },
-    update: { nome: "Dr. Lucas Felipe", senha: senhaHash, ativo: true, deletadoEm: null },
-    create: { nome: "Dr. Lucas Felipe", email: "lucas@drlucas.com.br", senha: senhaHash, perfil: "gestor", tipo: "humano" },
+    update: { nome: "Dr. Lucas Ferreira", senha: senhaHash, ativo: true, deletadoEm: null },
+    create: { nome: "Dr. Lucas Ferreira", email: "lucas@drlucas.com.br", senha: senhaHash, perfil: "gestor", tipo: "humano" },
   })
 
   const anaJulia = await prisma.usuario.upsert({

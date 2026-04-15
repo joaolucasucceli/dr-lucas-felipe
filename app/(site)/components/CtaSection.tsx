@@ -21,7 +21,7 @@ export function CtaSection({ whatsappLink }: CtaSectionProps) {
                 <div className="relative overflow-hidden rounded-2xl">
                   <Image
                     src="/images/dr-lucas/foto-3.jpeg"
-                    alt="Dr. Lucas Felipe — Agende sua avaliação"
+                    alt="Dr. Lucas Ferreira — Agende sua avaliação"
                     width={480}
                     height={600}
                     className="h-auto w-full object-cover"
@@ -43,7 +43,7 @@ export function CtaSection({ whatsappLink }: CtaSectionProps) {
               </h2>
               <p className="mb-8 max-w-lg text-lg leading-relaxed text-white/60">
                 Cada atendimento é conduzido de forma personalizada. Agende sua
-                avaliação e descubra como o Dr. Lucas pode ajudar você a alcançar
+                avaliação e descubra como o Dr. Lucas Ferreira pode ajudar você a alcançar
                 a melhor versão do seu corpo com segurança, ética e resultados
                 naturais.
               </p>

@@ -83,7 +83,7 @@ export function ProcedimentosSection({ whatsappLink }: ProcedimentosSectionProps
             <div className="relative overflow-hidden rounded-2xl">
               <Image
                 src="/images/dr-lucas/foto-2.jpeg"
-                alt="Dr. Lucas Felipe realizando procedimento estético"
+                alt="Dr. Lucas Ferreira realizando procedimento estético"
                 width={600}
                 height={750}
                 className="h-auto w-full object-cover"
