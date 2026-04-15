@@ -177,18 +177,10 @@ function normalizarBaileys(payload: any): MensagemNormalizada[] {
 // ── Handler principal ─────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  // Validar origem: WEBHOOK_SECRET e obrigatorio em producao
+  // Validar origem: apenas se WEBHOOK_SECRET estiver explicitamente configurado
+  // (TODO CLIENTE-253: tornar obrigatorio em producao apos configurar env+Uazapi
+  // de forma coordenada — revertido em 2026-04-15 para nao quebrar Ana Julia)
   const webhookSecret = process.env.WEBHOOK_SECRET
-  const ehProducao = process.env.NODE_ENV === "production"
-
-  if (ehProducao && !webhookSecret) {
-    console.error("[webhook] WEBHOOK_SECRET nao configurado em producao — rejeitando request")
-    return NextResponse.json(
-      { error: "Configuracao invalida do servidor" },
-      { status: 500 }
-    )
-  }
-
   if (webhookSecret) {
     const tokenRecebido =
       request.headers.get("x-webhook-token") ??
