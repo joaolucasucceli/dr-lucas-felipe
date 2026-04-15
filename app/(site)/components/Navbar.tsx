@@ -7,7 +7,6 @@ const NAV_LINKS = [
   { label: "Procedimentos", href: "#procedimentos" },
   { label: "Protocolos", href: "#protocolos" },
   { label: "Resultados", href: "#resultados" },
-  { label: "Contato", href: "#formulario" },
 ]
 
 interface NavbarProps {

@@ -6,15 +6,14 @@ test.describe("CLIENTE-223 — Navbar atualizado", () => {
     await page.waitForLoadState("networkidle")
   })
 
-  test("Navbar desktop mostra 5 links corretos", async ({ page }) => {
+  test("Navbar desktop mostra 4 links corretos", async ({ page }) => {
     const nav = page.locator("nav")
     const links = nav.locator(".hidden.md\\:flex a:not([target])")
-    await expect(links).toHaveCount(5)
+    await expect(links).toHaveCount(4)
     await expect(links.nth(0)).toContainText("Sobre")
     await expect(links.nth(1)).toContainText("Procedimentos")
     await expect(links.nth(2)).toContainText("Protocolos")
     await expect(links.nth(3)).toContainText("Resultados")
-    await expect(links.nth(4)).toContainText("Contato")
   })
 
   test("Link #protocolos aponta para secao existente", async ({ page }) => {

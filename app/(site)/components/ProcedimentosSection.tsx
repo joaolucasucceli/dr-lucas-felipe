@@ -80,13 +80,13 @@ export function ProcedimentosSection({ whatsappLink }: ProcedimentosSectionProps
               </p>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
               <Image
                 src="/images/dr-lucas/foto-2.jpeg"
                 alt="Dr. Lucas Ferreira realizando procedimento estético"
-                width={600}
-                height={750}
-                className="h-auto w-full object-cover"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover object-top"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-site-dark/30 via-transparent to-transparent" />
             </div>
