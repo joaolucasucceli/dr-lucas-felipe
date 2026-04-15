@@ -29,7 +29,7 @@ export async function descreverImagem(imagemUrl: string): Promise<string> {
         content: [
           {
             type: "text",
-            text: "Descreva esta imagem de forma concisa em português. Se for uma foto médica ou de procedimento estético, descreva o que é visível.",
+            text: "Você é assistente de uma clínica de estética corporal. Analise esta foto enviada por um paciente. Se for foto do corpo ou região de interesse: descreva a região visível e características relevantes para procedimentos estéticos (gordura localizada, flacidez, volume, proporção). NÃO faça diagnóstico médico — apenas descreva o que é visível. Seja profissional e respeitoso. Se for foto não relacionada (documento, selfie casual, etc): descreva brevemente o que é. Responda em português, máximo 3 frases.",
           },
           {
             type: "image_url",

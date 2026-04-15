@@ -22,7 +22,16 @@ const STATUSES_RETORNO = ["concluido", "perdido", "arquivado"]
 export function segmentarResposta(texto: string): string[] {
   if (!texto) return []
 
-  // Split por parágrafo duplo (cada bloco vira uma mensagem)
+  // Prioridade 1: split por --- explícito (agente controla as quebras)
+  if (texto.includes("---")) {
+    const segmentos = texto
+      .split(/\n?---\n?/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    if (segmentos.length > 1) return segmentos
+  }
+
+  // Fallback: split por parágrafo duplo
   const blocos = texto.split(/\n\n+/).filter((b) => b.trim())
 
   const segmentos: string[] = []
@@ -284,9 +293,13 @@ export async function processarMensagens(chatId: string): Promise<void> {
         }
       }
 
-      // Delay aleatório de 3-5s entre mensagens (exceto última)
+      // Delay proporcional ao tamanho (simula digitação humana)
+      const typingDelay = Math.min(segmento.length * 30, 3000)
+      await new Promise((resolve) => setTimeout(resolve, typingDelay))
+
+      // Delay entre mensagens (exceto última)
       if (i < segmentos.length - 1) {
-        const delay = Math.floor(Math.random() * 2001) + 3000
+        const delay = Math.floor(Math.random() * 2001) + 2000
         await new Promise((resolve) => setTimeout(resolve, delay))
       }
     }
