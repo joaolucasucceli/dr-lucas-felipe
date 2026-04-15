@@ -33,6 +33,42 @@ async function limparPadrao(match: string) {
   return apagadas
 }
 
+async function listarPadrao(match: string) {
+  let cursor = 0
+  const todas: string[] = []
+  do {
+    const resultado = (await redis.scan(cursor, { match, count: 200 })) as [
+      number | string,
+      string[],
+    ]
+    const proximoCursor =
+      typeof resultado[0] === "string"
+        ? parseInt(resultado[0], 10)
+        : resultado[0]
+    const chaves = resultado[1] || []
+    todas.push(...chaves)
+    cursor = proximoCursor
+  } while (cursor !== 0)
+  return todas
+}
+
+export async function GET(req: NextRequest) {
+  if (!autorizar(req)) {
+    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
+  }
+  const mem = await listarPadrao("*_mem_dr-lucas")
+  const buf = await listarPadrao("*_buf_dr-lucas")
+  const deb = await listarPadrao("*_deb_dr-lucas")
+  const total = await listarPadrao("*")
+  return NextResponse.json({
+    memoria: mem,
+    buffer: buf,
+    debounce: deb,
+    totalKeys: total.length,
+    amostraTotal: total.slice(0, 20),
+  })
+}
+
 export async function POST(req: NextRequest) {
   if (!autorizar(req)) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
