@@ -291,7 +291,7 @@ function GoogleAgendaConfigInner() {
               <li>
                 Em &quot;Authorized redirect URIs&quot; adicione:{" "}
                 <code className="text-xs bg-muted px-1 py-0.5 rounded">
-                  https://drlucasfelipe.vercel.app/api/configuracoes/google-agenda/callback
+                  https://dr-lucas-central.vercel.app/api/configuracoes/google-agenda/callback
                 </code>
               </li>
               <li>

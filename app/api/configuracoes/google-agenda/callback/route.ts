@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { google } from "googleapis"
 import { prisma } from "@/lib/prisma"
 
-const REDIRECT_URI = "https://drlucasfelipe.vercel.app/api/configuracoes/google-agenda/callback"
+const REDIRECT_URI = "https://dr-lucas-central.vercel.app/api/configuracoes/google-agenda/callback"
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)

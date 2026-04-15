@@ -4,7 +4,7 @@ import { google } from "googleapis"
 import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-helpers"
 
-const REDIRECT_URI = "https://drlucasfelipe.vercel.app/api/configuracoes/google-agenda/callback"
+const REDIRECT_URI = "https://dr-lucas-central.vercel.app/api/configuracoes/google-agenda/callback"
 
 export async function GET(_request: NextRequest) {
   const auth = await requireRole("gestor")
