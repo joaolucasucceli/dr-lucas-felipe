@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { validarApiSecret } from "@/lib/api-auth"
+import { atualizarEvento, cancelarEvento } from "@/lib/google-calendar"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -51,17 +52,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const novaInicio = new Date(novaDataHora)
     const agendamento = await prisma.agendamento.update({
       where: { id: agendamentoId },
       data: {
-        dataHora: new Date(novaDataHora),
+        dataHora: novaInicio,
         status: "remarcado",
       },
     })
 
-    // TODO: Atualizar evento Google Calendar quando lib estiver disponível
+    // Atualizar evento no Google Calendar se já sincronizado
+    let sincronizado = agendamentoExistente.sincronizado
+    if (agendamentoExistente.googleEventId) {
+      const duracaoMin = agendamentoExistente.duracao ?? 60
+      const novoFim = new Date(novaInicio.getTime() + duracaoMin * 60_000)
+      const ok = await atualizarEvento(agendamentoExistente.googleEventId, {
+        inicio: novaInicio,
+        fim: novoFim,
+      })
+      if (!ok) {
+        sincronizado = false
+        await prisma.agendamento.update({
+          where: { id: agendamentoId },
+          data: { sincronizado: false },
+        })
+      }
+    }
 
-    return NextResponse.json({ agendamento })
+    return NextResponse.json({ agendamento, sincronizado })
   }
 
   // Cancelar
@@ -70,7 +88,14 @@ export async function POST(request: NextRequest) {
     data: { status: "cancelado" },
   })
 
-  // TODO: Deletar evento Google Calendar quando lib estiver disponível
+  // Deletar evento no Google Calendar se sincronizado
+  if (agendamentoExistente.googleEventId) {
+    await cancelarEvento(agendamentoExistente.googleEventId)
+    await prisma.agendamento.update({
+      where: { id: agendamentoId },
+      data: { googleEventId: null, googleEventUrl: null, sincronizado: false },
+    })
+  }
 
   // Regredir funil: consulta_agendada → agendamento (em transação)
   const conversa = await prisma.conversa.findFirst({

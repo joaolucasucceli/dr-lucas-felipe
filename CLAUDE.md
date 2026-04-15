@@ -134,7 +134,6 @@ lib/documentacao/conteudo.ts
 
 | Severidade | Issue | Arquivo | Linear |
 |-----------|-------|---------|--------|
-| Crítica | Google Calendar sync ausente nas rotas do agente (TODO) | `app/api/agente/registrar-agendamento/route.ts`, `atualizar-agendamento/route.ts` | CLIENTE-252 |
 | Média | Race condition na dedup de mensagens webhook | `app/api/webhooks/whatsapp/route.ts` | CLIENTE-254 |
 | Média | Webhook secret opcional (aceita qualquer webhook se não configurado) | `app/api/webhooks/whatsapp/route.ts` | CLIENTE-253 |
 

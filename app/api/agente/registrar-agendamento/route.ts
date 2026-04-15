@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { validarApiSecret } from "@/lib/api-auth"
+import { criarEvento } from "@/lib/google-calendar"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -29,11 +30,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const inicio = new Date(dataHora)
+
   const agendamento = await prisma.agendamento.create({
     data: {
       leadId,
       procedimentoId: procedimentoId || null,
-      dataHora: new Date(dataHora),
+      dataHora: inicio,
       status: "agendado",
       observacao: observacao || null,
     },
@@ -53,7 +56,47 @@ export async function POST(request: NextRequest) {
     }
   })
 
-  // TODO: Criar evento Google Calendar quando lib estiver disponível
+  // Criar evento no Google Calendar (graceful fallback se não configurado)
+  const [lead, procedimento] = await Promise.all([
+    prisma.lead.findUnique({ where: { id: leadId }, select: { nome: true, email: true, whatsapp: true } }),
+    procedimentoId
+      ? prisma.procedimento.findUnique({ where: { id: procedimentoId }, select: { nome: true, duracaoMin: true } })
+      : null,
+  ])
 
-  return NextResponse.json({ agendamento })
+  const duracaoMin = procedimento?.duracaoMin ?? agendamento.duracao ?? 60
+  const fim = new Date(inicio.getTime() + duracaoMin * 60_000)
+  const tituloEvento = procedimento
+    ? `Consulta — ${procedimento.nome} (${lead?.nome ?? "Paciente"})`
+    : `Consulta — ${lead?.nome ?? "Paciente"}`
+  const descricaoEvento = [
+    `Paciente: ${lead?.nome ?? "-"}`,
+    lead?.whatsapp ? `WhatsApp: ${lead.whatsapp}` : null,
+    procedimento ? `Procedimento: ${procedimento.nome}` : null,
+    observacao ? `Observação: ${observacao}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n")
+
+  const resultadoCalendar = await criarEvento({
+    titulo: tituloEvento,
+    descricao: descricaoEvento,
+    inicio,
+    fim,
+    emailPaciente: lead?.email ?? undefined,
+  })
+
+  if (resultadoCalendar) {
+    await prisma.agendamento.update({
+      where: { id: agendamento.id },
+      data: {
+        googleEventId: resultadoCalendar.googleEventId,
+        googleEventUrl: resultadoCalendar.googleEventUrl,
+        sincronizado: true,
+        duracao: duracaoMin,
+      },
+    })
+  }
+
+  return NextResponse.json({ agendamento, sincronizado: !!resultadoCalendar })
 }

@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.17.0"
+export const VERSAO_DOCUMENTACAO = "1.17.1"
 export const DATA_ATUALIZACAO = "2026-04-15"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -401,6 +401,8 @@ POST /api/webhooks/whatsapp
 | \`/api/agente/registrar-mensagem\` | Persiste mensagem no banco |
 
 > Todas as chamadas de ferramentas têm timeout de **30 segundos**. Se o endpoint não responder, o agente recebe um erro explícito e segue a conversa sem travar.
+
+> **Sincronização Google Calendar:** ao registrar um agendamento, o sistema cria automaticamente o evento no Google Agenda do Dr. Lucas (com paciente, procedimento, WhatsApp na descrição). Remarcações atualizam o evento, cancelamentos removem. Se a integração não estiver configurada, o agendamento é salvo normalmente apenas no sistema (graceful fallback).
 
 ### Base de Conhecimento Dinâmica
 
