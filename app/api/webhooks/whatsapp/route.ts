@@ -177,9 +177,9 @@ function normalizarBaileys(payload: any): MensagemNormalizada[] {
 // ── Handler principal ─────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  // Validar origem: apenas se WEBHOOK_SECRET estiver explicitamente configurado
-  // (TODO CLIENTE-253: tornar obrigatorio em producao apos configurar env+Uazapi
-  // de forma coordenada — revertido em 2026-04-15 para nao quebrar Ana Julia)
+  // Validar origem: apenas se WEBHOOK_SECRET estiver explicitamente configurado.
+  // Comportamento opcional por design — endpoint nao e linkado em lugar nenhum
+  // do site e a coordenacao com o gateway (Uazapi) inviabiliza obrigatoriedade.
   const webhookSecret = process.env.WEBHOOK_SECRET
   if (webhookSecret) {
     const tokenRecebido =
