@@ -30,7 +30,15 @@ Mudancas que dependem de configuracao externa (env var na Vercel + token no Uaza
 
 **Padrao a aplicar:** mudancas de seguranca devem ser feature-flagged ou condicionadas a uma env explicita (`WEBHOOK_STRICT=true`), nao a `NODE_ENV === "production"`.
 
+## Decisao final (2026-04-15 17:20 BRT)
+
+Apos discussao, **CLIENTE-253 foi cancelado** — webhook secret permanece opcional como padrao definitivo. Justificativa:
+
+- Endpoint nao e linkado em lugar nenhum do site (URL nao-trivial)
+- Risco de quebrar producao maior que ganho de seguranca
+- Se algum dia precisarmos endurecer, abrir nova issue com janela coordenada
+
 ## Veja tambem
 
 - [[2026-04-15-sprint-pre-reuniao-dr-lucas]]
-- CLIENTE-253 (reaberto)
+- CLIENTE-253 (cancelado)
