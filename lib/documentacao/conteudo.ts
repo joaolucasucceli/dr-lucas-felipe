@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.16.1"
+export const VERSAO_DOCUMENTACAO = "1.17.0"
 export const DATA_ATUALIZACAO = "2026-04-15"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -401,6 +401,20 @@ POST /api/webhooks/whatsapp
 | \`/api/agente/registrar-mensagem\` | Persiste mensagem no banco |
 
 > Todas as chamadas de ferramentas têm timeout de **30 segundos**. Se o endpoint não responder, o agente recebe um erro explícito e segue a conversa sem travar.
+
+### Base de Conhecimento Dinâmica
+
+A Ana Júlia carrega uma **base de conhecimento dinâmica** do banco a cada conversa. Cada item tem título, conteúdo, seção (clínica, procedimentos, pós-operatório, pagamento, geral), ordem e status (ativo/inativo).
+
+O Gestor pode atualizar o conhecimento da agente sem deploy pelo menu **Clínica → Base de Conhecimento** no painel.
+
+Quando o banco está vazio, o agente usa apenas o prompt fixo. Com itens cadastrados, eles são injetados no system prompt agrupados por seção. O fluxo:
+
+1. Gestor cria/edita item em \`/base-conhecimento\`
+2. Próxima conversa do agente já carrega o novo conteúdo
+3. A Ana Júlia usa esses textos como referência ao responder o paciente
+
+> **Boas práticas:** mantenha cada item curto e factual. Use a seção certa (paciente fala em pagamento → Ana Júlia consulta seção "pagamento"). Desative em vez de excluir, para preservar histórico.
 
 ### Automações CRON
 

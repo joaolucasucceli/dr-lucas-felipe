@@ -1,3 +1,5 @@
+import { prisma } from "@/lib/prisma"
+
 interface ContextoLead {
   nome?: string
   procedimento?: string
@@ -9,8 +11,46 @@ interface ContextoLead {
   ultimoProcedimento?: string | null
 }
 
+/**
+ * Carrega a base de conhecimento ativa do banco e formata como
+ * seções markdown agrupadas por `secao`. Retorna string vazia
+ * se não houver registros — o prompt continua válido sem ela.
+ */
+async function carregarBaseConhecimento(): Promise<string> {
+  try {
+    const artigos = await prisma.baseConhecimento.findMany({
+      where: { ativo: true, deletadoEm: null },
+      orderBy: [{ secao: "asc" }, { ordem: "asc" }],
+      select: { titulo: true, conteudo: true, secao: true },
+    })
+
+    if (artigos.length === 0) return ""
+
+    // Agrupa por secao
+    const porSecao = new Map<string, { titulo: string; conteudo: string }[]>()
+    for (const artigo of artigos) {
+      const lista = porSecao.get(artigo.secao) ?? []
+      lista.push({ titulo: artigo.titulo, conteudo: artigo.conteudo })
+      porSecao.set(artigo.secao, lista)
+    }
+
+    const blocos: string[] = []
+    for (const [secao, items] of porSecao.entries()) {
+      const linhas = items
+        .map((item) => `**${item.titulo}**\n${item.conteudo}`)
+        .join("\n\n")
+      blocos.push(`### ${secao}\n${linhas}`)
+    }
+
+    return `\n\n## Base de Conhecimento\n${blocos.join("\n\n")}`
+  } catch (error) {
+    console.error("[prompt] Erro ao carregar base de conhecimento:", error)
+    return ""
+  }
+}
+
 /** Gera o system prompt da Ana Júlia com contexto dinâmico do lead */
-export function gerarSystemPrompt(contexto?: ContextoLead): string {
+export async function gerarSystemPrompt(contexto?: ContextoLead): Promise<string> {
   let contextoStr = ""
 
   if (contexto) {
@@ -31,6 +71,8 @@ export function gerarSystemPrompt(contexto?: ContextoLead): string {
       contextoStr = `\n\n## Contexto do Paciente Atual\n${partes.join("\n")}`
     }
   }
+
+  const baseConhecimentoStr = await carregarBaseConhecimento()
 
   return `Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira, cirurgião plástico. Você conduz o pré-atendimento dos pacientes via WhatsApp seguindo um SCRIPT FIXO com etapas obrigatórias.
 
@@ -166,5 +208,5 @@ Quando o contexto indicar paciente de retorno:
   - Use \`nomePaciente\` para atualizar o nome real do lead
 - \`registrar_agendamento\`: Quando data/hora confirmados → avança para consulta_agendada automaticamente
 - \`atualizar_agendamento\`: Para remarcar (mantém consulta_agendada) ou cancelar (regride para agendamento)
-- \`registrar_mensagem\`: Para registrar mensagens no banco${contextoStr}`
+- \`registrar_mensagem\`: Para registrar mensagens no banco${baseConhecimentoStr}${contextoStr}`
 }

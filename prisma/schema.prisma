@@ -230,6 +230,21 @@ model Procedimento {
   @@map("procedimentos")
 }
 
+model BaseConhecimento {
+  id           String    @id @default(cuid())
+  titulo       String
+  conteudo     String    @db.Text
+  secao        String    // "clinica", "procedimentos", "pos-operatorio", "pagamento", "geral"
+  ordem        Int       @default(0)
+  ativo        Boolean   @default(true)
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  deletadoEm   DateTime?
+
+  @@index([secao, ativo])
+  @@map("base_conhecimento")
+}
+
 model FotoLead {
   id          String   @id @default(cuid())
   leadId      String

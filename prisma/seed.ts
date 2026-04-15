@@ -287,6 +287,81 @@ async function main() {
 
   const procMap = { miniLipo, lipoGlutea, pmma }
 
+  // ── BASE DE CONHECIMENTO (Ana Júlia) ──────────────────────────────────────
+  const conhecimentos = [
+    {
+      id: "bc-clinica-endereco",
+      titulo: "Endereço da clínica",
+      conteudo: "A clínica do Dr. Lucas Ferreira fica na Av. Paulista, 1000 — Sala 810, Bela Vista, São Paulo/SP. Próximo ao Metrô Brigadeiro.",
+      secao: "clinica",
+      ordem: 1,
+    },
+    {
+      id: "bc-clinica-horario",
+      titulo: "Horário de atendimento",
+      conteudo: "Atendemos de segunda a sexta, das 9h às 19h, e aos sábados das 9h às 13h. Consultas são apenas com hora marcada.",
+      secao: "clinica",
+      ordem: 2,
+    },
+    {
+      id: "bc-clinica-medico",
+      titulo: "Sobre o Dr. Lucas Ferreira",
+      conteudo: "Cirurgião plástico com mais de 10 anos de experiência em estética avançada, especializado em contorno corporal (lipo, BBL, preenchimento glúteo). Membro da Sociedade Brasileira de Cirurgia Plástica.",
+      secao: "clinica",
+      ordem: 3,
+    },
+    {
+      id: "bc-pagamento-formas",
+      titulo: "Formas de pagamento",
+      conteudo: "Aceitamos PIX, dinheiro, débito, crédito (em até 12x sem juros no cartão) e parcelamento em boleto. O sinal de R$ 2.000 reserva sua data e é descontado do valor total do procedimento.",
+      secao: "pagamento",
+      ordem: 1,
+    },
+    {
+      id: "bc-pagamento-valores",
+      titulo: "Política de valores",
+      conteudo: "Os valores dos procedimentos só são informados na consulta com o Dr. Lucas, pois dependem de uma avaliação individual. Cada paciente tem necessidades únicas que influenciam no plano de tratamento.",
+      secao: "pagamento",
+      ordem: 2,
+    },
+    {
+      id: "bc-pre-exames",
+      titulo: "Exames pré-operatórios necessários",
+      conteudo: "Para procedimentos cirúrgicos, solicitamos: hemograma completo, coagulograma, glicemia, ECG (acima de 40 anos), avaliação cardiológica e risco cirúrgico. A clínica orienta exatamente quais exames pedir após a consulta.",
+      secao: "pos-operatorio",
+      ordem: 1,
+    },
+    {
+      id: "bc-pos-cuidados",
+      titulo: "Cuidados pós-operatórios gerais",
+      conteudo: "Após cirurgia, o paciente usa cinta compressiva pelo período indicado, faz drenagem linfática e segue as orientações médicas. Acompanhamos cada paciente de perto até a alta total.",
+      secao: "pos-operatorio",
+      ordem: 2,
+    },
+    {
+      id: "bc-proc-recuperacao",
+      titulo: "Tempo médio de recuperação",
+      conteudo: "Mini Lipo: 7 dias para atividades leves, 30 dias para exercícios. Lipo Enxertia Glútea (BBL): 15 dias sem sentar diretamente, 45 dias para exercícios intensos. PMMA: retorno imediato às atividades, evitar exercícios por 48h.",
+      secao: "procedimentos",
+      ordem: 1,
+    },
+    {
+      id: "bc-geral-sigilo",
+      titulo: "Sigilo e privacidade",
+      conteudo: "Todas as informações compartilhadas com a Ana Júlia e com a equipe são totalmente sigilosas, protegidas por LGPD e ética médica. Fotos e dados são usados apenas para avaliação.",
+      secao: "geral",
+      ordem: 1,
+    },
+  ]
+
+  for (const bc of conhecimentos) {
+    await prisma.baseConhecimento.upsert({
+      where: { id: bc.id },
+      update: { ...bc, ativo: true, deletadoEm: null },
+      create: bc,
+    })
+  }
+
   // ── LEADS + CONVERSAS + MENSAGENS + AGENDAMENTOS ──────────────────────────
   const todosLeads = [...LEADS, ...LEADS_ORIGINAIS]
 

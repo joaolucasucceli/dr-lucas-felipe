@@ -198,7 +198,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
     const memoria = await obterMemoria(chatId)
 
     // 8. Montar mensagens
-    const systemPrompt = gerarSystemPrompt(contextoLead)
+    const systemPrompt = await gerarSystemPrompt(contextoLead)
     const mensagens: ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
       ...memoria,
