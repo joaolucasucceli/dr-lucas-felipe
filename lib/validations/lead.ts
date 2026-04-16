@@ -10,7 +10,8 @@ export const criarLeadSchema = z.object({
     .enum([
       "acolhimento",
       "qualificacao",
-      "agendamento",
+      "pre_agendamento",
+      "verificacao_humana",
       "consulta_agendada",
       "consulta_realizada",
       "sinal_pago",
@@ -32,7 +33,8 @@ export const atualizarLeadSchema = z.object({
     .enum([
       "acolhimento",
       "qualificacao",
-      "agendamento",
+      "pre_agendamento",
+      "verificacao_humana",
       "consulta_agendada",
       "consulta_realizada",
       "sinal_pago",
@@ -50,7 +52,8 @@ export const mudarStatusSchema = z
     statusFunil: z.enum([
       "acolhimento",
       "qualificacao",
-      "agendamento",
+      "pre_agendamento",
+      "verificacao_humana",
       "consulta_agendada",
       "consulta_realizada",
       "sinal_pago",

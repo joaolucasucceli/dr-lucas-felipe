@@ -7,7 +7,8 @@ import type { StatusFunil } from "@/generated/prisma/client"
 const ETAPAS_FUNIL: StatusFunil[] = [
   "acolhimento",
   "qualificacao",
-  "agendamento",
+  "pre_agendamento",
+  "verificacao_humana",
   "consulta_agendada",
   "consulta_realizada",
   "sinal_pago",

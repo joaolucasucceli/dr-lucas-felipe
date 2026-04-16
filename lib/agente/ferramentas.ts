@@ -103,7 +103,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
           avancarPara: {
             type: "string",
-            enum: ["qualificacao", "agendamento"],
+            enum: ["qualificacao", "pre_agendamento"],
             description: "Avança a etapa do funil. Use 'agendamento' quando a qualificação estiver completa e for hora de agendar a consulta.",
           },
         },

@@ -13,7 +13,7 @@ import type { ChatCompletionMessageParam } from "openai/resources/chat/completio
 const MAX_TOOL_ITERATIONS = 10
 
 /** Statuses em que a IA fica em silêncio — humano está conduzindo */
-const STATUSES_SILENCIO = ["consulta_realizada", "sinal_pago", "procedimento_agendado"]
+const STATUSES_SILENCIO = ["verificacao_humana", "consulta_realizada", "sinal_pago", "procedimento_agendado"]
 
 /** Statuses que indicam paciente retornando — IA abre novo ciclo */
 const STATUSES_RETORNO = ["concluido", "perdido", "arquivado"]

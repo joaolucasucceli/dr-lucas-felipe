@@ -106,12 +106,12 @@ export async function POST(request: NextRequest) {
   await prisma.$transaction(async (tx) => {
     await tx.lead.update({
       where: { id: agendamentoExistente.leadId },
-      data: { statusFunil: "agendamento", ultimaMovimentacaoEm: new Date() },
+      data: { statusFunil: "pre_agendamento", ultimaMovimentacaoEm: new Date() },
     })
     if (conversa) {
       await tx.conversa.update({
         where: { id: conversa.id },
-        data: { etapa: "agendamento" },
+        data: { etapa: "pre_agendamento" },
       })
     }
   })

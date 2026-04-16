@@ -7,8 +7,8 @@ import type { StatusFunil, EtapaConversa } from "@/generated/prisma/client"
 // Transições permitidas a partir de cada etapa
 const TRANSICOES_PERMITIDAS: Record<string, string[]> = {
   acolhimento: ["qualificacao"],
-  qualificacao: ["agendamento"],
-  agendamento: ["consulta_agendada"],
+  qualificacao: ["pre_agendamento"],
+  pre_agendamento: ["verificacao_humana"],
 }
 
 export async function POST(request: NextRequest) {

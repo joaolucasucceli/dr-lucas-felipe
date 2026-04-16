@@ -223,7 +223,8 @@ export default function LeadsPage() {
                     <SelectItem value="todos">Todas as etapas</SelectItem>
                     <SelectItem value="acolhimento">Acolhimento</SelectItem>
                     <SelectItem value="qualificacao">Qualificação</SelectItem>
-                    <SelectItem value="agendamento">Agendamento</SelectItem>
+                    <SelectItem value="pre_agendamento">Pré-Agendamento</SelectItem>
+                    <SelectItem value="verificacao_humana">Verificação</SelectItem>
                     <SelectItem value="consulta_agendada">Consulta Agendada</SelectItem>
                     <SelectItem value="consulta_realizada">Consulta Realizada</SelectItem>
                     <SelectItem value="sinal_pago">Sinal Pago</SelectItem>

@@ -10,7 +10,8 @@ import type { KanbanLead } from "@/hooks/use-kanban"
 const ETAPA_LABELS: Record<string, string> = {
   acolhimento: "Acolhimento",
   qualificacao: "Qualificação",
-  agendamento: "Agendamento",
+  pre_agendamento: "Pré-Agendamento",
+  verificacao_humana: "Verificação",
   consulta_agendada: "Consulta Agendada",
   consulta_realizada: "Consulta Realizada",
   sinal_pago: "Sinal Pago",
@@ -22,7 +23,8 @@ const ETAPA_LABELS: Record<string, string> = {
 const ETAPAS_FUNIL = [
   "acolhimento",
   "qualificacao",
-  "agendamento",
+  "pre_agendamento",
+  "verificacao_humana",
   "consulta_agendada",
   "consulta_realizada",
   "sinal_pago",

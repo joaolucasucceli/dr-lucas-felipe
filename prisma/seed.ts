@@ -118,7 +118,7 @@ type LeadSeed = {
   whatsapp: string
   email?: string
   proc: "miniLipo" | "lipoGlutea" | "pmma"
-  status: "concluido" | "procedimento_agendado" | "sinal_pago" | "consulta_realizada" | "consulta_agendada" | "agendamento" | "qualificacao" | "acolhimento" | "perdido"
+  status: "concluido" | "procedimento_agendado" | "sinal_pago" | "consulta_realizada" | "consulta_agendada" | "verificacao_humana" | "pre_agendamento" | "qualificacao" | "acolhimento" | "perdido"
   origem: string
   sobreOPaciente: string
   diasAtras: number
@@ -181,16 +181,16 @@ const LEADS: LeadSeed[] = [
   { num: 39, nome: "Viviane Torres", whatsapp: "11991120039", email: "viviane.torres@gmail.com", proc: "miniLipo", status: "consulta_agendada", origem: "instagram", sobreOPaciente: "29 anos, saudável. Consulta: 23/03/2026 às 9h.", diasAtras: 20, lgpd: true, resp: "ia", consultaDias: 2 },
 
   // ── AGENDAMENTO (10) ── created 10-20 days ago ───────────────────────────────
-  { num: 40, nome: "Adriana Brito", whatsapp: "11991120040", email: "adriana.brito@gmail.com", proc: "lipoGlutea", status: "agendamento", origem: "instagram", sobreOPaciente: "30 anos, IMC 23, saudável. Interesse em BBL. Qualificada. Em processo de agendamento de consulta.", diasAtras: 20, lgpd: true, resp: "ia" },
-  { num: 41, nome: "Bianca Cunha", whatsapp: "11991120041", email: "bianca.cunha@hotmail.com", proc: "miniLipo", status: "agendamento", origem: "indicacao", sobreOPaciente: "25 anos, saudável. Mini lipo flancos. Qualificada. Escolhendo data da consulta.", diasAtras: 18, lgpd: true, resp: "ia" },
-  { num: 42, nome: "Carolina Esteves", whatsapp: "11991120042", email: "carolina.esteves@gmail.com", proc: "lipoGlutea", status: "agendamento", origem: "instagram", sobreOPaciente: "31 anos, IMC 24. BBL. Qualificada pelo agente IA. Aguardando data.", diasAtras: 17, lgpd: true, resp: "ia" },
-  { num: 43, nome: "Débora Farias", whatsapp: "11991120043", email: "debora.farias@gmail.com", proc: "pmma", status: "agendamento", origem: "google", sobreOPaciente: "36 anos, saudável. PMMA. Qualificada. Aguardando confirmação de horário.", diasAtras: 16, lgpd: true, resp: "maria" },
-  { num: 44, nome: "Emília Godoy", whatsapp: "11991120044", email: "emilia.godoy@outlook.com", proc: "miniLipo", status: "agendamento", origem: "instagram", sobreOPaciente: "28 anos, saudável. Mini lipo abdômen. Qualificada. Verificando disponibilidade de agenda.", diasAtras: 15, lgpd: true, resp: "ia" },
-  { num: 45, nome: "Fabiana Henrique", whatsapp: "11991120045", email: "fabiana.henrique@gmail.com", proc: "lipoGlutea", status: "agendamento", origem: "indicacao", sobreOPaciente: "34 anos, IMC 25. BBL. Qualificada. Aguarda confirmação de data pela equipe.", diasAtras: 14, lgpd: true, resp: "ia" },
-  { num: 46, nome: "Gisele Ivo", whatsapp: "11991120046", email: "gisele.ivo@gmail.com", proc: "miniLipo", status: "agendamento", origem: "instagram", sobreOPaciente: "27 anos, saudável. Mini lipo culote e flancos. Qualificada. Escolhendo turno.", diasAtras: 13, lgpd: true, resp: "ia" },
-  { num: 47, nome: "Hanna Santos", whatsapp: "11991120047", email: "hanna.santos@hotmail.com", proc: "lipoGlutea", status: "agendamento", origem: "google", sobreOPaciente: "29 anos, IMC 22. BBL. Qualificada. Aguardando proposta de horário.", diasAtras: 12, lgpd: true, resp: "ia" },
-  { num: 48, nome: "Iracema Kato", whatsapp: "11991120048", email: "iracema.kato@gmail.com", proc: "pmma", status: "agendamento", origem: "instagram", sobreOPaciente: "33 anos, saudável. PMMA preenchimento glúteo. Qualificada. Em processo de agendamento.", diasAtras: 11, lgpd: true, resp: "maria" },
-  { num: 49, nome: "Jaqueline Lima", whatsapp: "11991120049", email: "jaqueline.lima@outlook.com", proc: "lipoGlutea", status: "agendamento", origem: "indicacao", sobreOPaciente: "26 anos, IMC 23. BBL. Qualificada. Verificando datas disponíveis.", diasAtras: 10, lgpd: true, resp: "ia" },
+  { num: 40, nome: "Adriana Brito", whatsapp: "11991120040", email: "adriana.brito@gmail.com", proc: "lipoGlutea", status: "pre_agendamento", origem: "instagram", sobreOPaciente: "30 anos, IMC 23, saudável. Interesse em BBL. Qualificada. Em processo de agendamento de consulta.", diasAtras: 20, lgpd: true, resp: "ia" },
+  { num: 41, nome: "Bianca Cunha", whatsapp: "11991120041", email: "bianca.cunha@hotmail.com", proc: "miniLipo", status: "pre_agendamento", origem: "indicacao", sobreOPaciente: "25 anos, saudável. Mini lipo flancos. Qualificada. Escolhendo data da consulta.", diasAtras: 18, lgpd: true, resp: "ia" },
+  { num: 42, nome: "Carolina Esteves", whatsapp: "11991120042", email: "carolina.esteves@gmail.com", proc: "lipoGlutea", status: "pre_agendamento", origem: "instagram", sobreOPaciente: "31 anos, IMC 24. BBL. Qualificada pelo agente IA. Aguardando data.", diasAtras: 17, lgpd: true, resp: "ia" },
+  { num: 43, nome: "Débora Farias", whatsapp: "11991120043", email: "debora.farias@gmail.com", proc: "pmma", status: "pre_agendamento", origem: "google", sobreOPaciente: "36 anos, saudável. PMMA. Qualificada. Aguardando confirmação de horário.", diasAtras: 16, lgpd: true, resp: "maria" },
+  { num: 44, nome: "Emília Godoy", whatsapp: "11991120044", email: "emilia.godoy@outlook.com", proc: "miniLipo", status: "pre_agendamento", origem: "instagram", sobreOPaciente: "28 anos, saudável. Mini lipo abdômen. Qualificada. Verificando disponibilidade de agenda.", diasAtras: 15, lgpd: true, resp: "ia" },
+  { num: 45, nome: "Fabiana Henrique", whatsapp: "11991120045", email: "fabiana.henrique@gmail.com", proc: "lipoGlutea", status: "pre_agendamento", origem: "indicacao", sobreOPaciente: "34 anos, IMC 25. BBL. Qualificada. Aguarda confirmação de data pela equipe.", diasAtras: 14, lgpd: true, resp: "ia" },
+  { num: 46, nome: "Gisele Ivo", whatsapp: "11991120046", email: "gisele.ivo@gmail.com", proc: "miniLipo", status: "pre_agendamento", origem: "instagram", sobreOPaciente: "27 anos, saudável. Mini lipo culote e flancos. Qualificada. Escolhendo turno.", diasAtras: 13, lgpd: true, resp: "ia" },
+  { num: 47, nome: "Hanna Santos", whatsapp: "11991120047", email: "hanna.santos@hotmail.com", proc: "lipoGlutea", status: "pre_agendamento", origem: "google", sobreOPaciente: "29 anos, IMC 22. BBL. Qualificada. Aguardando proposta de horário.", diasAtras: 12, lgpd: true, resp: "ia" },
+  { num: 48, nome: "Iracema Kato", whatsapp: "11991120048", email: "iracema.kato@gmail.com", proc: "pmma", status: "pre_agendamento", origem: "instagram", sobreOPaciente: "33 anos, saudável. PMMA preenchimento glúteo. Qualificada. Em processo de agendamento.", diasAtras: 11, lgpd: true, resp: "maria" },
+  { num: 49, nome: "Jaqueline Lima", whatsapp: "11991120049", email: "jaqueline.lima@outlook.com", proc: "lipoGlutea", status: "pre_agendamento", origem: "indicacao", sobreOPaciente: "26 anos, IMC 23. BBL. Qualificada. Verificando datas disponíveis.", diasAtras: 10, lgpd: true, resp: "ia" },
 
   // ── QUALIFICAÇÃO (12) ── created 5-10 days ago ───────────────────────────────
   { num: 50, nome: "Lívia Neves", whatsapp: "11991120050", email: "livia.neves@gmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "27 anos, sem comorbidades. Interessada em BBL. Em qualificação.", diasAtras: 10, lgpd: true, resp: "ia" },
@@ -234,7 +234,7 @@ const LEADS: LeadSeed[] = [
 const LEADS_ORIGINAIS: LeadSeed[] = [
   { num: 81, nome: "Ana Silva", whatsapp: "11991110001", email: "ana.silva@gmail.com", proc: "miniLipo", status: "acolhimento", origem: "instagram", sobreOPaciente: "26 anos. Primeiro contato: interesse em Mini Lipo. Aguardando qualificação.", diasAtras: 1, lgpd: false, resp: "ia" },
   { num: 82, nome: "Bruna Costa", whatsapp: "11991110002", email: "bruna.costa@hotmail.com", proc: "lipoGlutea", status: "qualificacao", origem: "instagram", sobreOPaciente: "30 anos, saudável. Interesse em Lipo Glútea. Em qualificação pelo agente.", diasAtras: 6, lgpd: false, resp: "ia" },
-  { num: 83, nome: "Carla Souza", whatsapp: "11991110003", email: "carla.souza@gmail.com", proc: "pmma", status: "agendamento", origem: "google", sobreOPaciente: "34 anos, saudável. PMMA qualificada. Em processo de agendamento de consulta.", diasAtras: 14, lgpd: true, resp: "maria" },
+  { num: 83, nome: "Carla Souza", whatsapp: "11991110003", email: "carla.souza@gmail.com", proc: "pmma", status: "pre_agendamento", origem: "google", sobreOPaciente: "34 anos, saudável. PMMA qualificada. Em processo de agendamento de consulta.", diasAtras: 14, lgpd: true, resp: "maria" },
   { num: 84, nome: "Diana Lima", whatsapp: "11991110004", email: "diana.lima@outlook.com", proc: "miniLipo", status: "consulta_agendada", origem: "indicacao", sobreOPaciente: "28 anos, IMC 23, saudável. Consulta agendada para 22/03/2026 às 10h.", diasAtras: 22, lgpd: true, resp: "ia", consultaDias: 1 },
   { num: 85, nome: "Elena Rocha", whatsapp: "11991110005", email: "elena.rocha@gmail.com", proc: "lipoGlutea", status: "consulta_realizada", origem: "instagram", sobreOPaciente: "27 anos, saudável. Consultou em 12/03/2026. BBL aprovada. Dr. Lucas muito satisfeito com o perfil.", diasAtras: 32, lgpd: true, resp: "ia", consultaDias: -9 },
 ]
@@ -543,7 +543,7 @@ async function main() {
     where: { whatsapp: "5511988880099" },
     update: {
       nome: "Camila Retorno",
-      statusFunil: "agendamento",
+      statusFunil: "pre_agendamento",
       procedimentoInteresse: "Mini Lipo",
       cicloAtual: 2,
       ciclosCompletos: 1,
@@ -556,7 +556,7 @@ async function main() {
       nome: "Camila Retorno",
       whatsapp: "5511988880099",
       procedimentoInteresse: "Mini Lipo",
-      statusFunil: "agendamento",
+      statusFunil: "pre_agendamento",
       origem: "whatsapp",
       cicloAtual: 2,
       ciclosCompletos: 1,
@@ -587,11 +587,11 @@ async function main() {
   // Conversa do ciclo 2 (Mini Lipo — agendamento)
   const conversaRetornoCiclo2 = await prisma.conversa.upsert({
     where: { id: "conv-retorno-c2" },
-    update: { etapa: "agendamento" },
+    update: { etapa: "pre_agendamento" },
     create: {
       id: "conv-retorno-c2",
       leadId: leadRetorno.id,
-      etapa: "agendamento",
+      etapa: "pre_agendamento",
       ciclo: 2,
       criadoEm: ago(2),
       ultimaMensagemEm: ago(1),

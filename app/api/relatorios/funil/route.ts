@@ -6,7 +6,8 @@ import { requireRole } from "@/lib/auth-helpers"
 const labelsFunil: Record<string, string> = {
   acolhimento: "Acolhimento",
   qualificacao: "Qualificação",
-  agendamento: "Agendamento",
+  pre_agendamento: "Pré-Agendamento",
+  verificacao_humana: "Verificação",
   consulta_agendada: "Consulta Agendada",
   consulta_realizada: "Consulta Realizada",
   sinal_pago: "Sinal Pago",
@@ -18,7 +19,8 @@ const labelsFunil: Record<string, string> = {
 const coresFunil: Record<string, string> = {
   acolhimento: "#a1a1aa",
   qualificacao: "#93c5fd",
-  agendamento: "#a5b4fc",
+  pre_agendamento: "#a5b4fc",
+  verificacao_humana: "#fdba74",
   consulta_agendada: "#c4b5fd",
   consulta_realizada: "#86efac",
   sinal_pago: "#6ee7b7",
@@ -30,7 +32,8 @@ const coresFunil: Record<string, string> = {
 const ordemFunil = [
   "acolhimento",
   "qualificacao",
-  "agendamento",
+  "pre_agendamento",
+  "verificacao_humana",
   "consulta_agendada",
   "consulta_realizada",
   "sinal_pago",
