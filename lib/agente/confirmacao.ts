@@ -85,9 +85,9 @@ function gerarMensagemConfirmacao(
   const hora = formatarHora(dataHora)
 
   const mensagens: Record<TipoConfirmacao, string> = {
-    "6h": `Oi ${nome}! 😊 Lembrete: você tem consulta com Dr. Lucas hoje às ${hora}. Confirma presença?`,
-    "3h": `Oi ${nome}, só passando para confirmar: são ${hora} com o Dr. Lucas hoje! ✅ Tudo certo?`,
-    "30min": `Oi ${nome}! Sua consulta com Dr. Lucas é em aproximadamente 30 minutos! Qualquer dúvida é só chamar 😊`,
+    "6h": `Oi ${nome}! Lembrete: você tem consulta com Dr. Lucas hoje às ${hora}. Confirma presença?`,
+    "3h": `Oi ${nome}, só passando para confirmar: são ${hora} com o Dr. Lucas hoje! Tudo certo?`,
+    "30min": `Oi ${nome}! Sua consulta com Dr. Lucas é em aproximadamente 30 minutos. Qualquer dúvida é só chamar.`,
   }
 
   return mensagens[tipo]
