@@ -40,6 +40,7 @@ const MIME_MAP: Record<string, string> = {
   audio: "audio/ogg",
   documento: "application/octet-stream",
   video: "video/mp4",
+  sticker: "image/webp",
 }
 
 async function downloadEUploadMidia(
@@ -57,7 +58,16 @@ async function downloadEUploadMidia(
     if (!res.ok) return null
 
     const buffer = Buffer.from(await res.arrayBuffer())
-    const ext = tipo === "imagem" ? "jpg" : tipo === "audio" ? "ogg" : tipo === "video" ? "mp4" : "bin"
+    const ext =
+      tipo === "imagem"
+        ? "jpg"
+        : tipo === "audio"
+          ? "ogg"
+          : tipo === "video"
+            ? "mp4"
+            : tipo === "sticker"
+              ? "webp"
+              : "bin"
     const path = `webhook/${messageId}.${ext}`
 
     const { error } = await supabase.storage
@@ -104,7 +114,9 @@ function normalizarUazapiV2(payload: any): MensagemNormalizada | null {
   let tipoMsg: TipoMensagem = "texto"
   let mediaUrl: string | null = msg.mediaUrl || msg.media_url || null
 
-  if (mediaType.includes("audio") || mediaType === "ptt") {
+  if (mediaType.includes("sticker")) {
+    tipoMsg = "sticker"
+  } else if (mediaType.includes("audio") || mediaType === "ptt") {
     tipoMsg = "audio"
   } else if (mediaType.includes("image")) {
     tipoMsg = "imagem"
@@ -417,6 +429,25 @@ export async function POST(request: NextRequest) {
       where: { id: conversa.id },
       data: { ultimaMensagemEm: new Date() },
     })
+
+    // Se for imagem do paciente com URL no storage, registrar tambem em
+    // FotoLead — aparece na aba "Fotos" do lead para classificacao
+    // manual (antes/depois/geral) pelo gestor.
+    if (msg.tipo === "imagem" && storedMediaUrl) {
+      const descricao = conteudo.startsWith("[Imagem]:")
+        ? conteudo.replace(/^\[Imagem\]:\s*/, "").slice(0, 500)
+        : null
+      await prisma.fotoLead
+        .create({
+          data: {
+            leadId: lead.id,
+            url: storedMediaUrl,
+            tipoAnalise: "geral",
+            descricao,
+          },
+        })
+        .catch((err) => console.error("[Webhook] Falha FotoLead:", err))
+    }
 
     console.log("[Webhook] Mensagem processada", {
       leadId: lead.id,
