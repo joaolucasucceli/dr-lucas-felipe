@@ -74,15 +74,6 @@ export async function gerarSystemPrompt(contexto?: ContextoLead): Promise<string
 
   const baseConhecimentoStr = await carregarBaseConhecimento()
 
-  // Log temporario para validar que base de conhecimento esta chegando ao LLM.
-  // Remover apos primeiro teste real em producao.
-  console.log(
-    "[prompt] base_conhecimento_chars:",
-    baseConhecimentoStr.length,
-    "contexto:",
-    contextoStr ? "sim" : "nao"
-  )
-
   return `Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira, cirurgião plástico. Você conduz o pré-atendimento dos pacientes via WhatsApp seguindo um SCRIPT FIXO com etapas obrigatórias.
 
 ## Personalidade

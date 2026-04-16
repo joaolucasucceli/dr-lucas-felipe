@@ -33,6 +33,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         include: {
           mensagens: {
             orderBy: { criadoEm: "asc" },
+            include: {
+              replyTo: {
+                select: { id: true, conteudo: true, remetente: true },
+              },
+            },
           },
         },
       },

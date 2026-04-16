@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -37,6 +37,7 @@ import { useLead } from "@/hooks/use-lead"
 import { useAgendamentos } from "@/hooks/use-agendamentos"
 import { AgendamentoForm } from "@/components/features/agendamentos/AgendamentoForm"
 import { GaleriaFotos } from "@/components/features/leads/GaleriaFotos"
+import { BolhaChat } from "@/components/features/chat/BolhaChat"
 
 export default function LeadDetalhePage() {
   const params = useParams()
@@ -290,9 +291,15 @@ export default function LeadDetalhePage() {
         </div>
       </PageHeader>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-12">
-        {/* ── Coluna esquerda: dados do lead ── */}
-        <div className="space-y-6 lg:col-span-4">
+      <Tabs defaultValue="dados" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="dados">Dados</TabsTrigger>
+          <TabsTrigger value="historico">Histórico de Atendimento</TabsTrigger>
+          <TabsTrigger value="fotos">Fotos</TabsTrigger>
+          <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dados" className="mt-4 grid gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Informações</CardTitle>
@@ -386,7 +393,9 @@ export default function LeadDetalhePage() {
                 <p className="text-xs text-muted-foreground mb-2">
                   Gerenciado pelo agente IA
                 </p>
-                <Textarea value={lead.sobreOPaciente} readOnly rows={6} />
+                <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                  {lead.sobreOPaciente}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -411,66 +420,15 @@ export default function LeadDetalhePage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
 
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Fotos</h2>
-          <GaleriaFotos
-            leadId={lead.id}
-            fotosIniciais={lead.fotos}
-            isGestor={isGestor}
-          />
-
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Agendamentos</h2>
-            <Button size="sm" onClick={() => setFormAgendamento(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo
-            </Button>
-          </div>
-
-          {agendamentos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum agendamento.</p>
-          ) : (
-            <div className="space-y-2">
-              {agendamentos.map((a) => (
-                <Card key={a.id}>
-                  <CardContent className="flex items-center justify-between gap-2 py-3">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={a.status} variante="agendamento" />
-                        <span className="text-sm font-medium">
-                          {new Date(a.dataHora).toLocaleString("pt-BR", {
-                            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      {a.procedimento && <p className="text-xs text-muted-foreground">{a.procedimento.nome}</p>}
-                    </div>
-                    {a.status !== "cancelado" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs text-destructive"
-                        onClick={() => setConfirmCancelarAgendamento(a.id)}
-                      >
-                        Cancelar
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── Coluna direita: conversa ── */}
-        <div className="space-y-6 lg:col-span-8">
+        <TabsContent value="historico" className="mt-4">
           {lead.conversas.length === 0 ? (
             <EmptyState
               titulo="Sem conversas ainda"
               descricao="O histórico de conversas será exibido quando o agente IA iniciar atendimentos."
             />
           ) : (() => {
-            // Agrupar conversas por ciclo
             const ciclosMap = new Map<number, typeof lead.conversas>()
             for (const conversa of lead.conversas) {
               const ciclo = conversa.ciclo ?? 1
@@ -496,32 +454,10 @@ export default function LeadDetalhePage() {
                               Conversa — <StatusBadge status={conversa.etapa} />
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="space-y-2">
-                            {conversa.mensagens.map((msg) => {
-                              const ehAgente = msg.remetente === "agente"
-                              return (
-                                <div
-                                  key={msg.id}
-                                  className={`flex ${ehAgente ? "justify-end" : "justify-start"}`}
-                                >
-                                  <div
-                                    className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                                      ehAgente
-                                        ? "bg-primary text-primary-foreground rounded-tr-sm"
-                                        : "bg-muted text-foreground rounded-tl-sm"
-                                    }`}
-                                  >
-                                    <p className={`text-xs mb-1 font-medium ${ehAgente ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                                      {ehAgente ? "Ana Júlia" : lead.nome.split(" ")[0]}
-                                    </p>
-                                    <p>{msg.conteudo}</p>
-                                    <p className={`text-xs mt-1 text-right ${ehAgente ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                                      {new Date(msg.criadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                                    </p>
-                                  </div>
-                                </div>
-                              )
-                            })}
+                          <CardContent className="flex flex-col gap-1.5">
+                            {conversa.mensagens.map((msg) => (
+                              <BolhaChat key={msg.id} mensagem={msg} />
+                            ))}
                           </CardContent>
                         </Card>
                       ))}
@@ -531,8 +467,92 @@ export default function LeadDetalhePage() {
               </div>
             )
           })()}
-        </div>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="fotos" className="mt-4">
+          <GaleriaFotos
+            leadId={lead.id}
+            fotosIniciais={lead.fotos}
+            isGestor={isGestor}
+          />
+        </TabsContent>
+
+        <TabsContent value="agendamentos" className="mt-4">
+          <div className="mb-4">
+            <Button onClick={() => setFormAgendamento(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Agendamento
+            </Button>
+          </div>
+
+          {agendamentos.length === 0 ? (
+            <EmptyState
+              titulo="Sem agendamentos"
+              descricao="Clique em Novo Agendamento para criar o primeiro."
+            />
+          ) : (() => {
+            const ciclosMap = new Map<number, typeof agendamentos>()
+            for (const ag of agendamentos) {
+              const ciclo = ag.ciclo ?? 1
+              if (!ciclosMap.has(ciclo)) ciclosMap.set(ciclo, [])
+              ciclosMap.get(ciclo)!.push(ag)
+            }
+            const ciclosOrdenados = Array.from(ciclosMap.entries()).sort((a, b) => b[0] - a[0])
+
+            return (
+              <div className="space-y-6">
+                {ciclosOrdenados.map(([ciclo, ags]) => (
+                  <div key={ciclo}>
+                    {ciclosMap.size > 1 && (
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                        {ciclo === 1 ? "1º Atendimento" : `${ciclo}º Atendimento (Retorno)`}
+                      </p>
+                    )}
+                    <div className="space-y-3">
+                      {ags.map((a) => (
+                        <Card key={a.id}>
+                          <CardContent className="pt-4 flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <StatusBadge status={a.status} variante="agendamento" />
+                                <span className="text-sm font-medium">
+                                  {new Date(a.dataHora).toLocaleString("pt-BR", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                              {a.procedimento && (
+                                <p className="text-sm text-muted-foreground">{a.procedimento.nome}</p>
+                              )}
+                              {a.observacao && (
+                                <p className="text-sm">{a.observacao}</p>
+                              )}
+                            </div>
+                            {a.status !== "cancelado" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0 text-destructive"
+                                onClick={() => setConfirmCancelarAgendamento(a.id)}
+                              >
+                                Cancelar
+                              </Button>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+        </TabsContent>
+      </Tabs>
 
       <AgendamentoForm
         aberto={formAgendamento}

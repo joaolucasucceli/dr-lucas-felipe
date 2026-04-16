@@ -1,16 +1,6 @@
 import { NextResponse } from "next/server"
-import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-
-const schema = z.object({
-  nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
-  whatsapp: z.string().min(12, "WhatsApp inválido").max(15),
-  procedimentoInteresse: z.string().min(1, "Selecione um procedimento"),
-  consentimentoLgpd: z.literal(true, {
-    message: "Você precisa concordar com a Política de Privacidade",
-  }),
-  _hp: z.string().optional(),
-})
+import { captarLeadSiteSchema } from "@/lib/validations/lead-site"
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     // Validação
-    const resultado = schema.safeParse(body)
+    const resultado = captarLeadSiteSchema.safeParse(body)
     if (!resultado.success) {
       const detalhes = resultado.error.flatten().fieldErrors
       return NextResponse.json(
@@ -33,6 +23,20 @@ export async function POST(request: Request) {
     }
 
     const { nome, whatsapp, procedimentoInteresse } = resultado.data
+
+    // Buscar usuário IA para atribuir como responsável
+    const usuarioIa = await prisma.usuario.findFirst({
+      where: { tipo: "ia", ativo: true, deletadoEm: null },
+    })
+    if (!usuarioIa) {
+      console.warn("[captar-lead] Nenhum usuário IA ativo encontrado — lead será criado sem responsável")
+    }
+
+    // Checar se lead já existe para decidir se atribui responsável no update
+    const leadExistente = await prisma.lead.findUnique({
+      where: { whatsapp },
+      select: { responsavelId: true },
+    })
 
     // Upsert — se lead já existe com esse WhatsApp, atualiza
     await prisma.lead.upsert({
@@ -46,6 +50,8 @@ export async function POST(request: Request) {
         deletadoEm: null,
         arquivado: false,
         arquivadoEm: null,
+        // Atribuir IA apenas se lead ainda não tem responsável
+        ...(!leadExistente?.responsavelId && usuarioIa ? { responsavelId: usuarioIa.id } : {}),
       },
       create: {
         nome,
@@ -55,6 +61,7 @@ export async function POST(request: Request) {
         statusFunil: "acolhimento",
         consentimentoLgpd: true,
         consentimentoLgpdEm: new Date(),
+        responsavelId: usuarioIa?.id || null,
       },
     })
 

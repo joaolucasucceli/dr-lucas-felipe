@@ -179,7 +179,7 @@ export function GaleriaFotos({ leadId, fotosIniciais, isGestor }: GaleriaFotosPr
           <Badge variant="secondary" className="text-xs">{lista.length}</Badge>
           {cor && <div className={`h-2 w-2 rounded-full ${cor}`} />}
         </div>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3">
           {lista.map((foto) => (
             <CardFoto key={foto.id} foto={foto} secao={lista} />
           ))}

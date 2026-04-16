@@ -174,14 +174,32 @@ export async function processarMensagens(chatId: string): Promise<void> {
     console.error("[Agente] Erro ao consultar paciente:", error)
   }
 
-  // 5d. Checar modo de conversa — se humano está atendendo, IA não responde
+  // 5d. Checar responsabilidade — IA só responde a leads atribuídos a ela
+  if (leadId) {
+    const usuarioIa = await prisma.usuario.findFirst({
+      where: { tipo: "ia", ativo: true, deletadoEm: null },
+      select: { id: true },
+    })
+    if (usuarioIa) {
+      const leadAtual = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { responsavelId: true },
+      })
+      if (leadAtual?.responsavelId && leadAtual.responsavelId !== usuarioIa.id) {
+        console.log(`[Agente] IA não é responsável pelo lead ${leadId} — não responde`)
+        return
+      }
+    }
+  }
+
+  // 5e. Checar modo de conversa — se humano está atendendo, IA não responde
   if (conversaId) {
     const conversa = await prisma.conversa.findUnique({
       where: { id: conversaId },
       select: { modoConversa: true },
     })
     if (conversa?.modoConversa === "humano") {
-      console.log(`[Agente] Conversa ${conversaId} em modo humano — IA não responde`)
+      console.error(`[Agente] Conversa ${conversaId} em modo humano — IA não responde`)
       return
     }
   }

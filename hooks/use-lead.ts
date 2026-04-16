@@ -38,7 +38,15 @@ interface Lead {
       tipo: string
       conteudo: string
       remetente: string
+      mediaUrl: string | null
+      mediaType: string | null
+      replyToId: string | null
       criadoEm: string
+      replyTo: {
+        id: string
+        conteudo: string
+        remetente: string
+      } | null
     }>
   }>
   fotos: Array<{

@@ -217,9 +217,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  // Log completo do payload para diagnóstico
-  console.log("[Webhook] Payload bruto:", JSON.stringify(payload).slice(0, 2000))
-
   // ── Detectar formato e normalizar ──
   let mensagens: MensagemNormalizada[] = []
 
@@ -235,10 +232,9 @@ export async function POST(request: NextRequest) {
     }
     mensagens = normalizarBaileys(payload)
   } else {
-    console.log("[Webhook] Evento ignorado", {
+    console.error("[Webhook] Evento ignorado", {
       EventType: payload.EventType,
       event: payload.event,
-      keys: Object.keys(payload),
     })
     return NextResponse.json({ ok: true })
   }
@@ -367,6 +363,9 @@ export async function POST(request: NextRequest) {
       const usuarioIa = await prisma.usuario.findFirst({
         where: { tipo: "ia", ativo: true, deletadoEm: null },
       })
+      if (!usuarioIa) {
+        console.warn("[Webhook] Nenhum usuário IA ativo encontrado — lead será criado sem responsável")
+      }
       try {
         lead = await prisma.lead.create({
           data: {
@@ -448,13 +447,6 @@ export async function POST(request: NextRequest) {
         .catch((err) => console.error("[Webhook] Falha FotoLead:", err))
     }
 
-    console.log("[Webhook] Mensagem processada", {
-      leadId: lead.id,
-      numero: msg.numero,
-      tipo: msg.tipo,
-      conteudo: conteudo.slice(0, 100),
-    })
-
     // Adicionar ao buffer Redis. Se ja ha um /processar em andamento
     // (debounce ativo), nao disparar nova chamada — o processamento em curso
     // vai acumular esta mensagem no buffer e respondera uma vez so apos os 20s.
@@ -468,7 +460,7 @@ export async function POST(request: NextRequest) {
 
       const podeDisparar = await deveProcessar(msg.chatId)
       if (!podeDisparar) {
-        console.log("[Webhook] Debounce ativo — nao disparando /processar")
+        console.error("[Webhook] Debounce ativo — nao disparando /processar")
         continue
       }
 

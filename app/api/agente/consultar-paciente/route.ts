@@ -29,6 +29,9 @@ export async function POST(request: NextRequest) {
     const usuarioIa = await prisma.usuario.findFirst({
       where: { tipo: "ia", ativo: true, deletadoEm: null },
     })
+    if (!usuarioIa) {
+      console.warn("[consultar-paciente] Nenhum usuário IA ativo encontrado — lead será criado sem responsável")
+    }
 
     lead = await prisma.lead.create({
       data: {
@@ -74,6 +77,7 @@ export async function POST(request: NextRequest) {
       ehRetorno: lead.ehRetorno,
       cicloAtual: lead.cicloAtual,
       ciclosCompletos: lead.ciclosCompletos,
+      responsavelId: lead.responsavelId,
     },
     conversa: conversa
       ? { id: conversa.id, etapa: conversa.etapa }

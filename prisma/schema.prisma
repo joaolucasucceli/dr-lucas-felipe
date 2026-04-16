@@ -27,7 +27,8 @@ enum TipoUsuario {
 enum StatusFunil {
   acolhimento
   qualificacao
-  agendamento
+  pre_agendamento
+  verificacao_humana
   consulta_agendada
   consulta_realizada
   sinal_pago
@@ -39,7 +40,8 @@ enum StatusFunil {
 enum EtapaConversa {
   acolhimento
   qualificacao
-  agendamento
+  pre_agendamento
+  verificacao_humana
   consulta_agendada
   consulta_realizada
   sinal_pago
@@ -69,12 +71,6 @@ enum ModoConversa {
   ia
   humano
   hibrido
-}
-
-enum StatusSprint {
-  planejada
-  em_andamento
-  concluida
 }
 
 // ==========================================
@@ -334,37 +330,6 @@ model ConfigSite {
   atualizadoEm        DateTime @updatedAt
 
   @@map("config_site")
-}
-
-model Sprint {
-  id            String        @id @default(cuid())
-  nome          String
-  descricao     String?       @db.Text
-  status        StatusSprint  @default(planejada)
-  dataInicio    DateTime?
-  dataFim       DateTime?
-  ordem         Int           @default(0)
-  criadoEm      DateTime      @default(now())
-  atualizadoEm  DateTime      @updatedAt
-  deletadoEm    DateTime?
-
-  itens         SprintItem[]
-
-  @@map("sprints")
-}
-
-model SprintItem {
-  id          String   @id @default(cuid())
-  sprintId    String
-  titulo      String
-  concluido   Boolean  @default(false)
-  ordem       Int      @default(0)
-  criadoEm    DateTime @default(now())
-
-  sprint      Sprint   @relation(fields: [sprintId], references: [id], onDelete: Cascade)
-
-  @@index([sprintId])
-  @@map("sprint_itens")
 }
 
 model AuditLog {
