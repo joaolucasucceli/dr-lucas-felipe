@@ -13,16 +13,17 @@ const PROTOCOLOS = [
       "Desejo de melhores resultados na lipo",
     ],
     etapas: [
-      { numero: "01", titulo: "Avaliação Inicial", descricao: "Anamnese, bioimpedância, exames laboratoriais e definição de metas" },
-      { numero: "02", titulo: "Emagrecimento", descricao: "Plano alimentar, estratégias farmacológicas, atividade física e acompanhamento" },
-      { numero: "03", titulo: "Preparo Cirúrgico", descricao: "Reavaliação clínica, otimização de exames e planejamento" },
-      { numero: "04", titulo: "Lipoaspiração", descricao: "Definição corporal, contorno harmônico e alta precisão" },
-      { numero: "05", titulo: "Pós-operatório", descricao: "Drenagem linfática, malha compressiva e manutenção do peso" },
+      { numero: "01", titulo: "Avaliação Inicial", descricao: "Anamnese completa, bioimpedância, exames laboratoriais e definição de metas" },
+      { numero: "02", titulo: "Emagrecimento (LIPO FIT CUT)", descricao: "Plano alimentar, estratégias farmacológicas, atividade física e acompanhamento" },
+      { numero: "03", titulo: "Preparo Cirúrgico", descricao: "Reavaliação clínica, otimização de exames e planejamento individualizado" },
+      { numero: "04", titulo: "Lipoaspiração (LIPO SCULPT)", descricao: "Definição corporal, contorno harmônico e alta precisão" },
+      { numero: "05", titulo: "Pós-operatório", descricao: "Drenagem linfática, malha compressiva, acompanhamento e manutenção do peso" },
     ],
     diferenciais: [
       "Abordagem completa",
       "Maior segurança",
       "Resultados mais naturais",
+      "Redução de complicações",
     ],
     icone: (
       <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -37,18 +38,20 @@ const PROTOCOLOS = [
       "Protocolo combinado que associa lipoaspiração para escultura corporal e preenchimento glúteo definitivo com PMMA, promovendo definição, volume, projeção e estímulo de colágeno.",
     indicacoes: [
       "Gordura localizada",
+      "Desejo de definição corporal",
       "Baixa projeção glútea",
+      "Flacidez leve a moderada",
       "Busca por resultados duradouros",
     ],
     etapas: [
       { numero: "01", titulo: "Planejamento", descricao: "Avaliação global, marcação e definição de vetores" },
       { numero: "02", titulo: "Lipoaspiração", descricao: "Aspiração estratégica para harmonização corporal" },
-      { numero: "03", titulo: "Preenchimento PMMA", descricao: "Aplicação profunda com técnica segura para volume e sustentação" },
-      { numero: "04", titulo: "Resultados", descricao: "Silhueta definida, glúteo com mais volume, projeção e firmeza" },
+      { numero: "03", titulo: "Preenchimento com PMMA", descricao: "Aplicação profunda com técnica segura para volume e sustentação" },
     ],
     diferenciais: [
       "Abordagem global",
       "Resultado imediato e progressivo",
+      "Estímulo de colágeno",
       "Glúteo definitivo",
     ],
     icone: (
