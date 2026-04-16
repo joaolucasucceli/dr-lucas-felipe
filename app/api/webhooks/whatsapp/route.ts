@@ -6,8 +6,9 @@ import { adicionarAoBuffer, deveProcessar } from "@/lib/agente/buffer"
 import {
   transcreverAudio,
   transcreverAudioBase64,
-  descreverImagem,
-  descreverImagemBase64,
+  analisarImagem,
+  analisarImagemBase64,
+  type AnaliseFoto,
 } from "@/lib/agente/processar-midia"
 import { baixarMidia } from "@/lib/uazapi"
 import { createClient } from "@supabase/supabase-js"
@@ -266,16 +267,17 @@ export async function POST(request: NextRequest) {
     //   1) URL direta → Whisper/vision
     //   2) POST /message/download da Uazapi → base64 → Whisper/vision
     //   3) Fallback amigavel pra nao deixar o LLM dizer "nao processo audio/imagem"
+    let analiseFoto: AnaliseFoto | null = null
+
     if (msg.tipo === "audio" || msg.tipo === "imagem") {
       let transcricao: string | null = null
-      let descricao: string | null = null
 
       if (msg.mediaUrl) {
         try {
           if (msg.tipo === "audio") {
             transcricao = await transcreverAudio(msg.mediaUrl)
           } else {
-            descricao = await descreverImagem(msg.mediaUrl)
+            analiseFoto = await analisarImagem(msg.mediaUrl)
           }
         } catch (err) {
           console.error(
@@ -285,7 +287,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (!transcricao && !descricao) {
+      if (!transcricao && !analiseFoto) {
         // Fallback: baixar via Uazapi /message/download
         try {
           const configWa = await prisma.configWhatsapp.findFirst({
@@ -304,7 +306,7 @@ export async function POST(request: NextRequest) {
                   baixado.mimetype
                 )
               } else {
-                descricao = await descreverImagemBase64(
+                analiseFoto = await analisarImagemBase64(
                   baixado.base64,
                   baixado.mimetype
                 )
@@ -328,10 +330,10 @@ export async function POST(request: NextRequest) {
             : "[áudio recebido — transcrição indisponível]"
         }
       } else {
-        if (descricao) {
+        if (analiseFoto) {
           conteudo = conteudo
-            ? `${conteudo}\n[Imagem]: ${descricao}`
-            : `[Imagem]: ${descricao}`
+            ? `${conteudo}\n[Imagem]: ${analiseFoto.descricao}`
+            : `[Imagem]: ${analiseFoto.descricao}`
         } else {
           conteudo = conteudo
             ? `${conteudo}\n[imagem recebida — descrição indisponível]`
@@ -431,19 +433,16 @@ export async function POST(request: NextRequest) {
     })
 
     // Se for imagem do paciente com URL no storage, registrar tambem em
-    // FotoLead — aparece na aba "Fotos" do lead para classificacao
-    // manual (antes/depois/geral) pelo gestor.
+    // FotoLead na aba "Fotos". Classificacao (antes/depois/geral) vem
+    // do GPT-4o-mini vision; gestor pode ajustar manualmente depois.
     if (msg.tipo === "imagem" && storedMediaUrl) {
-      const descricao = conteudo.startsWith("[Imagem]:")
-        ? conteudo.replace(/^\[Imagem\]:\s*/, "").slice(0, 500)
-        : null
       await prisma.fotoLead
         .create({
           data: {
             leadId: lead.id,
             url: storedMediaUrl,
-            tipoAnalise: "geral",
-            descricao,
+            tipoAnalise: analiseFoto?.tipo ?? "geral",
+            descricao: analiseFoto?.descricao ?? null,
           },
         })
         .catch((err) => console.error("[Webhook] Falha FotoLead:", err))

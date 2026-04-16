@@ -41,11 +41,42 @@ export async function transcreverAudioBase64(
   return transcription.text
 }
 
-const PROMPT_VISAO =
-  "Você é assistente de uma clínica de estética corporal. Analise esta foto enviada por um paciente. Se for foto do corpo ou região de interesse: descreva a região visível e características relevantes para procedimentos estéticos (gordura localizada, flacidez, volume, proporção). NÃO faça diagnóstico médico — apenas descreva o que é visível. Seja profissional e respeitoso. Se for foto não relacionada (documento, selfie casual, etc): descreva brevemente o que é. Responda em português, máximo 3 frases."
+export type TipoFoto = "antes" | "depois" | "geral"
 
-/** Descreve imagem via GPT-4o-mini (vision) — aceita URL. */
-export async function descreverImagem(imagemUrl: string): Promise<string> {
+export interface AnaliseFoto {
+  tipo: TipoFoto
+  descricao: string
+}
+
+const PROMPT_VISAO = `Você é assistente de uma clínica de estética corporal. Analise a foto enviada por um paciente via WhatsApp.
+
+Classifique em UMA das 3 categorias:
+- "antes": foto do corpo/região SEM sinais de procedimento (típico de avaliação pré-operatória — pele sem curativos, sem marcas cirúrgicas, sem edema pós-op)
+- "depois": foto COM sinais de procedimento recente (curativos, malha compressiva, marcas de incisão, edema visível, cinta cirúrgica, resultado imediato)
+- "geral": foto que não se encaixa nas 2 acima (documento, selfie de rosto, região não-corporal, imagem ambígua)
+
+Descreva em 1-3 frases a região visível e características relevantes (gordura localizada, flacidez, volume, proporção, curativos, resultado). NÃO faça diagnóstico médico — apenas descreva o visível. Seja profissional e respeitoso.
+
+Retorne APENAS JSON válido neste formato:
+{"tipo": "antes" | "depois" | "geral", "descricao": "..."}`
+
+function parseAnalise(raw: string): AnaliseFoto {
+  try {
+    const parsed = JSON.parse(raw) as { tipo?: string; descricao?: string }
+    const tipo: TipoFoto =
+      parsed.tipo === "antes" || parsed.tipo === "depois" ? parsed.tipo : "geral"
+    const descricao =
+      typeof parsed.descricao === "string" && parsed.descricao.trim()
+        ? parsed.descricao.trim()
+        : "Imagem não descrita"
+    return { tipo, descricao }
+  } catch {
+    return { tipo: "geral", descricao: raw.slice(0, 500) || "Imagem não descrita" }
+  }
+}
+
+/** Analisa imagem via GPT-4o-mini (vision): retorna tipo + descrição. */
+export async function analisarImagem(imagemUrl: string): Promise<AnaliseFoto> {
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -57,17 +88,18 @@ export async function descreverImagem(imagemUrl: string): Promise<string> {
         ],
       },
     ],
-    max_tokens: 300,
+    max_tokens: 400,
+    response_format: { type: "json_object" },
   })
 
-  return completion.choices[0]?.message?.content || "Imagem não descrita"
+  return parseAnalise(completion.choices[0]?.message?.content || "")
 }
 
-/** Descreve imagem a partir de base64 (fallback /message/download da Uazapi) */
-export async function descreverImagemBase64(
+/** Analisa imagem a partir de base64 (fallback /message/download da Uazapi) */
+export async function analisarImagemBase64(
   base64: string,
   mimetype: string = "image/jpeg"
-): Promise<string> {
+): Promise<AnaliseFoto> {
   const dataUrl = `data:${mimetype};base64,${base64}`
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -80,8 +112,9 @@ export async function descreverImagemBase64(
         ],
       },
     ],
-    max_tokens: 300,
+    max_tokens: 400,
+    response_format: { type: "json_object" },
   })
 
-  return completion.choices[0]?.message?.content || "Imagem não descrita"
+  return parseAnalise(completion.choices[0]?.message?.content || "")
 }
