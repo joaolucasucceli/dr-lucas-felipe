@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -291,15 +290,9 @@ export default function LeadDetalhePage() {
         </div>
       </PageHeader>
 
-      <Tabs defaultValue="dados" className="mt-6">
-        <TabsList>
-          <TabsTrigger value="dados">Dados</TabsTrigger>
-          <TabsTrigger value="historico">Histórico de Atendimento</TabsTrigger>
-          <TabsTrigger value="fotos">Fotos</TabsTrigger>
-          <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dados" className="mt-4 grid gap-6">
+      <div className="mt-6 grid gap-6 lg:grid-cols-12">
+        {/* ── Coluna esquerda: dados do lead ── */}
+        <div className="space-y-6 lg:col-span-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Informações</CardTitle>
@@ -418,9 +411,10 @@ export default function LeadDetalhePage() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
+        </div>
 
-        <TabsContent value="historico" className="mt-4">
+        {/* ── Coluna direita: histórico + fotos + agendamentos ── */}
+        <div className="space-y-6 lg:col-span-8">
           {lead.conversas.length === 0 ? (
             <EmptyState
               titulo="Sem conversas ainda"
@@ -488,18 +482,16 @@ export default function LeadDetalhePage() {
               </div>
             )
           })()}
-        </TabsContent>
 
-        <TabsContent value="fotos" className="mt-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Fotos</h2>
           <GaleriaFotos
             leadId={lead.id}
             fotosIniciais={lead.fotos}
             isGestor={isGestor}
           />
-        </TabsContent>
 
-        <TabsContent value="agendamentos" className="mt-4">
-          <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Agendamentos</h2>
             <Button onClick={() => setFormAgendamento(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Agendamento
@@ -573,8 +565,8 @@ export default function LeadDetalhePage() {
               </div>
             )
           })()}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       <AgendamentoForm
         aberto={formAgendamento}

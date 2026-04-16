@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -177,14 +176,9 @@ export default function PacienteDetalhePage() {
         </Button>
       </PageHeader>
 
-      <Tabs defaultValue="dados" className="mt-6">
-        <TabsList>
-          <TabsTrigger value="dados">Dados</TabsTrigger>
-          <TabsTrigger value="prontuario">Prontuário</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dados" className="mt-4">
-          <div className="grid gap-6 md:grid-cols-2">
+      <div className="mt-6 grid gap-6 lg:grid-cols-12">
+        {/* ── Coluna esquerda: dados pessoais + endereço ── */}
+        <div className="space-y-6 lg:col-span-4">
             {/* Dados Pessoais */}
             <Card>
               <CardHeader>
@@ -343,10 +337,10 @@ export default function PacienteDetalhePage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="prontuario" className="mt-4">
+        {/* ── Coluna direita: prontuário ── */}
+        <div className="space-y-6 lg:col-span-8">
           {carregandoProntuario ? (
             <LoadingState />
           ) : prontuario ? (
@@ -374,9 +368,8 @@ export default function PacienteDetalhePage() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-
-      </Tabs>
+        </div>
+      </div>
 
       <ConfirmDialog
         aberto={confirmExcluir}
