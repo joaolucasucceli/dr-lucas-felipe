@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
@@ -58,6 +59,7 @@ export default function MidiaMarketingPage() {
   const [editando, setEditando] = useState<MidiaMarketing | null>(null)
   const [confirmToggle, setConfirmToggle] = useState<MidiaMarketing | null>(null)
   const [confirmExcluir, setConfirmExcluir] = useState<MidiaMarketing | null>(null)
+  const [preview, setPreview] = useState<MidiaMarketing | null>(null)
 
   const { dados, carregando, erro, recarregar } = useMidiaMarketing({ busca })
 
@@ -147,13 +149,28 @@ export default function MidiaMarketingPage() {
                 {dados.map((m) => (
                   <TableRow key={m.id}>
                     <TableCell>
-                      {m.tipo === "video" ? (
-                        <Film className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setPreview(m)}
+                        className="rounded p-1 hover:bg-muted transition-colors"
+                        title="Ver preview"
+                      >
+                        {m.tipo === "video" ? (
+                          <Film className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
                     </TableCell>
-                    <TableCell className="font-medium">{m.titulo}</TableCell>
+                    <TableCell>
+                      <button
+                        type="button"
+                        onClick={() => setPreview(m)}
+                        className="font-medium text-left hover:underline"
+                      >
+                        {m.titulo}
+                      </button>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{CATEGORIA_LABELS[m.categoria] || m.categoria}</Badge>
                     </TableCell>
@@ -222,6 +239,33 @@ export default function MidiaMarketingPage() {
         variante="destrutivo"
         textoBotao="Excluir"
       />
+
+      <Dialog open={!!preview} onOpenChange={(v) => !v && setPreview(null)}>
+        <DialogContent className="max-w-3xl border-none bg-background/95 p-4">
+          <DialogTitle className="sr-only">{preview?.titulo || "Preview"}</DialogTitle>
+          {preview && (
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">{preview.titulo}</h3>
+              {preview.descricao && (
+                <p className="text-sm text-muted-foreground">{preview.descricao}</p>
+              )}
+              {preview.tipo === "imagem" ? (
+                <img
+                  src={preview.url}
+                  alt={preview.titulo}
+                  className="max-h-[75vh] w-full rounded-lg object-contain"
+                />
+              ) : (
+                <video
+                  src={preview.url}
+                  controls
+                  className="max-h-[75vh] w-full rounded-lg"
+                />
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

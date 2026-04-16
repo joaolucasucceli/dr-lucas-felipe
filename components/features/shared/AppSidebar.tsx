@@ -11,6 +11,7 @@ import {
   Stethoscope,
   Brain,
   Film,
+  HeartPulse,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -112,7 +113,7 @@ function NavContent({ perfil }: { perfil: string }) {
 
         return (
           <div key={grupo.label} className={cn(index > 0 && "mt-4")}>
-            <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground">
               {grupo.label}
             </span>
             {itensVisiveis.map((item) => {
@@ -152,7 +153,8 @@ export function AppSidebar({ perfil }: AppSidebarProps) {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 border-r bg-muted/40 md:block">
-        <div className="flex h-14 items-center border-b px-4 font-semibold">
+        <div className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
+          <HeartPulse className="h-5 w-5 text-primary" />
           Central Dr. Lucas
         </div>
         <ScrollArea className="h-[calc(100svh-3.5rem)]">
@@ -175,7 +177,8 @@ export function MobileSidebarTrigger({ perfil }: AppSidebarProps) {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0">
-        <SheetTitle className="flex h-14 items-center border-b px-4 font-semibold">
+        <SheetTitle className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
+          <HeartPulse className="h-5 w-5 text-primary" />
           Central Dr. Lucas
         </SheetTitle>
         <ScrollArea className="h-[calc(100svh-3.5rem)]">
