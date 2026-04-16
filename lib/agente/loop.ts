@@ -190,8 +190,11 @@ export async function processarMensagens(chatId: string): Promise<void> {
     }
   }
 
-  // JLAU-551: manter "digitando" enquanto o GPT processa (delay cobre ate o primeiro segmento).
-  await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, whatsapp, 15000)
+  try {
+    await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
+  } catch {
+    console.warn("[Agente] Erro ao enviar indicador de digitacao")
+  }
 
   try {
     const memoria = await obterMemoria(chatId)
@@ -253,8 +256,13 @@ export async function processarMensagens(chatId: string): Promise<void> {
     for (let i = 0; i < segmentos.length; i++) {
       const segmento = segmentos[i]
 
+      try {
+        await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
+      } catch {
+        console.warn("[Agente] Erro ao enviar digitando antes do segmento")
+      }
+
       const typingDelay = Math.min(segmento.length * 30, 3000)
-      await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, whatsapp, typingDelay + 1000)
       await new Promise((resolve) => setTimeout(resolve, typingDelay))
 
       await enviarMensagem(
@@ -303,5 +311,11 @@ export async function processarMensagens(chatId: string): Promise<void> {
     }
   } catch (error) {
     console.error("[Agente] Erro no loop de resposta:", error)
+  } finally {
+    try {
+      await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, false)
+    } catch {
+      console.warn("[Agente] Erro ao parar indicador de digitacao")
+    }
   }
 }

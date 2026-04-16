@@ -235,30 +235,22 @@ export async function baixarMidia(
   }
 }
 
-// JLAU-551: o endpoint correto no UazapiGO v2 e POST /message/presence
-// com { number, presence, delay }. O backend mantem o status "composing"
-// durante `delay` (ms) e encerra sozinho — nao precisa mandar "paused".
+// JLAU-551: padrao validado no projeto Innovate LED.
+// POST /message/presence com { number: chatId, presence }.
+// O campo `number` aceita o chatId completo com sufixo @s.whatsapp.net.
 export async function enviarDigitando(
   url: string,
   instanceToken: string,
-  numero: string,
-  delayMs = 5000
+  chatId: string,
+  ativo: boolean
 ): Promise<void> {
-  try {
-    await uazapiFetch(url, "/message/presence", instanceToken, {
-      method: "POST",
-      body: JSON.stringify({
-        number: numero,
-        presence: "composing",
-        delay: delayMs,
-      }),
-    })
-  } catch (err) {
-    console.warn(
-      "[uazapi] enviarDigitando falhou:",
-      err instanceof Error ? err.message : err
-    )
-  }
+  await uazapiFetch(url, "/message/presence", instanceToken, {
+    method: "POST",
+    body: JSON.stringify({
+      number: chatId,
+      presence: ativo ? "composing" : "paused",
+    }),
+  })
 }
 
 /** Configura privacidade da instância — POST /instance/privacy
