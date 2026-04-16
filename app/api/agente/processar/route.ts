@@ -2,6 +2,13 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { validarApiSecret } from "@/lib/api-auth"
 import { processarMensagens } from "@/lib/agente/loop"
+import { agendarProcessamento, deveProcessar } from "@/lib/agente/buffer"
+
+// Precisa aguentar o debounce de 20s + processamento do LLM.
+// Vercel serverless padrao (Hobby) = 10s; este endpoint declara 60s explicitamente.
+export const maxDuration = 60
+
+const DEBOUNCE_MS = 20_000
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -19,8 +26,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "chatId é obrigatório" }, { status: 400 })
   }
 
-  // Processar mensagens do buffer (obterELimparBuffer é atômico — previne duplicatas)
-  // Precisa ser await — em serverless, fire-and-forget é terminado antes de completar
+  // Se ja ha um debounce em andamento, outra instancia vai processar. Retorna rapido.
+  const podeProcessar = await deveProcessar(chatId)
+  if (!podeProcessar) {
+    return NextResponse.json({ status: "debounce" })
+  }
+
+  // Adquire o lock (TTL 20s). Webhooks posteriores veem isso e nao disparam.
+  await agendarProcessamento(chatId)
+
+  // Aguarda 20s pra acumular mensagens do usuario (simula comportamento humano).
+  await new Promise((resolve) => setTimeout(resolve, DEBOUNCE_MS))
+
+  // Processa todas as mensagens acumuladas no buffer.
   try {
     await processarMensagens(chatId)
   } catch (err) {

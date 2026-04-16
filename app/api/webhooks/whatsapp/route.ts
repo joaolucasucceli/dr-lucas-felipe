@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import type { TipoMensagem } from "@/generated/prisma/enums"
-import { adicionarAoBuffer } from "@/lib/agente/buffer"
+import { adicionarAoBuffer, deveProcessar } from "@/lib/agente/buffer"
 import {
   transcreverAudio,
   transcreverAudioBase64,
@@ -425,8 +425,9 @@ export async function POST(request: NextRequest) {
       conteudo: conteudo.slice(0, 100),
     })
 
-    // Adicionar ao buffer Redis e acionar processamento imediatamente
-    // (setTimeout não funciona em serverless — a função é congelada após response)
+    // Adicionar ao buffer Redis. Se ja ha um /processar em andamento
+    // (debounce ativo), nao disparar nova chamada — o processamento em curso
+    // vai acumular esta mensagem no buffer e respondera uma vez so apos os 20s.
     try {
       await adicionarAoBuffer(msg.chatId, {
         tipo: msg.tipo,
@@ -434,6 +435,12 @@ export async function POST(request: NextRequest) {
         timestamp: msg.timestamp,
         messageId: msg.id,
       })
+
+      const podeDisparar = await deveProcessar(msg.chatId)
+      if (!podeDisparar) {
+        console.log("[Webhook] Debounce ativo — nao disparando /processar")
+        continue
+      }
 
       const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
       await fetch(`${baseUrl}/api/agente/processar`, {
