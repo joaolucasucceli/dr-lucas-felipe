@@ -235,20 +235,30 @@ export async function baixarMidia(
   }
 }
 
-/** Envia indicador de digitação — POST /chat/presence */
+// JLAU-551: o endpoint correto no UazapiGO v2 e POST /message/presence
+// com { number, presence, delay }. O backend mantem o status "composing"
+// durante `delay` (ms) e encerra sozinho — nao precisa mandar "paused".
 export async function enviarDigitando(
   url: string,
   instanceToken: string,
-  chatId: string,
-  ativo: boolean
+  numero: string,
+  delayMs = 5000
 ): Promise<void> {
-  await uazapiFetch(url, "/chat/presence", instanceToken, {
-    method: "POST",
-    body: JSON.stringify({
-      chatId,
-      presence: ativo ? "composing" : "paused",
-    }),
-  })
+  try {
+    await uazapiFetch(url, "/message/presence", instanceToken, {
+      method: "POST",
+      body: JSON.stringify({
+        number: numero,
+        presence: "composing",
+        delay: delayMs,
+      }),
+    })
+  } catch (err) {
+    console.warn(
+      "[uazapi] enviarDigitando falhou:",
+      err instanceof Error ? err.message : err
+    )
+  }
 }
 
 /** Configura privacidade da instância — POST /instance/privacy

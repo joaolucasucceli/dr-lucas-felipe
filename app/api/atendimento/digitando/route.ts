@@ -43,13 +43,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "WhatsApp não configurado" }, { status: 400 })
   }
 
-  const chatId = `${lead.whatsapp}@s.whatsapp.net`
-
-  try {
-    await enviarDigitando(config.uazapiUrl, config.instanceToken, chatId, true)
-  } catch {
-    // Não bloquear se falhar
-  }
+  await enviarDigitando(config.uazapiUrl, config.instanceToken, lead.whatsapp, 5000)
 
   return NextResponse.json({ sucesso: true })
 }
