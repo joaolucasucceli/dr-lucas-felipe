@@ -250,3 +250,19 @@ export async function enviarDigitando(
     }),
   })
 }
+
+/** Configura privacidade da instância — POST /instance/privacy
+ *  Mantém o bot sempre online e oculta o "visto por último". */
+export async function configurarPrivacidade(
+  url: string,
+  instanceToken: string
+): Promise<void> {
+  await uazapiFetch(url, "/instance/privacy", instanceToken, {
+    method: "POST",
+    body: JSON.stringify({
+      online: "all",
+      last: "none",
+      readreceipts: "all",
+    }),
+  })
+}

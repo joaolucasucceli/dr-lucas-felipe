@@ -285,6 +285,17 @@ export async function processarMensagens(chatId: string): Promise<void> {
     for (let i = 0; i < segmentos.length; i++) {
       const segmento = segmentos[i]
 
+      // Mostrar "digitando" antes de cada segmento (simula comportamento humano)
+      try {
+        await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
+      } catch {
+        // Ignorar erro de digitação
+      }
+
+      // Delay proporcional ao tamanho (simula tempo de digitação humana)
+      const typingDelay = Math.min(segmento.length * 30, 3000)
+      await new Promise((resolve) => setTimeout(resolve, typingDelay))
+
       // Enviar via Uazapi
       await enviarMensagem(
         configWa.uazapiUrl,
@@ -310,10 +321,6 @@ export async function processarMensagens(chatId: string): Promise<void> {
           // Não impedir envio se registro falhar
         }
       }
-
-      // Delay proporcional ao tamanho (simula digitação humana)
-      const typingDelay = Math.min(segmento.length * 30, 3000)
-      await new Promise((resolve) => setTimeout(resolve, typingDelay))
 
       // Delay entre mensagens (exceto última)
       if (i < segmentos.length - 1) {

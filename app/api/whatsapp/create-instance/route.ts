@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-helpers"
-import { criarInstancia, configurarWebhook, obterQrCode } from "@/lib/uazapi"
+import { criarInstancia, configurarWebhook, obterQrCode, configurarPrivacidade } from "@/lib/uazapi"
 
 export async function POST(request: NextRequest) {
   const auth = await requireRole("gestor")
@@ -65,6 +65,13 @@ export async function POST(request: NextRequest) {
 
     // Iniciar conexão e obter QR code
     const { qrcode } = await obterQrCode(config.uazapiUrl, instanceToken)
+
+    // Configurar privacidade (sempre online, sem "visto por último")
+    try {
+      await configurarPrivacidade(config.uazapiUrl, instanceToken)
+    } catch (privErr) {
+      console.error("[create-instance] Falha ao configurar privacidade:", privErr instanceof Error ? privErr.message : privErr)
+    }
 
     return NextResponse.json({ sucesso: true, qrcode, webhookConfigurado })
   } catch (err) {

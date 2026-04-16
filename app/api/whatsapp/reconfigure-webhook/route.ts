@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireRole } from "@/lib/auth-helpers"
-import { configurarWebhook } from "@/lib/uazapi"
+import { configurarWebhook, configurarPrivacidade } from "@/lib/uazapi"
 import { z } from "zod"
 
 const schema = z.object({
@@ -43,6 +43,13 @@ export async function POST(req: Request) {
       where: { id: config.id },
       data: { webhookUrl },
     })
+
+    // Reaplicar privacidade (sempre online, sem "visto por último")
+    try {
+      await configurarPrivacidade(config.uazapiUrl, config.instanceToken)
+    } catch (privErr) {
+      console.error("[reconfigure-webhook] Falha ao configurar privacidade:", privErr instanceof Error ? privErr.message : privErr)
+    }
 
     return NextResponse.json({ sucesso: true, webhookUrl })
   } catch (err) {
