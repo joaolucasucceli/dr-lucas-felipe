@@ -16,7 +16,6 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { Menu } from "lucide-react"
 import { useNaoLidas } from "@/hooks/use-nao-lidas"
@@ -144,9 +143,10 @@ function NavContent({ perfil }: { perfil: string }) {
                   {item.icone}
                   {item.titulo}
                   {ehAtendimentos && naoLidas > 0 && (
-                    <Badge variant="default" className="ml-auto h-5 min-w-[20px] flex items-center justify-center text-[10px] px-1.5">
-                      {naoLidas > 99 ? "99+" : naoLidas}
-                    </Badge>
+                    <span
+                      className="ml-auto h-2 w-2 rounded-full bg-primary"
+                      aria-label="Ha atendimentos nao lidos"
+                    />
                   )}
                 </Link>
               )

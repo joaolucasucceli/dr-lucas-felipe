@@ -58,9 +58,7 @@ export default function LeadDetalhePage() {
 
   const [nome, setNome] = useState("")
   const [whatsapp, setWhatsapp] = useState("")
-  const [email, setEmail] = useState("")
   const [procedimentoInteresse, setProcedimentoInteresse] = useState("")
-  const [origem, setOrigem] = useState("")
   const [statusFunil, setStatusFunil] = useState("")
 
   const [procedimentos, setProcedimentos] = useState<Array<{ id: string; nome: string }>>([])
@@ -74,9 +72,7 @@ export default function LeadDetalhePage() {
     if (lead && !initialized.current) {
       setNome(lead.nome)
       setWhatsapp(lead.whatsapp)
-      setEmail(lead.email || "")
       setProcedimentoInteresse(lead.procedimentoInteresse || "")
-      setOrigem(lead.origem || "")
       setStatusFunil(lead.statusFunil)
       initialized.current = true
     }
@@ -90,13 +86,11 @@ export default function LeadDetalhePage() {
   }, [])
 
   const salvarDados = useCallback(
-    async (v: { nome: string; whatsapp: string; email: string }) => {
-      const body: Record<string, string> = { nome: v.nome, whatsapp: v.whatsapp }
-      if (v.email) body.email = v.email
+    async (v: { nome: string; whatsapp: string }) => {
       const res = await fetch(`/api/leads/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ nome: v.nome, whatsapp: v.whatsapp }),
       })
       if (!res.ok) throw new Error("Erro ao salvar")
     },
@@ -104,11 +98,10 @@ export default function LeadDetalhePage() {
   )
 
   const { status: statusDados } = useAutosave({
-    valor: { nome, whatsapp, email },
+    valor: { nome, whatsapp },
     valorInicial: {
       nome: lead?.nome || "",
       whatsapp: lead?.whatsapp || "",
-      email: lead?.email || "",
     },
     onSalvar: salvarDados,
   })
@@ -142,17 +135,6 @@ export default function LeadDetalhePage() {
     } catch {
       toast.error("Erro ao salvar")
     }
-  }
-
-  async function handleOrigemChange(valor: string) {
-    setOrigem(valor)
-    try {
-      await fetch(`/api/leads/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ origem: valor || null }),
-      })
-    } catch {}
   }
 
   async function handleArquivar() {
@@ -312,7 +294,7 @@ export default function LeadDetalhePage() {
       <Tabs defaultValue="dados" className="mt-6">
         <TabsList>
           <TabsTrigger value="dados">Dados</TabsTrigger>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
+          <TabsTrigger value="historico">Histórico de Atendimento</TabsTrigger>
           <TabsTrigger value="fotos">Fotos</TabsTrigger>
           <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
         </TabsList>
@@ -338,15 +320,6 @@ export default function LeadDetalhePage() {
                 <Input
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
-                  className={cn(statusDados === "pendente" && "border-orange-400 focus-visible:ring-orange-400")}
-                  title="Salva automaticamente"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Email</Label>
-                <Input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   className={cn(statusDados === "pendente" && "border-orange-400 focus-visible:ring-orange-400")}
                   title="Salva automaticamente"
                 />
@@ -407,14 +380,6 @@ export default function LeadDetalhePage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Origem</Label>
-                <Input
-                  value={origem}
-                  onChange={(e) => handleOrigemChange(e.target.value)}
-                  placeholder="whatsapp, instagram..."
-                />
               </div>
             </CardContent>
           </Card>
