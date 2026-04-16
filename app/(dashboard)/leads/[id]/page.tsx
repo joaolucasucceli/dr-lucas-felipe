@@ -411,9 +411,58 @@ export default function LeadDetalhePage() {
               </CardContent>
             </Card>
           )}
+
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Fotos</h2>
+          <GaleriaFotos
+            leadId={lead.id}
+            fotosIniciais={lead.fotos}
+            isGestor={isGestor}
+          />
+
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Agendamentos</h2>
+            <Button size="sm" onClick={() => setFormAgendamento(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo
+            </Button>
+          </div>
+
+          {agendamentos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum agendamento.</p>
+          ) : (
+            <div className="space-y-2">
+              {agendamentos.map((a) => (
+                <Card key={a.id}>
+                  <CardContent className="flex items-center justify-between gap-2 py-3">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={a.status} variante="agendamento" />
+                        <span className="text-sm font-medium">
+                          {new Date(a.dataHora).toLocaleString("pt-BR", {
+                            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      {a.procedimento && <p className="text-xs text-muted-foreground">{a.procedimento.nome}</p>}
+                    </div>
+                    {a.status !== "cancelado" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-destructive"
+                        onClick={() => setConfirmCancelarAgendamento(a.id)}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* ── Coluna direita: histórico + fotos + agendamentos ── */}
+        {/* ── Coluna direita: conversa ── */}
         <div className="space-y-6 lg:col-span-8">
           {lead.conversas.length === 0 ? (
             <EmptyState
@@ -473,89 +522,6 @@ export default function LeadDetalhePage() {
                                 </div>
                               )
                             })}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
-          })()}
-
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Fotos</h2>
-          <GaleriaFotos
-            leadId={lead.id}
-            fotosIniciais={lead.fotos}
-            isGestor={isGestor}
-          />
-
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Agendamentos</h2>
-            <Button onClick={() => setFormAgendamento(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Agendamento
-            </Button>
-          </div>
-
-          {agendamentos.length === 0 ? (
-            <EmptyState
-              titulo="Sem agendamentos"
-              descricao="Clique em Novo Agendamento para criar o primeiro."
-            />
-          ) : (() => {
-            // Agrupar agendamentos por ciclo
-            const ciclosMap = new Map<number, typeof agendamentos>()
-            for (const ag of agendamentos) {
-              const ciclo = ag.ciclo ?? 1
-              if (!ciclosMap.has(ciclo)) ciclosMap.set(ciclo, [])
-              ciclosMap.get(ciclo)!.push(ag)
-            }
-            const ciclosOrdenados = Array.from(ciclosMap.entries()).sort((a, b) => b[0] - a[0])
-
-            return (
-              <div className="space-y-6">
-                {ciclosOrdenados.map(([ciclo, ags]) => (
-                  <div key={ciclo}>
-                    {ciclosMap.size > 1 && (
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                        {ciclo === 1 ? "1º Atendimento" : `${ciclo}º Atendimento (Retorno)`}
-                      </p>
-                    )}
-                    <div className="space-y-3">
-                      {ags.map((a) => (
-                        <Card key={a.id}>
-                          <CardContent className="pt-4 flex items-start justify-between gap-4">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <StatusBadge status={a.status} variante="agendamento" />
-                                <span className="text-sm font-medium">
-                                  {new Date(a.dataHora).toLocaleString("pt-BR", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                              </div>
-                              {a.procedimento && (
-                                <p className="text-sm text-muted-foreground">{a.procedimento.nome}</p>
-                              )}
-                              {a.observacao && (
-                                <p className="text-sm">{a.observacao}</p>
-                              )}
-                            </div>
-                            {a.status !== "cancelado" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="shrink-0 text-destructive"
-                                onClick={() => setConfirmCancelarAgendamento(a.id)}
-                              >
-                                Cancelar
-                              </Button>
-                            )}
                           </CardContent>
                         </Card>
                       ))}

@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
-import { getSupabaseBrowser } from "@/lib/supabase-browser"
 
 export default function MeuPerfilPage() {
   const { data: session, update } = useSession()
@@ -48,29 +47,22 @@ export default function MeuPerfilPage() {
 
     setUploadandoFoto(true)
     try {
-      const supabase = getSupabaseBrowser()
-      const ext = file.name.split(".").pop() || "jpg"
-      const path = `usuarios/${session!.user.id}/avatar.${ext}`
+      const formData = new FormData()
+      formData.append("foto", file)
 
-      const { error } = await supabase.storage
-        .from("atendimento-midias")
-        .upload(path, file, { upsert: true })
-      if (error) throw new Error(error.message)
-
-      const { data } = supabase.storage
-        .from("atendimento-midias")
-        .getPublicUrl(path)
-
-      const url = `${data.publicUrl}?t=${Date.now()}`
-
-      const res = await fetch("/api/usuarios/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fotoUrl: url }),
+      const res = await fetch("/api/usuarios/me/foto", {
+        method: "POST",
+        body: formData,
       })
-      if (!res.ok) throw new Error()
 
-      setFotoUrl(url)
+      if (!res.ok) {
+        const data = await res.json()
+        toast.error(data.error || "Erro ao enviar foto")
+        return
+      }
+
+      const { fotoUrl: novaUrl } = await res.json()
+      setFotoUrl(novaUrl)
       await update()
       toast.success("Foto atualizada")
     } catch {

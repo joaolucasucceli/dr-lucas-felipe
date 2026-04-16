@@ -75,16 +75,16 @@ export default function DocumentacaoPage() {
       conteudo: <ModuloMidiaMarketing />,
     },
     {
-      valor: "configuracoes",
-      titulo: "Configurações",
-      icone: <Settings className="h-3.5 w-3.5" />,
-      conteudo: <ModuloConfiguracoes />,
-    },
-    {
       valor: "meu-perfil",
       titulo: "Meu Perfil",
       icone: <User className="h-3.5 w-3.5" />,
       conteudo: <ModuloMeuPerfil />,
+    },
+    {
+      valor: "configuracoes",
+      titulo: "Configurações",
+      icone: <Settings className="h-3.5 w-3.5" />,
+      conteudo: <ModuloConfiguracoes />,
     },
   ]
 
