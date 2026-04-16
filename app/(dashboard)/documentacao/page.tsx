@@ -1,28 +1,28 @@
 import {
   LayoutDashboard,
-  UserSearch,
   Kanban,
+  UserSearch,
+  Users,
   CalendarDays,
   Stethoscope,
-  Bot,
-  BarChart3,
+  Brain,
+  Film,
   Settings,
-  ShieldCheck,
-  Sparkles,
+  User,
 } from "lucide-react"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { TabsDocumentacao } from "@/components/features/documentacao/TabsDocumentacao"
 import { BotaoDownloadDoc } from "@/components/features/documentacao/BotaoDownloadDoc"
 import { ModuloDashboard } from "@/components/features/documentacao/modulos/ModuloDashboard"
-import { ModuloLeads } from "@/components/features/documentacao/modulos/ModuloLeads"
 import { ModuloAtendimentos } from "@/components/features/documentacao/modulos/ModuloAtendimentos"
+import { ModuloLeads } from "@/components/features/documentacao/modulos/ModuloLeads"
+import { ModuloPacientes } from "@/components/features/documentacao/modulos/ModuloPacientes"
 import { ModuloAgendamentos } from "@/components/features/documentacao/modulos/ModuloAgendamentos"
 import { ModuloProcedimentos } from "@/components/features/documentacao/modulos/ModuloProcedimentos"
-import { ModuloAnaJulia } from "@/components/features/documentacao/modulos/ModuloAnaJulia"
-import { ModuloRelatorios } from "@/components/features/documentacao/modulos/ModuloRelatorios"
+import { ModuloBaseConhecimento } from "@/components/features/documentacao/modulos/ModuloBaseConhecimento"
+import { ModuloMidiaMarketing } from "@/components/features/documentacao/modulos/ModuloMidiaMarketing"
 import { ModuloConfiguracoes } from "@/components/features/documentacao/modulos/ModuloConfiguracoes"
-import { ModuloUsuarios } from "@/components/features/documentacao/modulos/ModuloUsuarios"
-import { ModuloSugestoes } from "@/components/features/documentacao/modulos/ModuloSugestoes"
+import { ModuloMeuPerfil } from "@/components/features/documentacao/modulos/ModuloMeuPerfil"
 
 export default function DocumentacaoPage() {
   const abas = [
@@ -33,16 +33,22 @@ export default function DocumentacaoPage() {
       conteudo: <ModuloDashboard />,
     },
     {
+      valor: "atendimentos",
+      titulo: "Atendimentos",
+      icone: <Kanban className="h-3.5 w-3.5" />,
+      conteudo: <ModuloAtendimentos />,
+    },
+    {
       valor: "leads",
       titulo: "Leads",
       icone: <UserSearch className="h-3.5 w-3.5" />,
       conteudo: <ModuloLeads />,
     },
     {
-      valor: "atendimentos",
-      titulo: "Atendimentos",
-      icone: <Kanban className="h-3.5 w-3.5" />,
-      conteudo: <ModuloAtendimentos />,
+      valor: "pacientes",
+      titulo: "Pacientes",
+      icone: <Users className="h-3.5 w-3.5" />,
+      conteudo: <ModuloPacientes />,
     },
     {
       valor: "agendamentos",
@@ -57,16 +63,16 @@ export default function DocumentacaoPage() {
       conteudo: <ModuloProcedimentos />,
     },
     {
-      valor: "ana-julia",
-      titulo: "Ana Júlia",
-      icone: <Bot className="h-3.5 w-3.5" />,
-      conteudo: <ModuloAnaJulia />,
+      valor: "base-conhecimento",
+      titulo: "Base de Conhecimento",
+      icone: <Brain className="h-3.5 w-3.5" />,
+      conteudo: <ModuloBaseConhecimento />,
     },
     {
-      valor: "relatorios",
-      titulo: "Relatórios",
-      icone: <BarChart3 className="h-3.5 w-3.5" />,
-      conteudo: <ModuloRelatorios />,
+      valor: "midia-marketing",
+      titulo: "Mídia Marketing",
+      icone: <Film className="h-3.5 w-3.5" />,
+      conteudo: <ModuloMidiaMarketing />,
     },
     {
       valor: "configuracoes",
@@ -75,16 +81,10 @@ export default function DocumentacaoPage() {
       conteudo: <ModuloConfiguracoes />,
     },
     {
-      valor: "usuarios",
-      titulo: "Usuários e Permissões",
-      icone: <ShieldCheck className="h-3.5 w-3.5" />,
-      conteudo: <ModuloUsuarios />,
-    },
-    {
-      valor: "sugestoes",
-      titulo: "Sugestões",
-      icone: <Sparkles className="h-3.5 w-3.5" />,
-      conteudo: <ModuloSugestoes />,
+      valor: "meu-perfil",
+      titulo: "Meu Perfil",
+      icone: <User className="h-3.5 w-3.5" />,
+      conteudo: <ModuloMeuPerfil />,
     },
   ]
 

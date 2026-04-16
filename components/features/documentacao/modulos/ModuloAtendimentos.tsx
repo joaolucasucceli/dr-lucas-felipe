@@ -1,4 +1,4 @@
-import { Kanban, Columns2, Bot, Hand, Filter } from "lucide-react"
+import { Kanban, Columns2, Bot, Hand, Filter, MessageSquare, Clock, Image } from "lucide-react"
 import { HeroBanner } from "../HeroBanner"
 import { FeaturesGrid } from "../FeaturesGrid"
 import { ComoUsarSection } from "../ComoUsarSection"
@@ -56,6 +56,31 @@ export function ModuloAtendimentos() {
             numero: 3,
             titulo: "Registre o motivo de perda",
             descricao: "Ao mover um lead para 'Perdido', informe o motivo. Esse dado alimenta os relatórios de perda.",
+          },
+        ]}
+      />
+
+      <FeaturesGrid
+        features={[
+          {
+            icone: <Bot />,
+            titulo: "Ana Júlia — Agente IA",
+            descricao: "Atendimento autônomo via WhatsApp. Conduz acolhimento, qualificação e agendamento seguindo script fixo com 7 ferramentas integradas.",
+          },
+          {
+            icone: <Clock />,
+            titulo: "Debounce inteligente",
+            descricao: "Espera 20 segundos após a última mensagem do paciente para responder. Se ele enviar 3 mensagens seguidas, a IA responde tudo junto.",
+          },
+          {
+            icone: <MessageSquare />,
+            titulo: "Mensagens humanizadas",
+            descricao: "Respostas quebradas em múltiplas mensagens curtas (como humano faria). Sem emojis, sem mencionar erros internos.",
+          },
+          {
+            icone: <Image />,
+            titulo: "Mídia via WhatsApp",
+            descricao: "A IA processa áudios (Whisper), fotos (GPT-4o-mini vision) e envia mídias de marketing quando o paciente pede referência visual.",
           },
         ]}
       />

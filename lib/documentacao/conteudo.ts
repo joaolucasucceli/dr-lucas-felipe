@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.20.0"
+export const VERSAO_DOCUMENTACAO = "1.21.0"
 export const DATA_ATUALIZACAO = "2026-04-16"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
