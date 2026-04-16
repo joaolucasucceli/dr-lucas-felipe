@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Stethoscope,
   Brain,
+  Film,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -80,6 +81,12 @@ const navGroups: NavGroup[] = [
         titulo: "Base de Conhecimento",
         href: "/base-conhecimento",
         icone: <Brain className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "Mídia Marketing",
+        href: "/midia-marketing",
+        icone: <Film className="h-4 w-4" />,
         perfis: ["gestor"],
       },
     ],

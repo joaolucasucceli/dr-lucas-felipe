@@ -172,6 +172,37 @@ export const ferramentasAgente: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "enviar_midia",
+      description:
+        "Envia mídia de marketing (vídeo, foto antes/depois, depoimento) pro paciente via WhatsApp. Use quando o paciente pedir referências visuais, depoimentos, fotos de resultado ou vídeos sobre procedimentos.",
+      parameters: {
+        type: "object",
+        properties: {
+          leadId: {
+            type: "string",
+            description: "ID do lead/paciente",
+          },
+          conversaId: {
+            type: "string",
+            description: "ID da conversa ativa",
+          },
+          categoria: {
+            type: "string",
+            enum: ["reels", "antes-depois", "depoimento", "procedimento"],
+            description: "Tipo da mídia a enviar: reels (vídeos do Instagram), antes-depois (fotos de resultados), depoimento (vídeos de pacientes), procedimento (vídeos explicativos)",
+          },
+          procedimento: {
+            type: "string",
+            description: "Nome do procedimento (obrigatório se categoria for 'antes-depois' ou 'procedimento'). Ex: Mini Lipo, Lipo Enxertia Glútea, PMMA",
+          },
+        },
+        required: ["leadId", "conversaId", "categoria"],
+      },
+    },
+  },
 ]
 
 /** Timeout maximo para execucao de uma ferramenta (evita agente travado) */

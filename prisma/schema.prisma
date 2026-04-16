@@ -261,6 +261,24 @@ model FotoLead {
   @@map("fotos_lead")
 }
 
+model MidiaMarketing {
+  id           String    @id @default(cuid())
+  titulo       String
+  descricao    String?   @db.Text
+  categoria    String
+  procedimento String?
+  url          String
+  tipo         String
+  ordem        Int       @default(0)
+  ativo        Boolean   @default(true)
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  deletadoEm   DateTime?
+
+  @@index([categoria, ativo])
+  @@map("midia_marketing")
+}
+
 model TipoProcedimento {
   id        String   @id @default(cuid())
   nome      String   @unique
