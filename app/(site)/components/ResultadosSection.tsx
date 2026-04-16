@@ -161,11 +161,11 @@ export function ResultadosSection() {
             </CarouselContent>
             <CarouselPrevious
               variant="outline"
-              className="-left-2 hidden border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:flex"
+              className="-left-2 flex border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:-left-4"
             />
             <CarouselNext
               variant="outline"
-              className="-right-2 hidden border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:flex"
+              className="-right-2 flex border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:-right-4"
             />
           </Carousel>
 
@@ -203,11 +203,11 @@ export function ResultadosSection() {
               </CarouselContent>
               <CarouselPrevious
                 variant="outline"
-                className="-left-2 hidden border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:flex"
+                className="-left-2 flex border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:-left-4"
               />
               <CarouselNext
                 variant="outline"
-                className="-right-2 hidden border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:flex"
+                className="-right-2 flex border-white/20 bg-black/40 text-white hover:bg-site-gold hover:text-white sm:-right-4"
               />
             </Carousel>
           </div>

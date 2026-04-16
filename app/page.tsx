@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { Navbar } from "./(site)/components/Navbar"
 import { HeroSection } from "./(site)/components/HeroSection"
 import { SobreSection } from "./(site)/components/SobreSection"
+import { PilaresSection } from "./(site)/components/PilaresSection"
 import { ProcedimentosSection } from "./(site)/components/ProcedimentosSection"
 import { ProtocolosSection } from "./(site)/components/ProtocolosSection"
 import { ResultadosSection } from "./(site)/components/ResultadosSection"
@@ -97,6 +98,7 @@ export default async function HomePage() {
       <main id="conteudo">
         <HeroSection whatsappLink={config.whatsappLink} />
         <SobreSection />
+        <PilaresSection />
         <ProcedimentosSection whatsappLink={config.whatsappLink} />
         <ProtocolosSection whatsappLink={config.whatsappLink} />
         <ResultadosSection />
