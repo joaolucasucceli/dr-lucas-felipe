@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
 
 export async function GET() {
   const auth = await requireAuth()
   if (auth.error) return auth.error
 
-  const config = await prisma.configGoogleCalendar.findFirst({
-    where: { ativo: true },
-    orderBy: { criadoEm: "desc" },
-    select: { refreshToken: true },
-  })
+  const { data: config } = await supabaseAdmin
+    .from("config_google_calendar")
+    .select("refreshToken")
+    .eq("ativo", true)
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   return NextResponse.json({
     configurado: !!config,

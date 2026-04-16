@@ -1,6 +1,31 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
+
+type ConversaQuery = {
+  id: string
+  leadId: string
+  etapa: string
+  modoConversa: string
+  atendenteId: string | null
+  ultimaMensagemEm: string | null
+  lead: {
+    id: string
+    nome: string
+    whatsapp: string
+    statusFunil: string
+    procedimentoInteresse: string | null
+  } | null
+  atendente: { id: string; nome: string } | null
+  mensagens: Array<{
+    id: string
+    conteudo: string
+    remetente: string
+    tipo: string
+    criadoEm: string
+    lidaEm: string | null
+  }>
+}
 
 export async function GET(req: Request) {
   const auth = await requireAuth()
@@ -11,87 +36,82 @@ export async function GET(req: Request) {
   const busca = searchParams.get("busca") || ""
   const userId = auth.session.user.id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = {
-    encerradaEm: null,
-  }
+  let query = supabaseAdmin
+    .from("conversas")
+    .select(`
+      id,
+      leadId,
+      etapa,
+      modoConversa,
+      atendenteId,
+      ultimaMensagemEm,
+      lead:leads!conversas_leadId_fkey(id, nome, whatsapp, statusFunil, procedimentoInteresse),
+      atendente:usuarios!conversas_atendenteId_fkey(id, nome),
+      mensagens:mensagens_whatsapp(id, conteudo, remetente, tipo, criadoEm, lidaEm)
+    `)
+    .is("encerradaEm", null)
 
   if (filtro === "minhas") {
-    where.atendenteId = userId
+    query = query.eq("atendenteId", userId)
   }
 
   if (filtro === "pendentes") {
-    where.modoConversa = "ia"
-    where.mensagens = {
-      some: {
-        remetente: "paciente",
-        lidaEm: null,
-      },
-    }
+    query = query.eq("modoConversa", "ia")
+  }
+
+  const { data, error } = await query
+    .order("ultimaMensagemEm", { ascending: false })
+    .limit(50)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  let conversas = (data ?? []) as unknown as ConversaQuery[]
+
+  if (filtro === "pendentes") {
+    conversas = conversas.filter((c) =>
+      c.mensagens.some((m) => m.remetente === "paciente" && m.lidaEm === null)
+    )
   }
 
   if (busca) {
-    where.lead = {
-      OR: [
-        { nome: { contains: busca, mode: "insensitive" } },
-        { whatsapp: { contains: busca } },
-      ],
-    }
+    const buscaLower = busca.toLowerCase()
+    conversas = conversas.filter((c) => {
+      const nome = c.lead?.nome?.toLowerCase() ?? ""
+      const whatsapp = c.lead?.whatsapp ?? ""
+      return nome.includes(buscaLower) || whatsapp.includes(busca)
+    })
   }
 
-  const conversas = await prisma.conversa.findMany({
-    where,
-    orderBy: { ultimaMensagemEm: "desc" },
-    take: 50,
-    include: {
-      lead: {
-        select: {
-          id: true,
-          nome: true,
-          whatsapp: true,
-          statusFunil: true,
-          procedimentoInteresse: true,
-        },
-      },
-      atendente: {
-        select: { id: true, nome: true },
-      },
-      mensagens: {
-        orderBy: { criadoEm: "desc" },
-        take: 1,
-        select: {
-          id: true,
-          conteudo: true,
-          remetente: true,
-          tipo: true,
-          criadoEm: true,
-        },
-      },
-      _count: {
-        select: {
-          mensagens: {
-            where: {
-              remetente: "paciente",
-              lidaEm: null,
-            },
-          },
-        },
-      },
-    },
-  })
+  const resultado = conversas.map((c) => {
+    const ultimaMensagem = [...c.mensagens]
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))[0]
+    const naoLidas = c.mensagens.filter(
+      (m) => m.remetente === "paciente" && m.lidaEm === null
+    ).length
 
-  const resultado = conversas.map((c) => ({
-    id: c.id,
-    leadId: c.leadId,
-    etapa: c.etapa,
-    modoConversa: c.modoConversa,
-    atendenteId: c.atendenteId,
-    atendente: c.atendente,
-    ultimaMensagemEm: c.ultimaMensagemEm,
-    lead: c.lead,
-    ultimaMensagem: c.mensagens[0] || null,
-    naoLidas: c._count.mensagens,
-  }))
+    return {
+      id: c.id,
+      leadId: c.leadId,
+      etapa: c.etapa,
+      modoConversa: c.modoConversa,
+      atendenteId: c.atendenteId,
+      atendente: c.atendente,
+      ultimaMensagemEm: c.ultimaMensagemEm,
+      lead: c.lead,
+      ultimaMensagem: ultimaMensagem
+        ? {
+            id: ultimaMensagem.id,
+            conteudo: ultimaMensagem.conteudo,
+            remetente: ultimaMensagem.remetente,
+            tipo: ultimaMensagem.tipo,
+            criadoEm: ultimaMensagem.criadoEm,
+          }
+        : null,
+      naoLidas,
+    }
+  })
 
   return NextResponse.json({ conversas: resultado })
 }

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
-import type { StatusFunil } from "@/generated/prisma/client"
 
-const ETAPAS_FUNIL: StatusFunil[] = [
+const ETAPAS_FUNIL: string[] = [
   "acolhimento",
   "qualificacao",
   "pre_agendamento",
@@ -25,38 +24,39 @@ export async function GET(request: NextRequest) {
   const responsavelId = searchParams.get("responsavelId")
   const procedimentoInteresse = searchParams.get("procedimentoInteresse")
 
-  const where: Record<string, unknown> = {
-    deletadoEm: null,
-    arquivado: false,
-  }
+  let query = supabaseAdmin
+    .from("leads")
+    .select(`
+      id,
+      nome,
+      whatsapp,
+      procedimentoInteresse,
+      statusFunil,
+      criadoEm,
+      atualizadoEm,
+      ultimaMovimentacaoEm,
+      motivoPerda,
+      ehRetorno,
+      cicloAtual,
+      responsavel:usuarios!leads_responsavelId_fkey(id, nome),
+      conversas(followUpEnviados, encerradaEm, criadoEm)
+    `)
+    .is("deletadoEm", null)
+    .eq("arquivado", false)
 
   if (responsavelId) {
-    where.responsavelId = responsavelId
+    query = query.eq("responsavelId", responsavelId)
   }
 
   if (procedimentoInteresse) {
-    where.procedimentoInteresse = { contains: procedimentoInteresse, mode: "insensitive" }
+    query = query.ilike("procedimentoInteresse", `%${procedimentoInteresse}%`)
   }
 
-  const leads = await prisma.lead.findMany({
-    where,
-    select: {
-      id: true,
-      nome: true,
-      whatsapp: true,
-      procedimentoInteresse: true,
-      statusFunil: true,
-      criadoEm: true,
-      atualizadoEm: true,
-      ultimaMovimentacaoEm: true,
-      motivoPerda: true,
-      ehRetorno: true,
-      cicloAtual: true,
-      responsavel: { select: { id: true, nome: true } },
-      conversas: { where: { encerradaEm: null }, select: { followUpEnviados: true }, take: 1, orderBy: { criadoEm: "desc" } },
-    },
-    orderBy: { atualizadoEm: "desc" },
-  })
+  const { data: leads, error } = await query.order("atualizadoEm", { ascending: false })
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const agora = Date.now()
   const colunas: Record<string, unknown[]> = {}
@@ -65,19 +65,50 @@ export async function GET(request: NextRequest) {
     colunas[etapa] = []
   }
 
-  for (const { conversas, ...lead } of leads) {
+  type ConversaComFollowUp = {
+    followUpEnviados?: string[] | null
+    encerradaEm?: string | null
+    criadoEm?: string | null
+  }
+
+  type LeadKanban = {
+    id: string
+    nome: string
+    whatsapp: string
+    procedimentoInteresse: string | null
+    statusFunil: string
+    criadoEm: string
+    atualizadoEm: string
+    ultimaMovimentacaoEm: string | null
+    motivoPerda: string | null
+    ehRetorno: boolean
+    cicloAtual: number
+    responsavel: { id: string; nome: string } | null
+    conversas: ConversaComFollowUp[]
+  }
+
+  for (const lead of (leads ?? []) as unknown as LeadKanban[]) {
+    const { conversas, ...resto } = lead
     const referencia = lead.ultimaMovimentacaoEm || lead.atualizadoEm
-    const diasNaEtapa = Math.floor((agora - referencia.getTime()) / 86400000)
+    const diasNaEtapa = Math.floor((agora - new Date(referencia).getTime()) / 86400000)
+
+    const conversaAberta = (conversas ?? [])
+      .filter((c) => !c.encerradaEm)
+      .sort((a, b) => (b.criadoEm ?? "").localeCompare(a.criadoEm ?? ""))[0]
+
+    if (!colunas[lead.statusFunil]) {
+      colunas[lead.statusFunil] = []
+    }
 
     colunas[lead.statusFunil].push({
-      ...lead,
+      ...resto,
       diasNaEtapa,
-      followUpEnviados: conversas[0]?.followUpEnviados ?? [],
+      followUpEnviados: conversaAberta?.followUpEnviados ?? [],
     })
   }
 
   return NextResponse.json({
     colunas,
-    total: leads.length,
+    total: leads?.length ?? 0,
   })
 }

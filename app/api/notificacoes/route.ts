@@ -1,87 +1,77 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
 
 export async function GET() {
   const auth = await requireAuth()
   if (auth.error) return auth.error
 
-  const agora = new Date()
-  const tressDiasAtras = new Date(agora.getTime() - 3 * 24 * 60 * 60 * 1000)
-  const vintQuatroHorasAtras = new Date(agora.getTime() - 24 * 60 * 60 * 1000)
-  const vintQuatroHorasAFrente = new Date(agora.getTime() + 24 * 60 * 60 * 1000)
+  const agoraTs = new Date()
+  const tressDiasAtras = new Date(agoraTs.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+  const vintQuatroHorasAtras = new Date(agoraTs.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  const vintQuatroHorasAFrente = new Date(agoraTs.getTime() + 24 * 60 * 60 * 1000).toISOString()
+  const agoraIso = agoraTs.toISOString()
 
-  const usuarioIA = await prisma.usuario.findFirst({
-    where: { email: "ia@drlucas.com.br" },
-    select: { id: true },
-  })
+  const { data: usuarioIA } = await supabaseAdmin
+    .from("usuarios")
+    .select("id")
+    .eq("email", "ia@drlucas.com.br")
+    .maybeSingle()
 
-  const [leadsAlerta, agendamentosProximos, leadsNovosIA, leadsVerificacaoPendente] = await Promise.all([
-    prisma.lead.findMany({
-      where: {
-        deletadoEm: null,
-        arquivado: false,
-        statusFunil: {
-          notIn: ["concluido", "perdido"] as never[],
-        },
-        ultimaMovimentacaoEm: { lt: tressDiasAtras },
-      },
-      select: { id: true, nome: true, statusFunil: true, ultimaMovimentacaoEm: true },
-      take: 5,
-    }),
-    prisma.agendamento.findMany({
-      where: {
-        status: "agendado",
-        dataHora: { gte: agora, lte: vintQuatroHorasAFrente },
-      },
-      select: {
-        id: true,
-        dataHora: true,
-        status: true,
-        lead: { select: { nome: true } },
-      },
-      take: 5,
-      orderBy: { dataHora: "asc" },
-    }),
+  const [
+    { data: leadsAlerta },
+    { data: agendamentosProximos },
+    leadsNovosIAResult,
+    { data: leadsVerificacaoPendente },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("leads")
+      .select("id, nome, statusFunil, ultimaMovimentacaoEm")
+      .is("deletadoEm", null)
+      .eq("arquivado", false)
+      .not("statusFunil", "in", "(concluido,perdido)")
+      .lt("ultimaMovimentacaoEm", tressDiasAtras)
+      .limit(5),
+    supabaseAdmin
+      .from("agendamentos")
+      .select("id, dataHora, status, lead:leads!agendamentos_leadId_fkey(nome)")
+      .eq("status", "agendado")
+      .gte("dataHora", agoraIso)
+      .lte("dataHora", vintQuatroHorasAFrente)
+      .order("dataHora", { ascending: true })
+      .limit(5),
     usuarioIA
-      ? prisma.lead.findMany({
-          where: {
-            responsavelId: usuarioIA.id,
-            criadoEm: { gte: vintQuatroHorasAtras },
-          },
-          select: { id: true, nome: true, criadoEm: true },
-          take: 3,
-          orderBy: { criadoEm: "desc" },
-        })
-      : Promise.resolve([]),
-    prisma.lead.findMany({
-      where: {
-        deletadoEm: null,
-        arquivado: false,
-        statusFunil: "verificacao_humana",
-      },
-      select: {
-        id: true,
-        nome: true,
-        procedimentoInteresse: true,
-        ultimaMovimentacaoEm: true,
-      },
-      take: 10,
-      orderBy: { ultimaMovimentacaoEm: "asc" },
-    }),
+      ? supabaseAdmin
+          .from("leads")
+          .select("id, nome, criadoEm")
+          .eq("responsavelId", usuarioIA.id)
+          .gte("criadoEm", vintQuatroHorasAtras)
+          .order("criadoEm", { ascending: false })
+          .limit(3)
+      : Promise.resolve({ data: [] as Array<{ id: string; nome: string; criadoEm: string }> }),
+    supabaseAdmin
+      .from("leads")
+      .select("id, nome, procedimentoInteresse, ultimaMovimentacaoEm")
+      .is("deletadoEm", null)
+      .eq("arquivado", false)
+      .eq("statusFunil", "verificacao_humana" as never)
+      .order("ultimaMovimentacaoEm", { ascending: true })
+      .limit(10),
   ])
 
+  const leadsNovosIA = leadsNovosIAResult.data ?? []
+
   const total =
-    leadsAlerta.length +
-    agendamentosProximos.length +
+    (leadsAlerta?.length ?? 0) +
+    (agendamentosProximos?.length ?? 0) +
     leadsNovosIA.length +
-    leadsVerificacaoPendente.length
+    (leadsVerificacaoPendente?.length ?? 0)
 
   return NextResponse.json({
-    leadsAlerta,
-    agendamentosProximos,
+    leadsAlerta: leadsAlerta ?? [],
+    agendamentosProximos: agendamentosProximos ?? [],
     leadsNovosIA,
-    leadsVerificacaoPendente,
+    leadsVerificacaoPendente: leadsVerificacaoPendente ?? [],
     total,
   })
 }

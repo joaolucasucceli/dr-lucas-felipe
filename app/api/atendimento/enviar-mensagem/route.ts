@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
 import { enviarMensagem } from "@/lib/uazapi"
+import { criarId, agora } from "@/lib/db-utils"
 import { z } from "zod"
 import { randomUUID } from "crypto"
 
@@ -26,39 +27,48 @@ export async function POST(req: Request) {
 
   const { conversaId, texto, replyToId } = parse.data
 
-  // Buscar conversa com lead e config WhatsApp
-  const conversa = await prisma.conversa.findUnique({
-    where: { id: conversaId },
-    include: { lead: true },
-  })
+  const { data: conversa } = await supabaseAdmin
+    .from("conversas")
+    .select("id, leadId, lead:leads!conversas_leadId_fkey(whatsapp)")
+    .eq("id", conversaId)
+    .maybeSingle()
 
   if (!conversa) {
     return NextResponse.json({ error: "Conversa não encontrada" }, { status: 404 })
   }
 
-  const config = await prisma.configWhatsapp.findFirst({ where: { ativo: true } })
+  const lead = conversa.lead as unknown as { whatsapp: string } | null
+  if (!lead) {
+    return NextResponse.json({ error: "Lead da conversa não encontrado" }, { status: 404 })
+  }
+
+  const { data: config } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("uazapiUrl, instanceToken")
+    .eq("ativo", true)
+    .maybeSingle()
+
   if (!config?.instanceToken || !config?.uazapiUrl) {
     return NextResponse.json({ error: "WhatsApp não configurado" }, { status: 400 })
   }
 
-  // Buscar messageIdWhatsapp do reply se fornecido
   let replyMessageId: string | undefined
   if (replyToId) {
-    const replyMsg = await prisma.mensagemWhatsapp.findUnique({
-      where: { id: replyToId },
-      select: { messageIdWhatsapp: true },
-    })
+    const { data: replyMsg } = await supabaseAdmin
+      .from("mensagens_whatsapp")
+      .select("messageIdWhatsapp")
+      .eq("id", replyToId)
+      .maybeSingle()
     if (replyMsg) replyMessageId = replyMsg.messageIdWhatsapp
   }
 
-  // Enviar via Uazapi
-  const numero = conversa.lead.whatsapp
-  const chatId = `${numero}@s.whatsapp.net`
+  const chatId = `${lead.whatsapp}@s.whatsapp.net`
   await enviarMensagem(config.uazapiUrl, config.instanceToken, chatId, texto, replyMessageId)
 
-  // Salvar no banco
-  const mensagem = await prisma.mensagemWhatsapp.create({
-    data: {
+  const { data: mensagem, error: insertError } = await supabaseAdmin
+    .from("mensagens_whatsapp")
+    .insert({
+      id: criarId(),
       conversaId,
       leadId: conversa.leadId,
       messageIdWhatsapp: `atendente_${randomUUID()}`,
@@ -66,14 +76,18 @@ export async function POST(req: Request) {
       conteudo: texto,
       remetente: "atendente",
       replyToId: replyToId || null,
-    },
-  })
+    })
+    .select("*")
+    .single()
 
-  // Atualizar ultimaMensagemEm da conversa
-  await prisma.conversa.update({
-    where: { id: conversaId },
-    data: { ultimaMensagemEm: new Date() },
-  })
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
+
+  await supabaseAdmin
+    .from("conversas")
+    .update({ ultimaMensagemEm: agora(), atualizadoEm: agora() })
+    .eq("id", conversaId)
 
   return NextResponse.json(mensagem, { status: 201 })
 }

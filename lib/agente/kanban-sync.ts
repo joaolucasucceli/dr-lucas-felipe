@@ -1,54 +1,58 @@
-import { prisma } from "@/lib/prisma"
-import type { StatusFunil, EtapaConversa } from "@/generated/prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
+import { criarId, agora } from "@/lib/db-utils"
 
-/** Atualiza o statusFunil de um lead + ultimaMovimentacaoEm */
 export async function sincronizarFunil(
   leadId: string,
-  novoStatus: StatusFunil
+  novoStatus: string
 ): Promise<void> {
-  await prisma.lead.update({
-    where: { id: leadId },
-    data: {
-      statusFunil: novoStatus,
-      ultimaMovimentacaoEm: new Date(),
-    },
-  })
+  await supabaseAdmin
+    .from("leads")
+    .update({
+      statusFunil: novoStatus as never,
+      ultimaMovimentacaoEm: agora(),
+      atualizadoEm: agora(),
+    })
+    .eq("id", leadId)
 }
 
-/** Avança a etapa de uma conversa */
 export async function avancarEtapa(
   conversaId: string,
-  novaEtapa: EtapaConversa
+  novaEtapa: string
 ): Promise<void> {
-  await prisma.conversa.update({
-    where: { id: conversaId },
-    data: { etapa: novaEtapa },
-  })
+  await supabaseAdmin
+    .from("conversas")
+    .update({ etapa: novaEtapa as never, atualizadoEm: agora() })
+    .eq("id", conversaId)
 }
 
 interface ResultadoNovoCiclo {
   conversaId: string
   cicloAtual: number
-  statusAnterior: StatusFunil
+  statusAnterior: string
 }
 
-/**
- * Abre um novo ciclo de atendimento para um lead que retornou (concluido ou perdido).
- * Incrementa cicloAtual, reseta statusFunil e cria nova conversa vinculada ao ciclo.
- */
 export async function abrirNovoCiclo(leadId: string): Promise<ResultadoNovoCiclo> {
-  // Bloquear se lead já foi convertido em paciente
-  const pacienteVinculado = await prisma.paciente.findUnique({
-    where: { leadOrigemId: leadId },
-    select: { id: true },
-  })
+  const { data: pacienteVinculado } = await supabaseAdmin
+    .from("pacientes")
+    .select("id")
+    .eq("leadOrigemId", leadId)
+    .maybeSingle()
+
   if (pacienteVinculado) {
     throw new Error(
       `Lead ${leadId} já foi convertido em paciente (${pacienteVinculado.id}). Novo ciclo bloqueado.`
     )
   }
 
-  const lead = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } })
+  const { data: lead, error: leadError } = await supabaseAdmin
+    .from("leads")
+    .select("*")
+    .eq("id", leadId)
+    .single()
+
+  if (leadError || !lead) {
+    throw new Error(`Lead ${leadId} não encontrado`)
+  }
 
   const statusAnterior = lead.statusFunil
   const novoCiclo = lead.cicloAtual + 1
@@ -60,34 +64,46 @@ export async function abrirNovoCiclo(leadId: string): Promise<ResultadoNovoCiclo
   })
 
   const notaRetorno = `\n\n[Ciclo ${novoCiclo} iniciado em ${dataFormatada}]: Paciente retornou via WhatsApp. Status anterior: ${statusAnterior}.`
+  const tsAgora = agora()
 
-  const [novaConversa] = await prisma.$transaction([
-    prisma.conversa.create({
-      data: {
-        leadId,
-        etapa: "qualificacao",
-        ciclo: novoCiclo,
-      },
-    }),
-    prisma.lead.update({
-      where: { id: leadId },
-      data: {
-        cicloAtual: novoCiclo,
-        ciclosCompletos: lead.ciclosCompletos + 1,
-        ehRetorno: true,
-        statusFunil: "qualificacao",
-        ultimaMovimentacaoEm: new Date(),
-        arquivado: false,
-        arquivadoEm: null,
-        sobreOPaciente: lead.sobreOPaciente
-          ? `${lead.sobreOPaciente}${notaRetorno}`
-          : notaRetorno.trim(),
-      },
-    }),
-  ])
+  const conversaId = criarId()
+  const { error: convError } = await supabaseAdmin
+    .from("conversas")
+    .insert({
+      id: conversaId,
+      atualizadoEm: tsAgora,
+      leadId,
+      etapa: "qualificacao",
+      ciclo: novoCiclo,
+    })
+
+  if (convError) {
+    throw new Error(`Erro ao criar nova conversa: ${convError.message}`)
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from("leads")
+    .update({
+      cicloAtual: novoCiclo,
+      ciclosCompletos: lead.ciclosCompletos + 1,
+      ehRetorno: true,
+      statusFunil: "qualificacao",
+      ultimaMovimentacaoEm: tsAgora,
+      atualizadoEm: tsAgora,
+      arquivado: false,
+      arquivadoEm: null,
+      sobreOPaciente: lead.sobreOPaciente
+        ? `${lead.sobreOPaciente}${notaRetorno}`
+        : notaRetorno.trim(),
+    })
+    .eq("id", leadId)
+
+  if (updateError) {
+    throw new Error(`Erro ao atualizar lead: ${updateError.message}`)
+  }
 
   return {
-    conversaId: novaConversa.id,
+    conversaId,
     cicloAtual: novoCiclo,
     statusAnterior,
   }

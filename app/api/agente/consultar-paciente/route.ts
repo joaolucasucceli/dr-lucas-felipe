@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
+import { criarId, agora } from "@/lib/db-utils"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -19,51 +20,78 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "whatsapp é obrigatório" }, { status: 400 })
   }
 
-  // Buscar lead existente
-  let lead = await prisma.lead.findUnique({
-    where: { whatsapp },
-  })
+  const { data: leadExistente } = await supabaseAdmin
+    .from("leads")
+    .select("*")
+    .eq("whatsapp", whatsapp)
+    .maybeSingle()
 
-  // Se não existe, criar novo lead com responsável IA
+  let lead = leadExistente
+
   if (!lead) {
-    const usuarioIa = await prisma.usuario.findFirst({
-      where: { tipo: "ia", ativo: true, deletadoEm: null },
-    })
+    const { data: usuarioIa } = await supabaseAdmin
+      .from("usuarios")
+      .select("id")
+      .eq("tipo", "ia")
+      .eq("ativo", true)
+      .is("deletadoEm", null)
+      .maybeSingle()
+
     if (!usuarioIa) {
       console.warn("[consultar-paciente] Nenhum usuário IA ativo encontrado — lead será criado sem responsável")
     }
 
-    lead = await prisma.lead.create({
-      data: {
+    const { data: novoLead, error: criarError } = await supabaseAdmin
+      .from("leads")
+      .insert({
+        id: criarId(),
+        atualizadoEm: agora(),
         nome: `WhatsApp ${whatsapp}`,
         whatsapp,
         origem: "whatsapp",
         statusFunil: "acolhimento",
         responsavelId: usuarioIa?.id || null,
-      },
-    })
+      })
+      .select("*")
+      .single()
+
+    if (criarError || !novoLead) {
+      return NextResponse.json(
+        { error: criarError?.message || "Erro ao criar lead" },
+        { status: 500 }
+      )
+    }
+
+    lead = novoLead
   }
 
-  // Buscar conversa ativa do ciclo atual (mais recente)
-  const conversa = await prisma.conversa.findFirst({
-    where: { leadId: lead.id, ciclo: lead.cicloAtual },
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: conversa } = await supabaseAdmin
+    .from("conversas")
+    .select("id, etapa")
+    .eq("leadId", lead.id)
+    .eq("ciclo", lead.cicloAtual)
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
-  // Buscar último procedimento realizado (ciclo anterior, se retorno)
   let ultimoProcedimento: string | null = null
   if (lead.ehRetorno && lead.ciclosCompletos > 0) {
-    const agendamentoCicloAnterior = await prisma.agendamento.findFirst({
-      where: {
-        leadId: lead.id,
-        ciclo: lead.cicloAtual - 1,
-        status: "realizado",
-        procedimentoId: { not: null },
-      },
-      include: { procedimento: { select: { nome: true } } },
-      orderBy: { dataHora: "desc" },
-    })
-    ultimoProcedimento = agendamentoCicloAnterior?.procedimento?.nome || null
+    const { data: agendamentoCicloAnterior } = await supabaseAdmin
+      .from("agendamentos")
+      .select("procedimento:procedimentos(nome)")
+      .eq("leadId", lead.id)
+      .eq("ciclo", lead.cicloAtual - 1)
+      .eq("status", "realizado")
+      .not("procedimentoId", "is", null)
+      .order("dataHora", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const proc = agendamentoCicloAnterior?.procedimento as
+      | { nome: string }
+      | null
+      | undefined
+    ultimoProcedimento = proc?.nome ?? null
   }
 
   return NextResponse.json({
@@ -79,9 +107,7 @@ export async function POST(request: NextRequest) {
       ciclosCompletos: lead.ciclosCompletos,
       responsavelId: lead.responsavelId,
     },
-    conversa: conversa
-      ? { id: conversa.id, etapa: conversa.etapa }
-      : null,
+    conversa: conversa ? { id: conversa.id, etapa: conversa.etapa } : null,
     sobreOPaciente: lead.sobreOPaciente || null,
     ultimoProcedimento,
   })

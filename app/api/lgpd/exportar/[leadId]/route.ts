@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 
 export async function GET(
@@ -11,45 +11,48 @@ export async function GET(
 
   const { leadId } = await params
 
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId },
-    include: {
-      conversas: {
-        include: {
-          mensagens: {
-            select: {
-              id: true,
-              tipo: true,
-              conteudo: true,
-              remetente: true,
-              criadoEm: true,
-            },
-          },
-        },
-      },
-      agendamentos: {
-        select: {
-          id: true,
-          dataHora: true,
-          status: true,
-          observacao: true,
-          criadoEm: true,
-        },
-      },
-      fotos: {
-        select: {
-          id: true,
-          url: true,
-          descricao: true,
-          tipoAnalise: true,
-          criadoEm: true,
-        },
-      },
-    },
-  })
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select(`
+      *,
+      conversas(id, etapa, criadoEm, mensagens:mensagens_whatsapp(id, tipo, conteudo, remetente, criadoEm)),
+      agendamentos(id, dataHora, status, observacao, criadoEm),
+      fotos:fotos_lead(id, url, descricao, tipoAnalise, criadoEm)
+    `)
+    .eq("id", leadId)
+    .maybeSingle()
 
   if (!lead) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
+  }
+
+  type ConversaPayload = {
+    id: string
+    etapa: string
+    criadoEm: string
+    mensagens: Array<{
+      id: string
+      tipo: string
+      conteudo: string
+      remetente: string
+      criadoEm: string
+    }>
+  }
+
+  type AgendamentoPayload = {
+    id: string
+    dataHora: string
+    status: string
+    observacao: string | null
+    criadoEm: string
+  }
+
+  type FotoPayload = {
+    id: string
+    url: string
+    descricao: string | null
+    tipoAnalise: string | null
+    criadoEm: string
   }
 
   const payload = {
@@ -66,14 +69,14 @@ export async function GET(
       consentimentoLgpdEm: lead.consentimentoLgpdEm,
       criadoEm: lead.criadoEm,
     },
-    conversas: lead.conversas.map((c) => ({
+    conversas: ((lead.conversas as ConversaPayload[]) ?? []).map((c) => ({
       id: c.id,
       etapa: c.etapa,
       criadoEm: c.criadoEm,
-      mensagens: c.mensagens,
+      mensagens: c.mensagens ?? [],
     })),
-    agendamentos: lead.agendamentos,
-    fotos: lead.fotos.map((f) => ({
+    agendamentos: (lead.agendamentos as AgendamentoPayload[]) ?? [],
+    fotos: ((lead.fotos as FotoPayload[]) ?? []).map((f) => ({
       id: f.id,
       url: f.url,
       descricao: f.descricao,

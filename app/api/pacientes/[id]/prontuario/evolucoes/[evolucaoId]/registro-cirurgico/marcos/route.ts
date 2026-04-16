@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { atualizarMarcoSchema } from "@/lib/validations/prontuario"
-import type { Prisma } from "@/generated/prisma/client"
+import { agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string; evolucaoId: string }> }
 
@@ -29,18 +29,32 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const prontuario = await prisma.prontuario.findFirst({
-    where: { paciente: { id, deletadoEm: null } },
-    select: { id: true },
-  })
+  const { data: paciente } = await supabaseAdmin
+    .from("pacientes")
+    .select("id")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
+
+  if (!paciente) {
+    return NextResponse.json({ error: "Paciente não encontrado" }, { status: 404 })
+  }
+
+  const { data: prontuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select("id")
+    .eq("pacienteId", id)
+    .maybeSingle()
 
   if (!prontuario) {
     return NextResponse.json({ error: "Prontuário não encontrado" }, { status: 404 })
   }
 
-  const registro = await prisma.registroCirurgico.findFirst({
-    where: { evolucaoId },
-  })
+  const { data: registro } = await supabaseAdmin
+    .from("registros_cirurgicos")
+    .select("id, marcosRecuperacao")
+    .eq("evolucaoId", evolucaoId)
+    .maybeSingle()
 
   if (!registro) {
     return NextResponse.json({ error: "Registro cirúrgico não encontrado" }, { status: 404 })
@@ -56,13 +70,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   marcos[indice] = {
     ...marcos[indice],
     concluido,
-    dataConcluida: dataConcluida ?? (concluido ? new Date().toISOString() : null),
+    dataConcluida: dataConcluida ?? (concluido ? agora() : null),
   }
 
-  const atualizado = await prisma.registroCirurgico.update({
-    where: { id: registro.id },
-    data: { marcosRecuperacao: marcos as unknown as Prisma.InputJsonValue },
-  })
+  const { data: atualizado, error } = await supabaseAdmin
+    .from("registros_cirurgicos")
+    .update({
+      marcosRecuperacao: marcos as never,
+      atualizadoEm: agora(),
+    })
+    .eq("id", registro.id)
+    .select("*")
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json(atualizado)
 }

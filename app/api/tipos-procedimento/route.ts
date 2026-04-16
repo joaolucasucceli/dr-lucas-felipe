@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth, requireRole } from "@/lib/auth-helpers"
+import { criarId } from "@/lib/db-utils"
 
 export async function GET() {
   const auth = await requireAuth()
   if (auth.error) return auth.error
 
-  const dados = await prisma.tipoProcedimento.findMany({
-    select: { id: true, nome: true, ativo: true, criadoEm: true },
-    orderBy: { nome: "asc" },
-  })
+  const { data, error } = await supabaseAdmin
+    .from("tipos_procedimento")
+    .select("id, nome, ativo, criadoEm")
+    .order("nome", { ascending: true })
 
-  return NextResponse.json({ dados })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ dados: data })
 }
 
 export async function POST(req: NextRequest) {
@@ -30,15 +35,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nome deve ter pelo menos 2 caracteres" }, { status: 400 })
   }
 
-  const existente = await prisma.tipoProcedimento.findUnique({ where: { nome } })
+  const { data: existente } = await supabaseAdmin
+    .from("tipos_procedimento")
+    .select("id")
+    .eq("nome", nome)
+    .maybeSingle()
+
   if (existente) {
     return NextResponse.json({ error: "Já existe um tipo com esse nome" }, { status: 409 })
   }
 
-  const tipo = await prisma.tipoProcedimento.create({
-    data: { nome },
-    select: { id: true, nome: true, ativo: true, criadoEm: true },
-  })
+  const { data: tipo, error } = await supabaseAdmin
+    .from("tipos_procedimento")
+    .insert({ id: criarId(), nome })
+    .select("id, nome, ativo, criadoEm")
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json(tipo, { status: 201 })
 }

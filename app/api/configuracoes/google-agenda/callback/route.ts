@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { google } from "googleapis"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
+import { agora } from "@/lib/db-utils"
 
 const REDIRECT_URI = "https://dr-lucas-central.vercel.app/api/configuracoes/google-agenda/callback"
 
@@ -16,10 +17,13 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const config = await prisma.configGoogleCalendar.findFirst({
-    where: { ativo: true },
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: config } = await supabaseAdmin
+    .from("config_google_calendar")
+    .select("id, clientId, clientSecret")
+    .eq("ativo", true)
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (!config) {
     return NextResponse.redirect(
@@ -37,10 +41,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    await prisma.configGoogleCalendar.update({
-      where: { id: config.id },
-      data: { refreshToken: tokens.refresh_token },
-    })
+    await supabaseAdmin
+      .from("config_google_calendar")
+      .update({ refreshToken: tokens.refresh_token, atualizadoEm: agora() })
+      .eq("id", config.id)
 
     return NextResponse.redirect(
       new URL("/configuracoes/google-agenda?conectado=true", request.url)

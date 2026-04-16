@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
 
 export async function GET(req: Request) {
@@ -15,22 +15,43 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "conversaId obrigatório" }, { status: 400 })
   }
 
-  const mensagens = await prisma.mensagemWhatsapp.findMany({
-    where: { conversaId },
-    orderBy: { criadoEm: "desc" },
-    take: limite + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    include: {
-      replyTo: {
-        select: { id: true, conteudo: true, remetente: true },
-      },
-    },
-  })
+  let cursorTimestamp: string | null = null
 
+  if (cursor) {
+    const { data: cursorMsg } = await supabaseAdmin
+      .from("mensagens_whatsapp")
+      .select("criadoEm")
+      .eq("id", cursor)
+      .maybeSingle()
+    if (cursorMsg) {
+      cursorTimestamp = cursorMsg.criadoEm
+    }
+  }
+
+  let query = supabaseAdmin
+    .from("mensagens_whatsapp")
+    .select(`
+      *,
+      replyTo:mensagens_whatsapp!mensagens_whatsapp_replyToId_fkey(id, conteudo, remetente)
+    `)
+    .eq("conversaId", conversaId)
+
+  if (cursorTimestamp) {
+    query = query.lt("criadoEm", cursorTimestamp)
+  }
+
+  const { data, error } = await query
+    .order("criadoEm", { ascending: false })
+    .limit(limite + 1)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  const mensagens = data ?? []
   const temMais = mensagens.length > limite
   if (temMais) mensagens.pop()
 
-  // Reverter para ordem cronológica
   mensagens.reverse()
 
   return NextResponse.json({

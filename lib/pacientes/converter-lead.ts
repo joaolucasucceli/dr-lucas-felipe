@@ -1,5 +1,6 @@
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { registrarAuditLog } from "@/lib/audit"
+import { criarId, agora } from "@/lib/db-utils"
 
 interface ResultadoConversao {
   paciente: {
@@ -10,98 +11,115 @@ interface ResultadoConversao {
   jaCriado: boolean
 }
 
-/**
- * Converte um Lead em Paciente. Operação idempotente:
- * se o lead já foi convertido, retorna o paciente existente.
- *
- * Dentro de $transaction:
- * 1. Verifica se lead já tem paciente → retorna existente
- * 2. Calcula número do prontuário (MAX+1)
- * 3. Cria Paciente + Prontuário + Anamnese vazia
- * 4. Copia consentimentoLgpd do lead
- * 5. Arquiva o lead
- */
 export async function converterLeadParaPaciente(
   leadId: string,
   usuarioId: string
 ): Promise<ResultadoConversao> {
-  // Verificar se já existe paciente para este lead (idempotência)
-  const pacienteExistente = await prisma.paciente.findUnique({
-    where: { leadOrigemId: leadId },
-    select: { id: true, nome: true, whatsapp: true },
-  })
+  const { data: pacienteExistente } = await supabaseAdmin
+    .from("pacientes")
+    .select("id, nome, whatsapp")
+    .eq("leadOrigemId", leadId)
+    .maybeSingle()
 
   if (pacienteExistente) {
     return { paciente: pacienteExistente, jaCriado: true }
   }
 
-  const lead = await prisma.lead.findUniqueOrThrow({
-    where: { id: leadId },
-    include: {
-      fotos: true,
-    },
-  })
+  const { data: lead, error: leadError } = await supabaseAdmin
+    .from("leads")
+    .select("id, nome, whatsapp, email, consentimentoLgpd, consentimentoLgpdEm, sobreOPaciente")
+    .eq("id", leadId)
+    .single()
 
-  const resultado = await prisma.$transaction(async (tx) => {
-    // Calcular número do prontuário
-    const ultimoProntuario = await tx.prontuario.findFirst({
-      orderBy: { numero: "desc" },
-      select: { numero: true },
+  if (leadError || !lead) {
+    throw new Error(`Lead ${leadId} não encontrado: ${leadError?.message ?? "não existe"}`)
+  }
+
+  const { data: fotos } = await supabaseAdmin
+    .from("fotos_lead")
+    .select("url, descricao, criadoEm")
+    .eq("leadId", leadId)
+
+  const { data: ultimoProntuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select("numero")
+    .order("numero", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const numeroProntuario = (ultimoProntuario?.numero ?? 0) + 1
+  const tsAgora = agora()
+
+  const novoPacienteId = criarId()
+  const { error: pacienteError } = await supabaseAdmin
+    .from("pacientes")
+    .insert({
+      id: novoPacienteId,
+      atualizadoEm: tsAgora,
+      nome: lead.nome,
+      whatsapp: lead.whatsapp,
+      email: lead.email,
+      leadOrigemId: lead.id,
+      consentimentoLgpd: lead.consentimentoLgpd,
+      consentimentoLgpdEm: lead.consentimentoLgpdEm,
+      observacoes: lead.sobreOPaciente,
     })
-    const numeroProntuario = (ultimoProntuario?.numero ?? 0) + 1
 
-    // Criar Paciente
-    const novoPaciente = await tx.paciente.create({
-      data: {
-        nome: lead.nome,
-        whatsapp: lead.whatsapp,
-        email: lead.email,
-        leadOrigemId: lead.id,
-        consentimentoLgpd: lead.consentimentoLgpd,
-        consentimentoLgpdEm: lead.consentimentoLgpdEm,
-        observacoes: lead.sobreOPaciente,
-      },
+  if (pacienteError) {
+    throw new Error(`Erro ao criar paciente: ${pacienteError.message}`)
+  }
+
+  const prontuarioId = criarId()
+  const { error: prontuarioError } = await supabaseAdmin
+    .from("prontuarios")
+    .insert({
+      id: prontuarioId,
+      atualizadoEm: tsAgora,
+      pacienteId: novoPacienteId,
+      numero: numeroProntuario,
     })
 
-    // Criar Prontuário + Anamnese vazia
-    const prontuario = await tx.prontuario.create({
-      data: {
-        pacienteId: novoPaciente.id,
-        numero: numeroProntuario,
-        anamnese: {
-          create: {},
-        },
-      },
+  if (prontuarioError) {
+    throw new Error(`Erro ao criar prontuário: ${prontuarioError.message}`)
+  }
+
+  await supabaseAdmin
+    .from("anamneses")
+    .insert({
+      id: criarId(),
+      atualizadoEm: tsAgora,
+      prontuarioId,
     })
 
-    // Copiar fotos do lead para o prontuário
-    if (lead.fotos.length > 0) {
-      await tx.fotoProntuario.createMany({
-        data: lead.fotos.map((foto) => ({
-          prontuarioId: prontuario.id,
+  if (fotos && fotos.length > 0) {
+    await supabaseAdmin
+      .from("fotos_prontuario")
+      .insert(
+        fotos.map((foto) => ({
+          id: criarId(),
+          prontuarioId,
           url: foto.url,
           descricao: foto.descricao,
           tipoFoto: "pre_operatorio",
           dataRegistro: foto.criadoEm,
-        })),
-      })
-    }
+        }))
+      )
+  }
 
-    // Arquivar o lead
-    await tx.lead.update({
-      where: { id: leadId },
-      data: {
-        arquivado: true,
-        arquivadoEm: new Date(),
-      },
+  await supabaseAdmin
+    .from("leads")
+    .update({
+      arquivado: true,
+      arquivadoEm: tsAgora,
+      atualizadoEm: tsAgora,
     })
+    .eq("id", leadId)
 
-    return {
-      id: novoPaciente.id,
-      nome: novoPaciente.nome,
-      whatsapp: novoPaciente.whatsapp,
-    }
-  })
+  const resultado = {
+    id: novoPacienteId,
+    nome: lead.nome,
+    whatsapp: lead.whatsapp,
+  }
 
   await registrarAuditLog({
     usuarioId,

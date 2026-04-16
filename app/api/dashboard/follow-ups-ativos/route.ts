@@ -1,56 +1,63 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
 
 export async function GET() {
   const { error } = await requireAuth()
   if (error) return error
 
-  const whereFollowUp = {
-    deletadoEm: null,
-    arquivado: false,
-    conversas: {
-      some: {
-        encerradaEm: null,
-        followUpEnviados: { isEmpty: false },
-      },
-    },
+  const { data: leadsRaw } = await supabaseAdmin
+    .from("leads")
+    .select(`
+      id,
+      nome,
+      statusFunil,
+      procedimentoInteresse,
+      conversas(followUpEnviados, ultimaMensagemEm, encerradaEm, criadoEm)
+    `)
+    .is("deletadoEm", null)
+    .eq("arquivado", false)
+    .limit(50)
+
+  type LeadComConversas = {
+    id: string
+    nome: string
+    statusFunil: string
+    procedimentoInteresse: string | null
+    conversas: Array<{
+      followUpEnviados: string[] | null
+      ultimaMensagemEm: string | null
+      encerradaEm: string | null
+      criadoEm: string
+    }>
   }
 
-  const [leads, total] = await Promise.all([
-    prisma.lead.findMany({
-      where: whereFollowUp,
-      select: {
-        id: true,
-        nome: true,
-        statusFunil: true,
-        procedimentoInteresse: true,
-        conversas: {
-          where: { encerradaEm: null, followUpEnviados: { isEmpty: false } },
-          select: { followUpEnviados: true, ultimaMensagemEm: true },
-          take: 1,
-          orderBy: { criadoEm: "desc" },
-        },
-      },
-      take: 5,
-    }),
-    prisma.lead.count({ where: whereFollowUp }),
-  ])
+  const leadsComFollowUp = ((leadsRaw ?? []) as unknown as LeadComConversas[])
+    .map((lead) => {
+      const conversaAberta = lead.conversas
+        .filter((c) => !c.encerradaEm && (c.followUpEnviados ?? []).length > 0)
+        .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))[0]
 
-  const resultado = leads
-    .map((lead) => ({
-      id: lead.id,
-      nome: lead.nome,
-      statusFunil: lead.statusFunil,
-      procedimentoInteresse: lead.procedimentoInteresse,
-      followUpEnviados: lead.conversas[0]?.followUpEnviados ?? [],
-      ultimaMensagemEm: lead.conversas[0]?.ultimaMensagemEm?.toISOString() ?? null,
-    }))
+      if (!conversaAberta) return null
+
+      return {
+        id: lead.id,
+        nome: lead.nome,
+        statusFunil: lead.statusFunil,
+        procedimentoInteresse: lead.procedimentoInteresse,
+        followUpEnviados: conversaAberta.followUpEnviados ?? [],
+        ultimaMensagemEm: conversaAberta.ultimaMensagemEm,
+      }
+    })
+    .filter((l): l is NonNullable<typeof l> => l !== null)
     .sort((a, b) => {
       if (!a.ultimaMensagemEm) return 1
       if (!b.ultimaMensagemEm) return -1
       return new Date(a.ultimaMensagemEm).getTime() - new Date(b.ultimaMensagemEm).getTime()
     })
 
-  return NextResponse.json({ leads: resultado, total })
+  return NextResponse.json({
+    leads: leadsComFollowUp.slice(0, 5),
+    total: leadsComFollowUp.length,
+  })
 }

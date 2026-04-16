@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 
 const labelsFunil: Record<string, string> = {
@@ -42,65 +42,68 @@ const ordemFunil = [
   "perdido",
 ]
 
+const etapasConvertidas = [
+  "consulta_agendada",
+  "consulta_realizada",
+  "sinal_pago",
+  "procedimento_agendado",
+  "concluido",
+]
+
 export async function GET(request: NextRequest) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const { searchParams } = request.nextUrl
-  const agora = new Date()
+  const agoraTs = new Date()
   const dataInicio = searchParams.get("dataInicio")
     ? new Date(searchParams.get("dataInicio")!)
-    : new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000)
+    : new Date(agoraTs.getTime() - 30 * 24 * 60 * 60 * 1000)
   const dataFim = searchParams.get("dataFim")
     ? new Date(searchParams.get("dataFim")!)
-    : agora
+    : agoraTs
   const origem = searchParams.get("origem") || undefined
 
-  const filtroBase = {
-    deletadoEm: null,
-    arquivado: false,
-    criadoEm: { gte: dataInicio, lte: dataFim },
-    ...(origem ? { origem } : {}),
+  const dataInicioIso = dataInicio.toISOString()
+  const dataFimIso = dataFim.toISOString()
+
+  let baseQuery = supabaseAdmin
+    .from("leads")
+    .select("statusFunil, criadoEm, ultimaMovimentacaoEm")
+    .is("deletadoEm", null)
+    .eq("arquivado", false)
+    .gte("criadoEm", dataInicioIso)
+    .lte("criadoEm", dataFimIso)
+
+  if (origem) baseQuery = baseQuery.eq("origem", origem)
+
+  const { data: leadsAll } = await baseQuery
+
+  const totalEntradas = leadsAll?.length ?? 0
+  const leadsConvertidos = (leadsAll ?? []).filter((l) =>
+    etapasConvertidas.includes(l.statusFunil)
+  ).length
+
+  const etapaCount: Record<string, number> = {}
+  for (const lead of leadsAll ?? []) {
+    etapaCount[lead.statusFunil] = (etapaCount[lead.statusFunil] ?? 0) + 1
   }
 
-  const [leadsPorEtapaRaw, totalEntradas, leadsConvertidos, leadsParaTempoMedio] =
-    await Promise.all([
-      prisma.lead.groupBy({
-        by: ["statusFunil"],
-        _count: { id: true },
-        where: filtroBase,
-      }),
-      prisma.lead.count({ where: filtroBase }),
-      prisma.lead.count({
-        where: {
-          ...filtroBase,
-          statusFunil: {
-            in: ["consulta_agendada", "consulta_realizada", "sinal_pago", "procedimento_agendado", "concluido"] as never[],
-          },
-        },
-      }),
-      prisma.lead.findMany({
-        where: {
-          ...filtroBase,
-          statusFunil: {
-            in: ["consulta_agendada", "consulta_realizada", "sinal_pago", "procedimento_agendado", "concluido"] as never[],
-          },
-          ultimaMovimentacaoEm: { not: null },
-        },
-        select: { criadoEm: true, ultimaMovimentacaoEm: true },
-        take: 100,
-      }),
-    ])
+  const leadsParaTempoMedio = (leadsAll ?? [])
+    .filter(
+      (l) =>
+        etapasConvertidas.includes(l.statusFunil) && l.ultimaMovimentacaoEm
+    )
+    .slice(0, 100)
 
   const funil = ordemFunil.map((etapa, idx) => {
-    const encontrado = leadsPorEtapaRaw.find((g) => g.statusFunil === etapa)
-    const total = encontrado?._count?.id ?? 0
+    const total = etapaCount[etapa] ?? 0
     const anterior =
       idx === 0
         ? totalEntradas
         : (ordemFunil
             .slice(0, idx)
-            .map((e) => leadsPorEtapaRaw.find((g) => g.statusFunil === e)?._count?.id ?? 0)
+            .map((e) => etapaCount[e] ?? 0)
             .find((v) => v > 0) ?? totalEntradas)
     const conversao = anterior > 0 ? Math.round((total / anterior) * 1000) / 10 : 0
 
@@ -114,14 +117,20 @@ export async function GET(request: NextRequest) {
   })
 
   const taxaConversaoGeral =
-    totalEntradas > 0 ? Math.round((leadsConvertidos / totalEntradas) * 1000) / 10 : 0
+    totalEntradas > 0
+      ? Math.round((leadsConvertidos / totalEntradas) * 1000) / 10
+      : 0
 
   const tempoMedioEtapas =
     leadsParaTempoMedio.length > 0
       ? Math.round(
           leadsParaTempoMedio.reduce((acc, l) => {
             if (!l.ultimaMovimentacaoEm) return acc
-            return acc + (l.ultimaMovimentacaoEm.getTime() - l.criadoEm.getTime())
+            return (
+              acc +
+              (new Date(l.ultimaMovimentacaoEm).getTime() -
+                new Date(l.criadoEm).getTime())
+            )
           }, 0) /
             leadsParaTempoMedio.length /
             (1000 * 60 * 60 * 24)

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
 import { criarEvento } from "@/lib/google-calendar"
+import { criarId, agora } from "@/lib/db-utils"
+
+const SELECT_AGENDAMENTO =
+  "*, lead:leads!agendamentos_leadId_fkey(nome, whatsapp), procedimento:procedimentos(nome)"
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth()
@@ -15,34 +19,34 @@ export async function GET(req: NextRequest) {
   const pagina = Math.max(1, Number(searchParams.get("pagina") || "1"))
   const porPagina = Math.min(100, Math.max(1, Number(searchParams.get("porPagina") || "20")))
 
-  const where = {
-    ...(leadId && { leadId }),
-    ...(status && { status: status as never }),
-    ...(dataInicio || dataFim
-      ? {
-          dataHora: {
-            ...(dataInicio && { gte: new Date(dataInicio) }),
-            ...(dataFim && { lte: new Date(dataFim) }),
-          },
-        }
-      : {}),
+  let query = supabaseAdmin
+    .from("agendamentos")
+    .select(SELECT_AGENDAMENTO, { count: "exact" })
+
+  if (leadId) query = query.eq("leadId", leadId)
+  if (status) query = query.eq("status", status as never)
+  if (dataInicio) query = query.gte("dataHora", new Date(dataInicio).toISOString())
+  if (dataFim) query = query.lte("dataHora", new Date(dataFim).toISOString())
+
+  const inicio = (pagina - 1) * porPagina
+  const fim = inicio + porPagina - 1
+
+  const { data, count, error } = await query
+    .order("dataHora", { ascending: false })
+    .range(inicio, fim)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const [total, dados] = await Promise.all([
-    prisma.agendamento.count({ where }),
-    prisma.agendamento.findMany({
-      where,
-      include: {
-        lead: { select: { nome: true, whatsapp: true } },
-        procedimento: { select: { nome: true } },
-      },
-      orderBy: { dataHora: "desc" },
-      skip: (pagina - 1) * porPagina,
-      take: porPagina,
-    }),
-  ])
+  const total = count ?? 0
 
-  return NextResponse.json({ dados, total, pagina, totalPaginas: Math.ceil(total / porPagina) })
+  return NextResponse.json({
+    dados: data ?? [],
+    total,
+    pagina,
+    totalPaginas: Math.ceil(total / porPagina),
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -72,10 +76,21 @@ export async function POST(req: NextRequest) {
   let googleEventUrl: string | undefined
   let sincronizado = false
 
-  const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { nome: true, email: true } })
-  const procedimento = procedimentoId
-    ? await prisma.procedimento.findUnique({ where: { id: procedimentoId }, select: { nome: true } })
-    : null
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("nome, email")
+    .eq("id", leadId)
+    .maybeSingle()
+
+  let procedimento: { nome: string } | null = null
+  if (procedimentoId) {
+    const { data } = await supabaseAdmin
+      .from("procedimentos")
+      .select("nome")
+      .eq("id", procedimentoId)
+      .maybeSingle()
+    procedimento = data
+  }
 
   const resultado = await criarEvento({
     titulo: `Consulta — ${lead?.nome || "Paciente"}${procedimento ? ` (${procedimento.nome})` : ""}`,
@@ -94,22 +109,26 @@ export async function POST(req: NextRequest) {
     sincronizado = true
   }
 
-  const agendamento = await prisma.agendamento.create({
-    data: {
+  const { data: agendamento, error } = await supabaseAdmin
+    .from("agendamentos")
+    .insert({
+      id: criarId(),
+      atualizadoEm: agora(),
       leadId,
       procedimentoId: procedimentoId || null,
-      dataHora: inicio,
+      dataHora: inicio.toISOString(),
       duracao: duracao ?? 60,
       observacao: observacao || null,
       googleEventId: googleEventId || null,
       googleEventUrl: googleEventUrl || null,
       sincronizado,
-    },
-    include: {
-      lead: { select: { nome: true, whatsapp: true } },
-      procedimento: { select: { nome: true } },
-    },
-  })
+    })
+    .select(SELECT_AGENDAMENTO)
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json(agendamento, { status: 201 })
 }

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { criarMidiaMarketingSchema } from "@/lib/validations/midia-marketing"
+import { criarId, agora } from "@/lib/db-utils"
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole("gestor")
@@ -14,20 +15,28 @@ export async function GET(request: NextRequest) {
   const busca = searchParams.get("busca")
   const ativo = searchParams.get("ativo")
 
-  const where: Record<string, unknown> = { deletadoEm: null }
-  if (categoria) where.categoria = categoria
-  if (tipo) where.tipo = tipo
-  if (ativo !== null && ativo !== undefined && ativo !== "")
-    where.ativo = ativo === "true"
-  if (busca)
-    where.titulo = { contains: busca, mode: "insensitive" }
+  let query = supabaseAdmin
+    .from("midia_marketing")
+    .select("*")
+    .is("deletadoEm", null)
 
-  const dados = await prisma.midiaMarketing.findMany({
-    where,
-    orderBy: [{ categoria: "asc" }, { ordem: "asc" }, { titulo: "asc" }],
-  })
+  if (categoria) query = query.eq("categoria", categoria)
+  if (tipo) query = query.eq("tipo", tipo)
+  if (ativo !== null && ativo !== undefined && ativo !== "") {
+    query = query.eq("ativo", ativo === "true")
+  }
+  if (busca) query = query.ilike("titulo", `%${busca}%`)
 
-  return NextResponse.json({ dados })
+  const { data, error } = await query
+    .order("categoria", { ascending: true })
+    .order("ordem", { ascending: true })
+    .order("titulo", { ascending: true })
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ dados: data ?? [] })
 }
 
 export async function POST(request: NextRequest) {
@@ -43,6 +52,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const midia = await prisma.midiaMarketing.create({ data: parsed.data })
+  const { data: midia, error } = await supabaseAdmin
+    .from("midia_marketing")
+    .insert({ id: criarId(), atualizadoEm: agora(), ...parsed.data })
+    .select("*")
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
   return NextResponse.json(midia, { status: 201 })
 }

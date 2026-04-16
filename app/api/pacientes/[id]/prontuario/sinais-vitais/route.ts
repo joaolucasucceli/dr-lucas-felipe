@@ -1,11 +1,31 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { criarSinalVitalSchema } from "@/lib/validations/prontuario"
 import { registrarAuditLog } from "@/lib/audit"
+import { criarId, agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
+
+async function buscarProntuario(pacienteId: string) {
+  const { data: paciente } = await supabaseAdmin
+    .from("pacientes")
+    .select("id")
+    .eq("id", pacienteId)
+    .is("deletadoEm", null)
+    .maybeSingle()
+
+  if (!paciente) return null
+
+  const { data: prontuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select("id")
+    .eq("pacienteId", pacienteId)
+    .maybeSingle()
+
+  return prontuario
+}
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
@@ -16,27 +36,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const tipo = searchParams.get("tipo")
   const limite = parseInt(searchParams.get("limite") || "50")
 
-  const prontuario = await prisma.prontuario.findFirst({
-    where: { paciente: { id, deletadoEm: null } },
-    select: { id: true },
-  })
-
+  const prontuario = await buscarProntuario(id)
   if (!prontuario) {
     return NextResponse.json({ error: "Prontuário não encontrado" }, { status: 404 })
   }
 
-  const where = {
-    prontuarioId: prontuario.id,
-    ...(tipo ? { tipo: tipo as never } : {}),
+  let query = supabaseAdmin
+    .from("sinais_vitais")
+    .select("*")
+    .eq("prontuarioId", prontuario.id)
+
+  if (tipo) {
+    query = query.eq("tipo", tipo as never)
   }
 
-  const sinais = await prisma.sinalVital.findMany({
-    where,
-    orderBy: { dataRegistro: "desc" },
-    take: limite,
-  })
+  const { data, error } = await query
+    .order("dataRegistro", { ascending: false })
+    .limit(limite)
 
-  return NextResponse.json({ dados: sinais })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ dados: data ?? [] })
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -54,24 +76,29 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const prontuario = await prisma.prontuario.findFirst({
-    where: { paciente: { id, deletadoEm: null } },
-    select: { id: true },
-  })
-
+  const prontuario = await buscarProntuario(id)
   if (!prontuario) {
     return NextResponse.json({ error: "Prontuário não encontrado" }, { status: 404 })
   }
 
   const { dataRegistro, ...resto } = parsed.data
 
-  const sinal = await prisma.sinalVital.create({
-    data: {
-      prontuarioId: prontuario.id,
-      ...resto,
-      dataRegistro: dataRegistro ? new Date(dataRegistro) : new Date(),
-    },
-  })
+  const insertData = {
+    id: criarId(),
+    prontuarioId: prontuario.id,
+    ...resto,
+    dataRegistro: dataRegistro ? new Date(dataRegistro).toISOString() : agora(),
+  } as never
+
+  const { data: sinal, error } = await supabaseAdmin
+    .from("sinais_vitais")
+    .insert(insertData)
+    .select("*")
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await registrarAuditLog({
     usuarioId: auth.session.user.id,

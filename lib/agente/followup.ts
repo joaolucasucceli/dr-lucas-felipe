@@ -1,54 +1,94 @@
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { openai } from "@/lib/openai"
 import { enviarMensagem } from "@/lib/uazapi"
-import type { Conversa, Lead, ConfigWhatsapp } from "@/generated/prisma/client"
+import { agora } from "@/lib/db-utils"
 
-type ConversaComLead = Conversa & { lead: Lead }
+interface LeadAgente {
+  id: string
+  nome: string
+  whatsapp: string
+  procedimentoInteresse: string | null
+}
+
+interface ConversaComLead {
+  id: string
+  leadId: string
+  ultimaMensagemEm: string | null
+  followUpEnviados: string[]
+  lead: LeadAgente
+}
+
+interface ConfigWhatsappAtivo {
+  uazapiUrl: string
+  instanceToken: string | null
+}
 
 interface FollowUpPendente {
   conversa: ConversaComLead
   tipo: "1h" | "6h" | "24h"
 }
 
-/** Busca conversas que precisam de follow-up */
 export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]> {
-  const agora = new Date()
-  const ha1h = new Date(agora.getTime() - 1 * 60 * 60 * 1000)
+  const agoraTs = new Date()
+  const ha1h = new Date(agoraTs.getTime() - 1 * 60 * 60 * 1000).toISOString()
 
-  // Buscar conversas ativas com ultimaMensagemEm > 1h atrás
-  const conversas = await prisma.conversa.findMany({
-    where: {
-      encerradaEm: null,
-      ultimaMensagemEm: {
-        not: null,
-        lt: ha1h,
-      },
-      etapa: {
-        in: ["acolhimento", "qualificacao", "pre_agendamento"],
-      },
-      lead: {
-        arquivado: false,
-        deletadoEm: null,
-      },
-    },
-    include: {
-      lead: true,
-    },
-  })
+  const { data: conversas, error } = await supabaseAdmin
+    .from("conversas")
+    .select(`
+      id,
+      leadId,
+      ultimaMensagemEm,
+      followUpEnviados,
+      etapa,
+      lead:leads!conversas_leadId_fkey(id, nome, whatsapp, procedimentoInteresse, arquivado, deletadoEm)
+    `)
+    .is("encerradaEm", null)
+    .not("ultimaMensagemEm", "is", null)
+    .lt("ultimaMensagemEm", ha1h)
+    .in("etapa", ["acolhimento", "qualificacao", "pre_agendamento"] as never)
+
+  if (error || !conversas) return []
+
+  type LeadRaw = LeadAgente & { arquivado: boolean; deletadoEm: string | null }
+  type ConversaRaw = {
+    id: string
+    leadId: string
+    ultimaMensagemEm: string | null
+    followUpEnviados: string[] | null
+    lead: LeadRaw | LeadRaw[] | null
+  }
 
   const pendentes: FollowUpPendente[] = []
-  const ha6h = new Date(agora.getTime() - 6 * 60 * 60 * 1000)
-  const ha24h = new Date(agora.getTime() - 24 * 60 * 60 * 1000)
+  const ha6h = new Date(agoraTs.getTime() - 6 * 60 * 60 * 1000)
+  const ha24h = new Date(agoraTs.getTime() - 24 * 60 * 60 * 1000)
+  const ha1hDate = new Date(ha1h)
 
-  for (const conversa of conversas) {
-    const ultimaMsg = conversa.ultimaMensagemEm!
+  for (const conversaRaw of conversas as unknown as ConversaRaw[]) {
+    const leadRaw = Array.isArray(conversaRaw.lead) ? conversaRaw.lead[0] : conversaRaw.lead
+    if (!leadRaw || leadRaw.arquivado || leadRaw.deletadoEm) continue
+    if (!conversaRaw.ultimaMensagemEm) continue
 
-    // Priorizar o mais urgente (24h > 6h > 1h)
-    if (ultimaMsg < ha24h && !conversa.followUpEnviados.includes("24h")) {
+    const ultimaMsg = new Date(conversaRaw.ultimaMensagemEm)
+    const followUps = conversaRaw.followUpEnviados ?? []
+
+    const conversa: ConversaComLead = {
+      id: conversaRaw.id,
+      leadId: conversaRaw.leadId,
+      ultimaMensagemEm: conversaRaw.ultimaMensagemEm,
+      followUpEnviados: followUps,
+      lead: {
+        id: leadRaw.id,
+        nome: leadRaw.nome,
+        whatsapp: leadRaw.whatsapp,
+        procedimentoInteresse: leadRaw.procedimentoInteresse,
+      },
+    }
+
+    if (ultimaMsg < ha24h && !followUps.includes("24h")) {
       pendentes.push({ conversa, tipo: "24h" })
-    } else if (ultimaMsg < ha6h && !conversa.followUpEnviados.includes("6h")) {
+    } else if (ultimaMsg < ha6h && !followUps.includes("6h")) {
       pendentes.push({ conversa, tipo: "6h" })
-    } else if (ultimaMsg < ha1h && !conversa.followUpEnviados.includes("1h")) {
+    } else if (ultimaMsg < ha1hDate && !followUps.includes("1h")) {
       pendentes.push({ conversa, tipo: "1h" })
     }
   }
@@ -56,15 +96,13 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
   return pendentes
 }
 
-/** Gera mensagem de follow-up via GPT-4o com fallback para template */
 async function gerarMensagemFollowUp(
-  lead: Lead,
+  lead: LeadAgente,
   tipo: "1h" | "6h" | "24h"
 ): Promise<string> {
   const nome = lead.nome.replace(/^WhatsApp\s+/, "") || "paciente"
   const procedimento = lead.procedimentoInteresse || "procedimentos estéticos"
 
-  // Templates de fallback (sem emojis — regra absoluta do agente)
   const templates: Record<string, string> = {
     "1h": `Oi ${nome}, tudo bem? Ainda tenho algumas informações sobre ${procedimento} pra compartilhar com você. Posso te ajudar?`,
     "6h": `Oi ${nome}! Só passando pra lembrar que o Dr. Lucas é referência em ${procedimento}. A pré-consulta é gratuita e sem compromisso — quer agendar?`,
@@ -92,15 +130,13 @@ async function gerarMensagemFollowUp(
   }
 }
 
-/** Envia follow-up e registra no banco */
 export async function enviarFollowUp(
   conversa: ConversaComLead,
   tipo: "1h" | "6h" | "24h",
-  configWa: ConfigWhatsapp
+  configWa: ConfigWhatsappAtivo
 ): Promise<void> {
   const mensagem = await gerarMensagemFollowUp(conversa.lead, tipo)
 
-  // Enviar via Uazapi
   await enviarMensagem(
     configWa.uazapiUrl,
     configWa.instanceToken!,
@@ -108,7 +144,6 @@ export async function enviarFollowUp(
     mensagem
   )
 
-  // Registrar no banco via API interna
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
   try {
     await fetch(`${baseUrl}/api/agente/registrar-mensagem`, {
@@ -128,19 +163,16 @@ export async function enviarFollowUp(
     // Não impedir fluxo se registro falhar
   }
 
-  // Marcar follow-up como enviado
-  await prisma.conversa.update({
-    where: { id: conversa.id },
-    data: {
-      followUpEnviados: { push: tipo },
-    },
-  })
+  const novosFollowUps = [...conversa.followUpEnviados, tipo]
+  await supabaseAdmin
+    .from("conversas")
+    .update({ followUpEnviados: novosFollowUps, atualizadoEm: agora() })
+    .eq("id", conversa.id)
 
-  // Se follow-up 24h: encerrar conversa
   if (tipo === "24h") {
-    await prisma.conversa.update({
-      where: { id: conversa.id },
-      data: { encerradaEm: new Date() },
-    })
+    await supabaseAdmin
+      .from("conversas")
+      .update({ encerradaEm: agora(), atualizadoEm: agora() })
+      .eq("id", conversa.id)
   }
 }

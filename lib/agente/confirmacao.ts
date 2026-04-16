@@ -1,8 +1,25 @@
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { enviarMensagem } from "@/lib/uazapi"
-import type { Agendamento, Lead, ConfigWhatsapp } from "@/generated/prisma/client"
+import { agora } from "@/lib/db-utils"
 
-type AgendamentoComLead = Agendamento & { lead: Lead }
+interface LeadAgente {
+  id: string
+  nome: string
+  whatsapp: string
+}
+
+interface AgendamentoComLead {
+  id: string
+  leadId: string
+  dataHora: string
+  confirmacoesEnviadas: string[]
+  lead: LeadAgente
+}
+
+interface ConfigWhatsappAtivo {
+  uazapiUrl: string
+  instanceToken: string | null
+}
 
 type TipoConfirmacao = "6h" | "3h" | "30min"
 
@@ -11,54 +28,59 @@ interface ConfirmacaoPendente {
   tipo: TipoConfirmacao
 }
 
-/** Busca agendamentos que precisam de confirmação */
 export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPendente[]> {
-  const agora = new Date()
-  const em7h = new Date(agora.getTime() + 7 * 60 * 60 * 1000)
+  const agoraTs = new Date()
+  const em7h = new Date(agoraTs.getTime() + 7 * 60 * 60 * 1000)
 
-  // Buscar agendamentos ativos nas próximas 7h
-  const agendamentos = await prisma.agendamento.findMany({
-    where: {
-      status: { in: ["agendado", "remarcado"] },
-      dataHora: {
-        gt: agora,
-        lt: em7h,
-      },
-    },
-    include: {
-      lead: true,
-    },
-  })
+  const { data, error } = await supabaseAdmin
+    .from("agendamentos")
+    .select(`
+      id,
+      leadId,
+      dataHora,
+      confirmacoesEnviadas,
+      status,
+      lead:leads!agendamentos_leadId_fkey(id, nome, whatsapp)
+    `)
+    .in("status", ["agendado", "remarcado"] as never)
+    .gt("dataHora", agoraTs.toISOString())
+    .lt("dataHora", em7h.toISOString())
+
+  if (error || !data) return []
+
+  type AgendamentoRaw = {
+    id: string
+    leadId: string
+    dataHora: string
+    confirmacoesEnviadas: string[] | null
+    lead: LeadAgente | LeadAgente[] | null
+  }
 
   const pendentes: ConfirmacaoPendente[] = []
 
-  for (const agendamento of agendamentos) {
-    const diffMs = agendamento.dataHora.getTime() - agora.getTime()
+  for (const ag of data as unknown as AgendamentoRaw[]) {
+    const leadRaw = Array.isArray(ag.lead) ? ag.lead[0] : ag.lead
+    if (!leadRaw) continue
+
+    const dataHora = new Date(ag.dataHora)
+    const diffMs = dataHora.getTime() - agoraTs.getTime()
     const diffHoras = diffMs / (60 * 60 * 1000)
     const diffMinutos = diffMs / (60 * 1000)
+    const confirmacoes = ag.confirmacoesEnviadas ?? []
 
-    // 6h: faltam 6-7h
-    if (
-      diffHoras >= 6 &&
-      diffHoras < 7 &&
-      !agendamento.confirmacoesEnviadas.includes("6h")
-    ) {
+    const agendamento: AgendamentoComLead = {
+      id: ag.id,
+      leadId: ag.leadId,
+      dataHora: ag.dataHora,
+      confirmacoesEnviadas: confirmacoes,
+      lead: leadRaw,
+    }
+
+    if (diffHoras >= 6 && diffHoras < 7 && !confirmacoes.includes("6h")) {
       pendentes.push({ agendamento, tipo: "6h" })
-    }
-    // 3h: faltam 3-4h
-    else if (
-      diffHoras >= 3 &&
-      diffHoras < 4 &&
-      !agendamento.confirmacoesEnviadas.includes("3h")
-    ) {
+    } else if (diffHoras >= 3 && diffHoras < 4 && !confirmacoes.includes("3h")) {
       pendentes.push({ agendamento, tipo: "3h" })
-    }
-    // 30min: faltam 30-60min
-    else if (
-      diffMinutos >= 30 &&
-      diffMinutos < 60 &&
-      !agendamento.confirmacoesEnviadas.includes("30min")
-    ) {
+    } else if (diffMinutos >= 30 && diffMinutos < 60 && !confirmacoes.includes("30min")) {
       pendentes.push({ agendamento, tipo: "30min" })
     }
   }
@@ -66,7 +88,6 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
   return pendentes
 }
 
-/** Formata hora no padrão brasileiro */
 function formatarHora(data: Date): string {
   return data.toLocaleTimeString("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -75,9 +96,8 @@ function formatarHora(data: Date): string {
   })
 }
 
-/** Gera mensagem de confirmação */
 function gerarMensagemConfirmacao(
-  lead: Lead,
+  lead: LeadAgente,
   dataHora: Date,
   tipo: TipoConfirmacao
 ): string {
@@ -93,19 +113,14 @@ function gerarMensagemConfirmacao(
   return mensagens[tipo]
 }
 
-/** Envia confirmação e registra no banco */
 export async function enviarConfirmacao(
   agendamento: AgendamentoComLead,
   tipo: TipoConfirmacao,
-  configWa: ConfigWhatsapp
+  configWa: ConfigWhatsappAtivo
 ): Promise<void> {
-  const mensagem = gerarMensagemConfirmacao(
-    agendamento.lead,
-    agendamento.dataHora,
-    tipo
-  )
+  const dataHora = new Date(agendamento.dataHora)
+  const mensagem = gerarMensagemConfirmacao(agendamento.lead, dataHora, tipo)
 
-  // Enviar via Uazapi
   await enviarMensagem(
     configWa.uazapiUrl,
     configWa.instanceToken!,
@@ -113,7 +128,6 @@ export async function enviarConfirmacao(
     mensagem
   )
 
-  // Registrar no banco
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
   try {
     await fetch(`${baseUrl}/api/agente/registrar-mensagem`, {
@@ -132,11 +146,9 @@ export async function enviarConfirmacao(
     // Não impedir fluxo se registro falhar
   }
 
-  // Marcar confirmação como enviada
-  await prisma.agendamento.update({
-    where: { id: agendamento.id },
-    data: {
-      confirmacoesEnviadas: { push: tipo },
-    },
-  })
+  const novasConfirmacoes = [...agendamento.confirmacoesEnviadas, tipo]
+  await supabaseAdmin
+    .from("agendamentos")
+    .update({ confirmacoesEnviadas: novasConfirmacoes, atualizadoEm: agora() })
+    .eq("id", agendamento.id)
 }

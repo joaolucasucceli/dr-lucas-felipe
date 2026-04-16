@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
+import { agora } from "@/lib/db-utils"
 import { z } from "zod"
 
 const schema = z.object({
@@ -17,9 +18,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "conversaId obrigatório" }, { status: 400 })
   }
 
-  const conversa = await prisma.conversa.findUnique({
-    where: { id: parse.data.conversaId },
-  })
+  const { data: conversa } = await supabaseAdmin
+    .from("conversas")
+    .select("id, leadId, modoConversa")
+    .eq("id", parse.data.conversaId)
+    .maybeSingle()
 
   if (!conversa) {
     return NextResponse.json({ error: "Conversa não encontrada" }, { status: 404 })
@@ -29,23 +32,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Conversa já está em modo IA" }, { status: 400 })
   }
 
-  const usuarioIa = await prisma.usuario.findFirst({
-    where: { tipo: "ia", ativo: true, deletadoEm: null },
-  })
+  const { data: usuarioIa } = await supabaseAdmin
+    .from("usuarios")
+    .select("id")
+    .eq("tipo", "ia")
+    .eq("ativo", true)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
-  await prisma.$transaction([
-    prisma.conversa.update({
-      where: { id: conversa.id },
-      data: {
-        modoConversa: "ia",
-        atendenteId: null,
-      },
-    }),
-    prisma.lead.update({
-      where: { id: conversa.leadId },
-      data: { responsavelId: usuarioIa?.id || null },
-    }),
-  ])
+  const { error: convError } = await supabaseAdmin
+    .from("conversas")
+    .update({
+      modoConversa: "ia",
+      atendenteId: null,
+      atualizadoEm: agora(),
+    })
+    .eq("id", conversa.id)
+
+  if (convError) {
+    return NextResponse.json({ error: convError.message }, { status: 500 })
+  }
+
+  await supabaseAdmin
+    .from("leads")
+    .update({ responsavelId: usuarioIa?.id || null, atualizadoEm: agora() })
+    .eq("id", conversa.leadId)
 
   return NextResponse.json({ sucesso: true, modoConversa: "ia" })
 }

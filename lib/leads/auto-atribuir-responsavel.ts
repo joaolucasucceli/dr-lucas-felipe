@@ -1,28 +1,20 @@
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 
-/**
- * Retorna o ID do usuário que deve ser atribuído como responsável
- * quando o lead transita para um determinado status. Null se a transição
- * não exige troca automática.
- *
- * Regras:
- * - verificacao_humana → atendente humana ativa (IA passa o bastão)
- * - consulta_realizada → gestor ativo (Dr. Lucas assume)
- */
 export async function obterNovoResponsavelPorStatus(
   novoStatus: string
 ): Promise<string | null> {
   if (novoStatus === "verificacao_humana") {
-    const atendente = await prisma.usuario.findFirst({
-      where: {
-        perfil: "atendente",
-        tipo: "humano",
-        ativo: true,
-        deletadoEm: null,
-      },
-      orderBy: { criadoEm: "asc" },
-      select: { id: true },
-    })
+    const { data: atendente } = await supabaseAdmin
+      .from("usuarios")
+      .select("id")
+      .eq("perfil", "atendente")
+      .eq("tipo", "humano")
+      .eq("ativo", true)
+      .is("deletadoEm", null)
+      .order("criadoEm", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
     if (!atendente) {
       console.warn("[auto-atribuir] Nenhuma atendente humana ativa encontrada — responsável não será trocado")
     }
@@ -30,15 +22,16 @@ export async function obterNovoResponsavelPorStatus(
   }
 
   if (novoStatus === "consulta_realizada") {
-    const gestor = await prisma.usuario.findFirst({
-      where: {
-        perfil: "gestor",
-        ativo: true,
-        deletadoEm: null,
-      },
-      orderBy: { criadoEm: "asc" },
-      select: { id: true },
-    })
+    const { data: gestor } = await supabaseAdmin
+      .from("usuarios")
+      .select("id")
+      .eq("perfil", "gestor")
+      .eq("ativo", true)
+      .is("deletadoEm", null)
+      .order("criadoEm", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
     if (!gestor) {
       console.warn("[auto-atribuir] Nenhum gestor ativo encontrado — responsável não será trocado")
     }

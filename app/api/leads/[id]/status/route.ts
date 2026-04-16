@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
 import { mudarStatusSchema } from "@/lib/validations/lead"
 import { converterLeadParaPaciente } from "@/lib/pacientes/converter-lead"
 import { obterNovoResponsavelPorStatus } from "@/lib/leads/auto-atribuir-responsavel"
+import { agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -23,15 +24,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const lead = await prisma.lead.findUnique({
-    where: { id, deletadoEm: null },
-  })
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("id, statusFunil, responsavelId")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!lead) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
   }
 
-  // Atendente só pode mover leads atribuídos a si
   const perfil = auth.session.user.perfil
   if (
     perfil === "atendente" &&
@@ -46,43 +49,38 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const statusAnterior = lead.statusFunil
   const novoStatus = parsed.data.statusFunil
 
-  // Preparar dados de atualização
   const dataUpdate: Record<string, unknown> = {
     statusFunil: novoStatus,
-    ultimaMovimentacaoEm: new Date(),
+    ultimaMovimentacaoEm: agora(),
+    atualizadoEm: agora(),
   }
 
-  // Salvar motivoPerda quando movendo para perdido, limpar quando saindo
   if (novoStatus === "perdido") {
     dataUpdate.motivoPerda = parsed.data.motivoPerda
   } else if (statusAnterior === "perdido") {
     dataUpdate.motivoPerda = null
   }
 
-  // Auto-atribuir responsável conforme novo status
-  // verificacao_humana → atendente | consulta_realizada → gestor
   const novoResponsavelId = await obterNovoResponsavelPorStatus(novoStatus)
   if (novoResponsavelId) {
     dataUpdate.responsavelId = novoResponsavelId
   }
 
-  const leadAtualizado = await prisma.lead.update({
-    where: { id },
-    data: dataUpdate,
-    select: {
-      id: true,
-      nome: true,
-      statusFunil: true,
-      motivoPerda: true,
-    },
-  })
+  const { data: leadAtualizado, error } = await supabaseAdmin
+    .from("leads")
+    .update(dataUpdate)
+    .eq("id", id)
+    .select("id, nome, statusFunil, motivoPerda")
+    .single()
 
-  // Trigger automático: converter Lead → Paciente quando status = "concluido"
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
   if (novoStatus === "concluido") {
     try {
       await converterLeadParaPaciente(id, auth.session.user.id)
     } catch (err) {
-      // Conversão falhou mas status já foi atualizado — não reverter
       console.error("[Conversão Lead→Paciente] Erro:", err)
     }
   }

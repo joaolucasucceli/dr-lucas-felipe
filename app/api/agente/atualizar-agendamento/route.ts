@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { atualizarEvento, cancelarEvento } from "@/lib/google-calendar"
+import { agora } from "@/lib/db-utils"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -35,10 +36,11 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const agendamentoExistente = await prisma.agendamento.findUnique({
-    where: { id: agendamentoId },
-    include: { lead: { select: { id: true } } },
-  })
+  const { data: agendamentoExistente } = await supabaseAdmin
+    .from("agendamentos")
+    .select("id, leadId, duracao, googleEventId, sincronizado")
+    .eq("id", agendamentoId)
+    .maybeSingle()
 
   if (!agendamentoExistente) {
     return NextResponse.json({ error: "Agendamento não encontrado" }, { status: 404 })
@@ -53,15 +55,22 @@ export async function POST(request: NextRequest) {
     }
 
     const novaInicio = new Date(novaDataHora)
-    const agendamento = await prisma.agendamento.update({
-      where: { id: agendamentoId },
-      data: {
-        dataHora: novaInicio,
-        status: "remarcado",
-      },
-    })
 
-    // Atualizar evento no Google Calendar se já sincronizado
+    const { data: agendamento, error } = await supabaseAdmin
+      .from("agendamentos")
+      .update({
+        dataHora: novaInicio.toISOString(),
+        status: "remarcado",
+        atualizadoEm: agora(),
+      })
+      .eq("id", agendamentoId)
+      .select("*")
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
     let sincronizado = agendamentoExistente.sincronizado
     if (agendamentoExistente.googleEventId) {
       const duracaoMin = agendamentoExistente.duracao ?? 60
@@ -72,49 +81,59 @@ export async function POST(request: NextRequest) {
       })
       if (!ok) {
         sincronizado = false
-        await prisma.agendamento.update({
-          where: { id: agendamentoId },
-          data: { sincronizado: false },
-        })
+        await supabaseAdmin
+          .from("agendamentos")
+          .update({ sincronizado: false, atualizadoEm: agora() })
+          .eq("id", agendamentoId)
       }
     }
 
     return NextResponse.json({ agendamento, sincronizado })
   }
 
-  // Cancelar
-  const agendamento = await prisma.agendamento.update({
-    where: { id: agendamentoId },
-    data: { status: "cancelado" },
-  })
+  const { data: agendamento } = await supabaseAdmin
+    .from("agendamentos")
+    .update({ status: "cancelado", atualizadoEm: agora() })
+    .eq("id", agendamentoId)
+    .select("*")
+    .single()
 
-  // Deletar evento no Google Calendar se sincronizado
   if (agendamentoExistente.googleEventId) {
     await cancelarEvento(agendamentoExistente.googleEventId)
-    await prisma.agendamento.update({
-      where: { id: agendamentoId },
-      data: { googleEventId: null, googleEventUrl: null, sincronizado: false },
-    })
+    await supabaseAdmin
+      .from("agendamentos")
+      .update({
+        googleEventId: null,
+        googleEventUrl: null,
+        sincronizado: false,
+        atualizadoEm: agora(),
+      })
+      .eq("id", agendamentoId)
   }
 
-  // Regredir funil: consulta_agendada → agendamento (em transação)
-  const conversa = await prisma.conversa.findFirst({
-    where: { leadId: agendamentoExistente.leadId },
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: conversa } = await supabaseAdmin
+    .from("conversas")
+    .select("id")
+    .eq("leadId", agendamentoExistente.leadId)
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
-  await prisma.$transaction(async (tx) => {
-    await tx.lead.update({
-      where: { id: agendamentoExistente.leadId },
-      data: { statusFunil: "pre_agendamento", ultimaMovimentacaoEm: new Date() },
+  await supabaseAdmin
+    .from("leads")
+    .update({
+      statusFunil: "pre_agendamento" as never,
+      ultimaMovimentacaoEm: agora(),
+      atualizadoEm: agora(),
     })
-    if (conversa) {
-      await tx.conversa.update({
-        where: { id: conversa.id },
-        data: { etapa: "pre_agendamento" },
-      })
-    }
-  })
+    .eq("id", agendamentoExistente.leadId)
+
+  if (conversa) {
+    await supabaseAdmin
+      .from("conversas")
+      .update({ etapa: "pre_agendamento" as never, atualizadoEm: agora() })
+      .eq("id", conversa.id)
+  }
 
   return NextResponse.json({ agendamento })
 }

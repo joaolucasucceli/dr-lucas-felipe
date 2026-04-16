@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { configurarWebhook, configurarPrivacidade } from "@/lib/uazapi"
+import { agora } from "@/lib/db-utils"
 import { z } from "zod"
 
 const schema = z.object({
@@ -18,9 +19,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "configId obrigatório" }, { status: 400 })
   }
 
-  const config = await prisma.configWhatsapp.findUnique({
-    where: { id: parse.data.configId },
-  })
+  const { data: config } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("id, uazapiUrl, instanceToken")
+    .eq("id", parse.data.configId)
+    .maybeSingle()
 
   if (!config) {
     return NextResponse.json({ error: "Instância não encontrada" }, { status: 404 })
@@ -39,12 +42,11 @@ export async function POST(req: Request) {
   try {
     const webhookToken = process.env.WEBHOOK_SECRET || process.env.API_SECRET || ""
     await configurarWebhook(config.uazapiUrl, config.instanceToken, webhookUrl, webhookToken)
-    await prisma.configWhatsapp.update({
-      where: { id: config.id },
-      data: { webhookUrl },
-    })
+    await supabaseAdmin
+      .from("config_whatsapp")
+      .update({ webhookUrl, atualizadoEm: agora() })
+      .eq("id", config.id)
 
-    // Reaplicar privacidade (sempre online, sem "visto por último")
     try {
       await configurarPrivacidade(config.uazapiUrl, config.instanceToken)
     } catch (privErr) {

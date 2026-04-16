@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
+import { criarId, agora } from "@/lib/db-utils"
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth()
@@ -14,7 +15,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "leadId é obrigatório" }, { status: 400 })
   }
 
-  const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("id, statusFunil, cicloAtual, ciclosCompletos")
+    .eq("id", leadId)
+    .maybeSingle()
 
   if (!lead) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
@@ -28,27 +33,38 @@ export async function POST(request: NextRequest) {
   }
 
   const novoCiclo = lead.cicloAtual + 1
+  const tsAgora = agora()
 
-  await prisma.$transaction([
-    prisma.lead.update({
-      where: { id: leadId },
-      data: {
-        cicloAtual: novoCiclo,
-        ciclosCompletos: { increment: 1 },
-        ehRetorno: true,
-        statusFunil: "acolhimento",
-        motivoPerda: null,
-        ultimaMovimentacaoEm: new Date(),
-      },
-    }),
-    prisma.conversa.create({
-      data: {
-        leadId,
-        ciclo: novoCiclo,
-        etapa: "acolhimento",
-      },
-    }),
-  ])
+  const { error: leadError } = await supabaseAdmin
+    .from("leads")
+    .update({
+      cicloAtual: novoCiclo,
+      ciclosCompletos: lead.ciclosCompletos + 1,
+      ehRetorno: true,
+      statusFunil: "acolhimento",
+      motivoPerda: null,
+      ultimaMovimentacaoEm: tsAgora,
+      atualizadoEm: tsAgora,
+    })
+    .eq("id", leadId)
+
+  if (leadError) {
+    return NextResponse.json({ error: leadError.message }, { status: 500 })
+  }
+
+  const { error: convError } = await supabaseAdmin
+    .from("conversas")
+    .insert({
+      id: criarId(),
+      atualizadoEm: tsAgora,
+      leadId,
+      ciclo: novoCiclo,
+      etapa: "acolhimento",
+    })
+
+  if (convError) {
+    return NextResponse.json({ error: convError.message }, { status: 500 })
+  }
 
   return NextResponse.json({ sucesso: true })
 }

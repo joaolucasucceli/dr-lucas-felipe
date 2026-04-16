@@ -1,13 +1,40 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { registrarAuditLog } from "@/lib/audit"
-import { supabaseAdmin } from "@/lib/supabase"
 
 type RouteParams = { params: Promise<{ id: string; docId: string }> }
 
 const BUCKET = "documentos-prontuario"
+
+async function buscarDocumento(pacienteId: string, docId: string) {
+  const { data: paciente } = await supabaseAdmin
+    .from("pacientes")
+    .select("id")
+    .eq("id", pacienteId)
+    .is("deletadoEm", null)
+    .maybeSingle()
+
+  if (!paciente) return null
+
+  const { data: prontuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select("id")
+    .eq("pacienteId", pacienteId)
+    .maybeSingle()
+
+  if (!prontuario) return null
+
+  const { data: documento } = await supabaseAdmin
+    .from("documentos_prontuario")
+    .select("*")
+    .eq("id", docId)
+    .eq("prontuarioId", prontuario.id)
+    .maybeSingle()
+
+  return documento
+}
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
@@ -15,21 +42,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const { id, docId } = await params
 
-  const documento = await prisma.documentoProntuario.findFirst({
-    where: {
-      id: docId,
-      prontuario: { paciente: { id, deletadoEm: null } },
-    },
-  })
-
+  const documento = await buscarDocumento(id, docId)
   if (!documento) {
     return NextResponse.json({ error: "Documento não encontrado" }, { status: 404 })
   }
 
-  // Gerar signed URL com TTL de 5 minutos
   const { data, error } = await supabaseAdmin.storage
     .from(BUCKET)
-    .createSignedUrl(documento.storagePath, 300) // 5 min
+    .createSignedUrl(documento.storagePath, 300)
 
   if (error || !data?.signedUrl) {
     return NextResponse.json(
@@ -47,26 +67,23 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
   const { id, docId } = await params
 
-  const documento = await prisma.documentoProntuario.findFirst({
-    where: {
-      id: docId,
-      prontuario: { paciente: { id, deletadoEm: null } },
-    },
-  })
-
+  const documento = await buscarDocumento(id, docId)
   if (!documento) {
     return NextResponse.json({ error: "Documento não encontrado" }, { status: 404 })
   }
 
-  // Remover do Storage
   await supabaseAdmin.storage
     .from(BUCKET)
     .remove([documento.storagePath])
 
-  // Remover do DB
-  await prisma.documentoProntuario.delete({
-    where: { id: docId },
-  })
+  const { error } = await supabaseAdmin
+    .from("documentos_prontuario")
+    .delete()
+    .eq("id", docId)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await registrarAuditLog({
     usuarioId: auth.session.user.id,

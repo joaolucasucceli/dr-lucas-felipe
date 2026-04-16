@@ -1,7 +1,7 @@
 import { getServerSession, type Session } from "next-auth"
 import { NextResponse } from "next/server"
 import { authOptions } from "@/lib/auth"
-import type { Perfil } from "@/generated/prisma/client"
+import type { Perfil } from "@/lib/types/enums"
 
 type AuthSuccess = { session: Session; error: null }
 type AuthError = { session: null; error: NextResponse }

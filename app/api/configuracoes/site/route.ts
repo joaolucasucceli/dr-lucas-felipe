@@ -1,17 +1,23 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { configSiteSchema } from "@/lib/validations/config-site"
+import { criarId, agora } from "@/lib/db-utils"
 
 export async function GET(_request: NextRequest) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
-  const config = await prisma.configSite.findFirst({
-    where: { ativo: true },
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: config } = await supabaseAdmin
+    .from("config_site")
+    .select(
+      "id, whatsappNumero, whatsappMensagem, medicoNome, medicoEspecialidade, medicoCrm, instagramUrl, contatoTelefone, contatoEndereco, contatoCidade, atualizadoEm"
+    )
+    .eq("ativo", true)
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (!config) {
     return NextResponse.json({ configurado: false, config: null })
@@ -19,19 +25,7 @@ export async function GET(_request: NextRequest) {
 
   return NextResponse.json({
     configurado: true,
-    config: {
-      id: config.id,
-      whatsappNumero: config.whatsappNumero,
-      whatsappMensagem: config.whatsappMensagem,
-      medicoNome: config.medicoNome,
-      medicoEspecialidade: config.medicoEspecialidade,
-      medicoCrm: config.medicoCrm,
-      instagramUrl: config.instagramUrl,
-      contatoTelefone: config.contatoTelefone,
-      contatoEndereco: config.contatoEndereco,
-      contatoCidade: config.contatoCidade,
-      atualizadoEm: config.atualizadoEm,
-    },
+    config,
   })
 }
 
@@ -49,20 +43,29 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const existente = await prisma.configSite.findFirst({
-    where: { ativo: true },
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: existente } = await supabaseAdmin
+    .from("config_site")
+    .select("id")
+    .eq("ativo", true)
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (existente) {
-    await prisma.configSite.update({
-      where: { id: existente.id },
-      data: parsed.data,
-    })
+    const { error } = await supabaseAdmin
+      .from("config_site")
+      .update({ ...parsed.data, atualizadoEm: agora() })
+      .eq("id", existente.id)
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
   } else {
-    await prisma.configSite.create({
-      data: parsed.data,
-    })
+    const { error } = await supabaseAdmin
+      .from("config_site")
+      .insert({ id: criarId(), atualizadoEm: agora(), ...parsed.data })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ sucesso: true, configurado: true })

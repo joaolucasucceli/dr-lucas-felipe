@@ -1,25 +1,21 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 
 export async function GET() {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
-  const instancias = await prisma.configWhatsapp.findMany({
-    orderBy: { criadoEm: "desc" },
-    select: {
-      id: true,
-      nome: true,
-      uazapiUrl: true,
-      instanceId: true,
-      numeroWhatsapp: true,
-      webhookUrl: true,
-      ativo: true,
-      criadoEm: true,
-      atualizadoEm: true,
-    },
-  })
+  const { data: instancias, error } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select(
+      "id, nome, uazapiUrl, instanceId, numeroWhatsapp, webhookUrl, ativo, criadoEm, atualizadoEm"
+    )
+    .order("criadoEm", { ascending: false })
 
-  return NextResponse.json({ instancias })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ instancias: instancias ?? [] })
 }

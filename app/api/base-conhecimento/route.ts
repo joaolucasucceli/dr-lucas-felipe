@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { criarBaseConhecimentoSchema } from "@/lib/validations/base-conhecimento"
+import { criarId, agora } from "@/lib/db-utils"
+
+const SELECT_BASE =
+  "id, titulo, conteudo, secao, ordem, ativo, criadoEm, atualizadoEm"
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole("gestor")
@@ -13,39 +17,31 @@ export async function GET(request: NextRequest) {
   const secao = searchParams.get("secao")
   const busca = searchParams.get("busca")
 
-  const where: Record<string, unknown> = {
-    deletadoEm: null,
-  }
+  let query = supabaseAdmin
+    .from("base_conhecimento")
+    .select(SELECT_BASE)
+    .is("deletadoEm", null)
 
   if (ativo !== null && ativo !== undefined && ativo !== "") {
-    where.ativo = ativo === "true"
+    query = query.eq("ativo", ativo === "true")
   }
   if (secao) {
-    where.secao = secao
+    query = query.eq("secao", secao)
   }
   if (busca) {
-    where.OR = [
-      { titulo: { contains: busca, mode: "insensitive" } },
-      { conteudo: { contains: busca, mode: "insensitive" } },
-    ]
+    query = query.or(`titulo.ilike.%${busca}%,conteudo.ilike.%${busca}%`)
   }
 
-  const dados = await prisma.baseConhecimento.findMany({
-    where,
-    select: {
-      id: true,
-      titulo: true,
-      conteudo: true,
-      secao: true,
-      ordem: true,
-      ativo: true,
-      criadoEm: true,
-      atualizadoEm: true,
-    },
-    orderBy: [{ secao: "asc" }, { ordem: "asc" }, { titulo: "asc" }],
-  })
+  const { data, error } = await query
+    .order("secao", { ascending: true })
+    .order("ordem", { ascending: true })
+    .order("titulo", { ascending: true })
 
-  return NextResponse.json({ dados })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ dados: data })
 }
 
 export async function POST(request: NextRequest) {
@@ -62,19 +58,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const registro = await prisma.baseConhecimento.create({
-    data: parsed.data,
-    select: {
-      id: true,
-      titulo: true,
-      conteudo: true,
-      secao: true,
-      ordem: true,
-      ativo: true,
-      criadoEm: true,
-      atualizadoEm: true,
-    },
-  })
+  const { data: registro, error } = await supabaseAdmin
+    .from("base_conhecimento")
+    .insert({
+      id: criarId(),
+      atualizadoEm: agora(),
+      ...parsed.data,
+    })
+    .select(SELECT_BASE)
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json(registro, { status: 201 })
 }

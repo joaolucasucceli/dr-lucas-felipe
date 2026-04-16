@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { desconectar } from "@/lib/uazapi"
+import { agora } from "@/lib/db-utils"
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
-  const config = await prisma.configWhatsapp.findFirst({
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: config } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("id, uazapiUrl, instanceToken, adminToken")
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   const instanceToken = config?.instanceToken || config?.adminToken
 
@@ -22,23 +26,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // DELETE /instance desconecta e remove a instância no Uazapi v2
     await desconectar(config.uazapiUrl, instanceToken).catch(() => {})
   } catch {
     // Ignorar erros do Uazapi — limpar config local mesmo assim
   }
 
-  // Limpar dados de instância
-  await prisma.configWhatsapp.update({
-    where: { id: config.id },
-    data: {
+  await supabaseAdmin
+    .from("config_whatsapp")
+    .update({
       instanceId: null,
       instanceToken: null,
       numeroWhatsapp: null,
       webhookUrl: null,
       ativo: false,
-    },
-  })
+      atualizadoEm: agora(),
+    })
+    .eq("id", config.id)
 
   return NextResponse.json({ sucesso: true })
 }

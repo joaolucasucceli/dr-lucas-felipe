@@ -1,27 +1,55 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import {
   criarRegistroCirurgicoSchema,
   atualizarRegistroCirurgicoSchema,
 } from "@/lib/validations/prontuario"
 import { registrarAuditLog } from "@/lib/audit"
-import type { Prisma } from "@/generated/prisma/client"
+import { criarId, agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string; evolucaoId: string }> }
 
 async function buscarEvolucao(pacienteId: string, evolucaoId: string) {
-  const prontuario = await prisma.prontuario.findFirst({
-    where: { paciente: { id: pacienteId, deletadoEm: null } },
-    select: { id: true },
-  })
+  const { data: paciente } = await supabaseAdmin
+    .from("pacientes")
+    .select("id")
+    .eq("id", pacienteId)
+    .is("deletadoEm", null)
+    .maybeSingle()
+  if (!paciente) return null
+
+  const { data: prontuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select("id")
+    .eq("pacienteId", pacienteId)
+    .maybeSingle()
   if (!prontuario) return null
 
-  return prisma.evolucao.findFirst({
-    where: { id: evolucaoId, prontuarioId: prontuario.id, deletadoEm: null },
-    include: { registroCirurgico: true },
-  })
+  const { data: evolucao } = await supabaseAdmin
+    .from("evolucoes")
+    .select("id, tipo, registroCirurgico:registros_cirurgicos(*)")
+    .eq("id", evolucaoId)
+    .eq("prontuarioId", prontuario.id)
+    .is("deletadoEm", null)
+    .maybeSingle()
+
+  if (!evolucao) return null
+
+  const registroRaw = evolucao.registroCirurgico as unknown
+  let registroCirurgico: Record<string, unknown> | null = null
+  if (Array.isArray(registroRaw)) {
+    registroCirurgico = (registroRaw[0] as Record<string, unknown>) ?? null
+  } else if (registroRaw && typeof registroRaw === "object") {
+    registroCirurgico = registroRaw as Record<string, unknown>
+  }
+
+  return {
+    id: evolucao.id,
+    tipo: evolucao.tipo,
+    registroCirurgico,
+  }
 }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
@@ -74,15 +102,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const { marcosRecuperacao, ...resto } = parsed.data
 
-  const registro = await prisma.registroCirurgico.create({
-    data: {
-      evolucaoId,
-      ...resto,
-      marcosRecuperacao: marcosRecuperacao
-        ? (marcosRecuperacao as unknown as Prisma.InputJsonValue)
-        : undefined,
-    },
-  })
+  const insertData = {
+    id: criarId(),
+    atualizadoEm: agora(),
+    evolucaoId,
+    ...resto,
+    marcosRecuperacao: marcosRecuperacao ?? null,
+  } as never
+
+  const { data: registro, error } = await supabaseAdmin
+    .from("registros_cirurgicos")
+    .insert(insertData)
+    .select("*")
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await registrarAuditLog({
     usuarioId: auth.session.user.id,
@@ -115,26 +151,32 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Registro cirúrgico não encontrado" }, { status: 404 })
   }
 
+  const registroAtual = evolucao.registroCirurgico as { id: string }
+
   const { marcosRecuperacao, ...resto } = parsed.data
 
-  const dadosAntes = evolucao.registroCirurgico as unknown as Record<string, unknown>
+  const dadosUpdate: Record<string, unknown> = { ...resto, atualizadoEm: agora() }
+  if (marcosRecuperacao !== undefined) {
+    dadosUpdate.marcosRecuperacao = marcosRecuperacao
+  }
 
-  const registro = await prisma.registroCirurgico.update({
-    where: { id: evolucao.registroCirurgico.id },
-    data: {
-      ...resto,
-      ...(marcosRecuperacao !== undefined
-        ? { marcosRecuperacao: marcosRecuperacao as unknown as Prisma.InputJsonValue }
-        : {}),
-    },
-  })
+  const { data: registro, error } = await supabaseAdmin
+    .from("registros_cirurgicos")
+    .update(dadosUpdate)
+    .eq("id", registroAtual.id)
+    .select("*")
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await registrarAuditLog({
     usuarioId: auth.session.user.id,
     acao: "atualizar",
     entidade: "RegistroCirurgico",
     entidadeId: registro.id,
-    dadosAntes,
+    dadosAntes: evolucao.registroCirurgico as unknown as Record<string, unknown>,
     dadosDepois: registro as unknown as Record<string, unknown>,
   })
 

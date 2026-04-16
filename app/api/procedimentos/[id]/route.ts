@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { atualizarProcedimentoSchema } from "@/lib/validations/procedimento"
+import { agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
+
+const SELECT_PROCEDIMENTO =
+  "id, nome, tipo, descricao, valorBase, duracaoMin, posOperatorio, ativo, criadoEm, atualizadoEm"
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
@@ -12,21 +16,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const procedimento = await prisma.procedimento.findUnique({
-    where: { id, deletadoEm: null },
-    select: {
-      id: true,
-      nome: true,
-      tipo: true,
-      descricao: true,
-      valorBase: true,
-      duracaoMin: true,
-      posOperatorio: true,
-      ativo: true,
-      criadoEm: true,
-      atualizadoEm: true,
-    },
-  })
+  const { data: procedimento } = await supabaseAdmin
+    .from("procedimentos")
+    .select(SELECT_PROCEDIMENTO)
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!procedimento) {
     return NextResponse.json({ error: "Procedimento não encontrado" }, { status: 404 })
@@ -50,56 +45,60 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const procedimentoAtual = await prisma.procedimento.findUnique({
-    where: { id, deletadoEm: null },
-  })
+  const { data: procedimentoAtual } = await supabaseAdmin
+    .from("procedimentos")
+    .select("id")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!procedimentoAtual) {
     return NextResponse.json({ error: "Procedimento não encontrado" }, { status: 404 })
   }
 
-  const procedimentoAtualizado = await prisma.procedimento.update({
-    where: { id },
-    data: parsed.data,
-    select: {
-      id: true,
-      nome: true,
-      tipo: true,
-      descricao: true,
-      valorBase: true,
-      duracaoMin: true,
-      posOperatorio: true,
-      ativo: true,
-      criadoEm: true,
-      atualizadoEm: true,
-    },
-  })
+  const { data: procedimentoAtualizado, error } = await supabaseAdmin
+    .from("procedimentos")
+    .update({ ...parsed.data, atualizadoEm: agora() })
+    .eq("id", id)
+    .select(SELECT_PROCEDIMENTO)
+    .single()
 
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json(procedimentoAtualizado)
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const { id } = await params
 
-  const procedimento = await prisma.procedimento.findUnique({
-    where: { id, deletadoEm: null },
-  })
+  const { data: procedimento } = await supabaseAdmin
+    .from("procedimentos")
+    .select("id")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!procedimento) {
     return NextResponse.json({ error: "Procedimento não encontrado" }, { status: 404 })
   }
 
-  await prisma.procedimento.update({
-    where: { id },
-    data: {
-      deletadoEm: new Date(),
+  const { error } = await supabaseAdmin
+    .from("procedimentos")
+    .update({
+      deletadoEm: agora(),
       ativo: false,
-    },
-  })
+      atualizadoEm: agora(),
+    })
+    .eq("id", id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({ mensagem: "Procedimento removido" })
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { validarCronSecret } from "@/lib/cron-auth"
 import { ehHorarioComercial } from "@/lib/agente/horario-comercial"
 import { buscarConversasParaFollowUp, enviarFollowUp } from "@/lib/agente/followup"
@@ -13,9 +13,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ skipped: "fora_horario", enviados: 0 })
   }
 
-  const configWa = await prisma.configWhatsapp.findFirst({
-    where: { ativo: true },
-  })
+  const { data: configWa } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("uazapiUrl, instanceToken")
+    .eq("ativo", true)
+    .maybeSingle()
 
   if (!configWa?.instanceToken) {
     return NextResponse.json({ enviados: 0, motivo: "sem_config" })

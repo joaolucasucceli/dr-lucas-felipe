@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { configWhatsappSchema } from "@/lib/validations/whatsapp-config"
 import { validarAdminToken } from "@/lib/uazapi"
+import { criarId, agora } from "@/lib/db-utils"
 
 export async function POST(request: NextRequest) {
   const auth = await requireRole("gestor")
@@ -21,7 +22,6 @@ export async function POST(request: NextRequest) {
 
   const { uazapiUrl, adminToken } = parsed.data
 
-  // Validar admin token via GET /status
   const resultado = await validarAdminToken(uazapiUrl, adminToken)
   if (!resultado.ok) {
     console.error("[test-connection] Falha ao conectar ao Uazapi:", resultado.erro)
@@ -31,20 +31,34 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Upsert config — salvar credenciais admin
-  const existente = await prisma.configWhatsapp.findFirst({
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: existente } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("id")
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (existente) {
-    await prisma.configWhatsapp.update({
-      where: { id: existente.id },
-      data: { uazapiUrl, adminToken },
-    })
+    const { error } = await supabaseAdmin
+      .from("config_whatsapp")
+      .update({ uazapiUrl, adminToken, atualizadoEm: agora() })
+      .eq("id", existente.id)
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
   } else {
-    await prisma.configWhatsapp.create({
-      data: { uazapiUrl, adminToken, instanceToken: "" },
-    })
+    const { error } = await supabaseAdmin
+      .from("config_whatsapp")
+      .insert({
+        id: criarId(),
+        atualizadoEm: agora(),
+        uazapiUrl,
+        adminToken,
+        instanceToken: "",
+      })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ sucesso: true })

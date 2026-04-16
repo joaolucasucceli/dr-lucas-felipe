@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
+import { agora } from "@/lib/db-utils"
 import { z } from "zod"
 
 const schema = z.object({
@@ -17,14 +18,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "conversaId obrigatório" }, { status: 400 })
   }
 
-  await prisma.mensagemWhatsapp.updateMany({
-    where: {
-      conversaId: parse.data.conversaId,
-      remetente: "paciente",
-      lidaEm: null,
-    },
-    data: { lidaEm: new Date() },
-  })
+  const { error } = await supabaseAdmin
+    .from("mensagens_whatsapp")
+    .update({ lidaEm: agora() })
+    .eq("conversaId", parse.data.conversaId)
+    .eq("remetente", "paciente")
+    .is("lidaEm", null)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({ sucesso: true })
 }

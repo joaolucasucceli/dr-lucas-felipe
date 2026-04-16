@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
-import type { TipoMensagem } from "@/generated/prisma/enums"
+import { supabaseAdmin } from "@/lib/supabase"
+import type { TipoMensagem } from "@/lib/types/enums"
 import { adicionarAoBuffer, deveProcessar } from "@/lib/agente/buffer"
 import {
   transcreverAudio,
@@ -11,9 +11,7 @@ import {
   type AnaliseFoto,
 } from "@/lib/agente/processar-midia"
 import { baixarMidia } from "@/lib/uazapi"
-import { createClient } from "@supabase/supabase-js"
-
-// ── Tipos UazapiGO v2 ─────────────────────────────────────────────
+import { criarId, agora } from "@/lib/db-utils"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -29,8 +27,6 @@ interface MensagemNormalizada {
   mediaUrl: string | null
   timestamp: number
 }
-
-// ── Helpers ────────────────────────────────────────────────────────
 
 function extrairNumero(jid: string): string {
   return jid.split("@")[0]
@@ -50,11 +46,6 @@ async function downloadEUploadMidia(
   messageId: string
 ): Promise<string | null> {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!supabaseUrl || !serviceKey) return null
-
-    const supabase = createClient(supabaseUrl, serviceKey)
     const res = await fetch(mediaUrl)
     if (!res.ok) return null
 
@@ -71,7 +62,7 @@ async function downloadEUploadMidia(
               : "bin"
     const path = `webhook/${messageId}.${ext}`
 
-    const { error } = await supabase.storage
+    const { error } = await supabaseAdmin.storage
       .from("atendimento-midias")
       .upload(path, buffer, {
         contentType: MIME_MAP[tipo] || "application/octet-stream",
@@ -80,21 +71,12 @@ async function downloadEUploadMidia(
 
     if (error) return null
 
-    const { data } = supabase.storage.from("atendimento-midias").getPublicUrl(path)
+    const { data } = supabaseAdmin.storage.from("atendimento-midias").getPublicUrl(path)
     return data.publicUrl
   } catch {
     return null
   }
 }
-
-// ── Normalizar payload UazapiGO v2 ────────────────────────────────
-// Formato real capturado dos logs:
-// {
-//   "EventType": "messages",
-//   "message": { "chatid", "content", "fromMe", "isGroup", "id", "mediaType", "messageTimestamp" },
-//   "chat": { "phone", "name", "wa_chatid" },
-//   "owner": "5527996960847"
-// }
 
 function normalizarUazapiV2(payload: any): MensagemNormalizada | null {
   const msg = payload.message
@@ -110,10 +92,9 @@ function normalizarUazapiV2(payload: any): MensagemNormalizada | null {
         : msg.messageTimestamp)
     : Math.floor(Date.now() / 1000)
 
-  // Detectar tipo de mídia
   const mediaType = (msg.mediaType || "").toLowerCase()
   let tipoMsg: TipoMensagem = "texto"
-  let mediaUrl: string | null = msg.mediaUrl || msg.media_url || null
+  const mediaUrl: string | null = msg.mediaUrl || msg.media_url || null
 
   if (mediaType.includes("sticker")) {
     tipoMsg = "sticker"
@@ -127,10 +108,8 @@ function normalizarUazapiV2(payload: any): MensagemNormalizada | null {
     tipoMsg = "video"
   }
 
-  // Conteúdo de texto
   const conteudo = msg.content || msg.body || ""
 
-  // Nome do contato — vem do chat do Uazapi
   const chat = payload.chat || {}
   const nomeContato = chat.name || chat.wa_name || null
 
@@ -152,8 +131,6 @@ function normalizarUazapiV2(payload: any): MensagemNormalizada | null {
     timestamp,
   }
 }
-
-// ── Normalizar payload Baileys/Evolution API (formato legado) ─────
 
 function normalizarBaileys(payload: any): MensagemNormalizada[] {
   const messages = payload?.data?.messages
@@ -193,12 +170,7 @@ function normalizarBaileys(payload: any): MensagemNormalizada[] {
     })
 }
 
-// ── Handler principal ─────────────────────────────────────────────
-
 export async function POST(request: NextRequest) {
-  // Validar origem: apenas se WEBHOOK_SECRET estiver explicitamente configurado.
-  // Comportamento opcional por design — endpoint nao e linkado em lugar nenhum
-  // do site e a coordenacao com o gateway (Uazapi) inviabiliza obrigatoriedade.
   const webhookSecret = process.env.WEBHOOK_SECRET
   if (webhookSecret) {
     const tokenRecebido =
@@ -217,15 +189,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  // ── Detectar formato e normalizar ──
   let mensagens: MensagemNormalizada[] = []
 
   if (payload.EventType === "messages" && payload.message) {
-    // UazapiGO v2: { EventType: "messages", message: { chatid, content, ... } }
     const msg = normalizarUazapiV2(payload)
     if (msg) mensagens = [msg]
   } else if (typeof payload.event === "string") {
-    // Baileys/Evolution: { event: "messages.upsert", data: { messages: [...] } }
     const eventosValidos = ["messages.upsert", "messages"]
     if (!eventosValidos.includes(payload.event)) {
       return NextResponse.json({ ok: true })
@@ -244,25 +213,19 @@ export async function POST(request: NextRequest) {
   }
 
   for (const msg of mensagens) {
-    // Ignorar mensagens do próprio bot
     if (msg.fromMe) continue
-
-    // Ignorar grupos
     if (msg.isGroup) continue
 
-    // Dedup: verificar se já processou
-    const existe = await prisma.mensagemWhatsapp.findUnique({
-      where: { messageIdWhatsapp: msg.id },
-    })
+    const { data: existe } = await supabaseAdmin
+      .from("mensagens_whatsapp")
+      .select("id")
+      .eq("messageIdWhatsapp", msg.id)
+      .maybeSingle()
+
     if (existe) continue
 
     let conteudo = msg.conteudo
     let storedMediaUrl: string | null = null
-
-    // Processar mídia — estratégia em cascata:
-    //   1) URL direta → Whisper/vision
-    //   2) POST /message/download da Uazapi → base64 → Whisper/vision
-    //   3) Fallback amigavel pra nao deixar o LLM dizer "nao processo audio/imagem"
     let analiseFoto: AnaliseFoto | null = null
 
     if (msg.tipo === "audio" || msg.tipo === "imagem") {
@@ -284,11 +247,13 @@ export async function POST(request: NextRequest) {
       }
 
       if (!transcricao && !analiseFoto) {
-        // Fallback: baixar via Uazapi /message/download
         try {
-          const configWa = await prisma.configWhatsapp.findFirst({
-            where: { ativo: true },
-          })
+          const { data: configWa } = await supabaseAdmin
+            .from("config_whatsapp")
+            .select("uazapiUrl, instanceToken")
+            .eq("ativo", true)
+            .maybeSingle()
+
           if (configWa?.uazapiUrl && configWa?.instanceToken) {
             const baixado = await baixarMidia(
               configWa.uazapiUrl,
@@ -338,118 +303,164 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Download mídia e upload para Storage
     if (msg.mediaUrl && msg.tipo !== "texto") {
       storedMediaUrl = await downloadEUploadMidia(msg.mediaUrl, msg.tipo, msg.id)
     }
 
-    // Encontrar ou criar lead pelo whatsapp
-    let lead = await prisma.lead.findUnique({
-      where: { whatsapp: msg.numero },
-    })
+    const { data: leadExistente } = await supabaseAdmin
+      .from("leads")
+      .select("*")
+      .eq("whatsapp", msg.numero)
+      .maybeSingle()
+
+    let lead = leadExistente
 
     if (lead && lead.deletadoEm) {
-      // Lead foi deletado mas recebeu nova mensagem — reativar
-      lead = await prisma.lead.update({
-        where: { id: lead.id },
-        data: {
+      const { data: reativado } = await supabaseAdmin
+        .from("leads")
+        .update({
           deletadoEm: null,
           nome: msg.nomeContato?.trim() || lead.nome,
-        },
-      })
+          atualizadoEm: agora(),
+        })
+        .eq("id", lead.id)
+        .select("*")
+        .single()
+      lead = reativado
     }
 
     if (!lead) {
-      const usuarioIa = await prisma.usuario.findFirst({
-        where: { tipo: "ia", ativo: true, deletadoEm: null },
-      })
+      const { data: usuarioIa } = await supabaseAdmin
+        .from("usuarios")
+        .select("id")
+        .eq("tipo", "ia")
+        .eq("ativo", true)
+        .is("deletadoEm", null)
+        .maybeSingle()
+
       if (!usuarioIa) {
         console.warn("[Webhook] Nenhum usuário IA ativo encontrado — lead será criado sem responsável")
       }
-      try {
-        lead = await prisma.lead.create({
-          data: {
-            nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
-            whatsapp: msg.numero,
-            origem: "whatsapp",
-            responsavelId: usuarioIa?.id || null,
-          },
+
+      const { data: novoLead, error: createErr } = await supabaseAdmin
+        .from("leads")
+        .insert({
+          id: criarId(),
+          atualizadoEm: agora(),
+          nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
+          whatsapp: msg.numero,
+          origem: "whatsapp",
+          responsavelId: usuarioIa?.id || null,
         })
-      } catch (err) {
-        // P2002 = lead com mesmo whatsapp criado por request paralelo
-        if ((err as { code?: string }).code === "P2002") {
-          lead = await prisma.lead.findUnique({ where: { whatsapp: msg.numero } })
-          if (lead?.deletadoEm) {
-            lead = await prisma.lead.update({
-              where: { id: lead.id },
-              data: { deletadoEm: null, nome: msg.nomeContato?.trim() || lead.nome },
-            })
+        .select("*")
+        .single()
+
+      if (createErr) {
+        if (createErr.code === "23505") {
+          const { data: paralelo } = await supabaseAdmin
+            .from("leads")
+            .select("*")
+            .eq("whatsapp", msg.numero)
+            .maybeSingle()
+
+          if (paralelo?.deletadoEm) {
+            const { data: reativado } = await supabaseAdmin
+              .from("leads")
+              .update({
+                deletadoEm: null,
+                nome: msg.nomeContato?.trim() || paralelo.nome,
+                atualizadoEm: agora(),
+              })
+              .eq("id", paralelo.id)
+              .select("*")
+              .single()
+            lead = reativado
+          } else {
+            lead = paralelo
           }
-          if (!lead) throw err
+
+          if (!lead) {
+            console.error("[Webhook] Falha ao criar/encontrar lead após dup:", createErr.message)
+            continue
+          }
         } else {
-          throw err
+          console.error("[Webhook] Falha ao criar lead:", createErr.message)
+          continue
         }
+      } else {
+        lead = novoLead
       }
     }
 
-    // Encontrar ou criar conversa
-    let conversa = await prisma.conversa.findFirst({
-      where: { leadId: lead.id },
-      orderBy: { criadoEm: "desc" },
-    })
+    const { data: conversaExistente } = await supabaseAdmin
+      .from("conversas")
+      .select("*")
+      .eq("leadId", lead!.id)
+      .order("criadoEm", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    let conversa = conversaExistente
 
     if (!conversa) {
-      conversa = await prisma.conversa.create({
-        data: { leadId: lead.id },
-      })
-    }
-
-    // Salvar mensagem
-    try {
-      await prisma.mensagemWhatsapp.create({
-        data: {
-          conversaId: conversa.id,
-          leadId: lead.id,
-          messageIdWhatsapp: msg.id,
-          tipo: msg.tipo,
-          conteudo,
-          remetente: "paciente",
-          mediaUrl: storedMediaUrl,
-          mediaType: msg.tipo !== "texto" ? msg.tipo : null,
-        },
-      })
-    } catch (err) {
-      // P2002 = outro request paralelo ja salvou essa messageIdWhatsapp
-      // entre nosso findUnique e o create. Skip silencioso.
-      if ((err as { code?: string }).code === "P2002") continue
-      throw err
-    }
-
-    // Atualizar ultimaMensagemEm na conversa
-    await prisma.conversa.update({
-      where: { id: conversa.id },
-      data: { ultimaMensagemEm: new Date() },
-    })
-
-    // Se for imagem do paciente com URL no storage, registrar tambem em
-    // FotoLead na aba "Fotos". Classificacao (antes/depois/geral) vem
-    // do GPT-4o-mini vision; gestor pode ajustar manualmente depois.
-    if (msg.tipo === "imagem" && storedMediaUrl) {
-      await prisma.fotoLead
-        .create({
-          data: {
-            leadId: lead.id,
-            url: storedMediaUrl,
-            tipoAnalise: analiseFoto?.tipo ?? "geral",
-            descricao: analiseFoto?.descricao ?? null,
-          },
+      const { data: novaConversa, error: convErr } = await supabaseAdmin
+        .from("conversas")
+        .insert({
+          id: criarId(),
+          atualizadoEm: agora(),
+          leadId: lead!.id,
         })
-        .catch((err) => console.error("[Webhook] Falha FotoLead:", err))
+        .select("*")
+        .single()
+
+      if (convErr) {
+        console.error("[Webhook] Falha ao criar conversa:", convErr.message)
+        continue
+      }
+      conversa = novaConversa
     }
 
-    // Adicionar ao buffer Redis. Se ja ha um /processar em andamento
-    // (debounce ativo), nao disparar nova chamada — o processamento em curso
-    // vai acumular esta mensagem no buffer e respondera uma vez so apos os 20s.
+    const { error: msgErr } = await supabaseAdmin
+      .from("mensagens_whatsapp")
+      .insert({
+        id: criarId(),
+        conversaId: conversa!.id,
+        leadId: lead!.id,
+        messageIdWhatsapp: msg.id,
+        tipo: msg.tipo,
+        conteudo,
+        remetente: "paciente",
+        mediaUrl: storedMediaUrl,
+        mediaType: msg.tipo !== "texto" ? msg.tipo : null,
+      })
+
+    if (msgErr) {
+      if (msgErr.code === "23505") continue
+      console.error("[Webhook] Falha ao salvar mensagem:", msgErr.message)
+      continue
+    }
+
+    await supabaseAdmin
+      .from("conversas")
+      .update({ ultimaMensagemEm: agora(), atualizadoEm: agora() })
+      .eq("id", conversa!.id)
+
+    if (msg.tipo === "imagem" && storedMediaUrl) {
+      const { error: fotoErr } = await supabaseAdmin
+        .from("fotos_lead")
+        .insert({
+          id: criarId(),
+          leadId: lead!.id,
+          url: storedMediaUrl,
+          tipoAnalise: analiseFoto?.tipo ?? "geral",
+          descricao: analiseFoto?.descricao ?? null,
+        })
+
+      if (fotoErr) {
+        console.error("[Webhook] Falha FotoLead:", fotoErr.message)
+      }
+    }
+
     try {
       await adicionarAoBuffer(msg.chatId, {
         tipo: msg.tipo,

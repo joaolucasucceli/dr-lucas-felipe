@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
 import { enviarDigitando } from "@/lib/uazapi"
 import { z } from "zod"
@@ -18,21 +18,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "conversaId obrigatório" }, { status: 400 })
   }
 
-  const conversa = await prisma.conversa.findUnique({
-    where: { id: parse.data.conversaId },
-    include: { lead: { select: { whatsapp: true } } },
-  })
+  const { data: conversa } = await supabaseAdmin
+    .from("conversas")
+    .select("id, lead:leads!conversas_leadId_fkey(whatsapp)")
+    .eq("id", parse.data.conversaId)
+    .maybeSingle()
 
   if (!conversa) {
     return NextResponse.json({ error: "Conversa não encontrada" }, { status: 404 })
   }
 
-  const config = await prisma.configWhatsapp.findFirst({ where: { ativo: true } })
+  const lead = conversa.lead as unknown as { whatsapp: string } | null
+  if (!lead) {
+    return NextResponse.json({ error: "Lead da conversa não encontrado" }, { status: 404 })
+  }
+
+  const { data: config } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("uazapiUrl, instanceToken")
+    .eq("ativo", true)
+    .maybeSingle()
+
   if (!config?.instanceToken || !config?.uazapiUrl) {
     return NextResponse.json({ error: "WhatsApp não configurado" }, { status: 400 })
   }
 
-  const chatId = `${conversa.lead.whatsapp}@s.whatsapp.net`
+  const chatId = `${lead.whatsapp}@s.whatsapp.net`
 
   try {
     await enviarDigitando(config.uazapiUrl, config.instanceToken, chatId, true)

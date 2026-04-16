@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarEvento } from "@/lib/google-calendar"
+import { criarId, agora } from "@/lib/db-utils"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -32,37 +33,57 @@ export async function POST(request: NextRequest) {
 
   const inicio = new Date(dataHora)
 
-  const agendamento = await prisma.agendamento.create({
-    data: {
+  const { data: agendamento, error: agendError } = await supabaseAdmin
+    .from("agendamentos")
+    .insert({
+      id: criarId(),
+      atualizadoEm: agora(),
       leadId,
       procedimentoId: procedimentoId || null,
-      dataHora: inicio,
+      dataHora: inicio.toISOString(),
       status: "agendado",
       observacao: observacao || null,
-    },
-  })
-
-  // Avançar etapa → consulta_agendada (em transação)
-  await prisma.$transaction(async (tx) => {
-    await tx.lead.update({
-      where: { id: leadId },
-      data: { statusFunil: "consulta_agendada", ultimaMovimentacaoEm: new Date() },
     })
-    if (conversaId) {
-      await tx.conversa.update({
-        where: { id: conversaId },
-        data: { etapa: "consulta_agendada" },
-      })
-    }
-  })
+    .select("*")
+    .single()
 
-  // Criar evento no Google Calendar (graceful fallback se não configurado)
-  const [lead, procedimento] = await Promise.all([
-    prisma.lead.findUnique({ where: { id: leadId }, select: { nome: true, email: true, whatsapp: true } }),
+  if (agendError || !agendamento) {
+    return NextResponse.json(
+      { error: agendError?.message || "Erro ao criar agendamento" },
+      { status: 500 }
+    )
+  }
+
+  await supabaseAdmin
+    .from("leads")
+    .update({
+      statusFunil: "consulta_agendada",
+      ultimaMovimentacaoEm: agora(),
+      atualizadoEm: agora(),
+    })
+    .eq("id", leadId)
+
+  await supabaseAdmin
+    .from("conversas")
+    .update({ etapa: "consulta_agendada", atualizadoEm: agora() })
+    .eq("id", conversaId)
+
+  const [{ data: lead }, procResult] = await Promise.all([
+    supabaseAdmin
+      .from("leads")
+      .select("nome, email, whatsapp")
+      .eq("id", leadId)
+      .maybeSingle(),
     procedimentoId
-      ? prisma.procedimento.findUnique({ where: { id: procedimentoId }, select: { nome: true, duracaoMin: true } })
-      : null,
+      ? supabaseAdmin
+          .from("procedimentos")
+          .select("nome, duracaoMin")
+          .eq("id", procedimentoId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
+
+  const procedimento = procResult.data
 
   const duracaoMin = procedimento?.duracaoMin ?? agendamento.duracao ?? 60
   const fim = new Date(inicio.getTime() + duracaoMin * 60_000)
@@ -87,15 +108,16 @@ export async function POST(request: NextRequest) {
   })
 
   if (resultadoCalendar) {
-    await prisma.agendamento.update({
-      where: { id: agendamento.id },
-      data: {
+    await supabaseAdmin
+      .from("agendamentos")
+      .update({
         googleEventId: resultadoCalendar.googleEventId,
         googleEventUrl: resultadoCalendar.googleEventUrl,
         sincronizado: true,
         duracao: duracaoMin,
-      },
-    })
+        atualizadoEm: agora(),
+      })
+      .eq("id", agendamento.id)
   }
 
   return NextResponse.json({ agendamento, sincronizado: !!resultadoCalendar })

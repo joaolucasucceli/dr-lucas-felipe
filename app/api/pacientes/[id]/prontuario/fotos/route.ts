@@ -1,17 +1,35 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { createId } from "@paralleldrive/cuid2"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { registrarAuditLog } from "@/lib/audit"
-import { supabaseAdmin } from "@/lib/supabase"
+import { criarId, agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
 const BUCKET = "fotos-prontuario"
-const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_SIZE = 10 * 1024 * 1024
 const TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"]
 const TIPOS_FOTO_VALIDOS = ["pre_operatorio", "pos_operatorio", "acompanhamento"]
+
+async function buscarProntuario(pacienteId: string) {
+  const { data: paciente } = await supabaseAdmin
+    .from("pacientes")
+    .select("id")
+    .eq("id", pacienteId)
+    .is("deletadoEm", null)
+    .maybeSingle()
+
+  if (!paciente) return null
+
+  const { data: prontuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select("id")
+    .eq("pacienteId", pacienteId)
+    .maybeSingle()
+
+  return prontuario
+}
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
@@ -19,21 +37,22 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const prontuario = await prisma.prontuario.findFirst({
-    where: { paciente: { id, deletadoEm: null } },
-    select: { id: true },
-  })
-
+  const prontuario = await buscarProntuario(id)
   if (!prontuario) {
     return NextResponse.json({ error: "Prontuário não encontrado" }, { status: 404 })
   }
 
-  const fotos = await prisma.fotoProntuario.findMany({
-    where: { prontuarioId: prontuario.id },
-    orderBy: { dataRegistro: "desc" },
-  })
+  const { data: fotos, error } = await supabaseAdmin
+    .from("fotos_prontuario")
+    .select("*")
+    .eq("prontuarioId", prontuario.id)
+    .order("dataRegistro", { ascending: false })
 
-  return NextResponse.json({ dados: fotos })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ dados: fotos ?? [] })
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -42,11 +61,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const prontuario = await prisma.prontuario.findFirst({
-    where: { paciente: { id, deletadoEm: null } },
-    select: { id: true },
-  })
-
+  const prontuario = await buscarProntuario(id)
   if (!prontuario) {
     return NextResponse.json({ error: "Prontuário não encontrado" }, { status: 404 })
   }
@@ -82,7 +97,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const ext = arquivo.name.split(".").pop() || "jpg"
-  const nomeArquivo = `${prontuario.id}/${createId()}.${ext}`
+  const nomeArquivo = `${prontuario.id}/${criarId()}.${ext}`
 
   const buffer = Buffer.from(await arquivo.arrayBuffer())
 
@@ -103,15 +118,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     .from(BUCKET)
     .getPublicUrl(nomeArquivo)
 
-  const foto = await prisma.fotoProntuario.create({
-    data: {
+  const { data: foto, error: insertError } = await supabaseAdmin
+    .from("fotos_prontuario")
+    .insert({
+      id: criarId(),
       prontuarioId: prontuario.id,
       url: urlData.publicUrl,
       descricao: descricao?.trim() || null,
       tipoFoto: tipoFoto || null,
-      dataRegistro: new Date(),
-    },
-  })
+      dataRegistro: agora(),
+    })
+    .select("*")
+    .single()
+
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
 
   await registrarAuditLog({
     usuarioId: auth.session.user.id,

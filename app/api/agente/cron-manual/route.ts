@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { ehHorarioComercial } from "@/lib/agente/horario-comercial"
 import { buscarConversasParaFollowUp, enviarFollowUp } from "@/lib/agente/followup"
@@ -7,14 +7,17 @@ import {
   buscarAgendamentosParaConfirmacao,
   enviarConfirmacao,
 } from "@/lib/agente/confirmacao"
+import { agora } from "@/lib/db-utils"
 
 export async function POST() {
   const { error } = await requireRole("gestor")
   if (error) return error
 
-  const configWa = await prisma.configWhatsapp.findFirst({
-    where: { ativo: true },
-  })
+  const { data: configWa } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("uazapiUrl, instanceToken")
+    .eq("ativo", true)
+    .maybeSingle()
 
   const resultado = {
     followups: 0,
@@ -28,7 +31,6 @@ export async function POST() {
     return NextResponse.json({ ...resultado, motivo: "sem_config_whatsapp" })
   }
 
-  // Follow-ups (só em horário comercial)
   if (resultado.horarioComercial) {
     try {
       const pendentesFollowUp = await buscarConversasParaFollowUp()
@@ -44,7 +46,6 @@ export async function POST() {
       // Ignorar erro geral
     }
 
-    // Confirmações
     try {
       const pendentesConfirmacao = await buscarAgendamentosParaConfirmacao()
       for (const { agendamento, tipo } of pendentesConfirmacao) {
@@ -60,24 +61,25 @@ export async function POST() {
     }
   }
 
-  // Auto-close (sempre, independente de horário)
   try {
-    const ha24h = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    const conversas = await prisma.conversa.findMany({
-      where: {
-        encerradaEm: null,
-        ultimaMensagemEm: { not: null, lt: ha24h },
-        followUpEnviados: { has: "24h" },
-      },
-      select: { id: true },
-    })
+    const ha24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: conversas } = await supabaseAdmin
+      .from("conversas")
+      .select("id, followUpEnviados")
+      .is("encerradaEm", null)
+      .not("ultimaMensagemEm", "is", null)
+      .lt("ultimaMensagemEm", ha24h)
 
-    for (const conversa of conversas) {
+    const pendentes = (conversas ?? []).filter((c) =>
+      (c.followUpEnviados ?? []).includes("24h")
+    )
+
+    for (const conversa of pendentes) {
       try {
-        await prisma.conversa.update({
-          where: { id: conversa.id },
-          data: { encerradaEm: new Date() },
-        })
+        await supabaseAdmin
+          .from("conversas")
+          .update({ encerradaEm: agora(), atualizadoEm: agora() })
+          .eq("id", conversa.id)
         resultado.autoClose++
       } catch {
         // Continuar

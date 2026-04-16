@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
-import { createId } from "@paralleldrive/cuid2"
-import type { TipoMensagem } from "@/generated/prisma/enums"
+import { criarId, agora } from "@/lib/db-utils"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -33,30 +32,44 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Se não há conversaId, criar nova conversa
   if (!conversaId) {
-    const conversa = await prisma.conversa.create({
-      data: { leadId },
-    })
-    conversaId = conversa.id
+    const novoId = criarId()
+    const { error: convError } = await supabaseAdmin
+      .from("conversas")
+      .insert({
+        id: novoId,
+        atualizadoEm: agora(),
+        leadId,
+      })
+
+    if (convError) {
+      return NextResponse.json({ error: convError.message }, { status: 500 })
+    }
+    conversaId = novoId
   }
 
-  const mensagem = await prisma.mensagemWhatsapp.create({
-    data: {
+  const { data: mensagem, error } = await supabaseAdmin
+    .from("mensagens_whatsapp")
+    .insert({
+      id: criarId(),
       conversaId,
       leadId,
-      messageIdWhatsapp: messageIdWhatsapp || `agente_${createId()}`,
-      tipo: (tipo || "texto") as TipoMensagem,
+      messageIdWhatsapp: messageIdWhatsapp || `agente_${criarId()}`,
+      tipo: (tipo || "texto") as never,
       conteudo,
       remetente: direcao === "agente" ? "agente" : "paciente",
-    },
-  })
+    })
+    .select("*")
+    .single()
 
-  // Atualizar ultimaMensagemEm na conversa
-  await prisma.conversa.update({
-    where: { id: conversaId },
-    data: { ultimaMensagemEm: new Date() },
-  })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  await supabaseAdmin
+    .from("conversas")
+    .update({ ultimaMensagemEm: agora(), atualizadoEm: agora() })
+    .eq("id", conversaId)
 
   return NextResponse.json({ mensagem, conversaId })
 }

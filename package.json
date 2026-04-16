@@ -10,14 +10,12 @@
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma generate"
+    "db:types": "npx supabase gen types typescript --project-id gbcrmiplukilalwyjxxp --schema public > lib/types/database.ts"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@paralleldrive/cuid2": "^3.3.0",
-    "@prisma/adapter-pg": "^7.5.0",
-    "@prisma/client": "^7.5.0",
     "@supabase/supabase-js": "^2.99.3",
     "@upstash/redis": "^1.37.0",
     "bcryptjs": "^3.0.3",
@@ -32,7 +30,6 @@
     "next-auth": "^4.24.13",
     "next-themes": "^0.4.6",
     "openai": "^6.32.0",
-    "prisma": "^7.5.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -47,9 +44,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.1",
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -61,8 +56,5 @@
     "tailwindcss": "^4.2.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
-  },
-  "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
   }
 }

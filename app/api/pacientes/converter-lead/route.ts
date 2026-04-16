@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { converterLeadParaPaciente } from "@/lib/pacientes/converter-lead"
 
@@ -18,9 +18,12 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const lead = await prisma.lead.findUnique({
-    where: { id: leadId, deletadoEm: null },
-  })
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("id")
+    .eq("id", leadId)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!lead) {
     return NextResponse.json(

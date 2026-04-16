@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth, requireAnyRole, requireRole } from "@/lib/auth-helpers"
 import { atualizarLeadSchema } from "@/lib/validations/lead"
 import { limparMemoria } from "@/lib/agente/memoria"
 import { obterELimparBuffer } from "@/lib/agente/buffer"
+import { agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
+
+const SELECT_LEAD_ATUALIZADO =
+  "id, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, sobreOPaciente, responsavelId, arquivado, criadoEm, atualizadoEm"
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireAuth()
@@ -14,47 +18,56 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const lead = await prisma.lead.findUnique({
-    where: { id, deletadoEm: null },
-    include: {
-      responsavel: {
-        select: { id: true, nome: true },
-      },
-      agendamentos: {
-        orderBy: { dataHora: "desc" },
-        include: {
-          procedimento: {
-            select: { id: true, nome: true },
-          },
-        },
-      },
-      conversas: {
-        orderBy: [{ ciclo: "desc" }, { atualizadoEm: "desc" }],
-        include: {
-          mensagens: {
-            orderBy: { criadoEm: "asc" },
-            include: {
-              replyTo: {
-                select: { id: true, conteudo: true, remetente: true },
-              },
-            },
-          },
-        },
-      },
-      fotos: {
-        orderBy: { criadoEm: "desc" },
-      },
-      paciente: {
-        select: { id: true, nome: true },
-      },
-    },
-  })
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select(`
+      *,
+      responsavel:usuarios!leads_responsavelId_fkey(id, nome),
+      agendamentos(*, procedimento:procedimentos(id, nome)),
+      conversas(*, mensagens:mensagens_whatsapp(*, replyTo:mensagens_whatsapp!mensagens_whatsapp_replyToId_fkey(id, conteudo, remetente))),
+      fotos:fotos_lead(*),
+      paciente:pacientes(id, nome)
+    `)
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!lead) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
   }
 
-  return NextResponse.json(lead)
+  type ConversaOrdenavel = { ciclo?: number | null; atualizadoEm?: string | null }
+  type MensagemOrdenavel = { criadoEm?: string | null }
+  type AgendamentoOrdenavel = { dataHora?: string | null }
+  type FotoOrdenavel = { criadoEm?: string | null }
+
+  const conversasOrdenadas = [...((lead.conversas as ConversaOrdenavel[]) ?? [])].sort((a, b) => {
+    const cicloA = a.ciclo ?? 0
+    const cicloB = b.ciclo ?? 0
+    if (cicloB !== cicloA) return cicloB - cicloA
+    return (b.atualizadoEm ?? "").localeCompare(a.atualizadoEm ?? "")
+  })
+
+  for (const conversa of conversasOrdenadas as Array<ConversaOrdenavel & { mensagens?: MensagemOrdenavel[] }>) {
+    if (Array.isArray(conversa.mensagens)) {
+      conversa.mensagens.sort((a, b) => (a.criadoEm ?? "").localeCompare(b.criadoEm ?? ""))
+    }
+  }
+
+  const agendamentosOrdenados = [...((lead.agendamentos as AgendamentoOrdenavel[]) ?? [])].sort((a, b) =>
+    (b.dataHora ?? "").localeCompare(a.dataHora ?? "")
+  )
+
+  const fotosOrdenadas = [...((lead.fotos as FotoOrdenavel[]) ?? [])].sort((a, b) =>
+    (b.criadoEm ?? "").localeCompare(a.criadoEm ?? "")
+  )
+
+  return NextResponse.json({
+    ...lead,
+    conversas: conversasOrdenadas,
+    agendamentos: agendamentosOrdenados,
+    fotos: fotosOrdenadas,
+  })
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
@@ -72,9 +85,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const leadAtual = await prisma.lead.findUnique({
-    where: { id, deletadoEm: null },
-  })
+  const { data: leadAtual } = await supabaseAdmin
+    .from("leads")
+    .select("id, whatsapp, sobreOPaciente")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!leadAtual) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
@@ -82,7 +98,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const dados = { ...parsed.data }
 
-  // sobreOPaciente: APPEND, nunca overwrite
   if (dados.sobreOPaciente) {
     const textoAtual = leadAtual.sobreOPaciente || ""
     dados.sobreOPaciente = textoAtual
@@ -90,62 +105,55 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       : dados.sobreOPaciente
   }
 
-  // Se whatsapp mudou, verificar unicidade
   if (dados.whatsapp && dados.whatsapp !== leadAtual.whatsapp) {
-    const existente = await prisma.lead.findUnique({
-      where: { whatsapp: dados.whatsapp },
-    })
+    const { data: existente } = await supabaseAdmin
+      .from("leads")
+      .select("id")
+      .eq("whatsapp", dados.whatsapp)
+      .maybeSingle()
     if (existente) {
       return NextResponse.json({ error: "WhatsApp já cadastrado" }, { status: 409 })
     }
   }
 
-  const leadAtualizado = await prisma.lead.update({
-    where: { id },
-    data: dados,
-    select: {
-      id: true,
-      nome: true,
-      whatsapp: true,
-      email: true,
-      procedimentoInteresse: true,
-      statusFunil: true,
-      origem: true,
-      sobreOPaciente: true,
-      responsavelId: true,
-      arquivado: true,
-      criadoEm: true,
-      atualizadoEm: true,
-    },
-  })
+  const updateData = { ...dados, atualizadoEm: agora() } as never
 
+  const { data: leadAtualizado, error } = await supabaseAdmin
+    .from("leads")
+    .update(updateData)
+    .eq("id", id)
+    .select(SELECT_LEAD_ATUALIZADO)
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json(leadAtualizado)
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const { id } = await params
 
-  const lead = await prisma.lead.findUnique({
-    where: { id, deletadoEm: null },
-  })
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("id, whatsapp")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!lead) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
   }
 
-  await prisma.lead.update({
-    where: { id },
-    data: {
-      deletadoEm: new Date(),
-    },
-  })
+  await supabaseAdmin
+    .from("leads")
+    .update({ deletadoEm: agora(), atualizadoEm: agora() })
+    .eq("id", id)
 
-  // Limpar estado do Redis (memoria 48h + buffer) para que o mesmo numero,
-  // se voltar, nao reencontre o contexto da conversa anterior.
   if (lead.whatsapp) {
     const chatId = `${lead.whatsapp}@s.whatsapp.net`
     try {

@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { createId } from "@paralleldrive/cuid2"
-import { prisma } from "@/lib/prisma"
-import { requireAuth } from "@/lib/auth-helpers"
 import { supabaseAdmin } from "@/lib/supabase"
+import { requireAuth } from "@/lib/auth-helpers"
+import { criarId } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -13,21 +12,28 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const lead = await prisma.lead.findUnique({
-    where: { id, deletadoEm: null },
-    select: { id: true },
-  })
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("id")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!lead) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
   }
 
-  const fotos = await prisma.fotoLead.findMany({
-    where: { leadId: id },
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: fotos, error } = await supabaseAdmin
+    .from("fotos_lead")
+    .select("*")
+    .eq("leadId", id)
+    .order("criadoEm", { ascending: false })
 
-  return NextResponse.json({ dados: fotos })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ dados: fotos ?? [] })
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -36,10 +42,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const lead = await prisma.lead.findUnique({
-    where: { id, deletadoEm: null },
-    select: { id: true },
-  })
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("id")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!lead) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
@@ -70,7 +78,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const ext = arquivo.name.split(".").pop() || "jpg"
-  const nomeArquivo = `${id}/${createId()}.${ext}`
+  const nomeArquivo = `${id}/${criarId()}.${ext}`
 
   const buffer = Buffer.from(await arquivo.arrayBuffer())
 
@@ -91,14 +99,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     .from("fotos-leads")
     .getPublicUrl(nomeArquivo)
 
-  const foto = await prisma.fotoLead.create({
-    data: {
+  const { data: foto, error: insertError } = await supabaseAdmin
+    .from("fotos_lead")
+    .insert({
+      id: criarId(),
       leadId: id,
       url: urlData.publicUrl,
       descricao,
       tipoAnalise,
-    },
-  })
+    })
+    .select("*")
+    .single()
+
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
 
   return NextResponse.json(foto, { status: 201 })
 }

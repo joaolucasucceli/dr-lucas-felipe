@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { checkRateLimit, registrarTentativa, resetarTentativas } from "@/lib/rate-limit"
 
 export const authOptions: NextAuthOptions = {
@@ -35,9 +35,11 @@ export const authOptions: NextAuthOptions = {
           // Se o Redis falhar, não bloquear o login
         }
 
-        const usuario = await prisma.usuario.findUnique({
-          where: { email: credentials.email },
-        })
+        const { data: usuario } = await supabaseAdmin
+          .from("usuarios")
+          .select("id, nome, email, senha, fotoUrl, perfil, tipo, ativo, deletadoEm")
+          .eq("email", credentials.email)
+          .maybeSingle()
 
         if (!usuario || !usuario.ativo || usuario.deletadoEm) {
           try { await registrarTentativa(ip) } catch {}
@@ -72,12 +74,12 @@ export const authOptions: NextAuthOptions = {
         token.perfil = user.perfil
         token.tipo = user.tipo
       }
-      // Refresh da foto ao atualizar session (via update())
       if (trigger === "update") {
-        const usr = await prisma.usuario.findUnique({
-          where: { id: token.id as string },
-          select: { fotoUrl: true, nome: true },
-        })
+        const { data: usr } = await supabaseAdmin
+          .from("usuarios")
+          .select("fotoUrl, nome")
+          .eq("id", token.id as string)
+          .maybeSingle()
         if (usr) {
           token.image = usr.fotoUrl || null
           token.name = usr.nome

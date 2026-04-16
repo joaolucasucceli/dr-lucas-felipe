@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 
 function escapeCsv(valor: unknown): string {
@@ -25,116 +25,137 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const tipo = searchParams.get("tipo") as "leads" | "agendamentos" | "conversas" | null
   const formato = searchParams.get("formato") || "csv"
-  const agora = new Date()
+  const agoraTs = new Date()
   const dataInicio = searchParams.get("dataInicio")
     ? new Date(searchParams.get("dataInicio")!)
     : undefined
   const dataFim = searchParams.get("dataFim")
     ? new Date(searchParams.get("dataFim")!)
-    : agora
+    : agoraTs
 
   if (!tipo || !["leads", "agendamentos", "conversas"].includes(tipo)) {
     return NextResponse.json({ error: "tipo inválido" }, { status: 400 })
   }
 
-  const dataStr = agora.toISOString().slice(0, 10)
+  const dataInicioIso = dataInicio?.toISOString()
+  const dataFimIso = dataFim.toISOString()
+  const dataStr = agoraTs.toISOString().slice(0, 10)
   let conteudo: string
   let contentType: string
 
   if (tipo === "leads") {
-    const where = {
-      deletadoEm: null,
-      ...(dataInicio ? { criadoEm: { gte: dataInicio, lte: dataFim } } : {}),
+    let query = supabaseAdmin
+      .from("leads")
+      .select(
+        "id, nome, whatsapp, email, origem, statusFunil, procedimentoInteresse, criadoEm, atualizadoEm"
+      )
+      .is("deletadoEm", null)
+
+    if (dataInicioIso) {
+      query = query.gte("criadoEm", dataInicioIso).lte("criadoEm", dataFimIso)
     }
-    const leads = await prisma.lead.findMany({
-      where,
-      select: {
-        id: true,
-        nome: true,
-        whatsapp: true,
-        email: true,
-        origem: true,
-        statusFunil: true,
-        procedimentoInteresse: true,
-        criadoEm: true,
-        atualizadoEm: true,
-      },
-      orderBy: { criadoEm: "desc" },
-    })
+
+    const { data: leads } = await query.order("criadoEm", { ascending: false })
 
     if (formato === "json") {
-      conteudo = JSON.stringify(leads, null, 2)
+      conteudo = JSON.stringify(leads ?? [], null, 2)
       contentType = "application/json"
     } else {
       conteudo = linhasCsv(
         ["id", "nome", "whatsapp", "email", "origem", "statusFunil", "procedimentoInteresse", "criadoEm", "atualizadoEm"],
-        leads.map((l) => [l.id, l.nome, l.whatsapp, l.email, l.origem, l.statusFunil, l.procedimentoInteresse, l.criadoEm.toISOString(), l.atualizadoEm.toISOString()])
-      )
-      contentType = "text/csv"
-    }
-  } else if (tipo === "agendamentos") {
-    const where = dataInicio ? { criadoEm: { gte: dataInicio, lte: dataFim } } : {}
-    const agendamentos = await prisma.agendamento.findMany({
-      where,
-      select: {
-        id: true,
-        lead: { select: { nome: true, whatsapp: true } },
-        procedimento: { select: { nome: true } },
-        dataHora: true,
-        duracao: true,
-        status: true,
-        criadoEm: true,
-      },
-      orderBy: { dataHora: "desc" },
-    })
-
-    if (formato === "json") {
-      conteudo = JSON.stringify(agendamentos, null, 2)
-      contentType = "application/json"
-    } else {
-      conteudo = linhasCsv(
-        ["id", "leadNome", "leadWhatsapp", "procedimento", "dataHora", "duracao", "status", "criadoEm"],
-        agendamentos.map((a) => [
-          a.id,
-          a.lead.nome,
-          a.lead.whatsapp,
-          a.procedimento?.nome ?? "",
-          a.dataHora.toISOString(),
-          a.duracao,
-          a.status,
-          a.criadoEm.toISOString(),
+        (leads ?? []).map((l) => [
+          l.id,
+          l.nome,
+          l.whatsapp,
+          l.email,
+          l.origem,
+          l.statusFunil,
+          l.procedimentoInteresse,
+          l.criadoEm,
+          l.atualizadoEm,
         ])
       )
       contentType = "text/csv"
     }
-  } else {
-    // conversas
-    const where = dataInicio ? { criadoEm: { gte: dataInicio, lte: dataFim } } : {}
-    const conversas = await prisma.conversa.findMany({
-      where,
-      select: {
-        id: true,
-        lead: { select: { nome: true, whatsapp: true } },
-        _count: { select: { mensagens: true } },
-        atualizadoEm: true,
-        encerradaEm: true,
-      },
-      orderBy: { atualizadoEm: "desc" },
-    })
+  } else if (tipo === "agendamentos") {
+    let query = supabaseAdmin
+      .from("agendamentos")
+      .select(
+        "id, dataHora, duracao, status, criadoEm, lead:leads!agendamentos_leadId_fkey(nome, whatsapp), procedimento:procedimentos(nome)"
+      )
+
+    if (dataInicioIso) {
+      query = query.gte("criadoEm", dataInicioIso).lte("criadoEm", dataFimIso)
+    }
+
+    const { data: agendamentos } = await query.order("dataHora", { ascending: false })
 
     if (formato === "json") {
-      conteudo = JSON.stringify(conversas, null, 2)
+      conteudo = JSON.stringify(agendamentos ?? [], null, 2)
+      contentType = "application/json"
+    } else {
+      conteudo = linhasCsv(
+        ["id", "leadNome", "leadWhatsapp", "procedimento", "dataHora", "duracao", "status", "criadoEm"],
+        (agendamentos ?? []).map((a) => {
+          const lead = a.lead as unknown as { nome: string; whatsapp: string } | null
+          const proc = a.procedimento as unknown as { nome: string } | null
+          return [
+            a.id,
+            lead?.nome ?? "",
+            lead?.whatsapp ?? "",
+            proc?.nome ?? "",
+            a.dataHora,
+            a.duracao,
+            a.status,
+            a.criadoEm,
+          ]
+        })
+      )
+      contentType = "text/csv"
+    }
+  } else {
+    let query = supabaseAdmin
+      .from("conversas")
+      .select(
+        "id, atualizadoEm, encerradaEm, criadoEm, lead:leads!conversas_leadId_fkey(nome, whatsapp), mensagens:mensagens_whatsapp(id)"
+      )
+
+    if (dataInicioIso) {
+      query = query.gte("criadoEm", dataInicioIso).lte("criadoEm", dataFimIso)
+    }
+
+    const { data: conversas } = await query.order("atualizadoEm", { ascending: false })
+
+    type ConversaExport = {
+      id: string
+      atualizadoEm: string
+      encerradaEm: string | null
+      lead: { nome: string; whatsapp: string } | null
+      mensagens: Array<{ id: string }>
+    }
+
+    const lista = ((conversas ?? []) as unknown as ConversaExport[]).map((c) => ({
+      id: c.id,
+      leadNome: c.lead?.nome ?? "",
+      leadWhatsapp: c.lead?.whatsapp ?? "",
+      totalMensagens: c.mensagens?.length ?? 0,
+      atualizadoEm: c.atualizadoEm,
+      encerradaEm: c.encerradaEm,
+    }))
+
+    if (formato === "json") {
+      conteudo = JSON.stringify(lista, null, 2)
       contentType = "application/json"
     } else {
       conteudo = linhasCsv(
         ["id", "leadNome", "leadWhatsapp", "totalMensagens", "ultimaMensagemEm", "encerradaEm"],
-        conversas.map((c) => [
+        lista.map((c) => [
           c.id,
-          c.lead.nome,
-          c.lead.whatsapp,
-          c._count.mensagens,
-          c.atualizadoEm.toISOString(),
-          c.encerradaEm?.toISOString() ?? "",
+          c.leadNome,
+          c.leadWhatsapp,
+          c.totalMensagens,
+          c.atualizadoEm,
+          c.encerradaEm ?? "",
         ])
       )
       contentType = "text/csv"

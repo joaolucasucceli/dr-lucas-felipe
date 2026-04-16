@@ -35,8 +35,6 @@ pnpm-debug.log*
 .env*.local
 .env
 
-# prisma
-/generated
 
 # typescript
 *.tsbuildinfo
@@ -44,9 +42,5 @@ next-env.d.ts
 .vercel
 .claude
 .playwright-mcp
-
-# materiais de origem (recebidos do cliente — ja convertidos para public/)
-/Materiais
-/public/images/dr-lucas/backup
 
 .env.production

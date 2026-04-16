@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { verificarStatus } from "@/lib/uazapi"
+import { agora } from "@/lib/db-utils"
 
 function mascarar(valor: string): string {
   if (valor.length <= 4) return "••••••••"
@@ -13,9 +14,14 @@ export async function GET(_request: NextRequest) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
-  const config = await prisma.configWhatsapp.findFirst({
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: config } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select(
+      "id, uazapiUrl, adminToken, instanceToken, instanceId, numeroWhatsapp, ativo"
+    )
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (!config) {
     return NextResponse.json({
@@ -27,7 +33,6 @@ export async function GET(_request: NextRequest) {
 
   const instanceToken = config.instanceToken || config.adminToken
 
-  // Se não tem token de instância, retornar configurado mas não conectado
   if (!instanceToken) {
     return NextResponse.json({
       configurado: true,
@@ -46,15 +51,14 @@ export async function GET(_request: NextRequest) {
       instanceToken
     )
 
-    // Se conectado, atualizar numero e ativo
     if (resultado.status === "connected" && resultado.jid) {
       const numero = resultado.jid.split("@")[0]
 
       if (!config.ativo || config.numeroWhatsapp !== numero) {
-        await prisma.configWhatsapp.update({
-          where: { id: config.id },
-          data: { ativo: true, numeroWhatsapp: numero },
-        })
+        await supabaseAdmin
+          .from("config_whatsapp")
+          .update({ ativo: true, numeroWhatsapp: numero, atualizadoEm: agora() })
+          .eq("id", config.id)
       }
 
       return NextResponse.json({

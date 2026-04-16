@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { registrarAuditLog } from "@/lib/audit"
 
@@ -12,49 +12,67 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const paciente = await prisma.paciente.findUnique({
-    where: { id, deletadoEm: null },
-    select: {
-      id: true,
-      nome: true,
-      prontuario: {
-        include: {
-          anamnese: true,
-          evolucoes: {
-            where: { deletadoEm: null },
-            orderBy: { dataRegistro: "desc" },
-            include: {
-              procedimento: {
-                select: { id: true, nome: true },
-              },
-              registroCirurgico: true,
-            },
-          },
-          _count: {
-            select: {
-              documentos: true,
-              fotos: true,
-            },
-          },
-        },
-      },
-    },
-  })
+  const { data: paciente } = await supabaseAdmin
+    .from("pacientes")
+    .select("id, nome")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
   if (!paciente) {
     return NextResponse.json({ error: "Paciente não encontrado" }, { status: 404 })
   }
 
-  if (!paciente.prontuario) {
+  const { data: prontuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select(`
+      *,
+      anamnese:anamneses(*),
+      evolucoes(*, procedimento:procedimentos(id, nome), registroCirurgico:registros_cirurgicos(*))
+    `)
+    .eq("pacienteId", id)
+    .maybeSingle()
+
+  if (!prontuario) {
     return NextResponse.json({ error: "Prontuário não encontrado" }, { status: 404 })
   }
+
+  const anamneseRaw = prontuario.anamnese as unknown
+  if (Array.isArray(anamneseRaw)) {
+    ;(prontuario as { anamnese: unknown }).anamnese = anamneseRaw[0] ?? null
+  }
+
+  type EvolucaoOrdenavel = { dataRegistro?: string | null; deletadoEm?: string | null }
+  const evolucoes = ((prontuario.evolucoes as EvolucaoOrdenavel[] | undefined) ?? [])
+    .filter((e) => !e.deletadoEm)
+    .slice()
+    .sort((a, b) => (b.dataRegistro ?? "").localeCompare(a.dataRegistro ?? ""))
+
+  const [documentos, fotos] = await Promise.all([
+    supabaseAdmin
+      .from("documentos_prontuario")
+      .select("id", { count: "exact", head: true })
+      .eq("prontuarioId", prontuario.id),
+    supabaseAdmin
+      .from("fotos_prontuario")
+      .select("id", { count: "exact", head: true })
+      .eq("prontuarioId", prontuario.id),
+  ])
 
   await registrarAuditLog({
     usuarioId: auth.session.user.id,
     acao: "visualizar",
     entidade: "Prontuario",
-    entidadeId: paciente.prontuario.id,
+    entidadeId: prontuario.id,
   })
 
-  return NextResponse.json(paciente.prontuario)
+  return NextResponse.json({
+    ...prontuario,
+    paciente: { id: paciente.id, nome: paciente.nome },
+    evolucoes,
+    _count: {
+      documentos: documentos.count ?? 0,
+      fotos: fotos.count ?? 0,
+    },
+  })
 }

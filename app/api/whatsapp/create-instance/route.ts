@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { criarInstancia, configurarWebhook, obterQrCode, configurarPrivacidade } from "@/lib/uazapi"
+import { agora } from "@/lib/db-utils"
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
-  const config = await prisma.configWhatsapp.findFirst({
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: config } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("id, uazapiUrl, adminToken, instanceToken")
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (!config) {
     return NextResponse.json(
@@ -21,7 +25,6 @@ export async function POST(request: NextRequest) {
 
   let instanceToken = config.instanceToken
 
-  // Se não tem instance token, criar instância via admin API
   if (!instanceToken) {
     const resultado = await criarInstancia(
       config.uazapiUrl,
@@ -38,15 +41,13 @@ export async function POST(request: NextRequest) {
 
     instanceToken = resultado.instanceToken || ""
 
-    // Salvar instance token no banco
-    await prisma.configWhatsapp.update({
-      where: { id: config.id },
-      data: { instanceToken },
-    })
+    await supabaseAdmin
+      .from("config_whatsapp")
+      .update({ instanceToken, atualizadoEm: agora() })
+      .eq("id", config.id)
   }
 
   try {
-    // Configurar webhook
     const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
     const webhookUrl = `${baseUrl}/api/webhooks/whatsapp`
     let webhookConfigurado = false
@@ -54,19 +55,17 @@ export async function POST(request: NextRequest) {
     try {
       const webhookToken = process.env.WEBHOOK_SECRET || process.env.API_SECRET || ""
       await configurarWebhook(config.uazapiUrl, instanceToken, webhookUrl, webhookToken)
-      await prisma.configWhatsapp.update({
-        where: { id: config.id },
-        data: { webhookUrl },
-      })
+      await supabaseAdmin
+        .from("config_whatsapp")
+        .update({ webhookUrl, atualizadoEm: agora() })
+        .eq("id", config.id)
       webhookConfigurado = true
     } catch (webhookErr) {
       console.error("[create-instance] Falha ao configurar webhook:", webhookErr instanceof Error ? webhookErr.message : webhookErr)
     }
 
-    // Iniciar conexão e obter QR code
     const { qrcode } = await obterQrCode(config.uazapiUrl, instanceToken)
 
-    // Configurar privacidade (sempre online, sem "visto por último")
     try {
       await configurarPrivacidade(config.uazapiUrl, instanceToken)
     } catch (privErr) {

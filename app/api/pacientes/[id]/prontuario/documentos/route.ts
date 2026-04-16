@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { createId } from "@paralleldrive/cuid2"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { registrarAuditLog } from "@/lib/audit"
-import { supabaseAdmin } from "@/lib/supabase"
+import { criarId } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
 const BUCKET = "documentos-prontuario"
-const MAX_SIZE = 15 * 1024 * 1024 // 15MB
+const MAX_SIZE = 15 * 1024 * 1024
 const TIPOS_PERMITIDOS = [
   "application/pdf",
   "image/jpeg",
@@ -24,7 +23,28 @@ const TIPOS_DOCUMENTO_VALIDOS = [
   "receita",
   "atestado",
   "outro",
-]
+] as const
+
+type TipoDocumento = (typeof TIPOS_DOCUMENTO_VALIDOS)[number]
+
+async function buscarProntuario(pacienteId: string) {
+  const { data: paciente } = await supabaseAdmin
+    .from("pacientes")
+    .select("id")
+    .eq("id", pacienteId)
+    .is("deletadoEm", null)
+    .maybeSingle()
+
+  if (!paciente) return null
+
+  const { data: prontuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select("id")
+    .eq("pacienteId", pacienteId)
+    .maybeSingle()
+
+  return prontuario
+}
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
@@ -32,21 +52,22 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const prontuario = await prisma.prontuario.findFirst({
-    where: { paciente: { id, deletadoEm: null } },
-    select: { id: true },
-  })
-
+  const prontuario = await buscarProntuario(id)
   if (!prontuario) {
     return NextResponse.json({ error: "Prontuário não encontrado" }, { status: 404 })
   }
 
-  const documentos = await prisma.documentoProntuario.findMany({
-    where: { prontuarioId: prontuario.id },
-    orderBy: { criadoEm: "desc" },
-  })
+  const { data: documentos, error } = await supabaseAdmin
+    .from("documentos_prontuario")
+    .select("*")
+    .eq("prontuarioId", prontuario.id)
+    .order("criadoEm", { ascending: false })
 
-  return NextResponse.json({ dados: documentos })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ dados: documentos ?? [] })
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -55,11 +76,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
-  const prontuario = await prisma.prontuario.findFirst({
-    where: { paciente: { id, deletadoEm: null } },
-    select: { id: true },
-  })
-
+  const prontuario = await buscarProntuario(id)
   if (!prontuario) {
     return NextResponse.json({ error: "Prontuário não encontrado" }, { status: 404 })
   }
@@ -74,7 +91,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Arquivo é obrigatório" }, { status: 400 })
   }
 
-  if (!tipo || !TIPOS_DOCUMENTO_VALIDOS.includes(tipo)) {
+  if (!tipo || !TIPOS_DOCUMENTO_VALIDOS.includes(tipo as TipoDocumento)) {
     return NextResponse.json({ error: "Tipo de documento inválido" }, { status: 400 })
   }
 
@@ -97,7 +114,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const ext = arquivo.name.split(".").pop() || "pdf"
-  const storagePath = `${prontuario.id}/${createId()}.${ext}`
+  const storagePath = `${prontuario.id}/${criarId()}.${ext}`
 
   const buffer = Buffer.from(await arquivo.arrayBuffer())
 
@@ -114,17 +131,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const documento = await prisma.documentoProntuario.create({
-    data: {
+  const { data: documento, error: insertError } = await supabaseAdmin
+    .from("documentos_prontuario")
+    .insert({
+      id: criarId(),
       prontuarioId: prontuario.id,
-      tipo: tipo as "exame_laboratorial" | "laudo" | "termo_consentimento" | "receita" | "atestado" | "outro",
+      tipo: tipo as TipoDocumento,
       nome: nome.trim(),
       descricao: descricao?.trim() || null,
       storagePath,
       tamanhoBytes: arquivo.size,
       mimeType: arquivo.type,
-    },
-  })
+    })
+    .select("*")
+    .single()
+
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
 
   await registrarAuditLog({
     usuarioId: auth.session.user.id,

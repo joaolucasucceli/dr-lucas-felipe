@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { Navbar } from "./(site)/components/Navbar"
 import { HeroSection } from "./(site)/components/HeroSection"
 import { SobreSection } from "./(site)/components/SobreSection"
@@ -35,10 +35,15 @@ export const metadata: Metadata = {
 
 async function getSiteConfig(): Promise<SiteConfigProps> {
   try {
-    const dbConfig = await prisma.configSite.findFirst({
-      where: { ativo: true },
-      orderBy: { criadoEm: "desc" },
-    })
+    const { data: dbConfig } = await supabaseAdmin
+      .from("config_site")
+      .select(
+        "whatsappNumero, whatsappMensagem, medicoNome, medicoEspecialidade, medicoCrm, instagramUrl, contatoTelefone, contatoEndereco, contatoCidade"
+      )
+      .eq("ativo", true)
+      .order("criadoEm", { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (!dbConfig || !dbConfig.whatsappNumero) {
       return buildFallbackConfig()

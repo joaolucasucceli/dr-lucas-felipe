@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { registrarAuditLog } from "@/lib/audit"
 
@@ -11,24 +11,46 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
   const { id, sinalId } = await params
 
-  const prontuario = await prisma.prontuario.findFirst({
-    where: { paciente: { id, deletadoEm: null } },
-    select: { id: true },
-  })
+  const { data: paciente } = await supabaseAdmin
+    .from("pacientes")
+    .select("id")
+    .eq("id", id)
+    .is("deletadoEm", null)
+    .maybeSingle()
+
+  if (!paciente) {
+    return NextResponse.json({ error: "Paciente não encontrado" }, { status: 404 })
+  }
+
+  const { data: prontuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select("id")
+    .eq("pacienteId", id)
+    .maybeSingle()
 
   if (!prontuario) {
     return NextResponse.json({ error: "Prontuário não encontrado" }, { status: 404 })
   }
 
-  const sinal = await prisma.sinalVital.findFirst({
-    where: { id: sinalId, prontuarioId: prontuario.id },
-  })
+  const { data: sinal } = await supabaseAdmin
+    .from("sinais_vitais")
+    .select("*")
+    .eq("id", sinalId)
+    .eq("prontuarioId", prontuario.id)
+    .maybeSingle()
 
   if (!sinal) {
     return NextResponse.json({ error: "Sinal vital não encontrado" }, { status: 404 })
   }
 
-  await prisma.sinalVital.delete({ where: { id: sinalId } })
+  const { error } = await supabaseAdmin
+    .from("sinais_vitais")
+    .delete()
+    .eq("id", sinalId)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await registrarAuditLog({
     usuarioId: auth.session.user.id,

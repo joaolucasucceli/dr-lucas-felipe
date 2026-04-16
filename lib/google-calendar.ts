@@ -1,5 +1,5 @@
 import { google } from "googleapis"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 
 export interface CalendarEvent {
   id: string
@@ -10,9 +10,13 @@ export interface CalendarEvent {
 }
 
 async function getCalendarClient() {
-  const config = await prisma.configGoogleCalendar.findFirst({
-    where: { ativo: true },
-  })
+  const { data: config } = await supabaseAdmin
+    .from("config_google_calendar")
+    .select("clientId, clientSecret, refreshToken, calendarId")
+    .eq("ativo", true)
+    .limit(1)
+    .maybeSingle()
+
   if (!config || !config.refreshToken) return null
 
   const oauth2 = new google.auth.OAuth2(config.clientId, config.clientSecret)

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
-import { createClient } from "@supabase/supabase-js"
+import { agora } from "@/lib/db-utils"
 
 const BUCKET = "atendimento-midias"
-const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_SIZE = 5 * 1024 * 1024
 
 export async function POST(request: NextRequest) {
   const { session, error } = await requireAuth()
@@ -26,18 +26,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Apenas imagens são aceitas" }, { status: 400 })
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !serviceKey) {
-    return NextResponse.json({ error: "Storage não configurado" }, { status: 500 })
-  }
-
-  const supabase = createClient(supabaseUrl, serviceKey)
   const ext = file.name.split(".").pop() || "jpg"
   const path = `usuarios/${session!.user.id}/avatar.${ext}`
   const buffer = Buffer.from(await file.arrayBuffer())
 
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await supabaseAdmin.storage
     .from(BUCKET)
     .upload(path, buffer, {
       contentType: file.type,
@@ -49,13 +42,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Falha no upload" }, { status: 500 })
   }
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path)
   const fotoUrl = `${data.publicUrl}?t=${Date.now()}`
 
-  await prisma.usuario.update({
-    where: { id: session!.user.id },
-    data: { fotoUrl },
-  })
+  await supabaseAdmin
+    .from("usuarios")
+    .update({ fotoUrl, atualizadoEm: agora() })
+    .eq("id", session!.user.id)
 
   return NextResponse.json({ fotoUrl })
 }

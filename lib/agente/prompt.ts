@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 
 interface ContextoLead {
   nome?: string
@@ -18,13 +18,15 @@ interface ContextoLead {
  */
 async function carregarBaseConhecimento(): Promise<string> {
   try {
-    const artigos = await prisma.baseConhecimento.findMany({
-      where: { ativo: true, deletadoEm: null },
-      orderBy: [{ secao: "asc" }, { ordem: "asc" }],
-      select: { titulo: true, conteudo: true, secao: true },
-    })
+    const { data: artigos, error } = await supabaseAdmin
+      .from("base_conhecimento")
+      .select("titulo, conteudo, secao")
+      .eq("ativo", true)
+      .is("deletadoEm", null)
+      .order("secao", { ascending: true })
+      .order("ordem", { ascending: true })
 
-    if (artigos.length === 0) return ""
+    if (error || !artigos || artigos.length === 0) return ""
 
     // Agrupa por secao
     const porSecao = new Map<string, { titulo: string; conteudo: string }[]>()

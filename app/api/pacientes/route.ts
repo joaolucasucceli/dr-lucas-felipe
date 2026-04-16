@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { criarPacienteSchema } from "@/lib/validations/paciente"
 import { registrarAuditLog } from "@/lib/audit"
 import { checkRateLimitPaciente, registrarTentativaPaciente } from "@/lib/rate-limit"
+import { criarId, agora } from "@/lib/db-utils"
+
+const SELECT_LISTA = "id, nome, whatsapp, cpf, email, ativo, criadoEm, leadOrigemId"
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole("gestor")
@@ -16,52 +19,39 @@ export async function GET(request: NextRequest) {
   const busca = searchParams.get("busca")
   const ativo = searchParams.get("ativo")
 
-  const where: Record<string, unknown> = {
-    deletadoEm: null,
-  }
-
-  if (ativo === "false") {
-    where.ativo = false
-  } else {
-    where.ativo = true
-  }
+  let query = supabaseAdmin
+    .from("pacientes")
+    .select(SELECT_LISTA, { count: "exact" })
+    .is("deletadoEm", null)
+    .eq("ativo", ativo !== "false")
 
   if (busca) {
-    where.OR = [
-      { nome: { contains: busca, mode: "insensitive" } },
-      { whatsapp: { contains: busca } },
-      { cpf: { contains: busca } },
-    ]
+    query = query.or(`nome.ilike.%${busca}%,whatsapp.ilike.%${busca}%,cpf.ilike.%${busca}%`)
   }
 
-  const [dados, total] = await Promise.all([
-    prisma.paciente.findMany({
-      where,
-      select: {
-        id: true,
-        nome: true,
-        whatsapp: true,
-        cpf: true,
-        email: true,
-        ativo: true,
-        criadoEm: true,
-        leadOrigemId: true,
-      },
-      skip: (pagina - 1) * porPagina,
-      take: porPagina,
-      orderBy: { criadoEm: "desc" },
-    }),
-    prisma.paciente.count({ where }),
-  ])
+  const inicio = (pagina - 1) * porPagina
+  const fim = inicio + porPagina - 1
 
-  return NextResponse.json({ dados, total, pagina, porPagina })
+  const { data, count, error } = await query
+    .order("criadoEm", { ascending: false })
+    .range(inicio, fim)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({
+    dados: data ?? [],
+    total: count ?? 0,
+    pagina,
+    porPagina,
+  })
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
-  // Rate limit
   const rateLimitResult = await checkRateLimitPaciente(auth.session.user.id)
   if (rateLimitResult.bloqueado) {
     return NextResponse.json(
@@ -83,9 +73,12 @@ export async function POST(request: NextRequest) {
 
   const { cpf, dataNascimento, consentimentoLgpd, ...resto } = parsed.data
 
-  // Verificar CPF único se fornecido
   if (cpf && cpf.length === 11) {
-    const existente = await prisma.paciente.findUnique({ where: { cpf } })
+    const { data: existente } = await supabaseAdmin
+      .from("pacientes")
+      .select("id")
+      .eq("cpf", cpf)
+      .maybeSingle()
     if (existente) {
       return NextResponse.json(
         { error: "CPF já cadastrado" },
@@ -94,43 +87,65 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Gerar número do prontuário
-  const ultimoProntuario = await prisma.prontuario.findFirst({
-    orderBy: { numero: "desc" },
-    select: { numero: true },
-  })
+  const { data: ultimoProntuario } = await supabaseAdmin
+    .from("prontuarios")
+    .select("numero")
+    .order("numero", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   const numeroProntuario = (ultimoProntuario?.numero ?? 0) + 1
+  const tsAgora = agora()
 
-  const paciente = await prisma.$transaction(async (tx) => {
-    const novoPaciente = await tx.paciente.create({
-      data: {
-        ...resto,
-        cpf: cpf && cpf.length === 11 ? cpf : null,
-        dataNascimento: dataNascimento ? new Date(dataNascimento) : null,
-        consentimentoLgpd: consentimentoLgpd ?? false,
-        consentimentoLgpdEm: consentimentoLgpd ? new Date() : null,
-      },
+  const pacienteId = criarId()
+  const insertPacienteData = {
+    id: pacienteId,
+    atualizadoEm: tsAgora,
+    ...resto,
+    cpf: cpf && cpf.length === 11 ? cpf : null,
+    dataNascimento: dataNascimento ? new Date(dataNascimento).toISOString() : null,
+    consentimentoLgpd: consentimentoLgpd ?? false,
+    consentimentoLgpdEm: consentimentoLgpd ? tsAgora : null,
+  } as never
+
+  const { data: paciente, error: pacienteError } = await supabaseAdmin
+    .from("pacientes")
+    .insert(insertPacienteData)
+    .select("*")
+    .single()
+
+  if (pacienteError) {
+    return NextResponse.json({ error: pacienteError.message }, { status: 500 })
+  }
+
+  const prontuarioId = criarId()
+  const { error: prontuarioError } = await supabaseAdmin
+    .from("prontuarios")
+    .insert({
+      id: prontuarioId,
+      atualizadoEm: tsAgora,
+      pacienteId,
+      numero: numeroProntuario,
     })
 
-    // Criar prontuário + anamnese vazia automaticamente
-    await tx.prontuario.create({
-      data: {
-        pacienteId: novoPaciente.id,
-        numero: numeroProntuario,
-        anamnese: {
-          create: {},
-        },
-      },
-    })
+  if (prontuarioError) {
+    await supabaseAdmin.from("pacientes").delete().eq("id", pacienteId)
+    return NextResponse.json({ error: prontuarioError.message }, { status: 500 })
+  }
 
-    return novoPaciente
-  })
+  await supabaseAdmin
+    .from("anamneses")
+    .insert({
+      id: criarId(),
+      atualizadoEm: tsAgora,
+      prontuarioId,
+    })
 
   await registrarAuditLog({
     usuarioId: auth.session.user.id,
     acao: "criar",
     entidade: "Paciente",
-    entidadeId: paciente.id,
+    entidadeId: pacienteId,
     dadosDepois: paciente as unknown as Record<string, unknown>,
   })
 

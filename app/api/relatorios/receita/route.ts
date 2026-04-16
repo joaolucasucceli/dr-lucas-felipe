@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 
 export async function GET(request: NextRequest) {
@@ -8,57 +8,50 @@ export async function GET(request: NextRequest) {
   if (auth.error) return auth.error
 
   const { searchParams } = request.nextUrl
-  const agora = new Date()
+  const agoraTs = new Date()
   const dataInicio = searchParams.get("dataInicio")
     ? new Date(searchParams.get("dataInicio")!)
-    : new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000)
+    : new Date(agoraTs.getTime() - 30 * 24 * 60 * 60 * 1000)
   const dataFim = searchParams.get("dataFim")
     ? new Date(searchParams.get("dataFim")!)
-    : agora
+    : agoraTs
 
-  const filtroAgendamento = { criadoEm: { gte: dataInicio, lte: dataFim } }
+  const dataInicioIso = dataInicio.toISOString()
+  const dataFimIso = dataFim.toISOString()
 
-  const [
-    totalAgendamentos,
-    realizados,
-    cancelados,
-    procedimentosRaw,
-    origensRaw,
-    agendamentosPorOrigem,
-  ] = await Promise.all([
-    prisma.agendamento.count({ where: filtroAgendamento }),
-    prisma.agendamento.count({ where: { ...filtroAgendamento, status: "realizado" } }),
-    prisma.agendamento.count({ where: { ...filtroAgendamento, status: "cancelado" } }),
-    prisma.agendamento.groupBy({
-      by: ["procedimentoId"],
-      _count: { id: true },
-      where: { ...filtroAgendamento, procedimentoId: { not: null } },
-    }),
-    prisma.lead.groupBy({
-      by: ["origem"],
-      _count: { id: true },
-      where: { deletadoEm: null, arquivado: false, criadoEm: { gte: dataInicio, lte: dataFim } },
-    }),
-    prisma.agendamento.findMany({
-      where: filtroAgendamento,
-      select: { lead: { select: { origem: true } } },
-    }),
-  ])
+  const { data: agendamentosPeriodo } = await supabaseAdmin
+    .from("agendamentos")
+    .select("status, procedimentoId, lead:leads!agendamentos_leadId_fkey(origem)")
+    .gte("criadoEm", dataInicioIso)
+    .lte("criadoEm", dataFimIso)
 
-  // Buscar nomes dos procedimentos
-  const procIds = procedimentosRaw.map((p) => p.procedimentoId!).filter(Boolean)
-  const procedimentosDb =
+  const totalAgendamentos = agendamentosPeriodo?.length ?? 0
+  const realizados = (agendamentosPeriodo ?? []).filter(
+    (a) => a.status === "realizado"
+  ).length
+  const cancelados = (agendamentosPeriodo ?? []).filter(
+    (a) => a.status === "cancelado"
+  ).length
+
+  const procIdsContagem: Record<string, number> = {}
+  for (const a of agendamentosPeriodo ?? []) {
+    if (a.procedimentoId) {
+      procIdsContagem[a.procedimentoId] = (procIdsContagem[a.procedimentoId] ?? 0) + 1
+    }
+  }
+
+  const procIds = Object.keys(procIdsContagem)
+  const { data: procedimentosDb } =
     procIds.length > 0
-      ? await prisma.procedimento.findMany({
-          where: { id: { in: procIds } },
-          select: { id: true, nome: true },
-        })
-      : []
+      ? await supabaseAdmin
+          .from("procedimentos")
+          .select("id, nome")
+          .in("id", procIds)
+      : { data: [] }
 
-  const totalComProc = procedimentosRaw.reduce((acc, p) => acc + (p._count?.id ?? 0), 0)
-  const procedimentos = procedimentosRaw.map((p) => {
-    const proc = procedimentosDb.find((d) => d.id === p.procedimentoId)
-    const quantidade = p._count?.id ?? 0
+  const totalComProc = Object.values(procIdsContagem).reduce((acc, n) => acc + n, 0)
+  const procedimentos = Object.entries(procIdsContagem).map(([id, quantidade]) => {
+    const proc = procedimentosDb?.find((d) => d.id === id)
     return {
       nome: proc?.nome || "Sem procedimento",
       quantidade,
@@ -66,17 +59,29 @@ export async function GET(request: NextRequest) {
     }
   })
 
-  // Conversão por origem
-  const agendamentosPorOrigemMap: Record<string, number> = {}
-  for (const a of agendamentosPorOrigem) {
-    const orig = a.lead?.origem || "Não informada"
-    agendamentosPorOrigemMap[orig] = (agendamentosPorOrigemMap[orig] ?? 0) + 1
+  const { data: leadsPeriodo } = await supabaseAdmin
+    .from("leads")
+    .select("origem")
+    .is("deletadoEm", null)
+    .eq("arquivado", false)
+    .gte("criadoEm", dataInicioIso)
+    .lte("criadoEm", dataFimIso)
+
+  const leadsPorOrigem: Record<string, number> = {}
+  for (const l of leadsPeriodo ?? []) {
+    const orig = l.origem || "Não informada"
+    leadsPorOrigem[orig] = (leadsPorOrigem[orig] ?? 0) + 1
   }
 
-  const origem = origensRaw.map((g) => {
-    const orig = g.origem || "Não informada"
-    const leads = g._count?.id ?? 0
-    const agends = agendamentosPorOrigemMap[orig] ?? 0
+  const agendamentosPorOrigem: Record<string, number> = {}
+  for (const a of agendamentosPeriodo ?? []) {
+    const lead = a.lead as unknown as { origem: string | null } | null
+    const orig = lead?.origem || "Não informada"
+    agendamentosPorOrigem[orig] = (agendamentosPorOrigem[orig] ?? 0) + 1
+  }
+
+  const origem = Object.entries(leadsPorOrigem).map(([orig, leads]) => {
+    const agends = agendamentosPorOrigem[orig] ?? 0
     return {
       origem: orig,
       leads,
@@ -86,7 +91,9 @@ export async function GET(request: NextRequest) {
   })
 
   const taxaRealizacao =
-    totalAgendamentos > 0 ? Math.round((realizados / totalAgendamentos) * 1000) / 10 : 0
+    totalAgendamentos > 0
+      ? Math.round((realizados / totalAgendamentos) * 1000) / 10
+      : 0
 
   return NextResponse.json({
     periodo: { inicio: dataInicio.toISOString(), fim: dataFim.toISOString() },

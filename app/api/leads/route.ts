@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
 import { criarLeadSchema } from "@/lib/validations/lead"
+import { criarId, agora } from "@/lib/db-utils"
+
+const SELECT_LEAD =
+  "id, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, arquivado, criadoEm, responsavel:usuarios!leads_responsavelId_fkey(id, nome)"
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
@@ -18,65 +22,44 @@ export async function GET(request: NextRequest) {
   const arquivado = searchParams.get("arquivado")
   const busca = searchParams.get("busca")
   const alerta = searchParams.get("alerta") === "true"
-  const followup = searchParams.get("followup") === "true"
 
-  const where: Record<string, unknown> = {
-    deletadoEm: null,
-    arquivado: arquivado === "true" ? true : false,
-  }
+  let query = supabaseAdmin
+    .from("leads")
+    .select(SELECT_LEAD, { count: "exact" })
+    .is("deletadoEm", null)
+    .eq("arquivado", arquivado === "true")
 
-  if (statusFunil) where.statusFunil = statusFunil
-  if (procedimentoInteresse) where.procedimentoInteresse = procedimentoInteresse
-  if (responsavelId) where.responsavelId = responsavelId
-  if (origem) where.origem = origem
+  if (statusFunil) query = query.eq("statusFunil", statusFunil as never)
+  if (procedimentoInteresse) query = query.eq("procedimentoInteresse", procedimentoInteresse)
+  if (responsavelId) query = query.eq("responsavelId", responsavelId)
+  if (origem) query = query.eq("origem", origem)
   if (busca) {
-    where.OR = [
-      { nome: { contains: busca, mode: "insensitive" } },
-      { whatsapp: { contains: busca } },
-    ]
+    query = query.or(`nome.ilike.%${busca}%,whatsapp.ilike.%${busca}%`)
   }
   if (alerta) {
-    const ha3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-    where.statusFunil = { notIn: ["concluido", "perdido"] }
-    where.OR = [
-      { ultimaMovimentacaoEm: { not: null, lt: ha3dias } },
-      { ultimaMovimentacaoEm: null, atualizadoEm: { lt: ha3dias } },
-    ]
-  }
-  if (followup) {
-    where.conversas = {
-      some: {
-        encerradaEm: null,
-        followUpEnviados: { isEmpty: false },
-      },
-    }
+    const ha3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    query = query
+      .not("statusFunil", "in", "(concluido,perdido)")
+      .or(`ultimaMovimentacaoEm.lt.${ha3dias},and(ultimaMovimentacaoEm.is.null,atualizadoEm.lt.${ha3dias})`)
   }
 
-  const [dados, total] = await Promise.all([
-    prisma.lead.findMany({
-      where,
-      select: {
-        id: true,
-        nome: true,
-        whatsapp: true,
-        email: true,
-        procedimentoInteresse: true,
-        statusFunil: true,
-        origem: true,
-        arquivado: true,
-        criadoEm: true,
-        responsavel: {
-          select: { id: true, nome: true },
-        },
-      },
-      skip: (pagina - 1) * porPagina,
-      take: porPagina,
-      orderBy: { criadoEm: "desc" },
-    }),
-    prisma.lead.count({ where }),
-  ])
+  const inicio = (pagina - 1) * porPagina
+  const fim = inicio + porPagina - 1
 
-  return NextResponse.json({ dados, total, pagina, porPagina })
+  const { data, count, error } = await query
+    .order("criadoEm", { ascending: false })
+    .range(inicio, fim)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({
+    dados: data ?? [],
+    total: count ?? 0,
+    pagina,
+    porPagina,
+  })
 }
 
 export async function POST(request: NextRequest) {
@@ -95,7 +78,12 @@ export async function POST(request: NextRequest) {
 
   const { whatsapp } = parsed.data
 
-  const existente = await prisma.lead.findUnique({ where: { whatsapp } })
+  const { data: existente } = await supabaseAdmin
+    .from("leads")
+    .select("id")
+    .eq("whatsapp", whatsapp)
+    .maybeSingle()
+
   if (existente) {
     return NextResponse.json(
       { error: "WhatsApp já cadastrado" },
@@ -103,19 +91,23 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const lead = await prisma.lead.create({
-    data: parsed.data,
-    select: {
-      id: true,
-      nome: true,
-      whatsapp: true,
-      email: true,
-      procedimentoInteresse: true,
-      statusFunil: true,
-      origem: true,
-      criadoEm: true,
-    },
-  })
+  const insertData = {
+    id: criarId(),
+    atualizadoEm: agora(),
+    ...parsed.data,
+  } as never
+
+  const { data: lead, error } = await supabaseAdmin
+    .from("leads")
+    .insert(insertData)
+    .select(
+      "id, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, criadoEm"
+    )
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json(lead, { status: 201 })
 }

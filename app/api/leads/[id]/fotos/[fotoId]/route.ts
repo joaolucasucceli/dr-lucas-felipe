@@ -1,33 +1,41 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
-import { requireRole } from "@/lib/auth-helpers"
 import { supabaseAdmin } from "@/lib/supabase"
+import { requireRole } from "@/lib/auth-helpers"
 
 type RouteParams = { params: Promise<{ id: string; fotoId: string }> }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
   const { id, fotoId } = await params
 
-  const foto = await prisma.fotoLead.findFirst({
-    where: { id: fotoId, leadId: id },
-  })
+  const { data: foto } = await supabaseAdmin
+    .from("fotos_lead")
+    .select("id, url")
+    .eq("id", fotoId)
+    .eq("leadId", id)
+    .maybeSingle()
 
   if (!foto) {
     return NextResponse.json({ error: "Foto não encontrada" }, { status: 404 })
   }
 
-  // Extrair path do Storage a partir da URL
   const urlParts = foto.url.split("/fotos-leads/")
   if (urlParts.length > 1) {
     const storagePath = urlParts[1]
     await supabaseAdmin.storage.from("fotos-leads").remove([storagePath])
   }
 
-  await prisma.fotoLead.delete({ where: { id: fotoId } })
+  const { error } = await supabaseAdmin
+    .from("fotos_lead")
+    .delete()
+    .eq("id", fotoId)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({ mensagem: "Foto removida" })
 }

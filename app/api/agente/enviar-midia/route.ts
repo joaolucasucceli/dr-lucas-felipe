@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { enviarMidia } from "@/lib/uazapi"
+import { criarId, agora } from "@/lib/db-utils"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -18,15 +19,20 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const where: Record<string, unknown> = {
-    categoria,
-    ativo: true,
-    deletadoEm: null,
-  }
-  if (procedimento) where.procedimento = procedimento
+  let query = supabaseAdmin
+    .from("midia_marketing")
+    .select("*")
+    .eq("categoria", categoria)
+    .eq("ativo", true)
+    .is("deletadoEm", null)
 
-  const midias = await prisma.midiaMarketing.findMany({ where })
-  if (midias.length === 0) {
+  if (procedimento) {
+    query = query.eq("procedimento", procedimento)
+  }
+
+  const { data: midias } = await query
+
+  if (!midias || midias.length === 0) {
     return NextResponse.json({
       ok: true,
       enviado: false,
@@ -36,14 +42,22 @@ export async function POST(request: NextRequest) {
 
   const midia = midias[Math.floor(Math.random() * midias.length)]
 
-  const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("whatsapp")
+    .eq("id", leadId)
+    .maybeSingle()
+
   if (!lead) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
   }
 
-  const configWa = await prisma.configWhatsapp.findFirst({
-    where: { ativo: true },
-  })
+  const { data: configWa } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("uazapiUrl, instanceToken")
+    .eq("ativo", true)
+    .maybeSingle()
+
   if (!configWa?.uazapiUrl || !configWa?.instanceToken) {
     return NextResponse.json({
       ok: true,
@@ -52,10 +66,7 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(
-    /\/$/,
-    ""
-  )
+  const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "")
   const urlCompleta = midia.url.startsWith("http")
     ? midia.url
     : `${baseUrl}${midia.url.startsWith("/") ? "" : "/"}${midia.url}`
@@ -85,8 +96,10 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  await prisma.mensagemWhatsapp.create({
-    data: {
+  await supabaseAdmin
+    .from("mensagens_whatsapp")
+    .insert({
+      id: criarId(),
       conversaId,
       leadId,
       messageIdWhatsapp: `agente_midia_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
@@ -95,13 +108,12 @@ export async function POST(request: NextRequest) {
       remetente: "agente",
       mediaUrl: urlCompleta,
       mediaType: midia.tipo,
-    },
-  })
+    })
 
-  await prisma.conversa.update({
-    where: { id: conversaId },
-    data: { ultimaMensagemEm: new Date() },
-  })
+  await supabaseAdmin
+    .from("conversas")
+    .update({ ultimaMensagemEm: agora(), atualizadoEm: agora() })
+    .eq("id", conversaId)
 
   return NextResponse.json({
     ok: true,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 
 export async function POST(request: NextRequest) {
@@ -14,28 +14,21 @@ export async function POST(request: NextRequest) {
     body = {}
   }
 
-  const where: Record<string, unknown> = {
-    ativo: true,
-    deletadoEm: null,
-  }
+  let query = supabaseAdmin
+    .from("procedimentos")
+    .select("id, nome, tipo, descricao, duracaoMin, posOperatorio")
+    .eq("ativo", true)
+    .is("deletadoEm", null)
 
   if (body.filtro) {
-    where.nome = { contains: body.filtro, mode: "insensitive" }
+    query = query.ilike("nome", `%${body.filtro}%`)
   }
 
-  const procedimentos = await prisma.procedimento.findMany({
-    where,
-    select: {
-      id: true,
-      nome: true,
-      tipo: true,
-      descricao: true,
-      duracaoMin: true,
-      posOperatorio: true,
-      // NUNCA retornar valorBase — agente não informa preço
-    },
-    orderBy: { nome: "asc" },
-  })
+  const { data: procedimentos, error } = await query.order("nome", { ascending: true })
 
-  return NextResponse.json({ procedimentos })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ procedimentos: procedimentos ?? [] })
 }
