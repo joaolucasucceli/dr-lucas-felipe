@@ -185,35 +185,6 @@ export default function ConfiguracoesPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-3">
-            <Zap className="h-8 w-8 text-muted-foreground" />
-            <div className="flex-1">
-              <CardTitle className="text-base">Automações</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Follow-ups e confirmações de consulta
-              </p>
-              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                Executado automaticamente a cada hora
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <Badge variant="default">
-              Ativo
-            </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExecutarCron}
-              disabled={executandoCron}
-            >
-              {executandoCron && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              Forçar execução
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

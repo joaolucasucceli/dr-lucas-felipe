@@ -9,8 +9,6 @@ import {
   Users,
   CalendarDays,
   Stethoscope,
-  Settings,
-  BookOpen,
   Brain,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -83,22 +81,6 @@ const navGroups: NavGroup[] = [
         href: "/base-conhecimento",
         icone: <Brain className="h-4 w-4" />,
         perfis: ["gestor"],
-      },
-    ],
-  },
-  {
-    label: "Sistema",
-    itens: [
-      {
-        titulo: "Configurações",
-        href: "/configuracoes",
-        icone: <Settings className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
-      {
-        titulo: "Documentação",
-        href: "/documentacao",
-        icone: <BookOpen className="h-4 w-4" />,
       },
     ],
   },

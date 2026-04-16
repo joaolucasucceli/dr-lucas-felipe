@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Bell, AlertTriangle, Calendar, Bot } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Bell, AlertTriangle, Calendar, Bot, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -32,6 +32,17 @@ function formatarHora(iso: string) {
 export function PainelNotificacoes() {
   const [aberto, setAberto] = useState(false)
   const { notificacoes, total } = useNotificacoes()
+  const [dispensadas, setDispensadas] = useState(false)
+  const ultimoTotal = useRef(total)
+
+  useEffect(() => {
+    if (total > ultimoTotal.current) {
+      setDispensadas(false)
+    }
+    ultimoTotal.current = total
+  }, [total])
+
+  const totalVisivel = dispensadas ? 0 : total
 
   function navegar(href: string) {
     setAberto(false)
@@ -48,31 +59,42 @@ export function PainelNotificacoes() {
           aria-label="Notificações"
         >
           <Bell className="h-5 w-5" />
-          {total > 0 && (
+          {totalVisivel > 0 && (
             <Badge
               variant="destructive"
               className="absolute -right-1 -top-1 h-5 min-w-5 rounded-full px-1 text-xs"
             >
-              {total > 9 ? "9+" : total}
+              {totalVisivel > 9 ? "9+" : totalVisivel}
             </Badge>
           )}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
-        <div className="border-b px-4 py-3">
+        <div className="flex items-center justify-between border-b px-4 py-3">
           <p className="text-sm font-semibold">
-            Notificações {total > 0 && `(${total})`}
+            Notificações {totalVisivel > 0 && `(${totalVisivel})`}
           </p>
+          {totalVisivel > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-muted-foreground"
+              onClick={() => setDispensadas(true)}
+            >
+              <X className="mr-1 h-3 w-3" />
+              Limpar
+            </Button>
+          )}
         </div>
 
         <div className="max-h-80 overflow-y-auto">
-          {total === 0 && (
+          {(total === 0 || dispensadas) && (
             <p className="px-4 py-6 text-center text-sm text-muted-foreground">
               Nenhuma notificação no momento.
             </p>
           )}
 
-          {notificacoes.leadsAlerta.length > 0 && (
+          {!dispensadas && notificacoes.leadsAlerta.length > 0 && (
             <div className="p-2">
               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                 <AlertTriangle className="mr-1 inline h-3 w-3 text-yellow-500" />
@@ -95,7 +117,7 @@ export function PainelNotificacoes() {
             </div>
           )}
 
-          {notificacoes.agendamentosProximos.length > 0 && (
+          {!dispensadas && notificacoes.agendamentosProximos.length > 0 && (
             <div className="border-t p-2">
               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                 <Calendar className="mr-1 inline h-3 w-3 text-blue-500" />
@@ -116,7 +138,7 @@ export function PainelNotificacoes() {
             </div>
           )}
 
-          {notificacoes.leadsNovosIA.length > 0 && (
+          {!dispensadas && notificacoes.leadsNovosIA.length > 0 && (
             <div className="border-t p-2">
               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                 <Bot className="mr-1 inline h-3 w-3 text-green-500" />

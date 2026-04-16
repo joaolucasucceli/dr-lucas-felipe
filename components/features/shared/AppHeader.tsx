@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { LogOut, Search, User, Settings } from "lucide-react"
+import { LogOut, Search, User, Settings, BookOpen } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -111,6 +111,10 @@ export function AppHeader({ nome, email, perfil }: AppHeaderProps) {
                 Configurações
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem onClick={() => router.push("/documentacao")}>
+              <BookOpen className="mr-2 h-4 w-4" />
+              Documentação
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: "/login" })}
