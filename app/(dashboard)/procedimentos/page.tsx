@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Plus, MoreHorizontal, Pencil, UserX, UserCheck } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, UserX, UserCheck, Tags } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { EmptyState } from "@/components/features/shared/EmptyState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { ProcedimentoForm } from "@/components/features/procedimentos/ProcedimentoForm"
+import { TiposProcedimentoDialog } from "@/components/features/procedimentos/TiposProcedimentoDialog"
 import { useProcedimentos } from "@/hooks/use-procedimentos"
 
 interface Procedimento {
@@ -57,6 +58,7 @@ export default function ProcedimentosPage() {
   const [procedimentoEditando, setProcedimentoEditando] =
     useState<Procedimento | null>(null)
   const [confirmToggle, setConfirmToggle] = useState<Procedimento | null>(null)
+  const [tiposAberto, setTiposAberto] = useState(false)
 
   const autorizado = session?.user?.perfil === "gestor"
 
@@ -195,15 +197,24 @@ export default function ProcedimentosPage() {
         descricao="Gerencie os procedimentos da clínica"
       >
         {isGestor && (
-          <Button
-            onClick={() => {
-              setProcedimentoEditando(null)
-              setFormAberto(true)
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Procedimento
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setTiposAberto(true)}
+            >
+              <Tags className="mr-2 h-4 w-4" />
+              Gerenciar Tipos
+            </Button>
+            <Button
+              onClick={() => {
+                setProcedimentoEditando(null)
+                setFormAberto(true)
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Procedimento
+            </Button>
+          </div>
         )}
       </PageHeader>
 
@@ -257,6 +268,11 @@ export default function ProcedimentosPage() {
           setProcedimentoEditando(null)
           recarregar()
         }}
+      />
+
+      <TiposProcedimentoDialog
+        aberto={tiposAberto}
+        onFechar={() => setTiposAberto(false)}
       />
 
       <ConfirmDialog

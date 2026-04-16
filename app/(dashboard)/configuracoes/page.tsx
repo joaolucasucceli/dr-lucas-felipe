@@ -142,24 +142,6 @@ export default function ConfiguracoesPage() {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => router.push("/configuracoes/tipos-procedimento")}>
-          <CardHeader className="flex flex-row items-center gap-3">
-            <Stethoscope className="h-8 w-8 text-muted-foreground" />
-            <div className="flex-1">
-              <CardTitle className="text-base">Tipos de Procedimento</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Categorias personalizáveis para procedimentos
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="flex items-center justify-end">
-            <Button variant="ghost" size="sm">
-              Gerenciar
-              <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-
         <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => router.push("/configuracoes/site")}>
           <CardHeader className="flex flex-row items-center gap-3">
             <Globe className="h-8 w-8 text-muted-foreground" />
