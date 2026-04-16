@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Bell, AlertTriangle, Calendar, Bot, X } from "lucide-react"
+import { Bell, AlertTriangle, Calendar, Bot, X, ClipboardCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -94,8 +94,38 @@ export function PainelNotificacoes() {
             </p>
           )}
 
-          {!dispensadas && notificacoes.leadsAlerta.length > 0 && (
+          {!dispensadas && notificacoes.leadsVerificacaoPendente.length > 0 && (
             <div className="p-2">
+              <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                <ClipboardCheck className="mr-1 inline h-3 w-3 text-orange-500" />
+                Verificação pendente
+              </p>
+              {notificacoes.leadsVerificacaoPendente.map((lead) => (
+                <button
+                  key={lead.id}
+                  onClick={() => navegar(`/leads/${lead.id}`)}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted"
+                >
+                  <span className="flex-1 truncate">
+                    {lead.nome}
+                    {lead.procedimentoInteresse && (
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        — {lead.procedimentoInteresse}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 text-xs text-orange-600">
+                    {lead.ultimaMovimentacaoEm
+                      ? formatarDataRelativa(lead.ultimaMovimentacaoEm)
+                      : "agora"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {!dispensadas && notificacoes.leadsAlerta.length > 0 && (
+            <div className={notificacoes.leadsVerificacaoPendente.length > 0 ? "border-t p-2" : "p-2"}>
               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                 <AlertTriangle className="mr-1 inline h-3 w-3 text-yellow-500" />
                 Leads em alerta

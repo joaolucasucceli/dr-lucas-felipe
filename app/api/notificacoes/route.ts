@@ -16,7 +16,7 @@ export async function GET() {
     select: { id: true },
   })
 
-  const [leadsAlerta, agendamentosProximos, leadsNovosIA] = await Promise.all([
+  const [leadsAlerta, agendamentosProximos, leadsNovosIA, leadsVerificacaoPendente] = await Promise.all([
     prisma.lead.findMany({
       where: {
         deletadoEm: null,
@@ -54,9 +54,34 @@ export async function GET() {
           orderBy: { criadoEm: "desc" },
         })
       : Promise.resolve([]),
+    prisma.lead.findMany({
+      where: {
+        deletadoEm: null,
+        arquivado: false,
+        statusFunil: "verificacao_humana",
+      },
+      select: {
+        id: true,
+        nome: true,
+        procedimentoInteresse: true,
+        ultimaMovimentacaoEm: true,
+      },
+      take: 10,
+      orderBy: { ultimaMovimentacaoEm: "asc" },
+    }),
   ])
 
-  const total = leadsAlerta.length + agendamentosProximos.length + leadsNovosIA.length
+  const total =
+    leadsAlerta.length +
+    agendamentosProximos.length +
+    leadsNovosIA.length +
+    leadsVerificacaoPendente.length
 
-  return NextResponse.json({ leadsAlerta, agendamentosProximos, leadsNovosIA, total })
+  return NextResponse.json({
+    leadsAlerta,
+    agendamentosProximos,
+    leadsNovosIA,
+    leadsVerificacaoPendente,
+    total,
+  })
 }
