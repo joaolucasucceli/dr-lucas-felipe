@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { validarApiSecret } from "@/lib/api-auth"
+import { obterNovoResponsavelPorStatus } from "@/lib/leads/auto-atribuir-responsavel"
 import type { StatusFunil, EtapaConversa } from "@/generated/prisma/client"
 
 // Transições permitidas a partir de cada etapa
@@ -86,10 +87,20 @@ export async function POST(request: NextRequest) {
   }
 
   if (novaEtapa) {
+    // Auto-atribuir responsável conforme nova etapa (verificacao_humana → atendente)
+    const novoResponsavelId = await obterNovoResponsavelPorStatus(novaEtapa)
+    const dataLead: Record<string, unknown> = {
+      statusFunil: novaEtapa as StatusFunil,
+      ultimaMovimentacaoEm: new Date(),
+    }
+    if (novoResponsavelId) {
+      dataLead.responsavelId = novoResponsavelId
+    }
+
     await prisma.$transaction([
       prisma.lead.update({
         where: { id: leadId },
-        data: { statusFunil: novaEtapa as StatusFunil, ultimaMovimentacaoEm: new Date() },
+        data: dataLead,
       }),
       prisma.conversa.update({
         where: { id: conversaId },

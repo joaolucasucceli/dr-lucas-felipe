@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth-helpers"
 import { mudarStatusSchema } from "@/lib/validations/lead"
 import { converterLeadParaPaciente } from "@/lib/pacientes/converter-lead"
+import { obterNovoResponsavelPorStatus } from "@/lib/leads/auto-atribuir-responsavel"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -56,6 +57,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     dataUpdate.motivoPerda = parsed.data.motivoPerda
   } else if (statusAnterior === "perdido") {
     dataUpdate.motivoPerda = null
+  }
+
+  // Auto-atribuir responsável conforme novo status
+  // verificacao_humana → atendente | consulta_realizada → gestor
+  const novoResponsavelId = await obterNovoResponsavelPorStatus(novoStatus)
+  if (novoResponsavelId) {
+    dataUpdate.responsavelId = novoResponsavelId
   }
 
   const leadAtualizado = await prisma.lead.update({
