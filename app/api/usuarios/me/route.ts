@@ -8,6 +8,7 @@ import { requireAuth } from "@/lib/auth-helpers"
 const atualizarMeSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").optional(),
   email: z.string().email("Email inválido").optional(),
+  fotoUrl: z.string().nullable().optional(),
   senhaAtual: z.string().optional(),
   novaSenha: z.string().min(6, "A nova senha deve ter pelo menos 6 caracteres").optional(),
 }).refine(
@@ -25,6 +26,7 @@ export async function GET() {
       id: true,
       nome: true,
       email: true,
+      fotoUrl: true,
       perfil: true,
       tipo: true,
       criadoEm: true,
@@ -52,7 +54,7 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { nome, email, senhaAtual, novaSenha } = parsed.data
+  const { nome, email, fotoUrl, senhaAtual, novaSenha } = parsed.data
 
   const usuario = await prisma.usuario.findUnique({
     where: { id: session!.user.id, deletadoEm: null },
@@ -81,6 +83,7 @@ export async function PATCH(request: NextRequest) {
   const dados: Record<string, unknown> = {}
   if (nome) dados.nome = nome
   if (email) dados.email = email
+  if (fotoUrl !== undefined) dados.fotoUrl = fotoUrl
   if (novaSenha) dados.senha = await hash(novaSenha, 12)
 
   const atualizado = await prisma.usuario.update({

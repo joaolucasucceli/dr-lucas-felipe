@@ -88,6 +88,7 @@ model Usuario {
   senha       String
   perfil      Perfil
   tipo        TipoUsuario  @default(humano)
+  fotoUrl     String?
   ativo       Boolean      @default(true)
   criadoEm    DateTime     @default(now())
   atualizadoEm DateTime   @updatedAt

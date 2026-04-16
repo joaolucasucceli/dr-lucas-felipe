@@ -35,6 +35,7 @@ interface AppHeaderProps {
   nome: string
   email: string
   perfil: string
+  fotoUrl?: string | null
 }
 
 const perfilLabels: Record<string, string> = {
@@ -42,7 +43,7 @@ const perfilLabels: Record<string, string> = {
   atendente: "Atendente",
 }
 
-export function AppHeader({ nome, email, perfil }: AppHeaderProps) {
+export function AppHeader({ nome, email, perfil, fotoUrl }: AppHeaderProps) {
   const router = useRouter()
   const [buscaAberta, setBuscaAberta] = useState(false)
 
@@ -86,7 +87,7 @@ export function AppHeader({ nome, email, perfil }: AppHeaderProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2" aria-label={nome}>
-              <UserAvatar nome={nome} tamanho="sm" />
+              <UserAvatar nome={nome} src={fotoUrl} tamanho="sm" />
               <span className="hidden text-sm font-medium sm:inline-block">
                 {nome}
               </span>

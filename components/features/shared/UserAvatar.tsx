@@ -1,10 +1,11 @@
 "use client"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
 interface UserAvatarProps {
   nome: string
+  src?: string | null
   tamanho?: "sm" | "md" | "lg"
   className?: string
 }
@@ -42,9 +43,10 @@ const tamanhos = {
   lg: "h-11 w-11 text-base",
 }
 
-export function UserAvatar({ nome, tamanho = "md", className }: UserAvatarProps) {
+export function UserAvatar({ nome, src, tamanho = "md", className }: UserAvatarProps) {
   return (
     <Avatar className={cn(tamanhos[tamanho], className)}>
+      {src && <AvatarImage src={src} alt={nome} />}
       <AvatarFallback className={cn(getCorFromNome(nome), "text-white font-medium")}>
         {getIniciais(nome)}
       </AvatarFallback>

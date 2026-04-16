@@ -57,6 +57,7 @@ export const authOptions: NextAuthOptions = {
           id: usuario.id,
           name: usuario.nome,
           email: usuario.email,
+          image: usuario.fotoUrl || null,
           perfil: usuario.perfil,
           tipo: usuario.tipo,
         }
@@ -64,17 +65,30 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
+        token.image = user.image
         token.perfil = user.perfil
         token.tipo = user.tipo
+      }
+      // Refresh da foto ao atualizar session (via update())
+      if (trigger === "update") {
+        const usr = await prisma.usuario.findUnique({
+          where: { id: token.id as string },
+          select: { fotoUrl: true, nome: true },
+        })
+        if (usr) {
+          token.image = usr.fotoUrl || null
+          token.name = usr.nome
+        }
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id
+        session.user.image = token.image as string | null
         session.user.perfil = token.perfil
         session.user.tipo = token.tipo
       }

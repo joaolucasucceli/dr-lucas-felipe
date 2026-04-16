@@ -1,32 +1,84 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import { Loader2, Camera } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { PageHeader } from "@/components/features/shared/PageHeader"
+import { UserAvatar } from "@/components/features/shared/UserAvatar"
+import { getSupabaseBrowser } from "@/lib/supabase-browser"
 
 export default function MeuPerfilPage() {
   const { data: session, update } = useSession()
   const [nome, setNome] = useState("")
   const [email, setEmail] = useState("")
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
   const [senhaAtual, setSenhaAtual] = useState("")
   const [novaSenha, setNovaSenha] = useState("")
   const [confirmarSenha, setConfirmarSenha] = useState("")
   const [salvandoDados, setSalvandoDados] = useState(false)
   const [salvandoSenha, setSalvandoSenha] = useState(false)
+  const [uploadandoFoto, setUploadandoFoto] = useState(false)
+  const inputFotoRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (session?.user) {
       setNome(session.user.name ?? "")
       setEmail(session.user.email ?? "")
+      setFotoUrl(session.user.image ?? null)
     }
   }, [session])
+
+  async function handleUploadFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem excede 5MB")
+      return
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem")
+      return
+    }
+
+    setUploadandoFoto(true)
+    try {
+      const supabase = getSupabaseBrowser()
+      const ext = file.name.split(".").pop() || "jpg"
+      const path = `usuarios/${session!.user.id}/avatar.${ext}`
+
+      const { error } = await supabase.storage
+        .from("atendimento-midias")
+        .upload(path, file, { upsert: true })
+      if (error) throw new Error(error.message)
+
+      const { data } = supabase.storage
+        .from("atendimento-midias")
+        .getPublicUrl(path)
+
+      const url = `${data.publicUrl}?t=${Date.now()}`
+
+      const res = await fetch("/api/usuarios/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fotoUrl: url }),
+      })
+      if (!res.ok) throw new Error()
+
+      setFotoUrl(url)
+      await update()
+      toast.success("Foto atualizada")
+    } catch {
+      toast.error("Erro ao enviar foto")
+    } finally {
+      setUploadandoFoto(false)
+    }
+  }
 
   async function handleSalvarDados(e: React.FormEvent) {
     e.preventDefault()
@@ -85,6 +137,46 @@ export default function MeuPerfilPage() {
       <PageHeader titulo="Meu Perfil" descricao="Gerencie seus dados pessoais e senha" />
 
       <div className="mt-6 max-w-lg space-y-6">
+        {/* Foto de perfil */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Foto de Perfil</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-6">
+            <div className="relative">
+              <UserAvatar
+                nome={nome || "U"}
+                src={fotoUrl}
+                tamanho="lg"
+                className="h-20 w-20 text-2xl"
+              />
+              <button
+                type="button"
+                onClick={() => inputFotoRef.current?.click()}
+                disabled={uploadandoFoto}
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary/90"
+              >
+                {uploadandoFoto ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+              </button>
+              <input
+                ref={inputFotoRef}
+                type="file"
+                accept="image/*"
+                onChange={handleUploadFoto}
+                className="hidden"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Clique no ícone para trocar a foto.</p>
+              <p>JPG, PNG ou WebP. Máximo 5MB.</p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Dados Pessoais</CardTitle>
