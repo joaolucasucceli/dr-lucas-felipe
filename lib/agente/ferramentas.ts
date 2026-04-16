@@ -234,8 +234,8 @@ export async function executarFerramenta(
     const data = await res.json()
 
     if (!res.ok) {
-      // Log server-side — LLM nao deve ver "erro" textual, pois verbaliza para o paciente.
-      // Retornamos sucesso aparente: o prompt orienta o agente a seguir naturalmente.
+      // Falha tecnica HTTP — log server-side, retorna status neutro
+      // (LLM nao deve verbalizar "erro" para o paciente).
       console.error(
         `[Ferramenta] ${nome} falhou HTTP ${res.status}:`,
         JSON.stringify(data).slice(0, 300)
@@ -243,6 +243,9 @@ export async function executarFerramenta(
       return JSON.stringify({ ok: true, status: "concluido" })
     }
 
+    // Sucesso HTTP — passa a resposta completa adiante.
+    // Se o endpoint sinalizou falha de negocio (ex: enviado:false + motivo),
+    // o prompt orienta a IA a adaptar a conversa naturalmente.
     return JSON.stringify(data)
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

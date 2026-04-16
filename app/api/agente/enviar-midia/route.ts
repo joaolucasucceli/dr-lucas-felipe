@@ -62,14 +62,28 @@ export async function POST(request: NextRequest) {
 
   const tipoUazapi = midia.tipo === "video" ? "video" : "image"
 
-  await enviarMidia(
-    configWa.uazapiUrl,
-    configWa.instanceToken,
-    lead.whatsapp,
-    urlCompleta,
-    tipoUazapi as "image" | "video",
-    midia.titulo
-  )
+  try {
+    await enviarMidia(
+      configWa.uazapiUrl,
+      configWa.instanceToken,
+      lead.whatsapp,
+      urlCompleta,
+      tipoUazapi as "image" | "video",
+      midia.titulo
+    )
+  } catch (err) {
+    console.error("[enviar-midia] Falha ao enviar via Uazapi:", {
+      midiaId: midia.id,
+      url: urlCompleta,
+      tipo: tipoUazapi,
+      erro: err instanceof Error ? err.message : err,
+    })
+    return NextResponse.json({
+      ok: true,
+      enviado: false,
+      motivo: "Falha ao enviar mídia (Uazapi rejeitou ou URL inacessível)",
+    })
+  }
 
   await prisma.mensagemWhatsapp.create({
     data: {

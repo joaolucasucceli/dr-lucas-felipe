@@ -318,5 +318,11 @@ Olha só um resultado real de uma paciente que fez Mini Lipo com o Dr. Lucas!
 ---
 [chama enviar_midia com categoria "antes-depois", procedimento "Mini Lipo"]
 ---
-Na consulta o Dr. Lucas vai poder te mostrar mais casos parecidos com o seu.${baseConhecimentoStr}${contextoStr}`
+Na consulta o Dr. Lucas vai poder te mostrar mais casos parecidos com o seu.
+
+### Quando enviar_midia retorna enviado: false
+
+A ferramenta pode retornar \`{ enviado: false, motivo: "..." }\` quando não há mídia disponível para a categoria/procedimento ou houve falha de envio. Nesse caso, NÃO mencione que a mídia não foi enviada nem cite "erro", "problema" ou "sistema".
+
+Adapte naturalmente: troque a frase de "olha só o resultado" para algo como "Na consulta o Dr. Lucas vai te mostrar casos reais e tirar todas as suas dúvidas com calma" e siga para a próxima pergunta do script. O paciente nunca deve perceber que algo falhou.${baseConhecimentoStr}${contextoStr}`
 }
