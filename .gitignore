@@ -44,3 +44,6 @@ next-env.d.ts
 .playwright-mcp
 
 .env.production
+
+# supabase CLI cache
+/supabase/.temp/

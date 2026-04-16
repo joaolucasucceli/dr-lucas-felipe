@@ -1,28 +1,22 @@
 import { openai } from "@/lib/openai"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { obterELimparBuffer } from "@/lib/agente/buffer"
 import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
 import { gerarSystemPrompt } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
 import { abrirNovoCiclo } from "@/lib/agente/kanban-sync"
+import { analisarConversa } from "@/lib/agente/analista"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
-// Transições de etapa agora são feitas diretamente nas ferramentas
-// (salvar_qualificacao → qualificacao, registrar_agendamento → consulta_agendada)
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
 const MAX_TOOL_ITERATIONS = 10
 
-/** Statuses em que a IA fica em silêncio — humano está conduzindo */
 const STATUSES_SILENCIO = ["verificacao_humana", "consulta_realizada", "sinal_pago", "procedimento_agendado"]
-
-/** Statuses que indicam paciente retornando — IA abre novo ciclo */
 const STATUSES_RETORNO = ["concluido", "perdido", "arquivado"]
 
-/** Segmenta resposta longa em mensagens curtas para WhatsApp */
 export function segmentarResposta(texto: string): string[] {
   if (!texto) return []
 
-  // Prioridade 1: split por --- explícito (agente controla as quebras)
   if (texto.includes("---")) {
     const segmentos = texto
       .split(/\n?---\n?/)
@@ -31,7 +25,6 @@ export function segmentarResposta(texto: string): string[] {
     if (segmentos.length > 1) return segmentos
   }
 
-  // Fallback: split por parágrafo duplo
   const blocos = texto.split(/\n\n+/).filter((b) => b.trim())
 
   const segmentos: string[] = []
@@ -39,7 +32,6 @@ export function segmentarResposta(texto: string): string[] {
     if (bloco.length <= 500) {
       segmentos.push(bloco.trim())
     } else {
-      // Quebrar por sentenças
       const frases = bloco.split(/(?<=\.)\s+/)
       let atual = ""
       for (const frase of frases) {
@@ -57,39 +49,34 @@ export function segmentarResposta(texto: string): string[] {
   return segmentos.filter((s) => s.length > 0)
 }
 
-/** Extrai número do chatId (remoteJid) */
 function extrairNumero(chatId: string): string {
   return chatId.split("@")[0]
 }
 
-/** Busca config WhatsApp ativa do banco */
 async function obterConfigWhatsapp() {
-  return prisma.configWhatsapp.findFirst({
-    where: { ativo: true },
-  })
+  const { data } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("*")
+    .eq("ativo", true)
+    .maybeSingle()
+  return data
 }
 
-/** Processa mensagens acumuladas no buffer e responde via GPT-4o */
 export async function processarMensagens(chatId: string): Promise<void> {
-  // 1. Obter mensagens do buffer
   const buffer = await obterELimparBuffer(chatId)
   if (buffer.length === 0) return
 
-  // 2. Concatenar conteúdos
   const textoBuffer = buffer.map((m) => m.conteudo).join("\n")
   const whatsapp = extrairNumero(chatId)
 
-  // 3. Obter config WhatsApp para envio
   const configWa = await obterConfigWhatsapp()
   if (!configWa?.instanceToken || !configWa?.uazapiUrl) {
     console.warn("[Agente] ConfigWhatsapp não encontrada ou incompleta — não será possível responder")
     return
   }
 
-  // 4. Determinar baseUrl para chamadas internas
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
 
-  // 5. Consultar paciente para contexto
   let contextoLead: {
     nome?: string
     procedimento?: string
@@ -110,17 +97,14 @@ export async function processarMensagens(chatId: string): Promise<void> {
     if (resultadoPaciente.lead) {
       const statusAtual: string = resultadoPaciente.lead.statusFunil
 
-      // 5a. Silêncio: humano está conduzindo — IA não responde
       if (STATUSES_SILENCIO.includes(statusAtual)) {
         return
       }
 
-      // 5b. Retorno: paciente voltou após concluido/perdido — abrir novo ciclo
       if (STATUSES_RETORNO.includes(statusAtual)) {
         try {
           const novoCiclo = await abrirNovoCiclo(resultadoPaciente.lead.id)
           conversaId = novoCiclo.conversaId
-          // Rebuscar dados atualizados do lead
           const leadAtualizado = JSON.parse(
             await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
           )
@@ -139,7 +123,6 @@ export async function processarMensagens(chatId: string): Promise<void> {
           }
         } catch (err) {
           console.error("[Agente] Erro ao abrir novo ciclo:", err)
-          // Se falhar abertura de ciclo, continua com dados originais
           contextoLead = {
             nome: resultadoPaciente.lead.nome,
             procedimento: resultadoPaciente.lead.procedimentoInteresse,
@@ -150,9 +133,6 @@ export async function processarMensagens(chatId: string): Promise<void> {
           conversaId = resultadoPaciente.conversa?.id || null
         }
       } else {
-        // 5c. Fluxo normal (colunas 1–4)
-        // Só incluir nome no contexto se já foi confirmado pelo paciente
-        // (sobreOPaciente contém dados coletados → paciente já informou nome)
         const nomeConfirmado = resultadoPaciente.sobreOPaciente
           ? resultadoPaciente.lead.nome
           : undefined
@@ -174,17 +154,22 @@ export async function processarMensagens(chatId: string): Promise<void> {
     console.error("[Agente] Erro ao consultar paciente:", error)
   }
 
-  // 5d. Checar responsabilidade — IA só responde a leads atribuídos a ela
   if (leadId) {
-    const usuarioIa = await prisma.usuario.findFirst({
-      where: { tipo: "ia", ativo: true, deletadoEm: null },
-      select: { id: true },
-    })
+    const { data: usuarioIa } = await supabaseAdmin
+      .from("usuarios")
+      .select("id")
+      .eq("tipo", "ia")
+      .eq("ativo", true)
+      .is("deletadoEm", null)
+      .maybeSingle()
+
     if (usuarioIa) {
-      const leadAtual = await prisma.lead.findUnique({
-        where: { id: leadId },
-        select: { responsavelId: true },
-      })
+      const { data: leadAtual } = await supabaseAdmin
+        .from("leads")
+        .select("responsavelId")
+        .eq("id", leadId)
+        .maybeSingle()
+
       if (leadAtual?.responsavelId && leadAtual.responsavelId !== usuarioIa.id) {
         console.log(`[Agente] IA não é responsável pelo lead ${leadId} — não responde`)
         return
@@ -192,19 +177,19 @@ export async function processarMensagens(chatId: string): Promise<void> {
     }
   }
 
-  // 5e. Checar modo de conversa — se humano está atendendo, IA não responde
   if (conversaId) {
-    const conversa = await prisma.conversa.findUnique({
-      where: { id: conversaId },
-      select: { modoConversa: true },
-    })
+    const { data: conversa } = await supabaseAdmin
+      .from("conversas")
+      .select("modoConversa")
+      .eq("id", conversaId)
+      .maybeSingle()
+
     if (conversa?.modoConversa === "humano") {
       console.error(`[Agente] Conversa ${conversaId} em modo humano — IA não responde`)
       return
     }
   }
 
-  // 6. Enviar "digitando"
   try {
     await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
   } catch {
@@ -212,10 +197,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
   }
 
   try {
-    // 7. Obter memória
     const memoria = await obterMemoria(chatId)
-
-    // 8. Montar mensagens
     const systemPrompt = await gerarSystemPrompt(contextoLead)
     const mensagens: ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
@@ -223,7 +205,6 @@ export async function processarMensagens(chatId: string): Promise<void> {
       { role: "user", content: textoBuffer },
     ]
 
-    // 9. Chamar GPT-4o com function calling
     let resposta = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: mensagens,
@@ -231,7 +212,6 @@ export async function processarMensagens(chatId: string): Promise<void> {
       tool_choice: "auto",
     })
 
-    // 10. Loop de tool calls
     let iteracoes = 0
     while (
       resposta.choices[0]?.message?.tool_calls &&
@@ -240,19 +220,13 @@ export async function processarMensagens(chatId: string): Promise<void> {
     ) {
       const toolCalls = resposta.choices[0].message.tool_calls
 
-      // Adicionar a mensagem do assistente com tool_calls
       mensagens.push(resposta.choices[0].message)
 
-      // Executar cada tool call
       for (const toolCall of toolCalls) {
         if (toolCall.type !== "function") continue
         const fn = toolCall.function
         const args = JSON.parse(fn.arguments || "{}")
-        const resultado = await executarFerramenta(
-          fn.name,
-          args,
-          baseUrl
-        )
+        const resultado = await executarFerramenta(fn.name, args, baseUrl)
 
         mensagens.push({
           role: "tool",
@@ -261,7 +235,6 @@ export async function processarMensagens(chatId: string): Promise<void> {
         })
       }
 
-      // Re-chamar GPT-4o com resultados
       resposta = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: mensagens,
@@ -272,31 +245,26 @@ export async function processarMensagens(chatId: string): Promise<void> {
       iteracoes++
     }
 
-    // 11. Obter resposta final
     const textoResposta = resposta.choices[0]?.message?.content || ""
     if (!textoResposta) {
       console.warn("[Agente] GPT-4o retornou resposta vazia")
       return
     }
 
-    // 12. Segmentar e enviar
     const segmentos = segmentarResposta(textoResposta)
 
     for (let i = 0; i < segmentos.length; i++) {
       const segmento = segmentos[i]
 
-      // Mostrar "digitando" antes de cada segmento (simula comportamento humano)
       try {
         await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
       } catch {
         // Ignorar erro de digitação
       }
 
-      // Delay proporcional ao tamanho (simula tempo de digitação humana)
       const typingDelay = Math.min(segmento.length * 30, 3000)
       await new Promise((resolve) => setTimeout(resolve, typingDelay))
 
-      // Enviar via Uazapi
       await enviarMensagem(
         configWa.uazapiUrl,
         configWa.instanceToken,
@@ -304,7 +272,6 @@ export async function processarMensagens(chatId: string): Promise<void> {
         segmento
       )
 
-      // Registrar no banco
       if (leadId) {
         try {
           await executarFerramenta(
@@ -322,24 +289,29 @@ export async function processarMensagens(chatId: string): Promise<void> {
         }
       }
 
-      // Delay entre mensagens (exceto última)
       if (i < segmentos.length - 1) {
         const delay = Math.floor(Math.random() * 2001) + 2000
         await new Promise((resolve) => setTimeout(resolve, delay))
       }
     }
 
-    // 13. Salvar na memória
     await adicionarAMemoria(chatId, { role: "user", content: textoBuffer })
     await adicionarAMemoria(chatId, { role: "assistant", content: textoResposta })
 
-    // Transições de etapa são feitas pelas ferramentas:
-    // salvar_qualificacao → acolhimento → qualificacao
-    // registrar_agendamento → qualquer → consulta_agendada
+    // JLAU-571 Fase 1 — Analista IA em shadow mode.
+    // Aguardar para garantir execucao em serverless (fire-and-forget seria morto
+    // ao retornar da rota). A mensagem ao paciente ja foi enviada via UAZAPI;
+    // este await so atrasa a resposta HTTP para o UAZAPI, que nao e sensivel a latencia.
+    if (leadId) {
+      try {
+        await analisarConversa({ leadId, conversaId })
+      } catch (err) {
+        console.error("[Analista] Falha:", err)
+      }
+    }
   } catch (error) {
     console.error("[Agente] Erro no loop de resposta:", error)
   } finally {
-    // 14. Parar "digitando"
     try {
       await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, false)
     } catch {

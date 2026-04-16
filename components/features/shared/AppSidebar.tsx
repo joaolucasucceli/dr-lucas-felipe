@@ -12,6 +12,7 @@ import {
   Brain,
   Film,
   HeartPulse,
+  BrainCog,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -88,6 +89,12 @@ const navGroups: NavGroup[] = [
         titulo: "Mídia Marketing",
         href: "/midia-marketing",
         icone: <Film className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "Analista IA",
+        href: "/analista-logs",
+        icone: <BrainCog className="h-4 w-4" />,
         perfis: ["gestor"],
       },
     ],

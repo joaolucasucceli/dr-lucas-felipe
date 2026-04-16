@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.21.0"
+export const VERSAO_DOCUMENTACAO = "1.23.0"
 export const DATA_ATUALIZACAO = "2026-04-16"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -27,15 +27,13 @@ Dois módulos integrados em uma única aplicação Next.js:
 | Framework | Next.js 16 (App Router + Turbopack) |
 | UI | shadcn/ui 4 (preset b1Ymqvi3U) |
 | Estilização | Tailwind CSS 4 |
-| Banco de dados | PostgreSQL via Supabase |
-| ORM | Prisma 7 |
+| Banco de dados | PostgreSQL via Supabase (acesso via @supabase/supabase-js) |
 | Autenticação | NextAuth.js (Credentials Provider) |
 | Cache/Buffer | Redis (Upstash) |
 | IA | OpenAI GPT-4o (chat), Whisper (áudio), GPT-4o-mini (visão) |
 | WhatsApp | Uazapi (gateway) |
 | Calendário | Google Calendar API |
 | Deploy | Vercel |
-| Testes E2E | Playwright |
 | Real-time | Supabase Realtime (postgres_changes) |
 
 ---
@@ -419,6 +417,27 @@ Quando o banco está vazio, o agente usa apenas o prompt fixo. Com itens cadastr
 3. A Ana Júlia usa esses textos como referência ao responder o paciente
 
 > **Boas práticas:** mantenha cada item curto e factual. Use a seção certa (paciente fala em pagamento → Ana Júlia consulta seção "pagamento"). Desative em vez de excluir, para preservar histórico.
+
+### Arquitetura dual: SDR + Analista (em shadow mode)
+
+Para desacoplar a responsabilidade de conversar da responsabilidade de preencher o CRM, o sistema tem um segundo agente IA chamado **Analista**:
+
+| Agente | Modelo | Responsabilidade |
+|--------|--------|------------------|
+| **Ana Júlia** | GPT-4o | Conversa com o paciente, envia mensagens, aciona \`enviar_midia\` e \`consultar_paciente\` |
+| **Analista** | GPT-4o-mini | Lê o histórico completo, extrai informações estruturadas e propõe escrita no CRM |
+
+**Fluxo atual (Fase 1 — Shadow Mode):** após cada resposta da Ana Júlia, a Analista é disparada em fire-and-forget e registra o que DEVERIA estar no CRM na tabela \`analista_logs\` — sem alterar nada. Serve para auditoria e tuning.
+
+Gestor acompanha tudo em **Clínica → Analista IA**:
+- Total de análises
+- Casos com divergência entre estado atual e sugestão da Analista
+- Erros de extração
+- Justificativa e score comercial por conversa
+
+Próximas fases (JLAU-571 no Linear):
+- **Fase 2**: Analista passa a escrever no CRM; tools de data entry da Ana Júlia ficam inertes
+- **Fase 3**: tools obsoletas removidas; prompt da Ana Júlia simplificado em ~70%
 
 ### Automações CRON
 

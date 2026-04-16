@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Framework:** Next.js 16 (App Router + Turbopack)
 - **UI:** shadcn/ui 4 exclusivamente (preset `b1Ymqvi3U`) — nunca criar botões, inputs ou cards do zero
 - **Estilização:** Tailwind CSS 4
-- **Banco de Dados:** PostgreSQL via Supabase, ORM: Prisma 7
+- **Banco de Dados:** PostgreSQL via Supabase (acesso direto via `@supabase/supabase-js`, sem ORM)
 - **Autenticação:** NextAuth.js 4 (Credentials Provider + JWT)
 - **Cache/Buffer:** Redis (Upstash)
 - **Realtime:** Supabase Realtime (WebSocket)
@@ -32,17 +32,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npx shadcn@latest init --preset b1Ymqvi3U --template next
 npm install
 
-# Banco de dados
-npx prisma generate
-npx prisma db push
-npx prisma db seed
-
 # Desenvolvimento
 npm run dev
 
-# Prisma
-npx prisma studio                      # visualizador do banco
-npx prisma migrate dev --name <nome>   # criar migration
+# Banco de dados (Supabase CLI)
+npm run db:types                       # regerar types TS a partir do schema do banco
+
+# Build / qualidade
+npm run build
+npm run lint
+npm run typecheck
 ```
 
 ## Arquitetura
@@ -55,9 +54,12 @@ Dois perfis: **Gestor** (acesso total), **Atendente** (operacional). O agente IA
 
 Colunas 1-4 são movidas automaticamente pelo agente IA. Colunas 5-8 exigem ação manual do Atendente/Gestor. Coluna 9 (Perdido) é manual.
 
-### Arquitetura do Agente IA
+### Arquitetura do Agente IA (dual: SDR + Analista)
 
-Fluxo do webhook: `POST /api/webhooks/whatsapp` → detectar tipo de conteúdo → processar mídia se necessário → buffer Redis (debounce 20s, chave: `{chat_id}_buf_dr-lucas`) → concatenar mensagens → GPT-4o com system prompt + memória Redis (20 msgs, chave: `{chat_id}_mem_dr-lucas`) → segmentar resposta → enviar via Uazapi com delay aleatório de 3-5s entre mensagens.
+Dois agentes IA trabalham em paralelo:
+
+- **Ana Júlia** (GPT-4o) — SDR que conversa com o paciente no WhatsApp. Fluxo do webhook: `POST /api/webhooks/whatsapp` → detectar tipo de conteúdo → processar mídia → buffer Redis (debounce 20s, `{chat_id}_buf_dr-lucas`) → concatenar → GPT-4o com system prompt + memória Redis (20 msgs, `{chat_id}_mem_dr-lucas`) → segmentar resposta → Uazapi com delay aleatório 3-5s entre mensagens.
+- **Analista** (GPT-4o-mini, JLAU-571) — disparada em fire-and-forget ao final do loop da Ana Júlia. Lê histórico + estado do lead, retorna JSON estruturado com o que *deveria* estar no CRM. **Fase 1 (shadow mode)**: apenas loga em `analista_logs` sem escrever. Fases 2/3 ainda pendentes.
 
 O agente tem 3 etapas no funil: Qualificação → Agendamento → Gestão do Agendamento, usando 6 ferramentas em `/api/agente/*`.
 
@@ -81,8 +83,12 @@ O agente tem 3 etapas no funil: Qualificação → Agendamento → Gestão do Ag
 
 - `app/(dashboard)/` — páginas do painel agrupadas sob layout do dashboard com sidebar + verificação de perfil
 - `app/api/agente/` — ferramentas do agente IA (6 endpoints)
-- `lib/agente/` — internos do agente: buffer, memória, processamento de mídia, prompt, ferramentas, sincronização do kanban
-- `prisma/seed.ts` — seed com 3 procedimentos + usuário IA
+- `lib/agente/` — internos do agente: buffer, memória, processamento de mídia, prompt, ferramentas, sincronização do kanban, analista (JLAU-571)
+- `supabase/migrations/` — migrations SQL aplicadas manualmente no Supabase (sem Prisma)
+- `lib/supabase.ts` — clients Supabase (`supabaseAdmin` para server-side com service role e `supabaseAnon` para client-side)
+- `lib/types/database.ts` — types TypeScript gerados pelo Supabase CLI (`npm run db:types`)
+- `lib/types/enums.ts` — enums do banco re-exportados a partir de `database.ts`
+- `lib/db-utils.ts` — helpers `criarId()` (cuid2) e `agora()` (ISO timestamp) usados nos `insert/update`
 
 ## Notas do Modelo de Dados
 
@@ -125,7 +131,7 @@ lib/documentacao/conteudo.ts
 |---------|-----------|
 | Páginas | 21 (18 dashboard + 2 públicas + 1 root) |
 | Endpoints API | 91 |
-| Models Prisma | 24 |
+| Tabelas no banco | 24 |
 | Enums | 12 |
 | Componentes | 98 (28 UI + 70 features) |
 | Hooks customizados | 21 |
