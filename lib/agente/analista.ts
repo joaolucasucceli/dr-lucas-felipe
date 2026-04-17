@@ -156,13 +156,9 @@ Retorne APENAS um JSON com a seguinte estrutura:
 /**
  * Analisa uma conversa e registra o resultado em analista_logs.
  *
- * Fase 1 (shadow mode): `ANALISTA_WRITE_MODE` ausente/false → apenas loga,
- * nao escreve em leads/conversas.
- *
- * Fase 2 (write mode): `ANALISTA_WRITE_MODE=true` → aplica as mudancas no
- * Supabase via `aplicarMudancasAnalista` e marca `aplicado: true` no log.
- * Tools de data entry da Ana Julia (salvar_qualificacao) viram inertes para
- * evitar escrita concorrente.
+ * Shadow mode (ANALISTA_WRITE_MODE ausente/false): apenas loga, nao escreve.
+ * Write mode (ANALISTA_WRITE_MODE=true): aplica as mudancas via
+ * `aplicarMudancasAnalista` e marca `aplicado: true` no log.
  */
 export async function analisarConversa(params: {
   leadId: string

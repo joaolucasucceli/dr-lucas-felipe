@@ -4,8 +4,8 @@ import { obterNovoResponsavelPorStatus } from "@/lib/leads/auto-atribuir-respons
 import type { AnalistaOutput, EstadoAtualLead } from "@/lib/agente/analista-types"
 
 /** Transicoes validas de statusFunil controladas pela Analista.
- *  Espelha TRANSICOES_PERMITIDAS de app/api/agente/salvar-qualificacao/route.ts,
- *  para que ativar/desativar o Analista write mode nao crie divergencia de regra. */
+ *  Analista nunca regride etapa nem avanca para estados operados por humanos
+ *  (consulta_agendada em diante, perdido). */
 const TRANSICOES_PERMITIDAS: Record<string, string[]> = {
   acolhimento: ["qualificacao"],
   qualificacao: ["pre_agendamento"],
