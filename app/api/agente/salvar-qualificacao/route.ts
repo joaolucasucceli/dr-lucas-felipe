@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { obterNovoResponsavelPorStatus } from "@/lib/leads/auto-atribuir-responsavel"
+import { analistaWriteModeAtivo } from "@/lib/agente/analista-aplicar"
 import { agora } from "@/lib/db-utils"
 
 const TRANSICOES_PERMITIDAS: Record<string, string[]> = {
@@ -14,6 +15,14 @@ const TRANSICOES_PERMITIDAS: Record<string, string[]> = {
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
   if (erro) return erro
+
+  // JLAU-571 Fase 2: quando a Analista IA assume a escrita no CRM,
+  // esta tool da Ana Julia fica inerte — responde 200 sem efeito para
+  // evitar escrita concorrente. A Analista processa a mesma conversa
+  // em fire-and-forget logo apos e grava o estado estruturado.
+  if (analistaWriteModeAtivo()) {
+    return NextResponse.json({ sucesso: true, inerte: true, motivo: "Analista IA (JLAU-571 Fase 2) e responsavel pela escrita" })
+  }
 
   let body: {
     leadId?: string

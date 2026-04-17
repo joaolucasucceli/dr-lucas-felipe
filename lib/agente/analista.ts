@@ -2,6 +2,10 @@ import { openai } from "@/lib/openai"
 import { supabaseAdmin } from "@/lib/supabase"
 import { criarId } from "@/lib/db-utils"
 import { SYSTEM_PROMPT_ANALISTA } from "@/lib/agente/analista-prompt"
+import {
+  aplicarMudancasAnalista,
+  analistaWriteModeAtivo,
+} from "@/lib/agente/analista-aplicar"
 import type {
   AnalistaOutput,
   Divergencia,
@@ -152,9 +156,13 @@ Retorne APENAS um JSON com a seguinte estrutura:
 /**
  * Analisa uma conversa e registra o resultado em analista_logs.
  *
- * Fase 1 (shadow mode): sempre grava com `aplicado: false`.
- * Nao escreve em leads/conversas. Use os logs para tunar a Analista
- * antes de avancar para Fase 2.
+ * Fase 1 (shadow mode): `ANALISTA_WRITE_MODE` ausente/false → apenas loga,
+ * nao escreve em leads/conversas.
+ *
+ * Fase 2 (write mode): `ANALISTA_WRITE_MODE=true` → aplica as mudancas no
+ * Supabase via `aplicarMudancasAnalista` e marca `aplicado: true` no log.
+ * Tools de data entry da Ana Julia (salvar_qualificacao) viram inertes para
+ * evitar escrita concorrente.
  */
 export async function analisarConversa(params: {
   leadId: string
@@ -167,6 +175,7 @@ export async function analisarConversa(params: {
   let output: AnalistaOutput | null = null
   let divergencias: Divergencia[] = []
   let erro: string | null = null
+  let aplicado = false
 
   try {
     estadoAtual = await carregarEstadoAtual(leadId)
@@ -186,6 +195,23 @@ export async function analisarConversa(params: {
 
     output = await chamarAnalistaLLM(historico, estadoAtual)
     divergencias = calcularDivergencias(estadoAtual, output)
+
+    // Fase 2 — aplicar de verdade quando a flag estiver ligada.
+    if (analistaWriteModeAtivo() && output && divergencias.length > 0) {
+      try {
+        const resultado = await aplicarMudancasAnalista({
+          leadId,
+          conversaId,
+          estadoAtual,
+          output,
+        })
+        aplicado = resultado.camposAtualizados.length > 0 || resultado.etapaAvancada !== null
+        console.log(`[Analista] Aplicou mudancas em ${leadId}:`, JSON.stringify(resultado))
+      } catch (err) {
+        console.error("[Analista] Falha ao aplicar mudancas:", err)
+        erro = `Aplicacao falhou: ${err instanceof Error ? err.message : String(err)}`
+      }
+    }
   } catch (err) {
     erro = err instanceof Error ? err.message : String(err)
     console.error("[Analista] Erro na analise:", erro)
@@ -200,7 +226,7 @@ export async function analisarConversa(params: {
       estadoAtualLead: (estadoAtual ?? null) as unknown as Json,
       output: (output ?? null) as unknown as Json,
       divergencias: divergencias as unknown as Json,
-      aplicado: false,
+      aplicado,
       confiancaGeral: output?.confiancaGeral ?? null,
       erro,
     })
