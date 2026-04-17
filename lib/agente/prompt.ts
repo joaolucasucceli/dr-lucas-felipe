@@ -51,6 +51,23 @@ async function carregarBaseConhecimento(): Promise<string> {
   }
 }
 
+/** Retorna a saudação apropriada para a hora atual em America/Sao_Paulo.
+ *  Faixas: bom dia 05-11, boa tarde 12-17, boa noite 18-04. */
+function obterContextoTemporal(): { horaSP: number; saudacao: "bom dia" | "boa tarde" | "boa noite" } {
+  const horaSP = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      hour12: false,
+    }).format(new Date())
+  )
+  let saudacao: "bom dia" | "boa tarde" | "boa noite"
+  if (horaSP >= 5 && horaSP < 12) saudacao = "bom dia"
+  else if (horaSP >= 12 && horaSP < 18) saudacao = "boa tarde"
+  else saudacao = "boa noite"
+  return { horaSP, saudacao }
+}
+
 /** Gera o system prompt da Ana Júlia com contexto dinâmico do lead */
 export async function gerarSystemPrompt(contexto?: ContextoLead): Promise<string> {
   let contextoStr = ""
@@ -75,6 +92,8 @@ export async function gerarSystemPrompt(contexto?: ContextoLead): Promise<string
   }
 
   const baseConhecimentoStr = await carregarBaseConhecimento()
+  const { horaSP, saudacao } = obterContextoTemporal()
+  const contextoTemporalStr = `\n\n## Contexto Temporal (AGORA)\nHora atual em America/Sao_Paulo: ${horaSP}h. Saudação correta para usar neste momento: **${saudacao}**. Sempre que o script pedir [bom dia/boa tarde/boa noite], use **${saudacao}**. Nunca saúde com saudação de outra faixa.`
 
   return `Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira, cirurgião plástico. Você conduz o pré-atendimento dos pacientes via WhatsApp seguindo um SCRIPT FIXO com etapas obrigatórias.
 
@@ -330,5 +349,5 @@ Você DEVE executar estes dois tool calls em ordem:
 
 ### Checagem final antes de mandar cada mensagem
 
-Antes de afirmar que enviou uma mídia, confirme mentalmente: "eu chamei \`enviar_midia\` e recebi \`enviado: true\` nesta iteração?" Se não, reescreva a resposta sem mencionar mídia.${baseConhecimentoStr}${contextoStr}`
+Antes de afirmar que enviou uma mídia, confirme mentalmente: "eu chamei \`enviar_midia\` e recebi \`enviado: true\` nesta iteração?" Se não, reescreva a resposta sem mencionar mídia.${contextoTemporalStr}${baseConhecimentoStr}${contextoStr}`
 }
