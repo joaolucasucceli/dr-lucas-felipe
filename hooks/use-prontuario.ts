@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 
 interface Anamnese {
   id: string
@@ -87,9 +87,15 @@ export function useProntuario(pacienteId: string): UseProntuarioReturn {
   const [prontuario, setProntuario] = useState<Prontuario | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
+  const carregouUmaVez = useRef(false)
 
   const buscar = useCallback(async () => {
-    setCarregando(true)
+    // Soh mostra skeleton no primeiro load. Refetches subsequentes rodam
+    // em background sem desmontar a UI — evita que o FormAnamnese suma
+    // durante digitacao (autosave chama onAtualizar a cada 800ms).
+    if (!carregouUmaVez.current) {
+      setCarregando(true)
+    }
     setErro(null)
 
     try {
@@ -101,6 +107,7 @@ export function useProntuario(pacienteId: string): UseProntuarioReturn {
 
       const json = await res.json()
       setProntuario(json)
+      carregouUmaVez.current = true
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro desconhecido")
     } finally {

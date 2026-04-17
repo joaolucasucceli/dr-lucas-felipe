@@ -88,9 +88,12 @@ export function FormAnamnese({ anamnese, pacienteId, onAtualizar }: FormAnamnese
         const err = await res.json()
         throw new Error(err.error || "Erro ao salvar")
       }
-      onAtualizar()
+      // NAO chamar onAtualizar aqui — o estado local ja tem o valor que
+      // acabou de ser persistido. Um refetch a cada 800ms de autosave faria
+      // o FormAnamnese desmontar e remontar, apagando o texto que o usuario
+      // esta digitando em tempo real.
     },
-    [pacienteId, onAtualizar]
+    [pacienteId]
   )
 
   const queixaAutosave = useAutosave({
