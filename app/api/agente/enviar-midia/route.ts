@@ -21,10 +21,12 @@ export async function POST(request: NextRequest) {
   }
 
   if (!leadId || !conversaId || !midiaId) {
-    return NextResponse.json(
-      { error: "leadId, conversaId e midiaId obrigatórios" },
-      { status: 400 }
-    )
+    console.warn("[enviar-midia] Parametros obrigatorios ausentes:", { leadId, conversaId, midiaId })
+    return NextResponse.json({
+      ok: true,
+      enviado: false,
+      motivo: "Parametros ausentes — chame listar_midias para obter midiaId valido antes de enviar_midia",
+    })
   }
 
   const { data: midia } = await supabaseAdmin
@@ -50,7 +52,12 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
 
   if (!lead) {
-    return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
+    console.warn("[enviar-midia] Lead nao encontrado:", { leadId })
+    return NextResponse.json({
+      ok: true,
+      enviado: false,
+      motivo: "Lead nao encontrado",
+    })
   }
 
   const { data: configWa } = await supabaseAdmin
@@ -75,6 +82,14 @@ export async function POST(request: NextRequest) {
   const tipo = inferirTipoArquivo(urlCompleta)
   const tipoUazapi = tipo === "video" ? "video" : "image"
 
+  console.log("[enviar-midia] Disparando Uazapi:", {
+    midiaId: midia.id,
+    whatsapp: lead.whatsapp,
+    url: urlCompleta,
+    tipo: tipoUazapi,
+    legendaPreview: midia.descricao.slice(0, 80),
+  })
+
   try {
     await enviarMidia(
       configWa.uazapiUrl,
@@ -84,6 +99,7 @@ export async function POST(request: NextRequest) {
       tipoUazapi as "image" | "video",
       midia.descricao.slice(0, 200)
     )
+    console.log("[enviar-midia] Uazapi aceitou:", { midiaId: midia.id })
   } catch (err) {
     console.error("[enviar-midia] Falha ao enviar via Uazapi:", {
       midiaId: midia.id,
