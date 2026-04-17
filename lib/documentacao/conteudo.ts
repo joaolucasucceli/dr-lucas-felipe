@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.27.0"
+export const VERSAO_DOCUMENTACAO = "1.28.0"
 export const DATA_ATUALIZACAO = "2026-04-17"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -366,9 +366,28 @@ Upload e gestão de documentos clínicos vinculados ao prontuário do paciente.
 
 ---
 
-## Módulo 7 — Ana Júlia (Agente IA)
+## As Duas IAs do Sistema
 
-Painel de desempenho e monitoramento do agente de atendimento IA.
+O sistema tem **dois agentes de IA** trabalhando em paralelo, com responsabilidades distintas e pipelines independentes:
+
+| IA | Modelo | Função | Onde acompanho no painel |
+|----|--------|--------|--------------------------|
+| **Ana Júlia** | GPT-4o | Conversa com o paciente no WhatsApp, envia mensagens e mídias | Dashboard (card "Ana Júlia") + Atendimentos (Kanban) |
+| **Analista IA** | GPT-4o-mini | Lê cada conversa e registra/escreve no CRM (nome, procedimento, sobreOPaciente, avanço de etapa) | Clínica → **Analista IA** (\`/analista-logs\`) |
+
+**Por que duas IAs?** Antes, a Ana Júlia acumulava duas responsabilidades: conversar bem E preencher o CRM. Isso sobrecarregava o prompt e causava bugs (alucinação de IDs, funil não avançando). A separação resolveu:
+
+- Ana Júlia fica **pura conversação** — prompt focado em tom, script e acolhimento
+- Analista IA fica **extração estruturada** — lê histórico e escreve no banco
+- Rollout em 3 fases (todas em produção desde 2026-04-17): shadow mode → write mode → cleanup
+
+Cada módulo abaixo documenta uma das IAs separadamente.
+
+---
+
+## Módulo 7 — Ana Júlia (SDR)
+
+Agente conversacional que atende pacientes no WhatsApp. SDR pura — **não escreve no CRM** (isso é trabalho da Analista IA, Módulo 8).
 
 ### Arquitetura do Agente
 
@@ -423,27 +442,6 @@ Quando o banco está vazio, o agente usa apenas o prompt fixo. Com itens cadastr
 
 > **Boas práticas:** mantenha cada item curto e factual. Use a seção certa (paciente fala em pagamento → Ana Júlia consulta seção "pagamento"). Desative em vez de excluir, para preservar histórico.
 
-### Arquitetura dual: SDR + Analista (em shadow mode)
-
-Para desacoplar a responsabilidade de conversar da responsabilidade de preencher o CRM, o sistema tem um segundo agente IA chamado **Analista**:
-
-| Agente | Modelo | Responsabilidade |
-|--------|--------|------------------|
-| **Ana Júlia** | GPT-4o | Conversa com o paciente, envia mensagens, aciona \`enviar_midia\` e \`consultar_paciente\` |
-| **Analista** | GPT-4o-mini | Lê o histórico completo, extrai informações estruturadas e propõe escrita no CRM |
-
-**Fluxo atual (Fase 1 — Shadow Mode):** após cada resposta da Ana Júlia, a Analista é disparada em fire-and-forget e registra o que DEVERIA estar no CRM na tabela \`analista_logs\` — sem alterar nada. Serve para auditoria e tuning.
-
-Gestor acompanha tudo em **Clínica → Analista IA**:
-- Total de análises
-- Casos com divergência entre estado atual e sugestão da Analista
-- Erros de extração
-- Justificativa e score comercial por conversa
-
-Próximas fases (JLAU-571 no Linear):
-- **Fase 2**: Analista passa a escrever no CRM; tools de data entry da Ana Júlia ficam inertes
-- **Fase 3**: tools obsoletas removidas; prompt da Ana Júlia simplificado em ~70%
-
 ### Automações CRON
 
 | Automação | Frequência | Descrição |
@@ -496,6 +494,136 @@ Proteções:
 
 ---
 
+## Módulo 8 — Analista IA
+
+Segundo agente IA do sistema. Lê cada conversa da Ana Júlia e **escreve estruturadamente no CRM** — nome do paciente, procedimento de interesse, texto cumulativo sobre o paciente, avanço de etapa no funil. Usa GPT-4o-mini, rodando em fire-and-forget após cada resposta da Ana Júlia.
+
+> **Acesso:** somente **Gestor**. Menu lateral: **Clínica → Analista IA**. Rota: \`/analista-logs\`.
+
+### O que a Analista escreve no CRM
+
+| Campo | Regra de escrita |
+|-------|------------------|
+| \`Lead.nome\` | Só sobrescreve se o atual for genérico (\`WhatsApp 55...\`) ou vazio. Nunca substitui nome real por outro |
+| \`Lead.procedimentoInteresse\` | Sobrescreve se diferente do registrado |
+| \`Lead.sobreOPaciente\` | **Sempre APPEND** (separador \`\\n---\\n\`). Nunca sobrescreve — texto cumulativo |
+| \`Lead.statusFunil\` | Avança respeitando transições permitidas (acolhimento → qualificação → pré-agendamento → verificação humana). **Nunca regride** |
+| \`Lead.responsavelId\` | Reatribui automaticamente quando a etapa muda |
+| \`Conversa.etapa\` | Espelho do statusFunil para a listagem |
+
+**O que a Analista NÃO faz:**
+- Não avança para \`consulta_agendada\` (decisão humana)
+- Não marca lead como \`perdido\` (decisão humana)
+- Nunca regride etapa automaticamente
+
+### Tela /analista-logs — Guia Operacional
+
+A tela lista cada análise feita pela Analista, da mais recente para a mais antiga. Cada linha é uma auditoria do que a Analista decidiu sobre uma conversa específica.
+
+#### Cabeçalho e filtros
+
+- **Botão "Só com divergências"** — filtra logs onde a Analista propôs mudança diferente do CRM atual. Útil para revisar casos que ela tocou
+- **3 cards de métricas no topo:**
+  - **Total de análises** — todas as análises feitas (histórico completo)
+  - **Com divergências** — análises em que a Analista encontrou algo pra mudar
+  - **Com erros** — análises que falharam (problema na extração ou na escrita)
+
+#### Cada card de log mostra
+
+| Elemento | Significado |
+|----------|-------------|
+| Nome + WhatsApp + data/hora | Identificação do lead e quando a análise rodou |
+| Texto de justificativa | Frase curta (1-2 linhas) em que a Analista explica a decisão |
+| Badge "Atual: X" | Status do lead no CRM no momento da análise |
+| Badge "Proposto: Y" | Etapa que a Analista acha correta (só aparece se diferente do atual) |
+| Badge "Score: N" | Score comercial 0-100 calculado pela Analista (ver régua abaixo) |
+| Badge "N divergência(s)" | Quantidade de campos em que ela discorda do CRM atual |
+| Badge "Aplicado" | A Analista efetivamente escreveu no CRM (true quando write mode está ativo E houve divergência) |
+| Ícone lateral | Verde: ok / Laranja: divergências / Vermelho: erro |
+
+#### Dialog de detalhes (clicando num card)
+
+| Seção | O que mostra |
+|-------|--------------|
+| **Lead** | Nome, WhatsApp, statusFunil atual |
+| **Erro** (se houver) | Mensagem da falha de extração ou de escrita |
+| **Output da Analista** | JSON completo com todos os campos propostos (nome, procedimento, qualificação comercial, sobreOPaciente, etapa, agendamento detectado, justificativa, confiança geral) |
+| **Divergências** | Cada campo em que a Analista discorda do CRM, com atual vs proposto |
+| **Histórico** | Últimas mensagens da conversa que a Analista leu para decidir — identifica paciente (PAC), atendente humano (ATD) e Ana Júlia (ANA) |
+
+### Régua do score comercial (0-100)
+
+A Analista calcula um score comercial em cada análise baseado em sinais extraídos da conversa. Parte de 50 (neutro) e ajusta:
+
+**Adiciona (+)**
+- +15 pediu espontaneamente para agendar
+- +15 timing urgente (evento específico: casamento, viagem)
+- +10 timing claro (próximos 3 meses)
+- +10 orçamento confortável ou aceitou parcelamento
+- +10 decisora é ela mesma (não depende de terceiros)
+- +10 realismo de expectativa demonstrado
+- +10 já conhece o Dr. Lucas (Instagram, indicação)
+
+**Subtrai (-)**
+- -30 contraindicação não-trivial (gestante, hipertensão descontrolada, tabagismo pesado)
+- -25 expectativa irreal (quer resultado impossível, rejeita orientação)
+- -20 só quer comparar preços (baixa intenção)
+- -20 depende de terceiros inseguros (marido contra, mãe contra)
+- -20 fora da área de atendimento
+- -15 timing vago ("só pesquisando")
+
+Score final é clamped em 0-100. Serve como heurística para o atendente humano priorizar.
+
+### Sinais estruturados em sobreOPaciente
+
+Quando a Analista detecta sinal comercial relevante, ela escreve com prefixo estruturado em \`sobreOPaciente\` para o atendente humano filtrar depois:
+
+- \`[sinal:timing] quer fazer em 2 meses\`
+- \`[sinal:decisor] depende do marido aprovar\`
+- \`[sinal:orcamento] pediu opções de parcelamento\`
+- \`[sinal:motivacao] casamento em novembro\`
+- \`[desqualificacao:contraindicacao] mencionou hipertensão descontrolada\`
+- \`[desqualificacao:timing] disse que só está pesquisando\`
+- \`[desqualificacao:decisor] não consegue decidir sem marido e ele é contra\`
+- \`[desqualificacao:localizacao] mora em outro estado sem viabilidade de viagem\`
+
+Buscar por \`[desqualificacao:\` no perfil do lead mostra todos os motivos de bloqueio encontrados.
+
+### Flag ANALISTA_WRITE_MODE (controle operacional)
+
+Variável de ambiente na Vercel que controla se a Analista escreve no CRM ou só loga:
+
+| Valor | Comportamento |
+|-------|---------------|
+| **ausente ou vazia** | Shadow mode — só registra em \`analista_logs\`, não altera nada no CRM |
+| **\`true\`** | Write mode — aplica as mudanças propostas no CRM quando há divergência |
+
+Hoje em produção: **\`true\`** (write mode ativo desde 2026-04-17). Se precisar voltar pra shadow (ex: regressão grave), basta remover a variável e redeployar — sem mudança de código.
+
+### Roadmap — 3 fases (todas em produção)
+
+| Fase | Data em prod | O que mudou |
+|------|--------------|-------------|
+| **1 — Shadow mode** | 2026-04-16 | Analista roda e loga, sem escrever no CRM. Ana Júlia mantém tools de data entry |
+| **2 — Write mode** | 2026-04-17 | Analista começa a escrever via flag \`ANALISTA_WRITE_MODE=true\` |
+| **3 — Cleanup** | 2026-04-17 | Tool \`salvar_qualificacao\` e endpoint correspondente removidos; prompt da Ana Júlia reescrito com "você não faz data entry" |
+
+### Permissões
+
+| Perfil | Acesso | Ações |
+|--------|--------|-------|
+| **Gestor** | Total | Visualiza todos os logs, detalhes, justificativas e filtra divergentes |
+| **Atendente** | Nenhum | Tela não aparece no menu |
+
+### Limites e boas práticas
+
+- Logs são acumulados sem TTL — auditar periodicamente e arquivar se crescer demais
+- A Analista **não deve ser desligada sem aviso** em produção: o sistema ficaria sem escrita estruturada no CRM até re-ativar
+- Divergências persistentes (mesmo campo, vários leads) geralmente indicam prompt desalinhado — ajustar \`lib/agente/analista-prompt.ts\` e re-avaliar
+- Nota arquitetural completa no vault: \`docs/vault/decisoes/2026-04-16-arquitetura-dual-sdr-analista.md\`
+
+---
+
 ## Landing Page (Página de Venda)
 
 Site institucional do Dr. Lucas Ferreira (\`/\`) com foco em contorno corporal.
@@ -517,7 +645,7 @@ Todos os dados editáveis (WhatsApp, CRM, Instagram, contato) ficam em:
 
 ---
 
-## Módulo 8 — Exportação de Dados
+## Módulo 9 — Exportação de Dados
 
 Exportação de relatórios em CSV, disponível no Dashboard (botão de download).
 
@@ -544,7 +672,7 @@ Exportação de relatórios em CSV, disponível no Dashboard (botão de download
 
 ---
 
-## Módulo 9 — Configurações
+## Módulo 10 — Configurações
 
 Integrações, automações e configurações gerais do sistema.
 
@@ -586,7 +714,7 @@ Integrações, automações e configurações gerais do sistema.
 
 ---
 
-## Módulo 10 — Usuários e Permissões
+## Módulo 11 — Usuários e Permissões
 
 Gerenciamento de acesso e perfis dos usuários da plataforma.
 
