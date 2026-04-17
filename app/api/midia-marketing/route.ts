@@ -10,8 +10,6 @@ export async function GET(request: NextRequest) {
   if (auth.error) return auth.error
 
   const { searchParams } = new URL(request.url)
-  const categoria = searchParams.get("categoria")
-  const tipo = searchParams.get("tipo")
   const busca = searchParams.get("busca")
   const ativo = searchParams.get("ativo")
 
@@ -20,16 +18,12 @@ export async function GET(request: NextRequest) {
     .select("*")
     .is("deletadoEm", null)
 
-  if (categoria) query = query.eq("categoria", categoria)
-  if (tipo) query = query.eq("tipo", tipo)
   if (ativo !== null && ativo !== undefined && ativo !== "") {
     query = query.eq("ativo", ativo === "true")
   }
-  if (busca) query = query.ilike("titulo", `%${busca}%`)
+  if (busca) query = query.ilike("descricao", `%${busca}%`)
 
-  const { data, error } = await query
-    .order("categoria", { ascending: true })
-    .order("titulo", { ascending: true })
+  const { data, error } = await query.order("criadoEm", { ascending: false })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

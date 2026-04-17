@@ -1,21 +1,8 @@
 import { z } from "zod"
 
-export const CATEGORIAS_MIDIA = [
-  "reels",
-  "antes-depois",
-  "depoimento",
-  "procedimento",
-] as const
-
-export const TIPOS_MIDIA = ["imagem", "video"] as const
-
 export const criarMidiaMarketingSchema = z.object({
-  titulo: z.string().min(2).max(200),
-  descricao: z.string().max(500).optional().nullable(),
-  categoria: z.enum(CATEGORIAS_MIDIA),
-  procedimento: z.string().max(100).optional().nullable(),
-  url: z.string().min(1),
-  tipo: z.enum(TIPOS_MIDIA),
+  descricao: z.string().min(3, "Descreva a midia").max(1000),
+  url: z.string().min(1, "Anexe um arquivo"),
   ativo: z.boolean().default(true),
 })
 

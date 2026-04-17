@@ -856,40 +856,28 @@ export type Database = {
         Row: {
           ativo: boolean | null
           atualizadoEm: string | null
-          categoria: string
           criadoEm: string | null
           deletadoEm: string | null
-          descricao: string | null
+          descricao: string
           id: string
-          procedimento: string | null
-          tipo: string
-          titulo: string
           url: string
         }
         Insert: {
           ativo?: boolean | null
           atualizadoEm?: string | null
-          categoria: string
           criadoEm?: string | null
           deletadoEm?: string | null
-          descricao?: string | null
+          descricao: string
           id?: string
-          procedimento?: string | null
-          tipo: string
-          titulo: string
           url: string
         }
         Update: {
           ativo?: boolean | null
           atualizadoEm?: string | null
-          categoria?: string
           criadoEm?: string | null
           deletadoEm?: string | null
-          descricao?: string | null
+          descricao?: string
           id?: string
-          procedimento?: string | null
-          tipo?: string
-          titulo?: string
           url?: string
         }
         Relationships: []

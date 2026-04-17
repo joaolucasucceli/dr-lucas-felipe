@@ -4,19 +4,14 @@ import { useState, useCallback, useEffect } from "react"
 
 interface MidiaMarketing {
   id: string
-  titulo: string
-  descricao: string | null
-  categoria: string
-  procedimento: string | null
+  descricao: string
   url: string
-  tipo: string
   ativo: boolean
   criadoEm: string
 }
 
 interface Opcoes {
   busca?: string
-  categoria?: string
 }
 
 export function useMidiaMarketing(opcoes: Opcoes = {}) {
@@ -30,7 +25,6 @@ export function useMidiaMarketing(opcoes: Opcoes = {}) {
     try {
       const params = new URLSearchParams()
       if (opcoes.busca) params.set("busca", opcoes.busca)
-      if (opcoes.categoria) params.set("categoria", opcoes.categoria)
       const res = await fetch(`/api/midia-marketing?${params}`)
       if (!res.ok) throw new Error("Erro ao buscar")
       const json = await res.json()
@@ -40,7 +34,7 @@ export function useMidiaMarketing(opcoes: Opcoes = {}) {
     } finally {
       setCarregando(false)
     }
-  }, [opcoes.busca, opcoes.categoria])
+  }, [opcoes.busca])
 
   useEffect(() => {
     buscar()

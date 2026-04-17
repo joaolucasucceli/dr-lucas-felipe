@@ -33,21 +33,14 @@ import { useMidiaMarketing } from "@/hooks/use-midia-marketing"
 
 interface MidiaMarketing {
   id: string
-  titulo: string
-  descricao: string | null
-  categoria: string
-  procedimento: string | null
+  descricao: string
   url: string
-  tipo: string
   ativo: boolean
   criadoEm: string
 }
 
-const CATEGORIA_LABELS: Record<string, string> = {
-  reels: "Reels",
-  "antes-depois": "Antes e Depois",
-  depoimento: "Depoimento",
-  procedimento: "Procedimento",
+function ehVideo(url: string): boolean {
+  return /\.(mp4|webm|mov|avi|mkv|m4v)(\?|$)/i.test(url)
 }
 
 export default function MidiaMarketingPage() {
@@ -106,7 +99,7 @@ export default function MidiaMarketingPage() {
     <div>
       <PageHeader
         titulo="Mídia Marketing"
-        descricao="Catálogo de mídias que a IA pode enviar para pacientes via WhatsApp."
+        descricao="Catálogo de mídias que a IA envia. A escolha é feita pela descrição — quanto mais detalhada, melhor."
       >
         <Button onClick={() => { setEditando(null); setFormAberto(true) }}>
           <Plus className="mr-2 h-4 w-4" />
@@ -116,7 +109,7 @@ export default function MidiaMarketingPage() {
 
       <div className="mt-6">
         <Input
-          placeholder="Buscar por título..."
+          placeholder="Buscar por descrição..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           className="mb-4 max-w-sm"
@@ -129,7 +122,7 @@ export default function MidiaMarketingPage() {
         ) : dados.length === 0 ? (
           <EmptyState
             titulo="Nenhuma mídia cadastrada"
-            descricao="Cadastre vídeos, fotos de antes/depois e depoimentos para a IA enviar aos pacientes."
+            descricao="Cadastre fotos e vídeos com descrição detalhada — a IA usa a descrição para escolher qual enviar ao paciente."
           />
         ) : (
           <div className="rounded-md border">
@@ -137,10 +130,7 @@ export default function MidiaMarketingPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10" />
-                  <TableHead>Título</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Procedimento</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
@@ -155,31 +145,22 @@ export default function MidiaMarketingPage() {
                         className="rounded p-1 hover:bg-muted transition-colors"
                         title="Ver preview"
                       >
-                        {m.tipo === "video" ? (
+                        {ehVideo(m.url) ? (
                           <Film className="h-4 w-4 text-muted-foreground" />
                         ) : (
                           <ImageIcon className="h-4 w-4 text-muted-foreground" />
                         )}
                       </button>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-xl">
                       <button
                         type="button"
                         onClick={() => setPreview(m)}
-                        className="font-medium text-left hover:underline"
+                        className="text-left text-sm hover:underline line-clamp-2"
                       >
-                        {m.titulo}
+                        {m.descricao}
                       </button>
                     </TableCell>
-                    <TableCell className="max-w-sm">
-                      <span className="text-sm text-muted-foreground line-clamp-2">
-                        {m.descricao || <span className="italic">sem descrição — preencha para a IA escolher melhor</span>}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{CATEGORIA_LABELS[m.categoria] || m.categoria}</Badge>
-                    </TableCell>
-                    <TableCell>{m.procedimento || "—"}</TableCell>
                     <TableCell>
                       <Badge variant={m.ativo ? "default" : "secondary"}>
                         {m.ativo ? "Ativo" : "Inativo"}
@@ -228,7 +209,7 @@ export default function MidiaMarketingPage() {
 
       <ConfirmDialog
         titulo={confirmToggle?.ativo ? "Desativar mídia" : "Ativar mídia"}
-        descricao={`Tem certeza que deseja ${confirmToggle?.ativo ? "desativar" : "ativar"} "${confirmToggle?.titulo}"?`}
+        descricao={`Tem certeza que deseja ${confirmToggle?.ativo ? "desativar" : "ativar"} essa mídia?`}
         aberto={!!confirmToggle}
         onFechar={() => setConfirmToggle(null)}
         onConfirmar={handleToggle}
@@ -237,7 +218,7 @@ export default function MidiaMarketingPage() {
 
       <ConfirmDialog
         titulo="Excluir mídia"
-        descricao={`Tem certeza que deseja excluir "${confirmExcluir?.titulo}"?`}
+        descricao="Tem certeza que deseja excluir essa mídia?"
         aberto={!!confirmExcluir}
         onFechar={() => setConfirmExcluir(null)}
         onConfirmar={handleExcluir}
@@ -247,24 +228,21 @@ export default function MidiaMarketingPage() {
 
       <Dialog open={!!preview} onOpenChange={(v) => !v && setPreview(null)}>
         <DialogContent className="max-w-3xl border-none bg-background/95 p-4">
-          <DialogTitle className="sr-only">{preview?.titulo || "Preview"}</DialogTitle>
+          <DialogTitle className="sr-only">Preview</DialogTitle>
           {preview && (
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold">{preview.titulo}</h3>
-              {preview.descricao && (
-                <p className="text-sm text-muted-foreground">{preview.descricao}</p>
-              )}
-              {preview.tipo === "imagem" ? (
-                <img
-                  src={preview.url}
-                  alt={preview.titulo}
-                  className="max-h-[75vh] w-full rounded-lg object-contain"
-                />
-              ) : (
+              <p className="text-sm text-muted-foreground">{preview.descricao}</p>
+              {ehVideo(preview.url) ? (
                 <video
                   src={preview.url}
                   controls
                   className="max-h-[75vh] w-full rounded-lg"
+                />
+              ) : (
+                <img
+                  src={preview.url}
+                  alt={preview.descricao}
+                  className="max-h-[75vh] w-full rounded-lg object-contain"
                 />
               )}
             </div>

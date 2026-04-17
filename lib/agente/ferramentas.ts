@@ -177,25 +177,16 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "listar_midias",
       description:
-        "Lista as mídias disponíveis para uma categoria (e procedimento, quando aplicável). Retorna título + descrição + flag jaEnviada. SEMPRE chame esta ferramenta antes de enviar_midia — use as descrições para escolher a mídia mais apropriada ao contexto do paciente e evite as que já foram enviadas.",
+        "Lista todas as mídias de marketing disponíveis com suas descrições. SEMPRE chame antes de enviar_midia. Use as descrições para escolher a mais apropriada ao contexto do paciente e evite as que já foram enviadas (jaEnviada: true).",
       parameters: {
         type: "object",
         properties: {
-          categoria: {
-            type: "string",
-            enum: ["reels", "antes-depois", "depoimento", "procedimento"],
-            description: "Categoria da mídia. reels (vídeos institucionais), antes-depois (fotos de resultados), depoimento (vídeos de pacientes), procedimento (vídeos explicativos)",
-          },
-          procedimento: {
-            type: "string",
-            description: "Nome do procedimento, obrigatório para 'antes-depois' e 'procedimento'. Ex: Mini Lipo, Lipo Enxertia Glútea, PMMA",
-          },
           conversaId: {
             type: "string",
             description: "ID da conversa ativa (para calcular quais mídias já foram enviadas)",
           },
         },
-        required: ["categoria", "conversaId"],
+        required: ["conversaId"],
       },
     },
   },
@@ -204,7 +195,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "enviar_midia",
       description:
-        "Envia uma mídia específica para o paciente via WhatsApp. Preferencialmente passe midiaId (escolhido após listar_midias). Se não tiver midiaId, pode passar categoria (+procedimento) e o sistema sorteia uma.",
+        "Envia uma mídia específica para o paciente via WhatsApp. Passe o midiaId escolhido após ler a lista de listar_midias.",
       parameters: {
         type: "object",
         properties: {
@@ -218,19 +209,10 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
           midiaId: {
             type: "string",
-            description: "ID da mídia escolhida (obtido via listar_midias). Preferencial — garante que a mídia selecionada por descrição seja a enviada.",
-          },
-          categoria: {
-            type: "string",
-            enum: ["reels", "antes-depois", "depoimento", "procedimento"],
-            description: "Fallback: se não passar midiaId, informe a categoria para sorteio aleatório",
-          },
-          procedimento: {
-            type: "string",
-            description: "Fallback: procedimento (usado apenas se midiaId não foi informado)",
+            description: "ID da mídia escolhida (obtido via listar_midias).",
           },
         },
-        required: ["leadId", "conversaId"],
+        required: ["leadId", "conversaId", "midiaId"],
       },
     },
   },

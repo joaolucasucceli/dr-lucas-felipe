@@ -5,62 +5,41 @@ import { validarApiSecret } from "@/lib/api-auth"
 import { enviarMidia } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
 
+function inferirTipoArquivo(url: string): "video" | "imagem" {
+  return /\.(mp4|webm|mov|avi|mkv|m4v)(\?|$)/i.test(url) ? "video" : "imagem"
+}
+
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
   if (erro) return erro
 
   const body = await request.json()
-  const { leadId, conversaId, midiaId, categoria, procedimento } = body as {
+  const { leadId, conversaId, midiaId } = body as {
     leadId?: string
     conversaId?: string
     midiaId?: string
-    categoria?: string
-    procedimento?: string
   }
 
-  if (!leadId || !conversaId) {
+  if (!leadId || !conversaId || !midiaId) {
     return NextResponse.json(
-      { error: "leadId e conversaId obrigatórios" },
+      { error: "leadId, conversaId e midiaId obrigatórios" },
       { status: 400 }
     )
   }
 
-  // JLAU-570: prioridade 1 — IA escolheu midia especifica por ID.
-  let midia: { id: string; titulo: string; url: string; tipo: string } | null = null
+  const { data: midia } = await supabaseAdmin
+    .from("midia_marketing")
+    .select("id, descricao, url")
+    .eq("id", midiaId)
+    .eq("ativo", true)
+    .is("deletadoEm", null)
+    .maybeSingle()
 
-  if (midiaId) {
-    const { data } = await supabaseAdmin
-      .from("midia_marketing")
-      .select("id, titulo, url, tipo")
-      .eq("id", midiaId)
-      .eq("ativo", true)
-      .is("deletadoEm", null)
-      .maybeSingle()
-    midia = data
-  }
-
-  // Fallback: IA passou so categoria (ou midiaId nao existe) — sorteia aleatorio.
-  if (!midia && categoria) {
-    let query = supabaseAdmin
-      .from("midia_marketing")
-      .select("id, titulo, url, tipo")
-      .eq("categoria", categoria)
-      .eq("ativo", true)
-      .is("deletadoEm", null)
-
-    if (procedimento) query = query.eq("procedimento", procedimento)
-
-    const { data: candidatas } = await query
-    if (candidatas && candidatas.length > 0) {
-      midia = candidatas[Math.floor(Math.random() * candidatas.length)]
-    }
-  }
-
-  if (!midia) {
+  if (!midia || !midia.descricao) {
     return NextResponse.json({
       ok: true,
       enviado: false,
-      motivo: "Nenhuma mídia disponível",
+      motivo: "Mídia não encontrada ou inativa",
     })
   }
 
@@ -93,7 +72,8 @@ export async function POST(request: NextRequest) {
     ? midia.url
     : `${baseUrl}${midia.url.startsWith("/") ? "" : "/"}${midia.url}`
 
-  const tipoUazapi = midia.tipo === "video" ? "video" : "image"
+  const tipo = inferirTipoArquivo(urlCompleta)
+  const tipoUazapi = tipo === "video" ? "video" : "image"
 
   try {
     await enviarMidia(
@@ -102,7 +82,7 @@ export async function POST(request: NextRequest) {
       lead.whatsapp,
       urlCompleta,
       tipoUazapi as "image" | "video",
-      midia.titulo
+      midia.descricao.slice(0, 200)
     )
   } catch (err) {
     console.error("[enviar-midia] Falha ao enviar via Uazapi:", {
@@ -125,11 +105,11 @@ export async function POST(request: NextRequest) {
       conversaId,
       leadId,
       messageIdWhatsapp: `agente_midia_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
-      tipo: midia.tipo === "video" ? "video" : "imagem",
-      conteudo: midia.titulo,
+      tipo,
+      conteudo: midia.descricao.slice(0, 200),
       remetente: "agente",
       mediaUrl: urlCompleta,
-      mediaType: midia.tipo,
+      mediaType: tipo,
     })
 
   await supabaseAdmin
@@ -141,7 +121,6 @@ export async function POST(request: NextRequest) {
     ok: true,
     enviado: true,
     midiaId: midia.id,
-    titulo: midia.titulo,
-    tipo: midia.tipo,
+    tipo,
   })
 }

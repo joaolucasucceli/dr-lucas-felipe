@@ -1,18 +1,16 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { Upload, Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
-import { criarMidiaMarketingSchema, CATEGORIAS_MIDIA, TIPOS_MIDIA } from "@/lib/validations/midia-marketing"
+import { criarMidiaMarketingSchema } from "@/lib/validations/midia-marketing"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import type { z } from "zod"
 
@@ -24,73 +22,34 @@ interface Props {
   onSalvo: () => void
   registro?: {
     id: string
-    titulo: string
-    descricao: string | null
-    categoria: string
-    procedimento: string | null
+    descricao: string
     url: string
-    tipo: string
     ativo: boolean
   } | null
 }
 
-const CATEGORIA_LABELS: Record<string, string> = {
-  reels: "Reels (Instagram)",
-  "antes-depois": "Antes e Depois",
-  depoimento: "Depoimento",
-  procedimento: "Procedimento",
-}
-
 const BUCKET = "atendimento-midias"
+
+function inferirTipoArquivo(url: string): "imagem" | "video" {
+  return /\.(mp4|webm|mov|avi|mkv|m4v)(\?|$)/i.test(url) ? "video" : "imagem"
+}
 
 export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Props) {
   const editando = !!registro
-  const [procedimentos, setProcedimentos] = useState<Array<{ id: string; nome: string }>>([])
   const [uploading, setUploading] = useState(false)
   const [progresso, setProgresso] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(criarMidiaMarketingSchema) as never,
-    defaultValues: {
-      titulo: "",
-      descricao: "",
-      categoria: "reels",
-      procedimento: "",
-      url: "",
-      tipo: "video",
-      ativo: true,
-    },
+    defaultValues: { descricao: "", url: "", ativo: true },
   })
 
   useEffect(() => {
-    fetch("/api/procedimentos?ativo=true")
-      .then((r) => r.json())
-      .then((j) => setProcedimentos(j.dados || []))
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
     if (aberto && registro) {
-      form.reset({
-        titulo: registro.titulo,
-        descricao: registro.descricao || "",
-        categoria: registro.categoria as FormData["categoria"],
-        procedimento: registro.procedimento || "",
-        url: registro.url,
-        tipo: registro.tipo as FormData["tipo"],
-        ativo: registro.ativo,
-      })
+      form.reset({ descricao: registro.descricao, url: registro.url, ativo: registro.ativo })
     } else if (aberto) {
-      form.reset({
-        titulo: "",
-        descricao: "",
-        categoria: "reels",
-        procedimento: "",
-        url: "",
-        tipo: "video",
-        ativo: true,
-      })
+      form.reset({ descricao: "", url: "", ativo: true })
     }
   }, [aberto, registro, form])
 
@@ -112,19 +71,21 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
       const path = `midia-marketing/${Date.now()}.${ext}`
 
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true })
-      if (error) throw new Error(error.message)
+      if (error) {
+        toast.error(`Falha no upload: ${error.message}`)
+        console.error("[upload] supabase.storage.upload:", error)
+        return
+      }
 
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
       form.setValue("url", data.publicUrl)
 
-      const isVideo = file.type.startsWith("video/")
-      form.setValue("tipo", isVideo ? "video" : "imagem")
-
       setProgresso(100)
       toast.success("Arquivo enviado")
     } catch (err) {
-      toast.error("Erro ao enviar arquivo")
-      console.error(err)
+      const msg = err instanceof Error ? err.message : "Erro desconhecido"
+      toast.error(`Erro ao enviar arquivo: ${msg}`)
+      console.error("[upload] exception:", err)
     } finally {
       setUploading(false)
     }
@@ -132,30 +93,30 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
 
   async function onSubmit(data: FormData) {
     if (!data.url) {
-      toast.error("Envie um arquivo primeiro")
+      toast.error("Anexe um arquivo primeiro")
       return
     }
     try {
-      const url = editando
-        ? `/api/midia-marketing/${registro!.id}`
-        : "/api/midia-marketing"
+      const url = editando ? `/api/midia-marketing/${registro!.id}` : "/api/midia-marketing"
       const res = await fetch(url, {
         method: editando ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Erro ao salvar")
+      }
       toast.success(editando ? "Mídia atualizada" : "Mídia criada")
       onSalvo()
       onFechar()
-    } catch {
-      toast.error("Erro ao salvar")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar")
     }
   }
 
-  const categoriaAtual = form.watch("categoria")
   const urlAtual = form.watch("url")
-  const tipoAtual = form.watch("tipo")
+  const tipoInferido = urlAtual ? inferirTipoArquivo(urlAtual) : null
 
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
@@ -165,73 +126,21 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-2">
-            <Label>Título</Label>
-            <Input {...form.register("titulo")} placeholder="Ex: Resultado Mini Lipo — Paciente #5" />
-          </div>
-
-          <div className="grid gap-2">
             <Label>
               Descrição
               <span className="ml-1 text-xs font-normal text-muted-foreground">
-                (usada pela IA para escolher a mídia mais apropriada)
+                (usada pela IA para escolher qual mídia enviar)
               </span>
             </Label>
             <Textarea
               {...form.register("descricao")}
-              rows={3}
-              placeholder="Descreva com detalhe: tipo de paciente (feminina/masculina), biotipo (magra/sobrepeso), região, tempo de resultado. Quanto mais contexto, melhor a IA acerta."
+              rows={5}
+              placeholder="Ex: Resultado de Mini Lipo em paciente feminina, sobrepeso, região abdominal, aos 6 meses. Abdome plano, cintura definida. Ideal para pacientes que querem eliminar gordura localizada."
             />
+            {form.formState.errors.descricao && (
+              <p className="text-xs text-destructive">{form.formState.errors.descricao.message}</p>
+            )}
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label>Categoria</Label>
-              <Select
-                value={form.watch("categoria")}
-                onValueChange={(v) => form.setValue("categoria", v as FormData["categoria"])}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIAS_MIDIA.map((c) => (
-                    <SelectItem key={c} value={c}>{CATEGORIA_LABELS[c] || c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Tipo</Label>
-              <Select
-                value={form.watch("tipo")}
-                onValueChange={(v) => form.setValue("tipo", v as FormData["tipo"])}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TIPOS_MIDIA.map((t) => (
-                    <SelectItem key={t} value={t}>{t === "imagem" ? "Imagem" : "Vídeo"}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {(categoriaAtual === "antes-depois" || categoriaAtual === "procedimento") && (
-            <div className="grid gap-2">
-              <Label>Procedimento associado</Label>
-              <Select
-                value={form.watch("procedimento") || "nenhum"}
-                onValueChange={(v) => form.setValue("procedimento", v === "nenhum" ? "" : v)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nenhum">Nenhum</SelectItem>
-                  {procedimentos.map((p) => (
-                    <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <div className="grid gap-2">
             <Label>Arquivo</Label>
@@ -249,19 +158,15 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
               disabled={uploading}
               className="w-full justify-center gap-2"
             >
-              {uploading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4" />
-              )}
-              {uploading ? "Enviando..." : urlAtual ? "Trocar arquivo" : "Enviar arquivo"}
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {uploading ? "Enviando..." : urlAtual ? "Trocar arquivo" : "Anexar imagem ou vídeo"}
             </Button>
             {uploading && <Progress value={progresso} className="h-1" />}
           </div>
 
           {urlAtual && (
             <div className="rounded-md border p-2">
-              {tipoAtual === "imagem" ? (
+              {tipoInferido === "imagem" ? (
                 <img src={urlAtual} alt="Preview" className="max-h-48 w-full rounded object-contain" />
               ) : (
                 <video src={urlAtual} controls className="max-h-48 w-full rounded" />
