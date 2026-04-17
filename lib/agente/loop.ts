@@ -241,6 +241,22 @@ export async function processarMensagens(chatId: string): Promise<void> {
         if (toolCall.type !== "function") continue
         const fn = toolCall.function
         const args = JSON.parse(fn.arguments || "{}")
+
+        // GPT-4o as vezes passa leadId/conversaId vazios ou errados (foi a
+        // causa do "acabei de enviar a foto" sem envio real). Injetamos os
+        // valores reais do contexto do webhook para toda tool que os aceita.
+        const toolsComIds = new Set([
+          "registrar_mensagem",
+          "salvar_qualificacao",
+          "registrar_agendamento",
+          "listar_midias",
+          "enviar_midia",
+        ])
+        if (toolsComIds.has(fn.name)) {
+          if (leadId) args.leadId = leadId
+          if (conversaId) args.conversaId = conversaId
+        }
+
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
 
         if (fn.name === "listar_midias") {
