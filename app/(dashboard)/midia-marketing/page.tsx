@@ -130,15 +130,15 @@ export default function MidiaMarketingPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10" />
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="w-full">Descrição</TableHead>
+                  <TableHead className="w-24">Status</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {dados.map((m) => (
                   <TableRow key={m.id}>
-                    <TableCell>
+                    <TableCell className="w-10">
                       <button
                         type="button"
                         onClick={() => setPreview(m)}
@@ -152,21 +152,21 @@ export default function MidiaMarketingPage() {
                         )}
                       </button>
                     </TableCell>
-                    <TableCell className="max-w-xl">
+                    <TableCell className="min-w-0 max-w-0">
                       <button
                         type="button"
                         onClick={() => setPreview(m)}
-                        className="text-left text-sm hover:underline line-clamp-2"
+                        className="block w-full text-left text-sm hover:underline line-clamp-2 break-words pr-4"
                       >
                         {m.descricao}
                       </button>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="w-24 whitespace-nowrap">
                       <Badge variant={m.ativo ? "default" : "secondary"}>
                         {m.ativo ? "Ativo" : "Inativo"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="w-10">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
