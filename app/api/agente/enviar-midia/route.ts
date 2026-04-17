@@ -87,17 +87,18 @@ export async function POST(request: NextRequest) {
     whatsapp: lead.whatsapp,
     url: urlCompleta,
     tipo: tipoUazapi,
-    legendaPreview: midia.descricao.slice(0, 80),
   })
 
+  // Midia e enviada SEM legenda. A descricao existe apenas para a IA escolher
+  // qual enviar — reproduzir ela como caption no WhatsApp gera duplicacao com
+  // o texto natural de contextualizacao que a IA escreve em seguida.
   try {
     await enviarMidia(
       configWa.uazapiUrl,
       configWa.instanceToken,
       lead.whatsapp,
       urlCompleta,
-      tipoUazapi as "image" | "video",
-      midia.descricao.slice(0, 200)
+      tipoUazapi as "image" | "video"
     )
     console.log("[enviar-midia] Uazapi aceitou:", { midiaId: midia.id })
   } catch (err) {
