@@ -10,37 +10,63 @@ export async function POST(request: NextRequest) {
   if (erro) return erro
 
   const body = await request.json()
-  const { leadId, conversaId, categoria, procedimento } = body
+  const { leadId, conversaId, midiaId, categoria, procedimento } = body as {
+    leadId?: string
+    conversaId?: string
+    midiaId?: string
+    categoria?: string
+    procedimento?: string
+  }
 
-  if (!leadId || !conversaId || !categoria) {
+  if (!leadId || !conversaId) {
     return NextResponse.json(
-      { error: "leadId, conversaId e categoria obrigatórios" },
+      { error: "leadId e conversaId obrigatórios" },
       { status: 400 }
     )
   }
 
-  let query = supabaseAdmin
-    .from("midia_marketing")
-    .select("*")
-    .eq("categoria", categoria)
-    .eq("ativo", true)
-    .is("deletadoEm", null)
+  // JLAU-570: prioridade 1 — IA escolheu midia especifica por ID.
+  let midia: Awaited<
+    ReturnType<typeof supabaseAdmin.from>
+  > extends never
+    ? never
+    : { id: string; titulo: string; url: string; tipo: string } | null = null
 
-  if (procedimento) {
-    query = query.eq("procedimento", procedimento)
+  if (midiaId) {
+    const { data } = await supabaseAdmin
+      .from("midia_marketing")
+      .select("id, titulo, url, tipo")
+      .eq("id", midiaId)
+      .eq("ativo", true)
+      .is("deletadoEm", null)
+      .maybeSingle()
+    midia = data
   }
 
-  const { data: midias } = await query
+  // Fallback: IA passou so categoria (ou midiaId nao existe) — sorteia aleatorio.
+  if (!midia && categoria) {
+    let query = supabaseAdmin
+      .from("midia_marketing")
+      .select("id, titulo, url, tipo")
+      .eq("categoria", categoria)
+      .eq("ativo", true)
+      .is("deletadoEm", null)
 
-  if (!midias || midias.length === 0) {
+    if (procedimento) query = query.eq("procedimento", procedimento)
+
+    const { data: candidatas } = await query
+    if (candidatas && candidatas.length > 0) {
+      midia = candidatas[Math.floor(Math.random() * candidatas.length)]
+    }
+  }
+
+  if (!midia) {
     return NextResponse.json({
       ok: true,
       enviado: false,
-      motivo: "Nenhuma mídia disponível nessa categoria",
+      motivo: "Nenhuma mídia disponível",
     })
   }
-
-  const midia = midias[Math.floor(Math.random() * midias.length)]
 
   const { data: lead } = await supabaseAdmin
     .from("leads")
@@ -118,6 +144,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     enviado: true,
+    midiaId: midia.id,
     titulo: midia.titulo,
     tipo: midia.tipo,
   })

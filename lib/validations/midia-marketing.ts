@@ -16,7 +16,6 @@ export const criarMidiaMarketingSchema = z.object({
   procedimento: z.string().max(100).optional().nullable(),
   url: z.string().min(1),
   tipo: z.enum(TIPOS_MIDIA),
-  ordem: z.number().int().min(0).default(0),
   ativo: z.boolean().default(true),
 })
 

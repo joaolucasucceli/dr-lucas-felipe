@@ -175,9 +175,36 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "listar_midias",
+      description:
+        "Lista as mídias disponíveis para uma categoria (e procedimento, quando aplicável). Retorna título + descrição + flag jaEnviada. SEMPRE chame esta ferramenta antes de enviar_midia — use as descrições para escolher a mídia mais apropriada ao contexto do paciente e evite as que já foram enviadas.",
+      parameters: {
+        type: "object",
+        properties: {
+          categoria: {
+            type: "string",
+            enum: ["reels", "antes-depois", "depoimento", "procedimento"],
+            description: "Categoria da mídia. reels (vídeos institucionais), antes-depois (fotos de resultados), depoimento (vídeos de pacientes), procedimento (vídeos explicativos)",
+          },
+          procedimento: {
+            type: "string",
+            description: "Nome do procedimento, obrigatório para 'antes-depois' e 'procedimento'. Ex: Mini Lipo, Lipo Enxertia Glútea, PMMA",
+          },
+          conversaId: {
+            type: "string",
+            description: "ID da conversa ativa (para calcular quais mídias já foram enviadas)",
+          },
+        },
+        required: ["categoria", "conversaId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "enviar_midia",
       description:
-        "Envia mídia de marketing (vídeo, foto antes/depois, depoimento) pro paciente via WhatsApp. Use quando o paciente pedir referências visuais, depoimentos, fotos de resultado ou vídeos sobre procedimentos.",
+        "Envia uma mídia específica para o paciente via WhatsApp. Preferencialmente passe midiaId (escolhido após listar_midias). Se não tiver midiaId, pode passar categoria (+procedimento) e o sistema sorteia uma.",
       parameters: {
         type: "object",
         properties: {
@@ -189,17 +216,21 @@ export const ferramentasAgente: ChatCompletionTool[] = [
             type: "string",
             description: "ID da conversa ativa",
           },
+          midiaId: {
+            type: "string",
+            description: "ID da mídia escolhida (obtido via listar_midias). Preferencial — garante que a mídia selecionada por descrição seja a enviada.",
+          },
           categoria: {
             type: "string",
             enum: ["reels", "antes-depois", "depoimento", "procedimento"],
-            description: "Tipo da mídia a enviar: reels (vídeos do Instagram), antes-depois (fotos de resultados), depoimento (vídeos de pacientes), procedimento (vídeos explicativos)",
+            description: "Fallback: se não passar midiaId, informe a categoria para sorteio aleatório",
           },
           procedimento: {
             type: "string",
-            description: "Nome do procedimento (obrigatório se categoria for 'antes-depois' ou 'procedimento'). Ex: Mini Lipo, Lipo Enxertia Glútea, PMMA",
+            description: "Fallback: procedimento (usado apenas se midiaId não foi informado)",
           },
         },
-        required: ["leadId", "conversaId", "categoria"],
+        required: ["leadId", "conversaId"],
       },
     },
   },

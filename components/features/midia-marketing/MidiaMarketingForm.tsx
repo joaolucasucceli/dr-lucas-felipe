@@ -30,7 +30,6 @@ interface Props {
     procedimento: string | null
     url: string
     tipo: string
-    ordem: number
     ativo: boolean
   } | null
 }
@@ -60,7 +59,6 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
       procedimento: "",
       url: "",
       tipo: "video",
-      ordem: 0,
       ativo: true,
     },
   })
@@ -81,7 +79,6 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
         procedimento: registro.procedimento || "",
         url: registro.url,
         tipo: registro.tipo as FormData["tipo"],
-        ordem: registro.ordem,
         ativo: registro.ativo,
       })
     } else if (aberto) {
@@ -92,7 +89,6 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
         procedimento: "",
         url: "",
         tipo: "video",
-        ordem: 0,
         ativo: true,
       })
     }
@@ -174,8 +170,17 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
           </div>
 
           <div className="grid gap-2">
-            <Label>Descrição (opcional)</Label>
-            <Textarea {...form.register("descricao")} rows={2} placeholder="Breve descrição da mídia" />
+            <Label>
+              Descrição
+              <span className="ml-1 text-xs font-normal text-muted-foreground">
+                (usada pela IA para escolher a mídia mais apropriada)
+              </span>
+            </Label>
+            <Textarea
+              {...form.register("descricao")}
+              rows={3}
+              placeholder="Descreva com detalhe: tipo de paciente (feminina/masculina), biotipo (magra/sobrepeso), região, tempo de resultado. Quanto mais contexto, melhor a IA acerta."
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

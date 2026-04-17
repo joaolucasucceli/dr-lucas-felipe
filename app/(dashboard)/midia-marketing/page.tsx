@@ -39,7 +39,6 @@ interface MidiaMarketing {
   procedimento: string | null
   url: string
   tipo: string
-  ordem: number
   ativo: boolean
   criadoEm: string
 }
@@ -139,6 +138,7 @@ export default function MidiaMarketingPage() {
                 <TableRow>
                   <TableHead className="w-10" />
                   <TableHead>Título</TableHead>
+                  <TableHead>Descrição</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Procedimento</TableHead>
                   <TableHead>Status</TableHead>
@@ -170,6 +170,11 @@ export default function MidiaMarketingPage() {
                       >
                         {m.titulo}
                       </button>
+                    </TableCell>
+                    <TableCell className="max-w-sm">
+                      <span className="text-sm text-muted-foreground line-clamp-2">
+                        {m.descricao || <span className="italic">sem descrição — preencha para a IA escolher melhor</span>}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{CATEGORIA_LABELS[m.categoria] || m.categoria}</Badge>

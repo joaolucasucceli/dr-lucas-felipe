@@ -10,7 +10,6 @@ interface MidiaMarketing {
   procedimento: string | null
   url: string
   tipo: string
-  ordem: number
   ativo: boolean
   criadoEm: string
 }

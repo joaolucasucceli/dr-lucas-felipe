@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await query
     .order("categoria", { ascending: true })
-    .order("ordem", { ascending: true })
     .order("titulo", { ascending: true })
 
   if (error) {
