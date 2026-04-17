@@ -861,7 +861,6 @@ export type Database = {
           deletadoEm: string | null
           descricao: string | null
           id: string
-          ordem: number | null
           procedimento: string | null
           tipo: string
           titulo: string
@@ -875,7 +874,6 @@ export type Database = {
           deletadoEm?: string | null
           descricao?: string | null
           id?: string
-          ordem?: number | null
           procedimento?: string | null
           tipo: string
           titulo: string
@@ -889,7 +887,6 @@ export type Database = {
           deletadoEm?: string | null
           descricao?: string | null
           id?: string
-          ordem?: number | null
           procedimento?: string | null
           tipo?: string
           titulo?: string
