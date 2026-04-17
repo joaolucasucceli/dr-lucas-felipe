@@ -7,8 +7,8 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.23.0"
-export const DATA_ATUALIZACAO = "2026-04-16"
+export const VERSAO_DOCUMENTACAO = "1.24.0"
+export const DATA_ATUALIZACAO = "2026-04-17"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
 > Versão ${VERSAO_DOCUMENTACAO} · Atualizado em ${DATA_ATUALIZACAO}
@@ -387,7 +387,7 @@ POST /api/webhooks/whatsapp
 2. **Agendamento** — Consulta disponibilidade e registra consulta no sistema
 3. **Gestão do Agendamento** — Confirmações, remarcações e pós-consulta
 
-### Ferramentas do Agente (6 endpoints)
+### Ferramentas do Agente (8 endpoints)
 
 | Endpoint | Função |
 |----------|--------|
@@ -397,6 +397,8 @@ POST /api/webhooks/whatsapp
 | \`/api/agente/registrar-agendamento\` | Cria agendamento no sistema |
 | \`/api/agente/atualizar-agendamento\` | Atualiza status do agendamento |
 | \`/api/agente/registrar-mensagem\` | Persiste mensagem no banco |
+| \`/api/agente/listar-midias\` | Lista mídias de marketing com descrição e status \`jaEnviada\` |
+| \`/api/agente/enviar-midia\` | Envia mídia escolhida ao paciente via WhatsApp |
 
 > Todas as chamadas de ferramentas têm timeout de **30 segundos**. Se o endpoint não responder, o agente recebe um erro explícito e segue a conversa sem travar.
 
@@ -452,6 +454,25 @@ Próximas fases (JLAU-571 no Linear):
 As métricas da Ana Júlia (mensagens, follow-ups, confirmações) estão no **Dashboard** — card "Ana Júlia".
 
 > A Ana Júlia opera 24/7. Configure o WhatsApp em Configurações para ela funcionar.
+
+### Mídia Marketing — Envio Autônomo pela IA
+
+A Ana Júlia envia fotos e vídeos ao paciente de forma autônoma durante a conversa, escolhendo a mídia certa **a partir da descrição**.
+
+**Fluxo:**
+
+1. Gestor cadastra mídias em **Clínica → Mídia Marketing** (somente 2 campos: descrição detalhada + arquivo)
+2. Quando o paciente solicita prova visual (*"como fica?"*, *"tem foto?"*, *"tem vídeo?"*, *"antes e depois"*, *"me mostra"*, *"resultado"*, entre outras), o agente detecta o gatilho programaticamente
+3. Agente chama \`listar_midias\` (obrigatório) e recebe lista com descrições + flag \`jaEnviada\`
+4. Agente chama \`enviar_midia\` (obrigatório) passando o \`midiaId\` que melhor casa com o contexto
+5. Uazapi entrega a mídia no WhatsApp do paciente
+6. Mensagem é registrada em \`mensagens_whatsapp\` com \`mediaUrl\` e \`mediaType\`
+
+**Por que a descrição é crítica:** a IA escolhe baseada 100% no texto da descrição. Uma descrição pobre ("mini lipo") faz a IA errar; uma descrição rica ("Resultado de Mini Lipo em paciente feminina, sobrepeso, região abdominal, aos 6 meses — abdome plano, cintura definida, cicatrizes quase imperceptíveis. Ideal para quem quer eliminar gordura localizada sem procedimento invasivo") garante escolha precisa.
+
+**Proteção anti-alucinação:** o loop do agente força a sequência \`listar_midias → enviar_midia\` quando gatilho é detectado (GPT-4o não pode escolher escrever "enviei uma foto" em texto sem executar a tool). O backend também injeta \`leadId\` e \`conversaId\` automaticamente nas tool calls — GPT não precisa adivinhar esses IDs.
+
+**Gerenciamento:** Gestor pode ativar/desativar mídias, editar descrição, trocar arquivo, excluir. Formatos aceitos: imagens (jpg, png, webp, heic) e vídeos (mp4, webm, mov, mkv). Limite: 20 MB por arquivo.
 
 ### Abordagem Proativa (Leads do Site)
 
