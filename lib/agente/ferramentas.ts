@@ -1,6 +1,8 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions"
 
-/** Definição das 6 ferramentas do agente no formato OpenAI function calling */
+/** Definição das ferramentas do agente no formato OpenAI function calling.
+ *  Data entry estruturada (nome, procedimento, sobreOPaciente, avanço de etapa)
+ *  é feita pela Analista IA (JLAU-571), não pela Ana Júlia. */
 export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
@@ -69,45 +71,6 @@ export const ferramentasAgente: ChatCompletionTool[] = [
             description: "Filtro opcional por nome do procedimento",
           },
         },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "salvar_qualificacao",
-      description:
-        "Salva informações de qualificação do paciente. Se o lead estiver em 'acolhimento', avança automaticamente para 'qualificacao'. Também atualiza o nome do lead se informado via nomePaciente. Use sempre que coletar informações novas.",
-      parameters: {
-        type: "object",
-        properties: {
-          leadId: {
-            type: "string",
-            description: "ID do lead/paciente",
-          },
-          conversaId: {
-            type: "string",
-            description: "ID da conversa ativa",
-          },
-          sobreOPaciente: {
-            type: "string",
-            description: "Informações coletadas sobre o paciente (será adicionado ao histórico, nunca sobrescrito)",
-          },
-          procedimentoInteresse: {
-            type: "string",
-            description: "Procedimento de interesse do paciente (opcional)",
-          },
-          nomePaciente: {
-            type: "string",
-            description: "Nome real do paciente, informado por ele na conversa. Atualiza o nome do lead se o atual é genérico.",
-          },
-          avancarPara: {
-            type: "string",
-            enum: ["qualificacao", "pre_agendamento"],
-            description: "Avança a etapa do funil. Use 'agendamento' quando a qualificação estiver completa e for hora de agendar a consulta.",
-          },
-        },
-        required: ["leadId", "conversaId", "sobreOPaciente"],
       },
     },
   },

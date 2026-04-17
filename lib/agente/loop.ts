@@ -247,7 +247,6 @@ export async function processarMensagens(chatId: string): Promise<void> {
         // valores reais do contexto do webhook para toda tool que os aceita.
         const toolsComIds = new Set([
           "registrar_mensagem",
-          "salvar_qualificacao",
           "registrar_agendamento",
           "listar_midias",
           "enviar_midia",

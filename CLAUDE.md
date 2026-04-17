@@ -59,9 +59,9 @@ Colunas 1-4 são movidas automaticamente pelo agente IA. Colunas 5-8 exigem aç�
 Dois agentes IA trabalham em paralelo:
 
 - **Ana Júlia** (GPT-4o) — SDR que conversa com o paciente no WhatsApp. Fluxo do webhook: `POST /api/webhooks/whatsapp` → detectar tipo de conteúdo → processar mídia → buffer Redis (debounce 20s, `{chat_id}_buf_dr-lucas`) → concatenar → GPT-4o com system prompt + memória Redis (20 msgs, `{chat_id}_mem_dr-lucas`) → segmentar resposta → Uazapi com delay aleatório 3-5s entre mensagens.
-- **Analista** (GPT-4o-mini, JLAU-571) — disparada em fire-and-forget ao final do loop da Ana Júlia. Lê histórico + estado do lead, retorna JSON estruturado com o que *deveria* estar no CRM. **Fase 1 (shadow mode)**: apenas loga em `analista_logs` sem escrever. Fases 2/3 ainda pendentes.
+- **Analista** (GPT-4o-mini, JLAU-571) — disparada em fire-and-forget ao final do loop da Ana Júlia. Lê histórico + estado do lead e escreve direto no CRM (nome, procedimento, sobreOPaciente, statusFunil). Controlada pela env `ANALISTA_WRITE_MODE=true` (padrão em produção); sem a flag, roda em shadow mode (só loga em `analista_logs`).
 
-O agente tem 3 etapas no funil: Qualificação → Agendamento → Gestão do Agendamento, usando 6 ferramentas em `/api/agente/*`.
+O agente tem 3 etapas no funil: Qualificação → Agendamento → Gestão do Agendamento, usando 7 ferramentas em `/api/agente/*` (Ana Júlia sem tools de data entry — quem escreve no CRM é a Analista IA).
 
 ### Segurança da API
 
@@ -82,7 +82,7 @@ O agente tem 3 etapas no funil: Qualificação → Agendamento → Gestão do Ag
 ### Convenção de Estrutura de Pastas
 
 - `app/(dashboard)/` — páginas do painel agrupadas sob layout do dashboard com sidebar + verificação de perfil
-- `app/api/agente/` — ferramentas do agente IA (6 endpoints)
+- `app/api/agente/` — ferramentas do agente IA (7 endpoints) + endpoints auxiliares (processar, cron-manual, limpar-memoria)
 - `lib/agente/` — internos do agente: buffer, memória, processamento de mídia, prompt, ferramentas, sincronização do kanban, analista (JLAU-571)
 - `supabase/migrations/` — migrations SQL aplicadas manualmente no Supabase (sem Prisma)
 - `lib/supabase.ts` — clients Supabase (`supabaseAdmin` para server-side com service role e `supabaseAnon` para client-side)
@@ -130,7 +130,7 @@ lib/documentacao/conteudo.ts
 | Métrica | Quantidade |
 |---------|-----------|
 | Páginas | 21 (18 dashboard + 2 públicas + 1 root) |
-| Endpoints API | 89 |
+| Endpoints API | 88 |
 | Tabelas no banco | 24 |
 | Enums | 12 |
 | Componentes | 98 (28 UI + 70 features) |
