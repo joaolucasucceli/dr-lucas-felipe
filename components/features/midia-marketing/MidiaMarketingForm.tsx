@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { criarMidiaMarketingSchema } from "@/lib/validations/midia-marketing"
-import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import type { z } from "zod"
 
 type FormData = z.infer<typeof criarMidiaMarketingSchema>
@@ -27,8 +26,6 @@ interface Props {
     ativo: boolean
   } | null
 }
-
-const BUCKET = "atendimento-midias"
 
 function inferirTipoArquivo(url: string): "imagem" | "video" {
   return /\.(mp4|webm|mov|avi|mkv|m4v)(\?|$)/i.test(url) ? "video" : "imagem"
@@ -66,19 +63,22 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
     setProgresso(0)
 
     try {
-      const supabase = getSupabaseBrowser()
-      const ext = file.name.split(".").pop() || "bin"
-      const path = `midia-marketing/${Date.now()}.${ext}`
+      const formData = new FormData()
+      formData.append("arquivo", file)
 
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true })
-      if (error) {
-        toast.error(`Falha no upload: ${error.message}`)
-        console.error("[upload] supabase.storage.upload:", error)
+      const res = await fetch("/api/midia-marketing/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Erro desconhecido" }))
+        toast.error(err.error || "Falha no upload")
         return
       }
 
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-      form.setValue("url", data.publicUrl)
+      const { url } = await res.json()
+      form.setValue("url", url)
 
       setProgresso(100)
       toast.success("Arquivo enviado")
