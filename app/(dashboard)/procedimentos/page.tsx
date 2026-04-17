@@ -29,7 +29,6 @@ interface Procedimento {
   nome: string
   tipo: string
   descricao: string | null
-  valorBase: number | null
   duracaoMin: number
   posOperatorio: string | null
   ativo: boolean
@@ -40,14 +39,6 @@ const tipoLabels: Record<string, string> = {
   cirurgico: "Cirúrgico",
   estetico: "Estético",
   "minimamente-invasivo": "Minimamente Invasivo",
-}
-
-function formatarValor(valor: number | null): string {
-  if (valor === null || valor === undefined) return "—"
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(Number(valor))
 }
 
 export default function ProcedimentosPage() {
@@ -119,12 +110,6 @@ export default function ProcedimentosPage() {
       renderizar: (p) => (
         <Badge variant="secondary">{tipoLabels[p.tipo] || p.tipo}</Badge>
       ),
-    },
-    {
-      chave: "valorBase",
-      titulo: "Valor Base",
-      classesCelula: "hidden md:table-cell",
-      renderizar: (p) => formatarValor(p.valorBase),
     },
     {
       chave: "duracaoMin",

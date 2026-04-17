@@ -1,4 +1,4 @@
-import { Stethoscope, Package, ToggleLeft, DollarSign } from "lucide-react"
+import { Stethoscope, Package, ToggleLeft, Clock } from "lucide-react"
 import { HeroBanner } from "../HeroBanner"
 import { FeaturesGrid } from "../FeaturesGrid"
 import { ComoUsarSection } from "../ComoUsarSection"
@@ -11,7 +11,7 @@ export function ModuloProcedimentos() {
       <HeroBanner
         icone={<Stethoscope />}
         titulo="Procedimentos"
-        subtitulo="Catálogo de procedimentos da clínica com valores e duração"
+        subtitulo="Catálogo de procedimentos da clínica com duração e orientações"
         gradientClasses="from-rose-600 to-pink-400"
       />
 
@@ -20,7 +20,7 @@ export function ModuloProcedimentos() {
           {
             icone: <Package />,
             titulo: "Catálogo de procedimentos",
-            descricao: "Lista completa com nome, tipo (cirúrgico, estético, minimamente invasivo), valor base e duração estimada em minutos.",
+            descricao: "Lista com nome, tipo (cirúrgico, estético, minimamente invasivo) e duração estimada em minutos.",
           },
           {
             icone: <ToggleLeft />,
@@ -28,9 +28,9 @@ export function ModuloProcedimentos() {
             descricao: "Procedimentos inativos não aparecem para seleção em leads e agendamentos, sem perder o histórico existente.",
           },
           {
-            icone: <DollarSign />,
-            titulo: "Valores em BRL",
-            descricao: "Cadastre o valor base de cada procedimento em reais para uso em relatórios financeiros e orçamentos.",
+            icone: <Clock />,
+            titulo: "Duração e pós-operatório",
+            descricao: "Cada procedimento tem duração média e instruções pós-operatórias próprias, usadas para orientar o paciente.",
           },
         ]}
       />
@@ -40,12 +40,12 @@ export function ModuloProcedimentos() {
           {
             numero: 1,
             titulo: "Visualize o catálogo",
-            descricao: "A tabela exibe todos os procedimentos com tipo, valor base, duração e status ativo/inativo.",
+            descricao: "A tabela exibe todos os procedimentos com tipo, duração e status ativo/inativo.",
           },
           {
             numero: 2,
             titulo: "Cadastre um procedimento",
-            descricao: "Clique em 'Novo Procedimento', preencha nome, tipo, duração em minutos, valor base e instruções pós-operatórias.",
+            descricao: "Clique em 'Novo Procedimento', preencha nome, tipo, duração em minutos e instruções pós-operatórias.",
           },
           {
             numero: 3,
@@ -61,7 +61,7 @@ export function ModuloProcedimentos() {
             {
               perfil: "Gestor",
               acesso: "total",
-              acoes: ["Cria, edita e ativa/desativa procedimentos", "Visualiza valores e histórico"],
+              acoes: ["Cria, edita e ativa/desativa procedimentos"],
             },
             {
               perfil: "Atendente",
@@ -71,7 +71,7 @@ export function ModuloProcedimentos() {
           ]}
         />
         <DicaImportante
-          texto="Desative procedimentos que não são mais realizados em vez de excluí-los. Isso preserva o histórico de agendamentos e relatórios financeiros já gerados."
+          texto="O preço de cada procedimento é definido pelo Dr. Lucas na consulta diagnóstica presencial, caso a caso — o sistema não armazena valor monetário. Desative procedimentos que não são mais realizados em vez de excluí-los, pra preservar o histórico."
           variante="sucesso"
         />
       </div>

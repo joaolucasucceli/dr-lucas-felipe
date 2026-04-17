@@ -28,7 +28,6 @@ const formSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   tipo: z.string().min(2, "Tipo é obrigatório"),
   descricao: z.string().optional(),
-  valorBase: z.string().optional(),
   duracaoMin: z.string().min(1, "Duração é obrigatória"),
   posOperatorio: z.string().optional(),
 })
@@ -40,7 +39,6 @@ interface Procedimento {
   nome: string
   tipo: string
   descricao: string | null
-  valorBase: number | null
   duracaoMin: number
   posOperatorio: string | null
   ativo: boolean
@@ -74,7 +72,6 @@ export function ProcedimentoForm({
       nome: "",
       tipo: "cirurgico",
       descricao: "",
-      valorBase: "",
       duracaoMin: "",
       posOperatorio: "",
     },
@@ -86,7 +83,6 @@ export function ProcedimentoForm({
         nome: procedimento.nome,
         tipo: procedimento.tipo,
         descricao: procedimento.descricao || "",
-        valorBase: procedimento.valorBase?.toString() || "",
         duracaoMin: procedimento.duracaoMin.toString(),
         posOperatorio: procedimento.posOperatorio || "",
       })
@@ -95,7 +91,6 @@ export function ProcedimentoForm({
         nome: "",
         tipo: "",
         descricao: "",
-        valorBase: "",
         duracaoMin: "",
         posOperatorio: "",
       })
@@ -125,7 +120,6 @@ export function ProcedimentoForm({
     }
 
     if (data.descricao) body.descricao = data.descricao
-    if (data.valorBase) body.valorBase = parseFloat(data.valorBase)
     if (data.posOperatorio) body.posOperatorio = data.posOperatorio
 
     try {
@@ -196,29 +190,17 @@ export function ProcedimentoForm({
             <Textarea id="proc-descricao" {...register("descricao")} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="proc-valor">Valor Base (R$)</Label>
-              <Input
-                id="proc-valor"
-                type="number"
-                step="0.01"
-                min="0"
-                {...register("valorBase")}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="proc-duracao">Duração (min)</Label>
-              <Input
-                id="proc-duracao"
-                type="number"
-                min="1"
-                {...register("duracaoMin")}
-              />
-              {errors.duracaoMin && (
-                <p className="text-xs text-destructive">{errors.duracaoMin.message}</p>
-              )}
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="proc-duracao">Duração (min)</Label>
+            <Input
+              id="proc-duracao"
+              type="number"
+              min="1"
+              {...register("duracaoMin")}
+            />
+            {errors.duracaoMin && (
+              <p className="text-xs text-destructive">{errors.duracaoMin.message}</p>
+            )}
           </div>
 
           <div className="grid gap-2">

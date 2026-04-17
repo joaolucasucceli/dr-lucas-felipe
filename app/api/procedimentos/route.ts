@@ -6,7 +6,7 @@ import { criarProcedimentoSchema } from "@/lib/validations/procedimento"
 import { criarId, agora } from "@/lib/db-utils"
 
 const SELECT_PROCEDIMENTO =
-  "id, nome, tipo, descricao, valorBase, duracaoMin, posOperatorio, ativo, criadoEm"
+  "id, nome, tipo, descricao, duracaoMin, posOperatorio, ativo, criadoEm"
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole("gestor")

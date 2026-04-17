@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.26.0"
+export const VERSAO_DOCUMENTACAO = "1.27.0"
 export const DATA_ATUALIZACAO = "2026-04-17"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -210,17 +210,19 @@ Agenda integrada com Google Calendar e confirmações automáticas.
 
 ## Módulo 5 — Procedimentos
 
-Catálogo de procedimentos da clínica com valores e duração.
+Catálogo de procedimentos da clínica com duração e orientações.
 
 ### Funcionalidades
 
-- **Catálogo** — Nome, tipo, valor base (BRL) e duração em minutos
+- **Catálogo** — Nome, tipo e duração em minutos
 - **Ativação/desativação** — Inativos não aparecem em leads e agendamentos
 - **Instruções pós-operatórias** — Texto livre por procedimento
 
+> **Sem valor no sistema.** O preço de cada procedimento é definido pelo Dr. Lucas na consulta diagnóstica presencial, caso a caso. Não existe campo de valor/preço no cadastro.
+
 ### Como usar
 
-1. Visualize o catálogo com tipo, valor e status
+1. Visualize o catálogo com tipo e duração
 2. Clique em "Novo Procedimento" para cadastrar
 3. Use o menu de ações para editar ou ativar/desativar
 
@@ -672,7 +674,7 @@ tipo (humano/ia) | ativo | criadoEm | atualizadoEm | deletadoEm
 
 ### Procedimento
 \`\`\`
-id | nome | tipo | descricao | valorBase (BRL) | duracaoMin
+id | nome | tipo | descricao | duracaoMin
 posOperatorio | ativo | criadoEm | atualizadoEm | deletadoEm
 \`\`\`
 

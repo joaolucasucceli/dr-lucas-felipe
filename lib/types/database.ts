@@ -971,7 +971,6 @@ export type Database = {
           nome: string
           posOperatorio: string | null
           tipo: string
-          valorBase: number | null
         }
         Insert: {
           ativo?: boolean
@@ -984,7 +983,6 @@ export type Database = {
           nome: string
           posOperatorio?: string | null
           tipo: string
-          valorBase?: number | null
         }
         Update: {
           ativo?: boolean
@@ -997,7 +995,6 @@ export type Database = {
           nome?: string
           posOperatorio?: string | null
           tipo?: string
-          valorBase?: number | null
         }
         Relationships: []
       }

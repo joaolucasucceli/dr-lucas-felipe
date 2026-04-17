@@ -7,7 +7,6 @@ interface Procedimento {
   nome: string
   tipo: string
   descricao: string | null
-  valorBase: number | null
   duracaoMin: number
   posOperatorio: string | null
   ativo: boolean

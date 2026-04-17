@@ -29,7 +29,6 @@ interface Procedimento {
   nome: string
   tipo: string
   descricao: string | null
-  valorBase: number | null
   duracaoMin: number
   posOperatorio: string | null
   ativo: boolean
@@ -49,7 +48,6 @@ export default function ProcedimentoDetalhePage() {
   const [nome, setNome] = useState("")
   const [tipo, setTipo] = useState("")
   const [descricao, setDescricao] = useState("")
-  const [valorBase, setValorBase] = useState("")
   const [duracaoMin, setDuracaoMin] = useState("")
   const [posOperatorio, setPosOperatorio] = useState("")
   const [ativo, setAtivo] = useState(true)
@@ -67,7 +65,6 @@ export default function ProcedimentoDetalhePage() {
       setNome(data.nome)
       setTipo(data.tipo)
       setDescricao(data.descricao || "")
-      setValorBase(data.valorBase?.toString() || "")
       setDuracaoMin(data.duracaoMin.toString())
       setPosOperatorio(data.posOperatorio || "")
       setAtivo(data.ativo)
@@ -101,10 +98,9 @@ export default function ProcedimentoDetalhePage() {
     [salvarCampos]
   )
 
-  const salvarNumeros = useCallback(
-    async (v: { valorBase: string; duracaoMin: string }) => {
+  const salvarDuracao = useCallback(
+    async (v: { duracaoMin: string }) => {
       const body: Record<string, unknown> = {}
-      if (v.valorBase) body.valorBase = parseFloat(v.valorBase)
       if (v.duracaoMin) body.duracaoMin = parseInt(v.duracaoMin, 10)
       await salvarCampos(body)
     },
@@ -121,13 +117,12 @@ export default function ProcedimentoDetalhePage() {
     onSalvar: salvarTexto,
   })
 
-  const { status: statusNumeros } = useAutosave({
-    valor: { valorBase, duracaoMin },
+  const { status: statusDuracao } = useAutosave({
+    valor: { duracaoMin },
     valorInicial: {
-      valorBase: procedimento?.valorBase?.toString() || "",
       duracaoMin: procedimento?.duracaoMin?.toString() || "",
     },
-    onSalvar: salvarNumeros,
+    onSalvar: salvarDuracao,
   })
 
   async function handleTipoChange(novoTipo: string) {
@@ -237,21 +232,10 @@ export default function ProcedimentoDetalhePage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Valores e Duração</CardTitle>
-            <IndicadorSalvamento status={statusNumeros} />
+            <CardTitle>Duração</CardTitle>
+            <IndicadorSalvamento status={statusDuracao} />
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Valor Base (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={valorBase}
-                onChange={(e) => setValorBase(e.target.value)}
-                disabled={!isGestor}
-              />
-            </div>
+          <CardContent>
             <div className="grid gap-2">
               <Label>Duração (min)</Label>
               <Input
