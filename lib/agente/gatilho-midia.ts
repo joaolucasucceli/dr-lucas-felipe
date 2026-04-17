@@ -32,14 +32,15 @@ const GATILHOS: RegExp[] = [
   /\bposso\s+ver/i,
 
   // Apresentacao do Dr. Lucas (JLAU-559)
+  // Cada padrao exige explicitamente "dr|doutor|medico|dele" para evitar
+  // falso positivo com "ele e bom", "apresentacao do procedimento",
+  // "me conta pouco sobre o preco" etc.
   /\bme\s+fala\s+(do|sobre\s+o)\s+(dr|doutor|medico|m[eé]dico)/i,
-  /\b(quem|sobre)\s+(e|[eé])\s+(o\s+)?(dr|doutor|medico|m[eé]dico)/i,
+  /\bquem\s+[eé]\s+(o\s+)?(dr|doutor|medico|m[eé]dico)/i,
   /\bqual\s+(a\s+)?experi[eê]ncia\s+(do\s+)?(dr|doutor|medico|m[eé]dico)/i,
-  /\bele\s+[eé]\s+bom/i,
-  /\bele\s+j[aá]\s+fez/i,
   /\bconhec[eê]r?\s+(melhor\s+)?o\s+(dr|doutor|medico|m[eé]dico)/i,
-  /\bapresenta[çc][aã]o\s+(do|dele)/i,
-  /\bme\s+conta\s+(um\s+)?pouco\s+(sobre|do|dele)/i,
+  /\bapresenta[çc][aã]o\s+(do\s+(dr|doutor|medico|m[eé]dico)|dele\b)/i,
+  /\bme\s+conta\s+(um\s+)?pouco\s+(sobre\s+(ele|o\s+(dr|doutor|medico|m[eé]dico))|do\s+(dr|doutor|medico|m[eé]dico)|dele\b)/i,
   /\bele\s+tem\s+experi[eê]ncia/i,
   /\bquantos?\s+anos?\s+de\s+experi[eê]ncia/i,
   /\bforma[çc][aã]o\s+(do\s+)?(dr|doutor|medico|m[eé]dico)/i,
