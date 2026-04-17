@@ -221,6 +221,11 @@ export async function processarMensagens(chatId: string): Promise<void> {
     })
 
     let iteracoes = 0
+    // Por padrao deixamos o GPT escolher, mas se acabou de listar midias com
+    // resultado nao vazio, a proxima iteracao EXIGE enviar_midia — impede a
+    // alucinacao "acabei de enviar uma foto" sem chamar a tool.
+    let proximoToolChoice: "auto" | { type: "function"; function: { name: string } } = "auto"
+
     while (
       resposta.choices[0]?.message?.tool_calls &&
       resposta.choices[0].message.tool_calls.length > 0 &&
@@ -230,11 +235,24 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
       mensagens.push(resposta.choices[0].message)
 
+      let forcarEnviarMidiaNext = false
+
       for (const toolCall of toolCalls) {
         if (toolCall.type !== "function") continue
         const fn = toolCall.function
         const args = JSON.parse(fn.arguments || "{}")
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
+
+        if (fn.name === "listar_midias") {
+          try {
+            const parsed = JSON.parse(resultado)
+            if (Array.isArray(parsed?.midias) && parsed.midias.length > 0) {
+              forcarEnviarMidiaNext = true
+            }
+          } catch {
+            // resposta invalida — deixa o GPT decidir
+          }
+        }
 
         mensagens.push({
           role: "tool",
@@ -243,11 +261,15 @@ export async function processarMensagens(chatId: string): Promise<void> {
         })
       }
 
+      proximoToolChoice = forcarEnviarMidiaNext
+        ? { type: "function", function: { name: "enviar_midia" } }
+        : "auto"
+
       resposta = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: mensagens,
         tools: ferramentasAgente,
-        tool_choice: "auto",
+        tool_choice: proximoToolChoice,
       })
 
       iteracoes++
