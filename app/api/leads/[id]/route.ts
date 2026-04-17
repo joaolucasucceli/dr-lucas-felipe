@@ -169,7 +169,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const whatsappAnonimo = lead.whatsapp ? anonimizarWhatsapp(lead.whatsapp) : null
+  const whatsappAnonimo = lead.whatsapp ? anonimizarWhatsapp(lead.whatsapp, id) : null
 
   const { data: atualizado, error: updateError } = await supabaseAdmin
     .from("leads")

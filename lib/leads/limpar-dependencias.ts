@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { limparMemoria } from "@/lib/agente/memoria"
 import { limparBuffer, limparDebounce } from "@/lib/agente/buffer"
 
-const HASH_SHA256_REGEX = /^[a-f0-9]{64}$/
+const WHATSAPP_ANONIMIZADO_REGEX = /^[a-f0-9]{64}(_[a-z0-9]+)?$/
 
 function extrairPathDoStorageUrl(url: string, bucket: string): string | null {
   const marker = `/${bucket}/`
@@ -64,8 +64,12 @@ export async function limparDependenciasDoLead(params: {
   }
 }
 
-/** Retorna hash SHA-256 do whatsapp, ou o proprio valor se ja parecer hash. */
-export function anonimizarWhatsapp(whatsapp: string): string {
-  if (HASH_SHA256_REGEX.test(whatsapp)) return whatsapp
-  return createHash("sha256").update(whatsapp).digest("hex")
+/** Retorna hash SHA-256 do whatsapp com sufixo opcional do leadId para
+ *  garantir unicidade entre soft-deletes (a coluna `whatsapp` tem UNIQUE key,
+ *  entao dois leads historicamente com mesmo numero colidiriam no hash puro).
+ *  Idempotente: se o valor ja parece anonimizado, retorna inalterado. */
+export function anonimizarWhatsapp(whatsapp: string, leadId?: string): string {
+  if (WHATSAPP_ANONIMIZADO_REGEX.test(whatsapp)) return whatsapp
+  const hash = createHash("sha256").update(whatsapp).digest("hex")
+  return leadId ? `${hash}_${leadId.slice(0, 8)}` : hash
 }
