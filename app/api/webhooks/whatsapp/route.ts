@@ -10,7 +10,7 @@ import {
   analisarImagemBase64,
   type AnaliseFoto,
 } from "@/lib/agente/processar-midia"
-import { baixarMidia } from "@/lib/uazapi"
+import { baixarMidia, enviarDigitando } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -468,6 +468,29 @@ export async function POST(request: NextRequest) {
         timestamp: msg.timestamp,
         messageId: msg.id,
       })
+
+      // JLAU-551: mostra "digitando" imediatamente ao receber a mensagem,
+      // sem esperar os 20s de debounce. Cada mensagem nova renova o indicador.
+      try {
+        const { data: configPresence } = await supabaseAdmin
+          .from("config_whatsapp")
+          .select("uazapiUrl, instanceToken")
+          .eq("ativo", true)
+          .maybeSingle()
+        if (configPresence?.uazapiUrl && configPresence?.instanceToken) {
+          await enviarDigitando(
+            configPresence.uazapiUrl,
+            configPresence.instanceToken,
+            msg.chatId,
+            true
+          )
+        }
+      } catch (err) {
+        console.warn(
+          "[Webhook] Falha ao disparar digitando imediato:",
+          err instanceof Error ? err.message : err
+        )
+      }
 
       const podeDisparar = await deveProcessar(msg.chatId)
       if (!podeDisparar) {
