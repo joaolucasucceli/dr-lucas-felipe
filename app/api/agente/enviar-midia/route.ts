@@ -26,11 +26,7 @@ export async function POST(request: NextRequest) {
   }
 
   // JLAU-570: prioridade 1 — IA escolheu midia especifica por ID.
-  let midia: Awaited<
-    ReturnType<typeof supabaseAdmin.from>
-  > extends never
-    ? never
-    : { id: string; titulo: string; url: string; tipo: string } | null = null
+  let midia: { id: string; titulo: string; url: string; tipo: string } | null = null
 
   if (midiaId) {
     const { data } = await supabaseAdmin
