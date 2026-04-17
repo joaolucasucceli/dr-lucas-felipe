@@ -118,7 +118,8 @@ export async function aplicarMudancasAnalista(params: {
 }
 
 /** Flag de ambiente que ativa Fase 2 da JLAU-571 (Analista escreve no CRM).
- *  Quando ausente/false, Analista continua em shadow mode (so loga). */
+ *  Quando ausente/false, Analista continua em shadow mode (so loga).
+ *  Trim defensivo: `vercel env add` via echo persiste o newline final. */
 export function analistaWriteModeAtivo(): boolean {
-  return process.env.ANALISTA_WRITE_MODE === "true"
+  return (process.env.ANALISTA_WRITE_MODE ?? "").trim() === "true"
 }
