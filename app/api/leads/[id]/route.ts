@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       *,
       responsavel:usuarios!leads_responsavelId_fkey(id, nome),
       agendamentos(*, procedimento:procedimentos(id, nome)),
-      conversas(*, mensagens:mensagens_whatsapp(*, replyTo:mensagens_whatsapp!mensagens_whatsapp_replyToId_fkey(id, conteudo, remetente))),
+      conversas(*, mensagens:mensagens_whatsapp(*, replyTo:mensagens_whatsapp!replyToId(id, conteudo, remetente))),
       fotos:fotos_lead(*),
       paciente:pacientes(id, nome)
     `)

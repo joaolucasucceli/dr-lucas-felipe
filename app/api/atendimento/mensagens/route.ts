@@ -32,7 +32,7 @@ export async function GET(req: Request) {
     .from("mensagens_whatsapp")
     .select(`
       *,
-      replyTo:mensagens_whatsapp!mensagens_whatsapp_replyToId_fkey(id, conteudo, remetente)
+      replyTo:mensagens_whatsapp!replyToId(id, conteudo, remetente)
     `)
     .eq("conversaId", conversaId)
 
