@@ -54,8 +54,14 @@ export async function GET(req: Request) {
 
   mensagens.reverse()
 
+  // Normaliza replyTo: PostgREST retorna array quando nao infere one-to-one pelo nome da coluna.
+  const normalizadas = mensagens.map((m) => ({
+    ...m,
+    replyTo: Array.isArray(m.replyTo) ? m.replyTo[0] ?? null : m.replyTo,
+  }))
+
   return NextResponse.json({
-    mensagens,
-    proximoCursor: temMais ? mensagens[0]?.id : null,
+    mensagens: normalizadas,
+    proximoCursor: temMais ? normalizadas[0]?.id : null,
   })
 }

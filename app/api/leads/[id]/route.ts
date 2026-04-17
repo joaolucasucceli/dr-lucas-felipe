@@ -50,9 +50,15 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     return (b.atualizadoEm ?? "").localeCompare(a.atualizadoEm ?? "")
   })
 
-  for (const conversa of conversasOrdenadas as Array<ConversaOrdenavel & { mensagens?: MensagemOrdenavel[] }>) {
+  for (const conversa of conversasOrdenadas as Array<ConversaOrdenavel & { mensagens?: Array<MensagemOrdenavel & { replyTo?: unknown }> }>) {
     if (Array.isArray(conversa.mensagens)) {
       conversa.mensagens.sort((a, b) => (a.criadoEm ?? "").localeCompare(b.criadoEm ?? ""))
+      // Normaliza replyTo: PostgREST devolve array quando nao infere one-to-one pelo nome da coluna.
+      for (const msg of conversa.mensagens) {
+        if (Array.isArray(msg.replyTo)) {
+          msg.replyTo = msg.replyTo[0] ?? null
+        }
+      }
     }
   }
 
