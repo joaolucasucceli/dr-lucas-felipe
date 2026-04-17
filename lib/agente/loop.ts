@@ -4,6 +4,7 @@ import { obterELimparBuffer } from "@/lib/agente/buffer"
 import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
 import { gerarSystemPrompt } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
+import { detectarGatilhoMidia } from "@/lib/agente/gatilho-midia"
 import { abrirNovoCiclo } from "@/lib/agente/kanban-sync"
 import { analisarConversa } from "@/lib/agente/analista"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
@@ -205,11 +206,18 @@ export async function processarMensagens(chatId: string): Promise<void> {
       { role: "user", content: textoBuffer },
     ]
 
+    // Se o paciente pediu prova visual (gatilho), obrigamos o GPT-4o a chamar
+    // `listar_midias` na primeira iteracao. Sem isso, o modelo alucina
+    // "enviei uma imagem" em texto, sem executar a tool.
+    const forcarMidia = detectarGatilhoMidia(textoBuffer)
+
     let resposta = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: mensagens,
       tools: ferramentasAgente,
-      tool_choice: "auto",
+      tool_choice: forcarMidia
+        ? { type: "function", function: { name: "listar_midias" } }
+        : "auto",
     })
 
     let iteracoes = 0
