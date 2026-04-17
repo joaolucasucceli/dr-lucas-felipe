@@ -171,7 +171,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
   const whatsappAnonimo = lead.whatsapp ? anonimizarWhatsapp(lead.whatsapp) : null
 
-  await supabaseAdmin
+  const { data: atualizado, error: updateError } = await supabaseAdmin
     .from("leads")
     .update({
       deletadoEm: agora(),
@@ -179,6 +179,21 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       ...(whatsappAnonimo ? { whatsapp: whatsappAnonimo } : {}),
     })
     .eq("id", id)
+    .select("id, deletadoEm")
+    .maybeSingle()
 
+  if (updateError || !atualizado?.deletadoEm) {
+    console.error("[leads.DELETE] Soft-delete falhou:", {
+      leadId: id,
+      updateError: updateError?.message,
+      atualizado,
+    })
+    return NextResponse.json(
+      { error: `Falha ao marcar lead como deletado: ${updateError?.message || "update nao aplicado"}` },
+      { status: 500 }
+    )
+  }
+
+  console.log("[leads.DELETE] Soft-delete ok:", { leadId: id, deletadoEm: atualizado.deletadoEm })
   return NextResponse.json({ mensagem: "Lead removido" })
 }
