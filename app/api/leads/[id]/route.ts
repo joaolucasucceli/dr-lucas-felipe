@@ -3,8 +3,10 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth, requireAnyRole, requireRole } from "@/lib/auth-helpers"
 import { atualizarLeadSchema } from "@/lib/validations/lead"
-import { limparMemoria } from "@/lib/agente/memoria"
-import { obterELimparBuffer } from "@/lib/agente/buffer"
+import {
+  limparDependenciasDoLead,
+  anonimizarWhatsapp,
+} from "@/lib/leads/limpar-dependencias"
 import { agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -149,20 +151,28 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
   }
 
+  const chatId = lead.whatsapp ? `${lead.whatsapp}@s.whatsapp.net` : null
+
+  try {
+    await limparDependenciasDoLead({ leadId: id, chatId })
+  } catch (err) {
+    console.error("[leads.DELETE] Falha ao limpar dependencias:", err)
+    return NextResponse.json(
+      { error: "Erro ao limpar dados do lead" },
+      { status: 500 }
+    )
+  }
+
+  const whatsappAnonimo = lead.whatsapp ? anonimizarWhatsapp(lead.whatsapp) : null
+
   await supabaseAdmin
     .from("leads")
-    .update({ deletadoEm: agora(), atualizadoEm: agora() })
+    .update({
+      deletadoEm: agora(),
+      atualizadoEm: agora(),
+      ...(whatsappAnonimo ? { whatsapp: whatsappAnonimo } : {}),
+    })
     .eq("id", id)
-
-  if (lead.whatsapp) {
-    const chatId = `${lead.whatsapp}@s.whatsapp.net`
-    try {
-      await limparMemoria(chatId)
-      await obterELimparBuffer(chatId)
-    } catch (err) {
-      console.error("[leads.DELETE] Falha ao limpar Redis:", err)
-    }
-  }
 
   return NextResponse.json({ mensagem: "Lead removido" })
 }

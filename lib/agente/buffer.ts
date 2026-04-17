@@ -47,3 +47,15 @@ export async function deveProcessar(chatId: string): Promise<boolean> {
   const existe = await redis.exists(chave)
   return existe === 0
 }
+
+/** JLAU-552: remove a chave de buffer (usado ao deletar lead). */
+export async function limparBuffer(chatId: string): Promise<void> {
+  const chave = `${chatId}${BUFFER_SUFFIX}`
+  await redis.del(chave)
+}
+
+/** JLAU-552: remove o lock de debounce (usado ao deletar lead). */
+export async function limparDebounce(chatId: string): Promise<void> {
+  const chave = `${chatId}${DEBOUNCE_SUFFIX}`
+  await redis.del(chave)
+}

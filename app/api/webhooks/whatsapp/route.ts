@@ -316,17 +316,9 @@ export async function POST(request: NextRequest) {
     let lead = leadExistente
 
     if (lead && lead.deletadoEm) {
-      const { data: reativado } = await supabaseAdmin
-        .from("leads")
-        .update({
-          deletadoEm: null,
-          nome: msg.nomeContato?.trim() || lead.nome,
-          atualizadoEm: agora(),
-        })
-        .eq("id", lead.id)
-        .select("*")
-        .single()
-      lead = reativado
+      // JLAU-552: nao reativar lead soft-deletado. O DELETE ja hasheou o whatsapp,
+      // entao na pratica essa query nao deveria encontrar o antigo — fallback defensivo.
+      lead = null
     }
 
     if (!lead) {
@@ -364,17 +356,12 @@ export async function POST(request: NextRequest) {
             .maybeSingle()
 
           if (paralelo?.deletadoEm) {
-            const { data: reativado } = await supabaseAdmin
-              .from("leads")
-              .update({
-                deletadoEm: null,
-                nome: msg.nomeContato?.trim() || paralelo.nome,
-                atualizadoEm: agora(),
-              })
-              .eq("id", paralelo.id)
-              .select("*")
-              .single()
-            lead = reativado
+            // JLAU-552: nao reativa — nao deveria acontecer apos hash do whatsapp.
+            console.error(
+              "[Webhook] Conflito inesperado: lead paralelo soft-deletado com whatsapp nao hasheado",
+              { leadId: paralelo.id, whatsapp: msg.numero }
+            )
+            continue
           } else {
             lead = paralelo
           }
