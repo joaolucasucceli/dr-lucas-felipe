@@ -49,7 +49,7 @@ export interface AnalistaLogRow {
   contatoId: string
   conversaId: string | null
   historicoMensagens: MensagemHistorico[]
-  estadoAtualLead: EstadoAtualContato
+  estadoAtualContato: EstadoAtualContato
   output: AnalistaOutput | null
   divergencias: Divergencia[]
   aplicado: boolean

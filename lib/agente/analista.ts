@@ -220,7 +220,7 @@ export async function analisarConversa(params: {
       contatoId,
       conversaId,
       historicoMensagens: historico as unknown as Json,
-      estadoAtualLead: (estadoAtual ?? null) as unknown as Json,
+      estadoAtualContato: (estadoAtual ?? null) as unknown as Json,
       output: (output ?? null) as unknown as Json,
       divergencias: divergencias as unknown as Json,
       aplicado,

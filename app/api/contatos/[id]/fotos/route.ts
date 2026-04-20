@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
 import { criarId } from "@/lib/db-utils"
+import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const buffer = Buffer.from(await arquivo.arrayBuffer())
 
   const { error: uploadError } = await supabaseAdmin.storage
-    .from("fotos-leads")
+    .from(BUCKET_FOTOS_CONTATO)
     .upload(nomeArquivo, buffer, {
       contentType: arquivo.type,
     })
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const { data: urlData } = supabaseAdmin.storage
-    .from("fotos-leads")
+    .from(BUCKET_FOTOS_CONTATO)
     .getPublicUrl(nomeArquivo)
 
   const { data: foto, error: insertError } = await supabaseAdmin

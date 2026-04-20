@@ -89,7 +89,7 @@ export type Database = {
           criadoEm: string
           divergencias: Json
           erro: string | null
-          estadoAtualLead: Json | null
+          estadoAtualContato: Json | null
           historicoMensagens: Json
           id: string
           output: Json | null
@@ -102,7 +102,7 @@ export type Database = {
           criadoEm?: string
           divergencias?: Json
           erro?: string | null
-          estadoAtualLead?: Json | null
+          estadoAtualContato?: Json | null
           historicoMensagens?: Json
           id: string
           output?: Json | null
@@ -115,7 +115,7 @@ export type Database = {
           criadoEm?: string
           divergencias?: Json
           erro?: string | null
-          estadoAtualLead?: Json | null
+          estadoAtualContato?: Json | null
           historicoMensagens?: Json
           id?: string
           output?: Json | null

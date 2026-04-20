@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
+import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
 
 type RouteParams = { params: Promise<{ id: string; fotoId: string }> }
 
@@ -22,10 +23,10 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Foto não encontrada" }, { status: 404 })
   }
 
-  const urlParts = foto.url.split("/fotos-leads/")
+  const urlParts = foto.url.split(`/${BUCKET_FOTOS_CONTATO}/`)
   if (urlParts.length > 1) {
     const storagePath = urlParts[1]
-    await supabaseAdmin.storage.from("fotos-leads").remove([storagePath])
+    await supabaseAdmin.storage.from(BUCKET_FOTOS_CONTATO).remove([storagePath])
   }
 
   const { error } = await supabaseAdmin

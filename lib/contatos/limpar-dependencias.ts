@@ -2,6 +2,7 @@ import { createHash } from "crypto"
 import { supabaseAdmin } from "@/lib/supabase"
 import { limparMemoria } from "@/lib/agente/memoria"
 import { limparBuffer, limparDebounce } from "@/lib/agente/buffer"
+import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
 
 const WHATSAPP_ANONIMIZADO_REGEX = /^[a-f0-9]{64}(_[a-z0-9]+)?$/
 
@@ -40,13 +41,13 @@ export async function limparDependenciasDoContato(params: {
   }
 
   const { data: arquivosFotos } = await supabaseAdmin.storage
-    .from("fotos-leads")
+    .from(BUCKET_FOTOS_CONTATO)
     .list(contatoId)
 
   if (arquivosFotos && arquivosFotos.length > 0) {
     const paths = arquivosFotos.map((a) => `${contatoId}/${a.name}`)
-    const { error } = await supabaseAdmin.storage.from("fotos-leads").remove(paths)
-    if (error) console.warn("[limparDependenciasDoContato] storage fotos-leads:", error.message)
+    const { error } = await supabaseAdmin.storage.from(BUCKET_FOTOS_CONTATO).remove(paths)
+    if (error) console.warn(`[limparDependenciasDoContato] storage ${BUCKET_FOTOS_CONTATO}:`, error.message)
   }
 
   await supabaseAdmin.from("analista_logs").delete().eq("contatoId", contatoId)
