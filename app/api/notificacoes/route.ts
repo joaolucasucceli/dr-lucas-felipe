@@ -25,6 +25,7 @@ export async function GET() {
       .select("id, nome, statusFunil, ultimaMovimentacaoEm")
       .is("deletadoEm", null)
       .eq("arquivado", false)
+      .eq("tipo", "lead")
       .lt("ultimaMovimentacaoEm", tressDiasAtras)
       .limit(5),
     usuarioIA
@@ -32,6 +33,7 @@ export async function GET() {
           .from("contatos")
           .select("id, nome, criadoEm")
           .eq("responsavelId", usuarioIA.id)
+          .eq("tipo", "lead")
           .gte("criadoEm", vintQuatroHorasAtras)
           .order("criadoEm", { ascending: false })
           .limit(3)

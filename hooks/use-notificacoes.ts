@@ -3,22 +3,22 @@
 import { useCallback, useEffect, useState } from "react"
 import { useRealtimeTabela } from "@/lib/realtime"
 
-interface LeadAlerta {
+interface ContatoAlerta {
   id: string
   nome: string
   statusFunil: string
   ultimaMovimentacaoEm: string | null
 }
 
-interface LeadNovoIA {
+interface ContatoNovoIA {
   id: string
   nome: string
   criadoEm: string
 }
 
 export interface DadosNotificacoes {
-  leadsAlerta: LeadAlerta[]
-  leadsNovosIA: LeadNovoIA[]
+  leadsAlerta: ContatoAlerta[]
+  leadsNovosIA: ContatoNovoIA[]
   total: number
 }
 

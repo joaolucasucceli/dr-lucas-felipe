@@ -70,6 +70,7 @@ export async function POST(request: Request) {
         .insert({
           id: criarId(),
           atualizadoEm: consentimentoEm,
+          tipo: "lead",
           nome,
           whatsapp,
           procedimentoInteresse,

@@ -69,7 +69,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       )
 
       // Toasts para eventos importantes (sem debounce)
-      if (eventType === "INSERT" && tabela === "leads") {
+      if (
+        eventType === "INSERT" &&
+        tabela === "contatos" &&
+        (payload as Record<string, string>).tipo === "lead"
+      ) {
         const nome = (payload as Record<string, string>).nome || "Novo lead"
         toast.info("Novo lead recebido!", { description: nome })
       }

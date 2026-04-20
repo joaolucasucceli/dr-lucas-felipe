@@ -10,7 +10,7 @@ interface EtapaFunil {
   cor: string
 }
 
-interface OrigemLead {
+interface OrigemContato {
   origem: string
   total: number
 }
@@ -21,7 +21,7 @@ export interface DashboardMetricas {
   taxaConversao: number
   agendamentosNoPeriodo: number
   leadsPorEtapa: EtapaFunil[]
-  leadsPorOrigem: OrigemLead[]
+  leadsPorOrigem: OrigemContato[]
   mensagensEnviadasPelaIA: number
   followUpsEnviados: number
   confirmacaoEnviadas: number
