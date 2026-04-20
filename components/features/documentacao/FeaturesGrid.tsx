@@ -16,7 +16,7 @@ export function FeaturesGrid({ features }: FeaturesGridProps) {
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
         Funcionalidades
       </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {features.map((feature, index) => (
           <Card key={index} className="border-muted">
             <CardHeader className="pb-2">

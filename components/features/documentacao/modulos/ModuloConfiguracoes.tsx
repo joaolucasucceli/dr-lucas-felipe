@@ -1,17 +1,16 @@
-import { Settings, CalendarDays, MessageCircle, Users, Zap } from "lucide-react"
+import { Settings, CalendarDays, MessageCircle, Users } from "lucide-react"
 import { HeroBanner } from "../HeroBanner"
 import { FeaturesGrid } from "../FeaturesGrid"
 import { ComoUsarSection } from "../ComoUsarSection"
-import { PermissoesCallout } from "../PermissoesCallout"
 import { DicaImportante } from "../DicaImportante"
 
 export function ModuloConfiguracoes() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <HeroBanner
         icone={<Settings />}
         titulo="Configurações"
-        subtitulo="Integrações, automações e configurações gerais do sistema"
+        subtitulo="Integrações e automações do sistema"
         gradientClasses="from-slate-600 to-gray-500"
       />
 
@@ -20,66 +19,33 @@ export function ModuloConfiguracoes() {
           {
             icone: <CalendarDays />,
             titulo: "Google Agenda",
-            descricao: "Integração OAuth com o Google Calendar para criação automática de eventos ao agendar consultas.",
+            descricao: "Integração que cria eventos automaticamente no calendário quando a Ana Júlia agenda uma avaliação.",
           },
           {
             icone: <MessageCircle />,
-            titulo: "WhatsApp via Uazapi",
-            descricao: "Conexão com o gateway WhatsApp para recebimento e envio de mensagens pela Ana Júlia.",
+            titulo: "WhatsApp",
+            descricao: "Conecta o gateway do WhatsApp pra Ana Júlia receber e enviar mensagens.",
           },
           {
             icone: <Users />,
-            titulo: "Gestão de usuários",
-            descricao: "Atalho direto para criar e gerenciar os usuários com acesso ao sistema.",
-          },
-          {
-            icone: <Zap />,
-            titulo: "Automações CRON",
-            descricao: "Follow-ups e confirmações de consulta são executados automaticamente a cada hora. Possível forçar execução manual para testes.",
+            titulo: "Usuários",
+            descricao: "Atalho pra criar e gerenciar quem tem acesso ao sistema.",
           },
         ]}
       />
 
       <ComoUsarSection
         passos={[
-          {
-            numero: 1,
-            titulo: "Configure o Google Agenda",
-            descricao: "Clique no card 'Google Agenda' e siga as instruções para autorizar via OAuth. Selecione o calendário que receberá os eventos.",
-          },
-          {
-            numero: 2,
-            titulo: "Conecte o WhatsApp",
-            descricao: "Clique em 'WhatsApp', insira a URL e o token da Uazapi, salve e escaneie o QR Code com o celular do Dr. Lucas.",
-          },
-          {
-            numero: 3,
-            titulo: "Monitore as automações",
-            descricao: "O card 'Automações' exibe o status do CRON. Use 'Forçar execução' para testar follow-ups e confirmações manualmente.",
-          },
+          { numero: 1, titulo: "Configure a Agenda", descricao: "Abra 'Google Agenda', autorize o acesso e selecione o calendário do Dr. Lucas." },
+          { numero: 2, titulo: "Conecte o WhatsApp", descricao: "Abra 'WhatsApp', insira a URL e token, escaneie o QR Code com o celular da clínica." },
+          { numero: 3, titulo: "Crie usuários", descricao: "Abra 'Usuários' e cadastre atendentes e gestores com perfil e senha." },
         ]}
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <PermissoesCallout
-          permissoes={[
-            {
-              perfil: "Gestor",
-              acesso: "total",
-              acoes: ["Configura Google Agenda e WhatsApp", "Gerencia usuários e automações"],
-            },
-            {
-              perfil: "Atendente",
-              acesso: "nenhum",
-              acoes: [],
-            },
-          ]}
-        />
-        <DicaImportante
-          texto="Sem o Google Agenda configurado, agendamentos não geram eventos no calendário. Sem o WhatsApp conectado, a Ana Júlia fica silenciosa e não recebe nem envia mensagens."
-          variante="aviso"
-        />
-      </div>
+      <DicaImportante
+        texto="Sem o Google Agenda configurado, agendamentos não vão pro calendário. Sem o WhatsApp conectado, a Ana Júlia fica muda."
+        variante="aviso"
+      />
     </div>
   )
 }

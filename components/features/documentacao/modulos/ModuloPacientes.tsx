@@ -1,17 +1,16 @@
-import { Users, ClipboardList, Heart, FolderOpen } from "lucide-react"
+import { Users, ClipboardList, Heart } from "lucide-react"
 import { HeroBanner } from "../HeroBanner"
 import { FeaturesGrid } from "../FeaturesGrid"
 import { ComoUsarSection } from "../ComoUsarSection"
-import { PermissoesCallout } from "../PermissoesCallout"
 import { DicaImportante } from "../DicaImportante"
 
 export function ModuloPacientes() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <HeroBanner
         icone={<Users />}
         titulo="Pacientes"
-        subtitulo="Cadastro completo de pacientes com prontuário integrado"
+        subtitulo="Cadastro e prontuário dos pacientes convertidos"
         gradientClasses="from-emerald-600 to-teal-400"
       />
 
@@ -19,67 +18,34 @@ export function ModuloPacientes() {
         features={[
           {
             icone: <Users />,
-            titulo: "Conversão de Lead",
-            descricao: "Converta leads qualificados em pacientes com um clique. O lead é arquivado e um prontuário é criado automaticamente.",
+            titulo: "Conversão de lead",
+            descricao: "Transforme um lead em paciente com um clique. O prontuário é criado automaticamente.",
           },
           {
             icone: <ClipboardList />,
             titulo: "Prontuário completo",
-            descricao: "Anamnese, sinais vitais, evolução clínica, documentos e galeria de fotos. Timeline cronológica de todo o histórico.",
+            descricao: "Anamnese, evolução clínica, documentos e galeria de fotos em timeline cronológica.",
           },
           {
             icone: <Heart />,
             titulo: "Dados pessoais",
-            descricao: "Nome, WhatsApp, CPF, data de nascimento, sexo, endereço, contato de emergência e consentimento LGPD.",
-          },
-          {
-            icone: <FolderOpen />,
-            titulo: "Layout em 2 colunas",
-            descricao: "Dados pessoais à esquerda e prontuário à direita. Tudo visível sem precisar trocar de aba.",
+            descricao: "CPF, nascimento, endereço, contato de emergência e consentimento LGPD.",
           },
         ]}
       />
 
       <ComoUsarSection
         passos={[
-          {
-            numero: 1,
-            titulo: "Converta o lead",
-            descricao: "Na página do lead, clique em 'Converter em Paciente'. Um prontuário será criado automaticamente e o lead será arquivado.",
-          },
-          {
-            numero: 2,
-            titulo: "Preencha os dados",
-            descricao: "Acesse Pacientes no menu, abra o paciente e preencha os dados pessoais. Salvamento automático ao sair do campo.",
-          },
-          {
-            numero: 3,
-            titulo: "Gerencie o prontuário",
-            descricao: "Na coluna direita, registre anamnese, sinais vitais, evoluções, faça upload de documentos e fotos do paciente.",
-          },
+          { numero: 1, titulo: "Converta o lead", descricao: "Na página do lead, clique 'Converter em Paciente'. Prontuário nasce pronto." },
+          { numero: 2, titulo: "Preencha os dados", descricao: "Dados pessoais à esquerda, prontuário à direita. Salva automático." },
+          { numero: 3, titulo: "Gerencie evoluções", descricao: "Registre anamnese, suba documentos, atualize fotos ao longo do tratamento." },
         ]}
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <PermissoesCallout
-          permissoes={[
-            {
-              perfil: "Gestor",
-              acesso: "total",
-              acoes: ["Converte leads em pacientes", "Gerencia prontuário completo", "Visualiza todos os pacientes"],
-            },
-            {
-              perfil: "Atendente",
-              acesso: "nenhum",
-              acoes: [],
-            },
-          ]}
-        />
-        <DicaImportante
-          texto="O consentimento LGPD deve ser obtido antes de coletar dados pessoais. Marque o checkbox na ficha do paciente após obter autorização."
-          variante="aviso"
-        />
-      </div>
+      <DicaImportante
+        texto="Marque o consentimento LGPD antes de coletar dados pessoais do paciente."
+        variante="aviso"
+      />
     </div>
   )
 }

@@ -5,11 +5,11 @@ import { ComoUsarSection } from "../ComoUsarSection"
 
 export function ModuloMeuPerfil() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <HeroBanner
         icone={<User />}
         titulo="Meu Perfil"
-        subtitulo="Gerencie seus dados pessoais, foto e senha"
+        subtitulo="Seus dados, foto e senha"
         gradientClasses="from-slate-600 to-gray-400"
       />
 
@@ -18,38 +18,26 @@ export function ModuloMeuPerfil() {
           {
             icone: <Camera />,
             titulo: "Foto de perfil",
-            descricao: "Envie sua foto e ela aparece no avatar do header. Aceita JPG, PNG ou WebP até 5MB. Troque a qualquer momento.",
+            descricao: "JPG, PNG ou WebP até 5MB. Aparece no avatar do header.",
           },
           {
             icone: <Mail />,
             titulo: "Dados pessoais",
-            descricao: "Atualize seu nome e e-mail. O nome aparece no header e nas interações do sistema.",
+            descricao: "Atualize nome e e-mail. O nome aparece no header e nas interações do sistema.",
           },
           {
             icone: <Lock />,
             titulo: "Alterar senha",
-            descricao: "Troque sua senha informando a atual e a nova. Mínimo de 6 caracteres. A nova senha vale no próximo login.",
+            descricao: "Mínimo 6 caracteres. Precisa informar a senha atual pra trocar.",
           },
         ]}
       />
 
       <ComoUsarSection
         passos={[
-          {
-            numero: 1,
-            titulo: "Acesse Meu Perfil",
-            descricao: "Clique no seu nome no canto superior direito e selecione 'Meu Perfil'.",
-          },
-          {
-            numero: 2,
-            titulo: "Atualize sua foto",
-            descricao: "No card 'Foto de Perfil', clique no ícone de câmera e selecione uma imagem. O avatar atualiza imediatamente.",
-          },
-          {
-            numero: 3,
-            titulo: "Salve seus dados",
-            descricao: "Edite nome ou e-mail e clique em 'Salvar'. Para alterar a senha, preencha os 3 campos e clique em 'Alterar Senha'.",
-          },
+          { numero: 1, titulo: "Acesse", descricao: "Clique no seu nome no canto superior direito e em 'Meu Perfil'." },
+          { numero: 2, titulo: "Atualize a foto", descricao: "No card 'Foto', clique no ícone de câmera e escolha a imagem." },
+          { numero: 3, titulo: "Salve mudanças", descricao: "Edite o que precisar e clique 'Salvar'. Pra senha, use o botão 'Alterar Senha'." },
         ]}
       />
     </div>

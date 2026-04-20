@@ -75,14 +75,12 @@ export function AjudaContextual() {
       </Tooltip>
 
       <Dialog open={aberto} onOpenChange={setAberto}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Ajuda — {titulo}</DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] pr-4">
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <Componente />
-            </div>
+            <Componente />
           </ScrollArea>
         </DialogContent>
       </Dialog>

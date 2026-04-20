@@ -1,17 +1,16 @@
-import { UserSearch, Search, Users, Download, Eye } from "lucide-react"
+import { UserSearch, Search, Users, Eye } from "lucide-react"
 import { HeroBanner } from "../HeroBanner"
 import { FeaturesGrid } from "../FeaturesGrid"
 import { ComoUsarSection } from "../ComoUsarSection"
-import { PermissoesCallout } from "../PermissoesCallout"
 import { DicaImportante } from "../DicaImportante"
 
 export function ModuloLeads() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <HeroBanner
         icone={<UserSearch />}
         titulo="Leads"
-        subtitulo="Gestão completa da base de pacientes e potenciais clientes"
+        subtitulo="Gestão da base de potenciais pacientes"
         gradientClasses="from-violet-600 to-purple-400"
       />
 
@@ -20,71 +19,33 @@ export function ModuloLeads() {
           {
             icone: <Search />,
             titulo: "Busca e filtros",
-            descricao: "Filtre por nome, WhatsApp, etapa do funil e status de arquivamento. Combine filtros para localizar leads específicos.",
+            descricao: "Filtre por nome, WhatsApp, etapa do funil ou arquivamento. Exporte em CSV.",
           },
           {
             icone: <Users />,
-            titulo: "Cadastro de leads",
-            descricao: "Crie leads manualmente com nome, WhatsApp, procedimento de interesse e canal de origem.",
-          },
-          {
-            icone: <Download />,
-            titulo: "Exportação CSV",
-            descricao: "Exporte a lista filtrada em formato CSV para análise em planilhas ou ferramentas externas.",
+            titulo: "Cadastro manual",
+            descricao: "Crie leads com nome, WhatsApp, procedimento de interesse e origem.",
           },
           {
             icone: <Eye />,
             titulo: "Perfil completo",
-            descricao: "Clique em qualquer lead para acessar histórico de conversas, fotos antes/depois e todos os agendamentos.",
+            descricao: "Conversas, fotos antes/depois e agendamentos reunidos num só lugar.",
           },
         ]}
       />
 
       <ComoUsarSection
         passos={[
-          {
-            numero: 1,
-            titulo: "Visualize e filtre leads",
-            descricao: "Use os filtros de etapa, status e busca por nome ou WhatsApp para segmentar a lista.",
-          },
-          {
-            numero: 2,
-            titulo: "Crie um novo lead",
-            descricao: "Clique em 'Novo Lead', preencha nome e WhatsApp (obrigatórios) e salve. Os demais campos são opcionais.",
-          },
-          {
-            numero: 3,
-            titulo: "Acesse o perfil",
-            descricao: "Clique em qualquer linha da tabela para abrir o perfil completo com histórico, fotos e agendamentos.",
-          },
-          {
-            numero: 4,
-            titulo: "Exporte os dados",
-            descricao: "Com os filtros aplicados, clique em 'Exportar CSV' para gerar relatório segmentado.",
-          },
+          { numero: 1, titulo: "Filtre a lista", descricao: "Use os filtros de etapa, status e busca pra segmentar." },
+          { numero: 2, titulo: "Crie um lead", descricao: "'Novo Lead': nome e WhatsApp são obrigatórios, o resto é opcional." },
+          { numero: 3, titulo: "Abra o perfil", descricao: "Clique numa linha pra ver histórico, fotos e agendamentos." },
         ]}
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <PermissoesCallout
-          permissoes={[
-            {
-              perfil: "Gestor",
-              acesso: "total",
-              acoes: ["Cria, edita e arquiva leads", "Reatribui responsável", "Exporta CSV e acessa LGPD"],
-            },
-            {
-              perfil: "Atendente",
-              acesso: "total",
-              acoes: ["Cria, edita e visualiza leads", "Não gerencia usuários responsáveis"],
-            },
-          ]}
-        />
-        <DicaImportante
-          texto="O número de WhatsApp é único no sistema — a Ana Júlia usa esse campo para identificar o paciente durante o atendimento. Nunca cadastre o mesmo número para dois leads diferentes."
-          variante="aviso"
-        />
-      </div>
+      <DicaImportante
+        texto="O número de WhatsApp é único no sistema. A Ana Júlia usa ele pra identificar o paciente — nunca cadastre o mesmo número pra dois leads."
+        variante="aviso"
+      />
     </div>
   )
 }
