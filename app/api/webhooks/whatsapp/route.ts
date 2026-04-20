@@ -6,9 +6,6 @@ import { adicionarAoBuffer, deveProcessar } from "@/lib/agente/buffer"
 import {
   transcreverAudio,
   transcreverAudioBase64,
-  analisarImagem,
-  analisarImagemBase64,
-  type AnaliseFoto,
 } from "@/lib/agente/processar-midia"
 import { baixarMidia, enviarDigitando } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
@@ -231,27 +228,22 @@ export async function POST(request: NextRequest) {
 
     let conteudo = msg.conteudo
     let storedMediaUrl: string | null = null
-    let analiseFoto: AnaliseFoto | null = null
 
-    if (msg.tipo === "audio" || msg.tipo === "imagem") {
+    if (msg.tipo === "audio") {
       let transcricao: string | null = null
 
       if (msg.mediaUrl) {
         try {
-          if (msg.tipo === "audio") {
-            transcricao = await transcreverAudio(msg.mediaUrl)
-          } else {
-            analiseFoto = await analisarImagem(msg.mediaUrl)
-          }
+          transcricao = await transcreverAudio(msg.mediaUrl)
         } catch (err) {
           console.error(
-            `[Webhook] Falha via URL direta (${msg.tipo}):`,
+            `[Webhook] Falha via URL direta (audio):`,
             err instanceof Error ? err.message : err
           )
         }
       }
 
-      if (!transcricao && !analiseFoto) {
+      if (!transcricao) {
         try {
           const { data: configWa } = await supabaseAdmin
             .from("config_whatsapp")
@@ -266,45 +258,32 @@ export async function POST(request: NextRequest) {
               msg.id
             )
             if (baixado) {
-              if (msg.tipo === "audio") {
-                transcricao = await transcreverAudioBase64(
-                  baixado.base64,
-                  baixado.mimetype
-                )
-              } else {
-                analiseFoto = await analisarImagemBase64(
-                  baixado.base64,
-                  baixado.mimetype
-                )
-              }
+              transcricao = await transcreverAudioBase64(
+                baixado.base64,
+                baixado.mimetype
+              )
             }
           }
         } catch (err) {
           console.error(
-            `[Webhook] Falha via /message/download (${msg.tipo}):`,
+            `[Webhook] Falha via /message/download (audio):`,
             err instanceof Error ? err.message : err
           )
         }
       }
 
-      if (msg.tipo === "audio") {
-        if (transcricao) {
-          conteudo = `[Áudio transcrito]: ${transcricao}`
-        } else {
-          conteudo = conteudo
-            ? `${conteudo}\n[áudio recebido — transcrição indisponível]`
-            : "[áudio recebido — transcrição indisponível]"
-        }
+      if (transcricao) {
+        conteudo = `[Áudio transcrito]: ${transcricao}`
       } else {
-        if (analiseFoto) {
-          conteudo = conteudo
-            ? `${conteudo}\n[Imagem]: ${analiseFoto.descricao}`
-            : `[Imagem]: ${analiseFoto.descricao}`
-        } else {
-          conteudo = conteudo
-            ? `${conteudo}\n[imagem recebida — descrição indisponível]`
-            : "[imagem recebida — descrição indisponível]"
-        }
+        conteudo = conteudo
+          ? `${conteudo}\n[áudio recebido — transcrição indisponível]`
+          : "[áudio recebido — transcrição indisponível]"
+      }
+    } else if (msg.tipo === "imagem") {
+      // JLAU-594: imagens vao direto pro atendimento, sem IA.
+      // Caption do paciente vira o conteudo; se nao houver, marca "[Imagem]".
+      if (!conteudo?.trim()) {
+        conteudo = "[Imagem]"
       }
     }
 
@@ -441,14 +420,17 @@ export async function POST(request: NextRequest) {
     if (ehAtendente) continue
 
     if (msg.tipo === "imagem" && storedMediaUrl) {
+      // JLAU-594: webhook anexa imagem direto, sem IA.
+      // Descricao = caption do paciente (se houver); tipo classificavel manualmente depois.
+      const captionPaciente = msg.conteudo?.trim() || null
       const { error: fotoErr } = await supabaseAdmin
         .from("fotos_lead")
         .insert({
           id: criarId(),
           leadId: lead!.id,
           url: storedMediaUrl,
-          tipoAnalise: analiseFoto?.tipo ?? "geral",
-          descricao: analiseFoto?.descricao ?? null,
+          tipoAnalise: "geral",
+          descricao: captionPaciente,
         })
 
       if (fotoErr) {

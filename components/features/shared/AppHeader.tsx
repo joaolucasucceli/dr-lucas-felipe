@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { LogOut, Search, User, Settings, BookOpen } from "lucide-react"
+import { LogOut, Search, User, Settings } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,7 @@ import { MobileSidebarTrigger } from "@/components/features/shared/AppSidebar"
 import { Badge } from "@/components/ui/badge"
 import dynamic from "next/dynamic"
 import { ThemeToggle } from "@/components/features/shared/ThemeToggle"
+import { AjudaContextual } from "@/components/features/shared/AjudaContextual"
 
 const BuscaGlobal = dynamic(
   () => import("@/components/features/busca/BuscaGlobal").then((m) => m.BuscaGlobal),
@@ -82,6 +83,8 @@ export function AppHeader({ nome, email, perfil, fotoUrl }: AppHeaderProps) {
           </kbd>
         </Button>
 
+        <AjudaContextual />
+
         <PainelNotificacoes />
 
         <DropdownMenu>
@@ -112,10 +115,6 @@ export function AppHeader({ nome, email, perfil, fotoUrl }: AppHeaderProps) {
                 Configurações
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={() => router.push("/documentacao")}>
-              <BookOpen className="mr-2 h-4 w-4" />
-              Documentação
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: "/login" })}

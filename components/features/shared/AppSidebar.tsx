@@ -12,6 +12,7 @@ import {
   Film,
   HeartPulse,
   BrainCog,
+  Sparkles,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -44,7 +45,7 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Operacional",
+    label: "Comercial",
     itens: [
       {
         titulo: "Atendimentos",
@@ -57,16 +58,33 @@ const navGroups: NavGroup[] = [
         icone: <UserSearch className="h-4 w-4" />,
       },
       {
-        titulo: "Pacientes",
-        href: "/pacientes",
-        icone: <Users className="h-4 w-4" />,
+        titulo: "Ana Júlia",
+        href: "/ana-julia",
+        icone: <Sparkles className="h-4 w-4" />,
+      },
+      {
+        titulo: "Eduarda",
+        href: "/eduarda",
+        icone: <BrainCog className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "Mídia Marketing",
+        href: "/midia-marketing",
+        icone: <Film className="h-4 w-4" />,
         perfis: ["gestor"],
       },
     ],
   },
   {
-    label: "Clínica",
+    label: "Operacional",
     itens: [
+      {
+        titulo: "Pacientes",
+        href: "/pacientes",
+        icone: <Users className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
       {
         titulo: "Procedimentos",
         href: "/procedimentos",
@@ -77,18 +95,6 @@ const navGroups: NavGroup[] = [
         titulo: "Base de Conhecimento",
         href: "/base-conhecimento",
         icone: <Brain className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
-      {
-        titulo: "Mídia Marketing",
-        href: "/midia-marketing",
-        icone: <Film className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
-      {
-        titulo: "Analista IA",
-        href: "/analista-logs",
-        icone: <BrainCog className="h-4 w-4" />,
         perfis: ["gestor"],
       },
     ],
