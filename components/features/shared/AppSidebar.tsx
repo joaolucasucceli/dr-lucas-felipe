@@ -58,17 +58,6 @@ const navGroups: NavGroup[] = [
         icone: <UserSearch className="h-4 w-4" />,
       },
       {
-        titulo: "Ana Júlia",
-        href: "/ana-julia",
-        icone: <Sparkles className="h-4 w-4" />,
-      },
-      {
-        titulo: "Eduarda",
-        href: "/eduarda",
-        icone: <BrainCog className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
-      {
         titulo: "Mídia Marketing",
         href: "/midia-marketing",
         icone: <Film className="h-4 w-4" />,
@@ -95,6 +84,22 @@ const navGroups: NavGroup[] = [
         titulo: "Base de Conhecimento",
         href: "/base-conhecimento",
         icone: <Brain className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+    ],
+  },
+  {
+    label: "Colaboradores",
+    itens: [
+      {
+        titulo: "Ana Júlia",
+        href: "/ana-julia",
+        icone: <Sparkles className="h-4 w-4" />,
+      },
+      {
+        titulo: "Eduarda",
+        href: "/eduarda",
+        icone: <BrainCog className="h-4 w-4" />,
         perfis: ["gestor"],
       },
     ],
