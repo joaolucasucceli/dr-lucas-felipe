@@ -99,7 +99,7 @@ export function useProntuario(pacienteId: string): UseProntuarioReturn {
     setErro(null)
 
     try {
-      const res = await fetch(`/api/pacientes/${pacienteId}/prontuario`)
+      const res = await fetch(`/api/contatos/${pacienteId}/prontuario`)
 
       if (!res.ok) {
         throw new Error("Erro ao carregar prontuário")

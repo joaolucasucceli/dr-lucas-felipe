@@ -51,7 +51,7 @@ export function ListaDocumentos({ pacienteId }: ListaDocumentosProps) {
   const buscar = useCallback(async () => {
     setCarregando(true)
     try {
-      const res = await fetch(`/api/pacientes/${pacienteId}/prontuario/documentos`)
+      const res = await fetch(`/api/contatos/${pacienteId}/prontuario/documentos`)
       if (!res.ok) throw new Error()
       const json = await res.json()
       setDocumentos(json.dados)
@@ -69,7 +69,7 @@ export function ListaDocumentos({ pacienteId }: ListaDocumentosProps) {
   async function handleDownload(docId: string) {
     try {
       const res = await fetch(
-        `/api/pacientes/${pacienteId}/prontuario/documentos/${docId}`
+        `/api/contatos/${pacienteId}/prontuario/documentos/${docId}`
       )
       if (!res.ok) throw new Error()
       const json = await res.json()
@@ -82,7 +82,7 @@ export function ListaDocumentos({ pacienteId }: ListaDocumentosProps) {
   async function handleExcluir(docId: string) {
     try {
       const res = await fetch(
-        `/api/pacientes/${pacienteId}/prontuario/documentos/${docId}`,
+        `/api/contatos/${pacienteId}/prontuario/documentos/${docId}`,
         { method: "DELETE" }
       )
       if (!res.ok) throw new Error()

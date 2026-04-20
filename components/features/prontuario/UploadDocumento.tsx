@@ -92,7 +92,7 @@ export function UploadDocumento({
       if (descricao.trim()) formData.append("descricao", descricao.trim())
 
       const res = await fetch(
-        `/api/pacientes/${pacienteId}/prontuario/documentos`,
+        `/api/contatos/${pacienteId}/prontuario/documentos`,
         { method: "POST", body: formData }
       )
 

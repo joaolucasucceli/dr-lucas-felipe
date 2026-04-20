@@ -77,7 +77,7 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
   const buscar = useCallback(async () => {
     setCarregando(true)
     try {
-      const res = await fetch(`/api/pacientes/${pacienteId}/prontuario/fotos`)
+      const res = await fetch(`/api/contatos/${pacienteId}/prontuario/fotos`)
       if (!res.ok) throw new Error()
       const json = await res.json()
       setFotos(json.dados)
@@ -114,7 +114,7 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
       if (descricao.trim()) formData.append("descricao", descricao.trim())
 
       const res = await fetch(
-        `/api/pacientes/${pacienteId}/prontuario/fotos`,
+        `/api/contatos/${pacienteId}/prontuario/fotos`,
         { method: "POST", body: formData }
       )
 
@@ -136,7 +136,7 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
   async function handleExcluir(fotoId: string) {
     try {
       const res = await fetch(
-        `/api/pacientes/${pacienteId}/prontuario/fotos/${fotoId}`,
+        `/api/contatos/${pacienteId}/prontuario/fotos/${fotoId}`,
         { method: "DELETE" }
       )
       if (!res.ok) throw new Error()

@@ -72,7 +72,7 @@ export function SinaisVitais({ pacienteId }: SinaisVitaisProps) {
     setCarregando(true)
     try {
       const params = filtroTipo !== "todos" ? `?tipo=${filtroTipo}` : ""
-      const res = await fetch(`/api/pacientes/${pacienteId}/prontuario/sinais-vitais${params}`)
+      const res = await fetch(`/api/contatos/${pacienteId}/prontuario/sinais-vitais${params}`)
       if (!res.ok) throw new Error()
       const json = await res.json()
       setSinais(json.dados)
@@ -90,7 +90,7 @@ export function SinaisVitais({ pacienteId }: SinaisVitaisProps) {
   async function handleExcluir(sinalId: string) {
     try {
       const res = await fetch(
-        `/api/pacientes/${pacienteId}/prontuario/sinais-vitais/${sinalId}`,
+        `/api/contatos/${pacienteId}/prontuario/sinais-vitais/${sinalId}`,
         { method: "DELETE" }
       )
       if (!res.ok) throw new Error()

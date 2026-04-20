@@ -44,7 +44,7 @@ export function TimelineEvolucao({ evolucoes, pacienteId, onAtualizar }: Timelin
   async function handleExcluir(evolucaoId: string) {
     try {
       const res = await fetch(
-        `/api/pacientes/${pacienteId}/prontuario/evolucoes/${evolucaoId}`,
+        `/api/contatos/${pacienteId}/prontuario/evolucoes/${evolucaoId}`,
         { method: "DELETE" }
       )
       if (!res.ok) throw new Error()
