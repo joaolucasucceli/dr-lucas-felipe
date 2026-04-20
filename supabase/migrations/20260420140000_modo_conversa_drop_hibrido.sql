@@ -26,6 +26,9 @@ UPDATE conversas SET "modoConversa" = 'ia' WHERE "modoConversa"::text = 'hibrido
 -- Criar novo enum
 CREATE TYPE "ModoConversa_new" AS ENUM ('ia', 'humano');
 
+-- Dropar DEFAULT antes de trocar o tipo (PG nao converte default automaticamente)
+ALTER TABLE conversas ALTER COLUMN "modoConversa" DROP DEFAULT;
+
 -- Migrar a coluna
 ALTER TABLE conversas
   ALTER COLUMN "modoConversa" TYPE "ModoConversa_new"
@@ -34,5 +37,8 @@ ALTER TABLE conversas
 -- Dropar enum antigo e renomear
 DROP TYPE "ModoConversa";
 ALTER TYPE "ModoConversa_new" RENAME TO "ModoConversa";
+
+-- Restaurar DEFAULT com o novo tipo
+ALTER TABLE conversas ALTER COLUMN "modoConversa" SET DEFAULT 'ia'::"ModoConversa";
 
 COMMIT;
