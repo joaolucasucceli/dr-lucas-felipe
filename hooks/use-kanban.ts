@@ -19,6 +19,7 @@ export interface KanbanLead {
   diasNaEtapa: number
   responsavel: { id: string; nome: string } | null
   followUpEnviados: string[]
+  iaPausada: boolean
 }
 
 interface UseKanbanParams {

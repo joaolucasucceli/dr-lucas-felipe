@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       ehRetorno,
       cicloAtual,
       responsavel:usuarios!leads_responsavelId_fkey(id, nome),
-      conversas(followUpEnviados, encerradaEm, criadoEm)
+      conversas(followUpEnviados, encerradaEm, criadoEm, modoConversa)
     `)
     .is("deletadoEm", null)
     .eq("arquivado", false)
@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
     followUpEnviados?: string[] | null
     encerradaEm?: string | null
     criadoEm?: string | null
+    modoConversa?: "ia" | "humano" | null
   }
 
   type LeadKanban = {
@@ -104,6 +105,7 @@ export async function GET(request: NextRequest) {
       ...resto,
       diasNaEtapa,
       followUpEnviados: conversaAberta?.followUpEnviados ?? [],
+      iaPausada: conversaAberta?.modoConversa === "humano",
     })
   }
 

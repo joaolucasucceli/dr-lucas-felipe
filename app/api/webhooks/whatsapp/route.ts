@@ -213,8 +213,13 @@ export async function POST(request: NextRequest) {
   }
 
   for (const msg of mensagens) {
-    if (msg.fromMe) continue
     if (msg.isGroup) continue
+
+    // JLAU-584: fromMe = mensagens enviadas pela propria instancia.
+    // Pode ser: (a) IA via registrar-mensagem; (b) atendente pelo WhatsApp pessoal da clinica
+    // apos pausar a IA. Em (a) o dedup por messageIdWhatsapp (UNIQUE) protege duplicata.
+    // Em (b) registramos como remetente "atendente" para aparecer no historico do lead.
+    const ehAtendente = msg.fromMe === true
 
     const { data: existe } = await supabaseAdmin
       .from("mensagens_whatsapp")
@@ -416,7 +421,7 @@ export async function POST(request: NextRequest) {
         messageIdWhatsapp: msg.id,
         tipo: msg.tipo,
         conteudo,
-        remetente: "paciente",
+        remetente: ehAtendente ? "atendente" : "paciente",
         mediaUrl: storedMediaUrl,
         mediaType: msg.tipo !== "texto" ? msg.tipo : null,
       })
@@ -431,6 +436,9 @@ export async function POST(request: NextRequest) {
       .from("conversas")
       .update({ ultimaMensagemEm: agora(), atualizadoEm: agora() })
       .eq("id", conversa!.id)
+
+    // JLAU-584: mensagens do atendente nao disparam a IA e nao viram foto analisada.
+    if (ehAtendente) continue
 
     if (msg.tipo === "imagem" && storedMediaUrl) {
       const { error: fotoErr } = await supabaseAdmin

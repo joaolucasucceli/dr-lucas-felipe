@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { ArrowLeft, Trash2, Archive, ArchiveRestore, Plus, Users, ExternalLink } from "lucide-react"
+import { ArrowLeft, Trash2, Archive, ArchiveRestore, Plus, Users, ExternalLink, Pause, Play } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -53,6 +53,7 @@ export default function LeadDetalhePage() {
   const [convertendo, setConvertendo] = useState(false)
   const [formAgendamento, setFormAgendamento] = useState(false)
   const [confirmCancelarAgendamento, setConfirmCancelarAgendamento] = useState<string | null>(null)
+  const [confirmTogglePausa, setConfirmTogglePausa] = useState(false)
 
   const { dados: agendamentos, recarregar: recarregarAgendamentos } = useAgendamentos({ leadId: id })
 
@@ -204,6 +205,33 @@ export default function LeadDetalhePage() {
     }
   }
 
+  async function handleTogglePausa() {
+    const conversa = lead?.conversas?.[0]
+    if (!conversa) {
+      toast.error("Nenhuma conversa ativa para alternar")
+      return
+    }
+    const estaPausada = conversa.modoConversa === "humano"
+    const rota = estaPausada ? "retomar-ia" : "pausar-ia"
+    try {
+      const res = await fetch(`/api/atendimento/${rota}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversaId: conversa.id }),
+      })
+      if (!res.ok) {
+        const erro = await res.json()
+        throw new Error(erro.error || "Erro ao alternar estado da IA")
+      }
+      toast.success(estaPausada ? "IA retomada" : "IA pausada — responda pelo WhatsApp")
+      recarregar()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao alternar estado da IA")
+    } finally {
+      setConfirmTogglePausa(false)
+    }
+  }
+
   async function handleCancelarAgendamento() {
     if (!confirmCancelarAgendamento) return
     try {
@@ -270,6 +298,24 @@ export default function LeadDetalhePage() {
               </>
             )}
           </Button>
+          {lead.conversas?.[0] && (
+            <Button
+              variant={lead.conversas[0].modoConversa === "humano" ? "default" : "outline"}
+              onClick={() => setConfirmTogglePausa(true)}
+            >
+              {lead.conversas[0].modoConversa === "humano" ? (
+                <>
+                  <Play className="mr-2 h-4 w-4" />
+                  Retomar IA
+                </>
+              ) : (
+                <>
+                  <Pause className="mr-2 h-4 w-4" />
+                  Pausar IA
+                </>
+              )}
+            </Button>
+          )}
           {/* Botão Converter/Ver Paciente */}
           {lead.paciente ? (
             <Button variant="outline" onClick={() => router.push(`/pacientes/${lead.paciente!.id}`)}>
@@ -599,6 +645,19 @@ export default function LeadDetalhePage() {
         onFechar={() => setConfirmConverter(false)}
         onConfirmar={handleConverter}
         textoBotao={convertendo ? "Convertendo..." : "Converter"}
+      />
+
+      <ConfirmDialog
+        titulo={lead.conversas?.[0]?.modoConversa === "humano" ? "Retomar IA" : "Pausar IA"}
+        descricao={
+          lead.conversas?.[0]?.modoConversa === "humano"
+            ? "A IA volta a responder automaticamente as mensagens deste paciente. Deseja continuar?"
+            : "A IA para de responder. Qualquer resposta precisa ser enviada direto pelo WhatsApp do atendente. Deseja continuar?"
+        }
+        aberto={confirmTogglePausa}
+        onFechar={() => setConfirmTogglePausa(false)}
+        onConfirmar={handleTogglePausa}
+        textoBotao={lead.conversas?.[0]?.modoConversa === "humano" ? "Retomar IA" : "Pausar IA"}
       />
     </div>
   )

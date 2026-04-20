@@ -1282,7 +1282,7 @@ export type Database = {
         | "procedimento_agendado"
         | "concluido"
         | "perdido"
-      ModoConversa: "ia" | "humano" | "hibrido"
+      ModoConversa: "ia" | "humano"
       Perfil: "gestor" | "atendente"
       StatusAgendamento:
         | "agendado"
@@ -1474,7 +1474,7 @@ export const Constants = {
         "concluido",
         "perdido",
       ],
-      ModoConversa: ["ia", "humano", "hibrido"],
+      ModoConversa: ["ia", "humano"],
       Perfil: ["gestor", "atendente"],
       StatusAgendamento: [
         "agendado",

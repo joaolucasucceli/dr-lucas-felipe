@@ -33,6 +33,7 @@ interface Lead {
     id: string
     etapa: string
     ciclo: number
+    modoConversa: "ia" | "humano"
     mensagens: Array<{
       id: string
       tipo: string

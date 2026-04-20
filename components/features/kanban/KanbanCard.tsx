@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { Draggable } from "@hello-pangea/dnd"
 import { formatDistanceToNow, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { AlertTriangle, Clock, Bell, DoorOpen, Repeat2 } from "lucide-react"
+import { AlertTriangle, Clock, Bell, DoorOpen, Repeat2, Pause } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
 import type { KanbanLead } from "@/hooks/use-kanban"
@@ -86,6 +86,17 @@ export function KanbanCard({ lead, index }: KanbanCardProps) {
                   <Repeat2 className="h-3 w-3" />
                   {lead.cicloAtual}º
                 </span>
+              )}
+              {lead.iaPausada && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="flex items-center gap-0.5 shrink-0 rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                      <Pause className="h-3 w-3" />
+                      IA pausada
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>IA pausada — atendente responde via WhatsApp</TooltipContent>
+                </Tooltip>
               )}
               <FollowUpBadge followUpEnviados={lead.followUpEnviados} />
               {lead.diasNaEtapa > 3 && (
