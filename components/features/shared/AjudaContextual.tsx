@@ -75,7 +75,7 @@ export function AjudaContextual() {
       </Tooltip>
 
       <Dialog open={aberto} onOpenChange={setAberto}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Ajuda — {titulo}</DialogTitle>
           </DialogHeader>
