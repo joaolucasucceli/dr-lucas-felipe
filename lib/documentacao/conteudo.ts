@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.30.0"
+export const VERSAO_DOCUMENTACAO = "1.31.0"
 export const DATA_ATUALIZACAO = "2026-04-20"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -394,16 +394,17 @@ POST /api/webhooks/whatsapp
 2. **Agendamento** — Consulta disponibilidade e registra consulta no sistema
 3. **Gestão do Agendamento** — Confirmações, remarcações e pós-consulta
 
-### Ferramentas do Agente (7 endpoints)
+### Ferramentas do Agente (8 endpoints)
 
-A Ana Júlia tem apenas ferramentas de **conversa e consulta** — data entry estruturado (nome, procedimento, sobreOPaciente, avanço de etapa) é feito pela Analista IA em pipeline separado.
+A Ana Júlia tem ferramentas de **conversa, consulta e agendamento** — data entry estruturado de qualificação (nome, procedimento, sobreOPaciente, avanço de etapa até \`agendamento\`) é feito pela Analista IA em pipeline separado.
 
 | Endpoint | Função |
 |----------|--------|
 | \`/api/agente/consultar-paciente\` | Busca informações do paciente (cria lead novo se não existir) |
 | \`/api/agente/consultar-procedimentos\` | Lista procedimentos ativos |
-| \`/api/agente/registrar-agendamento\` | Cria agendamento (reservada para fluxo pós-Google Calendar) |
-| \`/api/agente/atualizar-agendamento\` | Remarca/cancela agendamento (reservada) |
+| \`/api/agente/consultar-agenda\` | Retorna slots livres do Dr. Lucas cruzando Google Calendar + expediente + agendamentos existentes (até 10 slots, próximos 14 dias). Ana Júlia chama antes de propor horário |
+| \`/api/agente/registrar-agendamento\` | Cria agendamento com o \`dataIso\` de um slot retornado pelo \`consultar-agenda\`. Cria evento no Google Calendar e avança funil pra \`consulta_agendada\` |
+| \`/api/agente/atualizar-agendamento\` | Remarca ou cancela agendamento existente |
 | \`/api/agente/registrar-mensagem\` | Persiste mensagem no banco |
 | \`/api/agente/listar-midias\` | Lista mídias de marketing com descrição e status \`jaEnviada\` |
 | \`/api/agente/enviar-midia\` | Envia mídia escolhida ao paciente via WhatsApp |
