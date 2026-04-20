@@ -9,7 +9,7 @@ import {
 import type {
   AnalistaOutput,
   Divergencia,
-  EstadoAtualLead,
+  EstadoAtualContato,
   MensagemHistorico,
 } from "@/lib/agente/analista-types"
 import type { Json } from "@/lib/types/database"
@@ -17,7 +17,7 @@ import type { Json } from "@/lib/types/database"
 const MAX_MENSAGENS_HISTORICO = 30
 
 function calcularDivergencias(
-  atual: EstadoAtualLead,
+  atual: EstadoAtualContato,
   output: AnalistaOutput
 ): Divergencia[] {
   const divs: Divergencia[] = []
@@ -64,7 +64,7 @@ function calcularDivergencias(
   return divs
 }
 
-async function carregarEstadoAtual(contatoId: string): Promise<EstadoAtualLead | null> {
+async function carregarEstadoAtual(contatoId: string): Promise<EstadoAtualContato | null> {
   const { data } = await supabaseAdmin
     .from("contatos")
     .select("nome, statusFunil, procedimentoInteresse, sobreOPaciente")
@@ -103,7 +103,7 @@ function formatarHistoricoParaPrompt(historico: MensagemHistorico[]): string {
 
 async function chamarAnalistaLLM(
   historico: MensagemHistorico[],
-  atual: EstadoAtualLead
+  atual: EstadoAtualContato
 ): Promise<AnalistaOutput> {
   const userContent = `## Estado atual do lead no CRM
 
@@ -167,7 +167,7 @@ export async function analisarConversa(params: {
   const { contatoId, conversaId } = params
 
   let historico: MensagemHistorico[] = []
-  let estadoAtual: EstadoAtualLead | null = null
+  let estadoAtual: EstadoAtualContato | null = null
   let output: AnalistaOutput | null = null
   let divergencias: Divergencia[] = []
   let erro: string | null = null

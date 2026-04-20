@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
 
   if (!lead) {
-    return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
+    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
   }
 
   if (!lead.arquivado) {

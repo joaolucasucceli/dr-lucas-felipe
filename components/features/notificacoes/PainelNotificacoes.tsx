@@ -89,7 +89,7 @@ export function PainelNotificacoes() {
             <div className="p-2">
               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                 <AlertTriangle className="mr-1 inline h-3 w-3 text-yellow-500" />
-                Leads em alerta
+                Contatos em alerta
               </p>
               {notificacoes.leadsAlerta.map((lead) => (
                 <button
@@ -112,7 +112,7 @@ export function PainelNotificacoes() {
             <div className={notificacoes.leadsAlerta.length > 0 ? "border-t p-2" : "p-2"}>
               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                 <Bot className="mr-1 inline h-3 w-3 text-green-500" />
-                Novos leads da IA
+                Novos contatos da IA
               </p>
               {notificacoes.leadsNovosIA.map((lead) => (
                 <button
@@ -132,10 +132,10 @@ export function PainelNotificacoes() {
 
         <div className="border-t px-4 py-2">
           <button
-            onClick={() => navegar("/leads")}
+            onClick={() => navegar("/contatos")}
             className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
           >
-            Ver todos os leads
+            Ver todos os contatos
           </button>
         </div>
       </PopoverContent>

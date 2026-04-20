@@ -14,12 +14,12 @@ const SELECT_EVOLUCAO =
 async function buscarProntuario(pacienteId: string) {
   const { data: paciente } = await supabaseAdmin
     .from("contatos")
-    .select("id")
+    .select("id, tipo")
     .eq("id", pacienteId)
     .is("deletadoEm", null)
     .maybeSingle()
 
-  if (!paciente) return null
+  if (!paciente || paciente.tipo !== "paciente") return null
 
   const { data: prontuario } = await supabaseAdmin
     .from("prontuarios")

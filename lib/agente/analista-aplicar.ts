@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase"
 import { agora } from "@/lib/db-utils"
-import type { AnalistaOutput, EstadoAtualLead } from "@/lib/agente/analista-types"
+import type { AnalistaOutput, EstadoAtualContato } from "@/lib/agente/analista-types"
 
 /** Transicoes validas de statusFunil controladas pela Analista.
  *  Analista nunca regride etapa nem avanca para consulta_agendada
@@ -24,7 +24,7 @@ export interface ResultadoAplicacao {
 export async function aplicarMudancasAnalista(params: {
   contatoId: string
   conversaId: string | null
-  estadoAtual: EstadoAtualLead
+  estadoAtual: EstadoAtualContato
   output: AnalistaOutput
 }): Promise<ResultadoAplicacao> {
   const { contatoId, conversaId, estadoAtual, output } = params

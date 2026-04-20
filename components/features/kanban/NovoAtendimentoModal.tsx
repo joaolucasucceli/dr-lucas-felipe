@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 
-interface LeadBusca {
+interface ContatoBusca {
   id: string
   nome: string
   whatsapp: string
@@ -32,9 +32,9 @@ export function NovoAtendimentoModal({
   onSucesso,
 }: NovoAtendimentoModalProps) {
   const [busca, setBusca] = useState("")
-  const [resultados, setResultados] = useState<LeadBusca[]>([])
+  const [resultados, setResultados] = useState<ContatoBusca[]>([])
   const [buscando, setBuscando] = useState(false)
-  const [leadSelecionado, setLeadSelecionado] = useState<LeadBusca | null>(null)
+  const [leadSelecionado, setLeadSelecionado] = useState<ContatoBusca | null>(null)
   const [confirmando, setConfirmando] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -136,7 +136,7 @@ export function NovoAtendimentoModal({
 
           {!buscando && busca.trim() && resultados.length === 0 && !leadSelecionado && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhum lead encontrado
+              Nenhum contato encontrado
             </p>
           )}
 

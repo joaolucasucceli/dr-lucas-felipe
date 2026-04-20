@@ -323,6 +323,7 @@ export async function POST(request: NextRequest) {
         .insert({
           id: criarId(),
           atualizadoEm: agora(),
+          tipo: "lead",
           nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
           whatsapp: msg.numero,
           origem: "whatsapp",

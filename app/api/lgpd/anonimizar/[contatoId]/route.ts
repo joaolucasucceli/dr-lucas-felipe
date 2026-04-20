@@ -20,11 +20,11 @@ export async function POST(
     .maybeSingle()
 
   if (!lead) {
-    return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
+    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
   }
 
   if (lead.deletadoEm) {
-    return NextResponse.json({ error: "Lead já anonimizado" }, { status: 409 })
+    return NextResponse.json({ error: "Contato já anonimizado" }, { status: 409 })
   }
 
   if (!lead.whatsapp) {

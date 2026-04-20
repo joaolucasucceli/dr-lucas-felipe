@@ -23,7 +23,7 @@ export async function GET(
     .maybeSingle()
 
   if (!lead) {
-    return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
+    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
   }
 
   type ConversaPayload = {

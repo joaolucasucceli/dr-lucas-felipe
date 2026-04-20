@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/configuracoes/", "/leads/", "/agendamentos/"],
+      disallow: ["/api/", "/configuracoes/", "/contatos/", "/agendamentos/"],
     },
     sitemap: `${process.env.NEXTAUTH_URL || "https://drlucasfelipe.com.br"}/sitemap.xml`,
   }

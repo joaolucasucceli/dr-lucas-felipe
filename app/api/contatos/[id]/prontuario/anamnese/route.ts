@@ -25,13 +25,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const { data: paciente } = await supabaseAdmin
     .from("contatos")
-    .select("id")
+    .select("id, tipo")
     .eq("id", id)
     .is("deletadoEm", null)
     .maybeSingle()
 
-  if (!paciente) {
-    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
+  if (!paciente || paciente.tipo !== "paciente") {
+    return NextResponse.json({ error: "Paciente não encontrado" }, { status: 404 })
   }
 
   const { data: prontuario } = await supabaseAdmin

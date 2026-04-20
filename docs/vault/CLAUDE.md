@@ -16,12 +16,12 @@ Base de conhecimento do projeto **Central Dr. Lucas Felipe** (sistema web de ges
 - **Nomes em kebab-case**, datas absolutas (`YYYY-MM-DD`), nunca relativas
 - **Frontmatter obrigatorio** em toda nota: `title`, `date`, `tags`
 - **Wikilinks** `[[nome-do-arquivo]]` para conectar notas
-- **Documentacao do SISTEMA** (funcionalidades, modulos, como usar) fica em `lib/documentacao/conteudo.ts` — NAO duplicar aqui
+- **Documentacao funcional do SISTEMA** (modulos para usuario final) vive nos componentes `components/features/documentacao/modulos/*` expostos em `/documentacao` — NAO duplicar aqui
 - **O que entra no vault**: motivacao de decisoes, contexto de incidentes, padroes validados com o cliente, coisas que CODIGO nao conta
 
 ## O que NAO colocar no vault
 
-- Documentacao funcional (ja esta em `lib/documentacao/conteudo.ts` e exposta em `/documentacao`)
+- Documentacao funcional (ja esta em `components/features/documentacao/modulos/*` e exposta em `/documentacao`)
 - Instrucoes do projeto para o Claude (ja estao em `CLAUDE.md` na raiz)
 - Informacao que muda rapido (status de issues, progresso de sprint — isso vive no Linear)
 - Codigo ou snippets — prefira referenciar arquivo:linha do repo

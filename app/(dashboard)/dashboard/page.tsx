@@ -137,7 +137,7 @@ export default function DashboardPage() {
           <MetricCard
             titulo="Leads do Dia"
             valor={metricas.leadsHoje}
-            descricao="Novos leads criados hoje"
+            descricao="Novos contatos criados hoje"
             icone={<UserPlus className="h-5 w-5" />}
           />
         )}

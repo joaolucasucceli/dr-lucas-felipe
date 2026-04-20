@@ -25,7 +25,7 @@ export interface AnalistaOutput {
   confiancaGeral: number
 }
 
-export interface EstadoAtualLead {
+export interface EstadoAtualContato {
   nome: string
   statusFunil: StatusFunil | null
   procedimentoInteresse: string | null
@@ -49,7 +49,7 @@ export interface AnalistaLogRow {
   contatoId: string
   conversaId: string | null
   historicoMensagens: MensagemHistorico[]
-  estadoAtualLead: EstadoAtualLead
+  estadoAtualLead: EstadoAtualContato
   output: AnalistaOutput | null
   divergencias: Divergencia[]
   aplicado: boolean

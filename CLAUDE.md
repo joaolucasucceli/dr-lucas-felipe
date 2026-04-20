@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Central Dr. Lucas** — sistema web para gestão de atendimento da clínica do Dr. Lucas Felipe. Sistema **100% autônomo** — a IA faz todo o processo do funil (acolhimento → reunião agendada). Dois módulos integrados em uma única aplicação Next.js:
 
-1. **Painel de Gestão** — kanban (4 etapas), leads, pacientes, procedimentos, métricas, roadmap
+1. **Painel de Gestão** — kanban (4 etapas), contatos (leads e pacientes), procedimentos, métricas, roadmap
 2. **Agente IA WhatsApp ("Ana Júlia" + Analista IA)** — atendimento autônomo de pacientes via API Routes, alimentando o painel em tempo real
 
 ## Stack Tecnológica
@@ -52,7 +52,7 @@ Dois perfis: **Gestor** (acesso total), **Atendente** (operacional). O agente IA
 
 ### Funil Kanban (4 colunas)
 
-Funil simplificado: **Acolhimento → Qualificação → Agendamento → Reunião Agendada**. Todas as colunas são movidas automaticamente pela dupla Ana Júlia (SDR) + Analista IA. Depois de "Reunião Agendada", o funil para — a IA continua respondendo mas não avança mais. Conversão Lead→Paciente é manual (botão no detalhe do lead, só gestor).
+Funil simplificado: **Acolhimento → Qualificação → Agendamento → Reunião Agendada**. Todas as colunas são movidas automaticamente pela dupla Ana Júlia (SDR) + Analista IA. Depois de "Reunião Agendada", o funil para — a IA continua respondendo mas não avança mais. Promoção de lead → paciente é manual (botão no detalhe do contato, só gestor).
 
 ### Arquitetura do Agente IA (dual: SDR + Analista)
 
@@ -92,49 +92,22 @@ A Ana Júlia conduz a conversa até o horário fechar (usando as 9 ferramentas e
 
 ## Notas do Modelo de Dados
 
-- `Lead.sobreOPaciente` é texto cumulativo — nunca sobrescrever, apenas adicionar (append)
-- `Lead.whatsapp` é único — usado para dedup
+- `Contato.sobreOPaciente` é texto cumulativo — nunca sobrescrever, apenas adicionar (append)
+- `Contato.whatsapp` é único — usado para dedup
+- `Contato.tipo` é `'lead' | 'paciente'` — promoção lead → paciente preserva o `id`
 - `MensagemWhatsapp.messageIdWhatsapp` é único — usado para dedup de mensagens do WhatsApp
 - Todos os nomes de campos dos modelos estão em português (camelCase)
-
-## Documentação — Regra Obrigatória
-
-> **CRÍTICO:** A documentação do sistema DEVE ser mantida sempre atualizada.
-
-O arquivo de documentação centralizada fica em:
-```
-lib/documentacao/conteudo.ts
-```
-
-**Toda sprint, feature ou mudança no sistema DEVE atualizar esse arquivo.** O botão "Baixar Documentação" em `/documentacao` gera o `.md` a partir dele — se estiver desatualizado, o documento exportado estará errado.
-
-### O que deve ser atualizado em `lib/documentacao/conteudo.ts`
-
-| Tipo de mudança | O que atualizar |
-|-----------------|-----------------|
-| Nova página/módulo | Adicionar seção completa com funcionalidades, como usar e permissões |
-| Nova funcionalidade | Adicionar na seção do módulo correspondente |
-| Mudança de permissão de perfil | Atualizar tabela de permissões do módulo |
-| Novo modelo de dados | Atualizar seção "Modelo de Dados — Referência Rápida" |
-| Nova rota de API | Atualizar se for relevante para o usuário final |
-| Mudança no funil kanban | Atualizar seção do Módulo 3 — Atendimentos |
-| Nova ferramenta do agente IA | Atualizar tabela de ferramentas no Módulo 6 — Ana Júlia (SDR) |
-
-### Campos a atualizar sempre
-
-- `VERSAO_DOCUMENTACAO` — incrementar a versão (semver: patch para ajustes, minor para features)
-- `DATA_ATUALIZACAO` — sempre atualizar para a data da mudança (formato `YYYY-MM-DD`)
 
 ## Números do Sistema
 
 | Métrica | Quantidade |
 |---------|-----------|
 | Páginas | 20 (17 dashboard + 2 públicas + 1 root) |
-| Endpoints API | 84 |
+| Endpoints API | 80 |
 | Tabelas no banco | 24 |
 | Enums | 12 |
 | Componentes | 92 (28 UI + 64 features) |
-| Hooks customizados | 20 |
+| Hooks customizados | 19 |
 
 ## Issues Conhecidas
 
