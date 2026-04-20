@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
   const { data: conversa } = await supabaseAdmin
     .from("conversas")
-    .select("id, leadId, modoConversa")
+    .select("id, contatoId, modoConversa")
     .eq("id", parse.data.conversaId)
     .maybeSingle()
 
@@ -46,9 +46,9 @@ export async function POST(req: Request) {
   }
 
   await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .update({ responsavelId: auth.session.user.id, atualizadoEm: agora() })
-    .eq("id", conversa.leadId)
+    .eq("id", conversa.contatoId)
 
   return NextResponse.json({ sucesso: true, modoConversa: "humano" })
 }

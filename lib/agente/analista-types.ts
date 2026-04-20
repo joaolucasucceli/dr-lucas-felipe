@@ -27,7 +27,7 @@ export interface AnalistaOutput {
 
 export interface EstadoAtualLead {
   nome: string
-  statusFunil: StatusFunil
+  statusFunil: StatusFunil | null
   procedimentoInteresse: string | null
   sobreOPaciente: string | null
 }
@@ -46,7 +46,7 @@ export interface MensagemHistorico {
 
 export interface AnalistaLogRow {
   id: string
-  leadId: string
+  contatoId: string
   conversaId: string | null
   historicoMensagens: MensagemHistorico[]
   estadoAtualLead: EstadoAtualLead

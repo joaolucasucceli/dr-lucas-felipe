@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
   let body: {
     conversaId?: string
-    leadId?: string
+    contatoId?: string
     conteudo?: string
     direcao?: string
     tipo?: string
@@ -22,12 +22,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  const { leadId, conteudo, direcao, tipo, messageIdWhatsapp } = body
+  const { contatoId, conteudo, direcao, tipo, messageIdWhatsapp } = body
   let { conversaId } = body
 
-  if (!leadId || !conteudo || !direcao) {
+  if (!contatoId || !conteudo || !direcao) {
     return NextResponse.json(
-      { error: "leadId, conteudo e direcao são obrigatórios" },
+      { error: "contatoId, conteudo e direcao são obrigatórios" },
       { status: 400 }
     )
   }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       .insert({
         id: novoId,
         atualizadoEm: agora(),
-        leadId,
+        contatoId,
       })
 
     if (convError) {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     .insert({
       id: criarId(),
       conversaId,
-      leadId,
+      contatoId,
       messageIdWhatsapp: messageIdWhatsapp || `agente_${criarId()}`,
       tipo: (tipo || "texto") as never,
       conteudo,

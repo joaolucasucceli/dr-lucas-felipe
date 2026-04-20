@@ -12,7 +12,7 @@ interface LeadAgente {
 
 interface ConversaComLead {
   id: string
-  leadId: string
+  contatoId: string
   ultimaMensagemEm: string | null
   followUpEnviados: string[]
   lead: LeadAgente
@@ -36,11 +36,11 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
     .from("conversas")
     .select(`
       id,
-      leadId,
+      contatoId,
       ultimaMensagemEm,
       followUpEnviados,
       etapa,
-      lead:leads!conversas_leadId_fkey(id, nome, whatsapp, procedimentoInteresse, arquivado, deletadoEm)
+      lead:leads!conversas_contatoId_fkey(id, nome, whatsapp, procedimentoInteresse, arquivado, deletadoEm)
     `)
     .is("encerradaEm", null)
     .not("ultimaMensagemEm", "is", null)
@@ -52,7 +52,7 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
   type LeadRaw = LeadAgente & { arquivado: boolean; deletadoEm: string | null }
   type ConversaRaw = {
     id: string
-    leadId: string
+    contatoId: string
     ultimaMensagemEm: string | null
     followUpEnviados: string[] | null
     lead: LeadRaw | LeadRaw[] | null
@@ -73,7 +73,7 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
 
     const conversa: ConversaComLead = {
       id: conversaRaw.id,
-      leadId: conversaRaw.leadId,
+      contatoId: conversaRaw.contatoId,
       ultimaMensagemEm: conversaRaw.ultimaMensagemEm,
       followUpEnviados: followUps,
       lead: {
@@ -154,7 +154,7 @@ export async function enviarFollowUp(
       },
       body: JSON.stringify({
         conversaId: conversa.id,
-        leadId: conversa.leadId,
+        contatoId: conversa.contatoId,
         conteudo: mensagem,
         direcao: "agente",
       }),

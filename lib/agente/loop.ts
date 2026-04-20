@@ -88,7 +88,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
     ciclosCompletos?: number
     ultimoProcedimento?: string | null
   } = {}
-  let leadId: string | null = null
+  let contatoId: string | null = null
   let conversaId: string | null = null
 
   try {
@@ -120,7 +120,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
               ciclosCompletos: leadAtualizado.lead.ciclosCompletos,
               ultimoProcedimento: leadAtualizado.ultimoProcedimento,
             }
-            leadId = leadAtualizado.lead.id
+            contatoId = leadAtualizado.lead.id
           }
         } catch (err) {
           console.error("[Agente] Erro ao abrir novo ciclo:", err)
@@ -130,7 +130,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
             etapa: resultadoPaciente.lead.statusFunil,
             sobreOPaciente: resultadoPaciente.sobreOPaciente,
           }
-          leadId = resultadoPaciente.lead.id
+          contatoId = resultadoPaciente.lead.id
           conversaId = resultadoPaciente.conversa?.id || null
         }
       } else {
@@ -147,7 +147,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
           ciclosCompletos: resultadoPaciente.lead.ciclosCompletos,
           ultimoProcedimento: resultadoPaciente.ultimoProcedimento,
         }
-        leadId = resultadoPaciente.lead.id
+        contatoId = resultadoPaciente.lead.id
         conversaId = resultadoPaciente.conversa?.id || null
       }
     }
@@ -155,7 +155,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
     console.error("[Agente] Erro ao consultar paciente:", error)
   }
 
-  if (leadId) {
+  if (contatoId) {
     const { data: usuarioIa } = await supabaseAdmin
       .from("usuarios")
       .select("id")
@@ -166,13 +166,13 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
     if (usuarioIa) {
       const { data: leadAtual } = await supabaseAdmin
-        .from("leads")
+        .from("contatos")
         .select("responsavelId")
-        .eq("id", leadId)
+        .eq("id", contatoId)
         .maybeSingle()
 
       if (leadAtual?.responsavelId && leadAtual.responsavelId !== usuarioIa.id) {
-        console.log(`[Agente] IA não é responsável pelo lead ${leadId} — não responde`)
+        console.log(`[Agente] IA não é responsável pelo lead ${contatoId } — não responde`)
         return
       }
     }
@@ -242,7 +242,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
         const fn = toolCall.function
         const args = JSON.parse(fn.arguments || "{}")
 
-        // GPT-4o as vezes passa leadId/conversaId vazios ou errados (foi a
+        // GPT-4o as vezes passa contatoId/conversaId vazios ou errados (foi a
         // causa do "acabei de enviar a foto" sem envio real). Injetamos os
         // valores reais do contexto do webhook para toda tool que os aceita.
         const toolsComIds = new Set([
@@ -252,7 +252,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
           "enviar_midia",
         ])
         if (toolsComIds.has(fn.name)) {
-          if (leadId) args.leadId = leadId
+          if (contatoId) args.contatoId = contatoId
           if (conversaId) args.conversaId = conversaId
         }
 
@@ -317,13 +317,13 @@ export async function processarMensagens(chatId: string): Promise<void> {
         segmento
       )
 
-      if (leadId) {
+      if (contatoId) {
         try {
           await executarFerramenta(
             "registrar_mensagem",
             {
               conversaId,
-              leadId,
+              contatoId,
               conteudo: segmento,
               direcao: "agente",
             },
@@ -347,9 +347,9 @@ export async function processarMensagens(chatId: string): Promise<void> {
     // Aguardar para garantir execucao em serverless (fire-and-forget seria morto
     // ao retornar da rota). A mensagem ao paciente ja foi enviada via UAZAPI;
     // este await so atrasa a resposta HTTP para o UAZAPI, que nao e sensivel a latencia.
-    if (leadId) {
+    if (contatoId) {
       try {
-        await analisarConversa({ leadId, conversaId })
+        await analisarConversa({ contatoId, conversaId })
       } catch (err) {
         console.error("[Analista] Falha:", err)
       }

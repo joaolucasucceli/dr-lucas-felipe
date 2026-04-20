@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     { data: procedimentos },
   ] = await Promise.all([
     supabaseAdmin
-      .from("leads")
+      .from("contatos")
       .select("id, nome, whatsapp, statusFunil")
       .is("deletadoEm", null)
       .eq("arquivado", false)

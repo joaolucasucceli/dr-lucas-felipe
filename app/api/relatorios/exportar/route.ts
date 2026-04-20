@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
   if (tipo === "leads") {
     let query = supabaseAdmin
-      .from("leads")
+      .from("contatos")
       .select(
         "id, nome, whatsapp, email, origem, statusFunil, procedimentoInteresse, criadoEm, atualizadoEm"
       )
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from("agendamentos")
       .select(
-        "id, dataHora, duracao, status, criadoEm, lead:leads!agendamentos_leadId_fkey(nome, whatsapp), procedimento:procedimentos(nome)"
+        "id, dataHora, duracao, status, criadoEm, lead:leads!agendamentos_contatoId_fkey(nome, whatsapp), procedimento:procedimentos(nome)"
       )
 
     if (dataInicioIso) {
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from("conversas")
       .select(
-        "id, atualizadoEm, encerradaEm, criadoEm, lead:leads!conversas_leadId_fkey(nome, whatsapp), mensagens:mensagens_whatsapp(id)"
+        "id, atualizadoEm, encerradaEm, criadoEm, lead:leads!conversas_contatoId_fkey(nome, whatsapp), mensagens:mensagens_whatsapp(id)"
       )
 
     if (dataInicioIso) {

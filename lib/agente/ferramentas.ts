@@ -35,7 +35,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
             type: "string",
             description: "ID da conversa (opcional — se não fornecido, cria nova conversa)",
           },
-          leadId: {
+          contatoId: {
             type: "string",
             description: "ID do lead/paciente",
           },
@@ -53,7 +53,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
             description: "ID da mensagem no WhatsApp (opcional)",
           },
         },
-        required: ["leadId", "conteudo", "direcao"],
+        required: ["contatoId", "conteudo", "direcao"],
       },
     },
   },
@@ -134,7 +134,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {
-          leadId: {
+          contatoId: {
             type: "string",
             description: "ID do lead/paciente",
           },
@@ -155,7 +155,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
             description: "Observações adicionais (opcional)",
           },
         },
-        required: ["leadId", "conversaId", "dataHora"],
+        required: ["contatoId", "conversaId", "dataHora"],
       },
     },
   },
@@ -213,7 +213,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {
-          leadId: {
+          contatoId: {
             type: "string",
             description: "ID do lead/paciente",
           },
@@ -226,7 +226,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
             description: "ID da mídia escolhida (obtido via listar_midias).",
           },
         },
-        required: ["leadId", "conversaId", "midiaId"],
+        required: ["contatoId", "conversaId", "midiaId"],
       },
     },
   },

@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     const { data: leadExistente } = await supabaseAdmin
-      .from("leads")
+      .from("contatos")
       .select("id, responsavelId")
       .eq("whatsapp", whatsapp)
       .maybeSingle()
@@ -60,12 +60,12 @@ export async function POST(request: Request) {
       }
 
       await supabaseAdmin
-        .from("leads")
+        .from("contatos")
         .update(dadosUpdate)
         .eq("id", leadExistente.id)
     } else {
       await supabaseAdmin
-        .from("leads")
+        .from("contatos")
         .insert({
           id: criarId(),
           atualizadoEm: consentimentoEm,

@@ -94,7 +94,7 @@ export function PainelNotificacoes() {
               {notificacoes.leadsAlerta.map((lead) => (
                 <button
                   key={lead.id}
-                  onClick={() => navegar(`/leads/${lead.id}`)}
+                  onClick={() => navegar(`/contatos/${lead.id}`)}
                   className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted"
                 >
                   <span className="flex-1 truncate">{lead.nome}</span>
@@ -117,7 +117,7 @@ export function PainelNotificacoes() {
               {notificacoes.leadsNovosIA.map((lead) => (
                 <button
                   key={lead.id}
-                  onClick={() => navegar(`/leads/${lead.id}`)}
+                  onClick={() => navegar(`/contatos/${lead.id}`)}
                   className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted"
                 >
                   <span className="flex-1 truncate">{lead.nome}</span>

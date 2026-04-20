@@ -43,7 +43,7 @@ export function useDashboard(periodo: string = "mes") {
   )
 
   // Realtime: atualizar métricas quando leads ou agendamentos mudarem
-  useRealtimeTabela("leads", () => mutate())
+  useRealtimeTabela("contatos", () => mutate())
   useRealtimeTabela("agendamentos", () => mutate())
 
   return {

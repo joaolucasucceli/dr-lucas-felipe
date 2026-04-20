@@ -3,7 +3,7 @@
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { toast } from "sonner"
 import { KanbanColuna } from "./KanbanColuna"
-import type { KanbanLead } from "@/hooks/use-kanban"
+import type { KanbanContato } from "@/hooks/use-kanban"
 
 const ETAPA_LABELS: Record<string, string> = {
   acolhimento: "Acolhimento",
@@ -20,11 +20,11 @@ const ETAPAS_FUNIL = [
 ]
 
 interface KanbanBoardProps {
-  colunas: Record<string, KanbanLead[]>
-  moverLead: (leadId: string, novoStatus: string) => Promise<boolean>
+  colunas: Record<string, KanbanContato[]>
+  moverContato: (contatoId: string, novoStatus: string) => Promise<boolean>
 }
 
-export function KanbanBoard({ colunas, moverLead }: KanbanBoardProps) {
+export function KanbanBoard({ colunas, moverContato }: KanbanBoardProps) {
   function onDragEnd(result: DropResult) {
     const { destination, source, draggableId } = result
 
@@ -38,7 +38,7 @@ export function KanbanBoard({ colunas, moverLead }: KanbanBoardProps) {
 
     const novoStatus = destination.droppableId
 
-    moverLead(draggableId, novoStatus).then((ok) => {
+    moverContato(draggableId, novoStatus).then((ok) => {
       if (ok) toast.success(`Lead movido para ${ETAPA_LABELS[novoStatus] || novoStatus}`)
     })
   }

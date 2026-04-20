@@ -7,10 +7,10 @@ import { ptBR } from "date-fns/locale"
 import { AlertTriangle, Clock, Bell, DoorOpen, Repeat2, Pause } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
-import type { KanbanLead } from "@/hooks/use-kanban"
+import type { KanbanContato } from "@/hooks/use-kanban"
 
 interface KanbanCardProps {
-  lead: KanbanLead
+  lead: KanbanContato
   index: number
 }
 
@@ -71,7 +71,7 @@ export function KanbanCard({ lead, index }: KanbanCardProps) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          onClick={() => router.push(`/leads/${lead.id}`)}
+          onClick={() => router.push(`/contatos/${lead.id}`)}
           className={`rounded-lg border bg-card p-3 cursor-pointer transition-shadow ${
             snapshot.isDragging ? "shadow-lg opacity-90" : "hover:shadow-sm"
           }`}

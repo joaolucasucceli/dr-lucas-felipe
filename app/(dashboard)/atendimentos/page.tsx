@@ -5,7 +5,7 @@ import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { KanbanView } from "@/components/features/kanban/KanbanView"
-import { LeadForm } from "@/components/features/leads/LeadForm"
+import { ContatoForm } from "@/components/features/contatos/ContatoForm"
 import { NovoAtendimentoModal } from "@/components/features/kanban/NovoAtendimentoModal"
 
 interface Procedimento {
@@ -14,7 +14,7 @@ interface Procedimento {
 }
 
 export default function AtendimentosPage() {
-  const [novoLeadAberto, setNovoLeadAberto] = useState(false)
+  const [novoContatoAberto, setNovoLeadAberto] = useState(false)
   const [novoAtendimentoAberto, setNovoAtendimentoAberto] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([])
@@ -51,8 +51,8 @@ export default function AtendimentosPage() {
         </Suspense>
       </div>
 
-      <LeadForm
-        aberto={novoLeadAberto}
+      <ContatoForm
+        aberto={novoContatoAberto}
         onFechar={() => setNovoLeadAberto(false)}
         onSucesso={() => {
           setNovoLeadAberto(false)

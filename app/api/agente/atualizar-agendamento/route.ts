@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
   const { data: agendamentoExistente } = await supabaseAdmin
     .from("agendamentos")
-    .select("id, leadId, duracao, googleEventId, sincronizado")
+    .select("id, contatoId, duracao, googleEventId, sincronizado")
     .eq("id", agendamentoId)
     .maybeSingle()
 
@@ -114,19 +114,19 @@ export async function POST(request: NextRequest) {
   const { data: conversa } = await supabaseAdmin
     .from("conversas")
     .select("id")
-    .eq("leadId", agendamentoExistente.leadId)
+    .eq("contatoId", agendamentoExistente.contatoId)
     .order("criadoEm", { ascending: false })
     .limit(1)
     .maybeSingle()
 
   await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .update({
       statusFunil: "agendamento" as never,
       ultimaMovimentacaoEm: agora(),
       atualizadoEm: agora(),
     })
-    .eq("id", agendamentoExistente.leadId)
+    .eq("id", agendamentoExistente.contatoId)
 
   if (conversa) {
     await supabaseAdmin

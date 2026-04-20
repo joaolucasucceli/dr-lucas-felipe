@@ -7,7 +7,7 @@ export async function GET() {
   if (error) return error
 
   const { data: leadsRaw } = await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .select(`
       id,
       nome,
@@ -16,6 +16,7 @@ export async function GET() {
       conversas(followUpEnviados, ultimaMensagemEm, encerradaEm, criadoEm)
     `)
     .is("deletadoEm", null)
+    .eq("tipo", "lead")
     .eq("arquivado", false)
     .limit(50)
 
@@ -57,7 +58,7 @@ export async function GET() {
     })
 
   return NextResponse.json({
-    leads: leadsComFollowUp.slice(0, 5),
+    contatos: leadsComFollowUp.slice(0, 5),
     total: leadsComFollowUp.length,
   })
 }

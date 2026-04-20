@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 
   const baseLeads = () =>
     supabaseAdmin
-      .from("leads")
+      .from("contatos")
       .select("id", { count: "exact", head: true })
       .is("deletadoEm", null)
       .eq("arquivado", false)
@@ -94,13 +94,13 @@ export async function GET(request: NextRequest) {
   })()
 
   const leadsPorEtapaP = supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .select("statusFunil")
     .is("deletadoEm", null)
     .eq("arquivado", false)
 
   const leadsPorOrigemP = supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .select("origem")
     .is("deletadoEm", null)
     .eq("arquivado", false)
@@ -190,6 +190,7 @@ export async function GET(request: NextRequest) {
   const etapaCount: Record<string, number> = {}
   for (const lead of leadsPorEtapaRes.data ?? []) {
     const etapa = lead.statusFunil
+    if (!etapa) continue
     etapaCount[etapa] = (etapaCount[etapa] ?? 0) + 1
   }
 

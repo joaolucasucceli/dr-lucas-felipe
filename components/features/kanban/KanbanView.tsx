@@ -36,7 +36,7 @@ export function KanbanView({ externalRefresh }: KanbanViewProps) {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
-  const { colunas, total, carregando, erro, recarregar, moverLead } = useKanban({
+  const { colunas, total, carregando, erro, recarregar, moverContato } = useKanban({
     responsavelId: responsavelId || undefined,
     procedimentoInteresse: procedimentoInteresse || undefined,
   })
@@ -62,7 +62,7 @@ export function KanbanView({ externalRefresh }: KanbanViewProps) {
       </p>
 
       <div className="overflow-hidden">
-        <KanbanBoard colunas={colunas} moverLead={moverLead} />
+        <KanbanBoard colunas={colunas} moverContato={moverContato} />
       </div>
     </div>
   )

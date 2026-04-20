@@ -17,6 +17,26 @@ const nextConfig = {
         destination: "/dashboard",
         permanent: true,
       },
+      {
+        source: "/leads",
+        destination: "/contatos",
+        permanent: true,
+      },
+      {
+        source: "/leads/:path*",
+        destination: "/contatos/:path*",
+        permanent: true,
+      },
+      {
+        source: "/pacientes",
+        destination: "/contatos",
+        permanent: true,
+      },
+      {
+        source: "/pacientes/:path*",
+        destination: "/contatos/:path*",
+        permanent: true,
+      },
     ]
   },
   async headers() {

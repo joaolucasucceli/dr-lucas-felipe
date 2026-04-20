@@ -19,13 +19,13 @@ export type Database = {
           atualizadoEm: string
           ciclo: number
           confirmacoesEnviadas: string[] | null
+          contatoId: string
           criadoEm: string
           dataHora: string
           duracao: number
           googleEventId: string | null
           googleEventUrl: string | null
           id: string
-          leadId: string
           observacao: string | null
           procedimentoId: string | null
           sincronizado: boolean
@@ -35,13 +35,13 @@ export type Database = {
           atualizadoEm: string
           ciclo?: number
           confirmacoesEnviadas?: string[] | null
+          contatoId: string
           criadoEm?: string
           dataHora: string
           duracao?: number
           googleEventId?: string | null
           googleEventUrl?: string | null
           id: string
-          leadId: string
           observacao?: string | null
           procedimentoId?: string | null
           sincronizado?: boolean
@@ -51,13 +51,13 @@ export type Database = {
           atualizadoEm?: string
           ciclo?: number
           confirmacoesEnviadas?: string[] | null
+          contatoId?: string
           criadoEm?: string
           dataHora?: string
           duracao?: number
           googleEventId?: string | null
           googleEventUrl?: string | null
           id?: string
-          leadId?: string
           observacao?: string | null
           procedimentoId?: string | null
           sincronizado?: boolean
@@ -65,10 +65,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "agendamentos_leadId_fkey"
-            columns: ["leadId"]
+            foreignKeyName: "agendamentos_contatoid_fkey"
+            columns: ["contatoId"]
             isOneToOne: false
-            referencedRelation: "leads"
+            referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
           {
@@ -80,61 +80,11 @@ export type Database = {
           },
         ]
       }
-      agendamentos_paciente: {
-        Row: {
-          atualizadoEm: string
-          criadoEm: string
-          dataHora: string
-          id: string
-          observacao: string | null
-          pacienteId: string
-          procedimentoId: string | null
-          status: Database["public"]["Enums"]["StatusAgendamento"]
-          tipo: string | null
-        }
-        Insert: {
-          atualizadoEm: string
-          criadoEm?: string
-          dataHora: string
-          id: string
-          observacao?: string | null
-          pacienteId: string
-          procedimentoId?: string | null
-          status?: Database["public"]["Enums"]["StatusAgendamento"]
-          tipo?: string | null
-        }
-        Update: {
-          atualizadoEm?: string
-          criadoEm?: string
-          dataHora?: string
-          id?: string
-          observacao?: string | null
-          pacienteId?: string
-          procedimentoId?: string | null
-          status?: Database["public"]["Enums"]["StatusAgendamento"]
-          tipo?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agendamentos_paciente_pacienteId_fkey"
-            columns: ["pacienteId"]
-            isOneToOne: false
-            referencedRelation: "pacientes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agendamentos_paciente_procedimentoId_fkey"
-            columns: ["procedimentoId"]
-            isOneToOne: false
-            referencedRelation: "procedimentos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       analista_logs: {
         Row: {
           aplicado: boolean
           confiancaGeral: number | null
+          contatoId: string
           conversaId: string | null
           criadoEm: string
           divergencias: Json
@@ -142,12 +92,12 @@ export type Database = {
           estadoAtualLead: Json | null
           historicoMensagens: Json
           id: string
-          leadId: string
           output: Json | null
         }
         Insert: {
           aplicado?: boolean
           confiancaGeral?: number | null
+          contatoId: string
           conversaId?: string | null
           criadoEm?: string
           divergencias?: Json
@@ -155,12 +105,12 @@ export type Database = {
           estadoAtualLead?: Json | null
           historicoMensagens?: Json
           id: string
-          leadId: string
           output?: Json | null
         }
         Update: {
           aplicado?: boolean
           confiancaGeral?: number | null
+          contatoId?: string
           conversaId?: string | null
           criadoEm?: string
           divergencias?: Json
@@ -168,22 +118,21 @@ export type Database = {
           estadoAtualLead?: Json | null
           historicoMensagens?: Json
           id?: string
-          leadId?: string
           output?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "analista_logs_contatoid_fkey"
+            columns: ["contatoId"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "analista_logs_conversaId_fkey"
             columns: ["conversaId"]
             isOneToOne: false
             referencedRelation: "conversas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "analista_logs_leadId_fkey"
-            columns: ["leadId"]
-            isOneToOne: false
-            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -468,17 +417,124 @@ export type Database = {
         }
         Relationships: []
       }
+      contatos: {
+        Row: {
+          arquivado: boolean
+          arquivadoEm: string | null
+          atualizadoEm: string
+          cicloAtual: number
+          ciclosCompletos: number
+          cidade: string | null
+          consentimentoLgpd: boolean
+          consentimentoLgpdEm: string | null
+          contatoEmergencia: string | null
+          contatoEmergenciaTel: string | null
+          cpf: string | null
+          criadoEm: string
+          dataNascimento: string | null
+          deletadoEm: string | null
+          ehRetorno: boolean
+          email: string | null
+          endereco: string | null
+          estado: string | null
+          id: string
+          nome: string
+          origem: string | null
+          procedimentoInteresse: string | null
+          promovidoEm: string | null
+          responsavelId: string | null
+          sexo: string | null
+          sobreOPaciente: string | null
+          statusFunil: Database["public"]["Enums"]["StatusFunil"] | null
+          tipo: Database["public"]["Enums"]["TipoContato"]
+          ultimaMovimentacaoEm: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          arquivado?: boolean
+          arquivadoEm?: string | null
+          atualizadoEm?: string
+          cicloAtual?: number
+          ciclosCompletos?: number
+          cidade?: string | null
+          consentimentoLgpd?: boolean
+          consentimentoLgpdEm?: string | null
+          contatoEmergencia?: string | null
+          contatoEmergenciaTel?: string | null
+          cpf?: string | null
+          criadoEm?: string
+          dataNascimento?: string | null
+          deletadoEm?: string | null
+          ehRetorno?: boolean
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id: string
+          nome: string
+          origem?: string | null
+          procedimentoInteresse?: string | null
+          promovidoEm?: string | null
+          responsavelId?: string | null
+          sexo?: string | null
+          sobreOPaciente?: string | null
+          statusFunil?: Database["public"]["Enums"]["StatusFunil"] | null
+          tipo?: Database["public"]["Enums"]["TipoContato"]
+          ultimaMovimentacaoEm?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          arquivado?: boolean
+          arquivadoEm?: string | null
+          atualizadoEm?: string
+          cicloAtual?: number
+          ciclosCompletos?: number
+          cidade?: string | null
+          consentimentoLgpd?: boolean
+          consentimentoLgpdEm?: string | null
+          contatoEmergencia?: string | null
+          contatoEmergenciaTel?: string | null
+          cpf?: string | null
+          criadoEm?: string
+          dataNascimento?: string | null
+          deletadoEm?: string | null
+          ehRetorno?: boolean
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          nome?: string
+          origem?: string | null
+          procedimentoInteresse?: string | null
+          promovidoEm?: string | null
+          responsavelId?: string | null
+          sexo?: string | null
+          sobreOPaciente?: string | null
+          statusFunil?: Database["public"]["Enums"]["StatusFunil"] | null
+          tipo?: Database["public"]["Enums"]["TipoContato"]
+          ultimaMovimentacaoEm?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contatos_responsavelid_fkey"
+            columns: ["responsavelId"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversas: {
         Row: {
           atendenteId: string | null
           atualizadoEm: string
           ciclo: number
+          contatoId: string
           criadoEm: string
           encerradaEm: string | null
           etapa: Database["public"]["Enums"]["EtapaConversa"]
           followUpEnviados: string[] | null
           id: string
-          leadId: string
           modoConversa: Database["public"]["Enums"]["ModoConversa"]
           ultimaMensagemEm: string | null
         }
@@ -486,12 +542,12 @@ export type Database = {
           atendenteId?: string | null
           atualizadoEm: string
           ciclo?: number
+          contatoId: string
           criadoEm?: string
           encerradaEm?: string | null
           etapa?: Database["public"]["Enums"]["EtapaConversa"]
           followUpEnviados?: string[] | null
           id: string
-          leadId: string
           modoConversa?: Database["public"]["Enums"]["ModoConversa"]
           ultimaMensagemEm?: string | null
         }
@@ -499,12 +555,12 @@ export type Database = {
           atendenteId?: string | null
           atualizadoEm?: string
           ciclo?: number
+          contatoId?: string
           criadoEm?: string
           encerradaEm?: string | null
           etapa?: Database["public"]["Enums"]["EtapaConversa"]
           followUpEnviados?: string[] | null
           id?: string
-          leadId?: string
           modoConversa?: Database["public"]["Enums"]["ModoConversa"]
           ultimaMensagemEm?: string | null
         }
@@ -517,10 +573,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "conversas_leadId_fkey"
-            columns: ["leadId"]
+            foreignKeyName: "conversas_contatoid_fkey"
+            columns: ["contatoId"]
             isOneToOne: false
-            referencedRelation: "leads"
+            referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
         ]
@@ -629,166 +685,57 @@ export type Database = {
           },
         ]
       }
-      fotos_lead: {
+      fotos_contato: {
         Row: {
-          ciclo: number
+          categoria: string
+          ciclo: number | null
+          contatoId: string
           criadoEm: string
+          dataRegistro: string | null
           descricao: string | null
           id: string
-          leadId: string
           tipoAnalise: string | null
           url: string
         }
         Insert: {
-          ciclo?: number
+          categoria?: string
+          ciclo?: number | null
+          contatoId: string
           criadoEm?: string
+          dataRegistro?: string | null
           descricao?: string | null
           id: string
-          leadId: string
           tipoAnalise?: string | null
           url: string
         }
         Update: {
-          ciclo?: number
+          categoria?: string
+          ciclo?: number | null
+          contatoId?: string
           criadoEm?: string
+          dataRegistro?: string | null
           descricao?: string | null
           id?: string
-          leadId?: string
           tipoAnalise?: string | null
           url?: string
         }
         Relationships: [
           {
-            foreignKeyName: "fotos_lead_leadId_fkey"
-            columns: ["leadId"]
+            foreignKeyName: "fotos_contato_contatoId_fkey"
+            columns: ["contatoId"]
             isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      fotos_prontuario: {
-        Row: {
-          criadoEm: string
-          dataRegistro: string
-          descricao: string | null
-          id: string
-          prontuarioId: string
-          tipoFoto: string | null
-          url: string
-        }
-        Insert: {
-          criadoEm?: string
-          dataRegistro?: string
-          descricao?: string | null
-          id: string
-          prontuarioId: string
-          tipoFoto?: string | null
-          url: string
-        }
-        Update: {
-          criadoEm?: string
-          dataRegistro?: string
-          descricao?: string | null
-          id?: string
-          prontuarioId?: string
-          tipoFoto?: string | null
-          url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fotos_prontuario_prontuarioId_fkey"
-            columns: ["prontuarioId"]
-            isOneToOne: false
-            referencedRelation: "prontuarios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leads: {
-        Row: {
-          arquivado: boolean
-          arquivadoEm: string | null
-          atualizadoEm: string
-          cicloAtual: number
-          ciclosCompletos: number
-          consentimentoLgpd: boolean
-          consentimentoLgpdEm: string | null
-          criadoEm: string
-          deletadoEm: string | null
-          ehRetorno: boolean
-          email: string | null
-          id: string
-          nome: string
-          origem: string | null
-          procedimentoInteresse: string | null
-          responsavelId: string | null
-          sobreOPaciente: string | null
-          statusFunil: Database["public"]["Enums"]["StatusFunil"]
-          ultimaMovimentacaoEm: string | null
-          whatsapp: string
-        }
-        Insert: {
-          arquivado?: boolean
-          arquivadoEm?: string | null
-          atualizadoEm: string
-          cicloAtual?: number
-          ciclosCompletos?: number
-          consentimentoLgpd?: boolean
-          consentimentoLgpdEm?: string | null
-          criadoEm?: string
-          deletadoEm?: string | null
-          ehRetorno?: boolean
-          email?: string | null
-          id: string
-          nome: string
-          origem?: string | null
-          procedimentoInteresse?: string | null
-          responsavelId?: string | null
-          sobreOPaciente?: string | null
-          statusFunil?: Database["public"]["Enums"]["StatusFunil"]
-          ultimaMovimentacaoEm?: string | null
-          whatsapp: string
-        }
-        Update: {
-          arquivado?: boolean
-          arquivadoEm?: string | null
-          atualizadoEm?: string
-          cicloAtual?: number
-          ciclosCompletos?: number
-          consentimentoLgpd?: boolean
-          consentimentoLgpdEm?: string | null
-          criadoEm?: string
-          deletadoEm?: string | null
-          ehRetorno?: boolean
-          email?: string | null
-          id?: string
-          nome?: string
-          origem?: string | null
-          procedimentoInteresse?: string | null
-          responsavelId?: string | null
-          sobreOPaciente?: string | null
-          statusFunil?: Database["public"]["Enums"]["StatusFunil"]
-          ultimaMovimentacaoEm?: string | null
-          whatsapp?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leads_responsavelId_fkey"
-            columns: ["responsavelId"]
-            isOneToOne: false
-            referencedRelation: "usuarios"
+            referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
         ]
       }
       mensagens_whatsapp: {
         Row: {
+          contatoId: string
           conteudo: string
           conversaId: string
           criadoEm: string
           id: string
-          leadId: string
           lidaEm: string | null
           mediaType: string | null
           mediaUrl: string | null
@@ -798,11 +745,11 @@ export type Database = {
           tipo: Database["public"]["Enums"]["TipoMensagem"]
         }
         Insert: {
+          contatoId: string
           conteudo: string
           conversaId: string
           criadoEm?: string
           id: string
-          leadId: string
           lidaEm?: string | null
           mediaType?: string | null
           mediaUrl?: string | null
@@ -812,11 +759,11 @@ export type Database = {
           tipo: Database["public"]["Enums"]["TipoMensagem"]
         }
         Update: {
+          contatoId?: string
           conteudo?: string
           conversaId?: string
           criadoEm?: string
           id?: string
-          leadId?: string
           lidaEm?: string | null
           mediaType?: string | null
           mediaUrl?: string | null
@@ -827,17 +774,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "mensagens_whatsapp_contatoid_fkey"
+            columns: ["contatoId"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "mensagens_whatsapp_conversaId_fkey"
             columns: ["conversaId"]
             isOneToOne: false
             referencedRelation: "conversas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mensagens_whatsapp_leadId_fkey"
-            columns: ["leadId"]
-            isOneToOne: false
-            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
           {
@@ -878,83 +825,6 @@ export type Database = {
           url?: string
         }
         Relationships: []
-      }
-      pacientes: {
-        Row: {
-          ativo: boolean
-          atualizadoEm: string
-          cidade: string | null
-          consentimentoLgpd: boolean
-          consentimentoLgpdEm: string | null
-          contatoEmergencia: string | null
-          contatoEmergenciaTel: string | null
-          cpf: string | null
-          criadoEm: string
-          dataNascimento: string | null
-          deletadoEm: string | null
-          email: string | null
-          endereco: string | null
-          estado: string | null
-          id: string
-          leadOrigemId: string | null
-          nome: string
-          observacoes: string | null
-          sexo: string | null
-          whatsapp: string | null
-        }
-        Insert: {
-          ativo?: boolean
-          atualizadoEm: string
-          cidade?: string | null
-          consentimentoLgpd?: boolean
-          consentimentoLgpdEm?: string | null
-          contatoEmergencia?: string | null
-          contatoEmergenciaTel?: string | null
-          cpf?: string | null
-          criadoEm?: string
-          dataNascimento?: string | null
-          deletadoEm?: string | null
-          email?: string | null
-          endereco?: string | null
-          estado?: string | null
-          id: string
-          leadOrigemId?: string | null
-          nome: string
-          observacoes?: string | null
-          sexo?: string | null
-          whatsapp?: string | null
-        }
-        Update: {
-          ativo?: boolean
-          atualizadoEm?: string
-          cidade?: string | null
-          consentimentoLgpd?: boolean
-          consentimentoLgpdEm?: string | null
-          contatoEmergencia?: string | null
-          contatoEmergenciaTel?: string | null
-          cpf?: string | null
-          criadoEm?: string
-          dataNascimento?: string | null
-          deletadoEm?: string | null
-          email?: string | null
-          endereco?: string | null
-          estado?: string | null
-          id?: string
-          leadOrigemId?: string | null
-          nome?: string
-          observacoes?: string | null
-          sexo?: string | null
-          whatsapp?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pacientes_leadOrigemId_fkey"
-            columns: ["leadOrigemId"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       procedimentos: {
         Row: {
@@ -998,31 +868,31 @@ export type Database = {
       prontuarios: {
         Row: {
           atualizadoEm: string
+          contatoId: string
           criadoEm: string
           id: string
           numero: number
-          pacienteId: string
         }
         Insert: {
           atualizadoEm: string
+          contatoId: string
           criadoEm?: string
           id: string
           numero: number
-          pacienteId: string
         }
         Update: {
           atualizadoEm?: string
+          contatoId?: string
           criadoEm?: string
           id?: string
           numero?: number
-          pacienteId?: string
         }
         Relationships: [
           {
-            foreignKeyName: "prontuarios_pacienteId_fkey"
-            columns: ["pacienteId"]
+            foreignKeyName: "prontuarios_contatoid_fkey"
+            columns: ["contatoId"]
             isOneToOne: false
-            referencedRelation: "pacientes"
+            referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
         ]
@@ -1295,6 +1165,7 @@ export type Database = {
         | "raquidiana"
         | "peridural"
         | "bloqueio_regional"
+      TipoContato: "lead" | "paciente"
       TipoDocumentoProntuario:
         | "exame_laboratorial"
         | "laudo"
@@ -1480,6 +1351,7 @@ export const Constants = {
         "peridural",
         "bloqueio_regional",
       ],
+      TipoContato: ["lead", "paciente"],
       TipoDocumentoProntuario: [
         "exame_laboratorial",
         "laudo",

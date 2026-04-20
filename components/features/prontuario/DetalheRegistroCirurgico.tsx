@@ -41,7 +41,7 @@ export function DetalheRegistroCirurgico({
   async function toggleMarco(indice: number, concluido: boolean) {
     try {
       const res = await fetch(
-        `/api/pacientes/${pacienteId}/prontuario/evolucoes/${evolucaoId}/registro-cirurgico/marcos`,
+        `/api/contatos/${pacienteId}/prontuario/evolucoes/${evolucaoId}/registro-cirurgico/marcos`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

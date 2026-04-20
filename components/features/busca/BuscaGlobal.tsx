@@ -95,7 +95,7 @@ export function BuscaGlobal({ aberto, onFechar }: BuscaGlobalProps) {
               <CommandItem
                 key={lead.id}
                 value={`lead-${lead.id}-${lead.nome}`}
-                onSelect={() => navegar(`/leads/${lead.id}`)}
+                onSelect={() => navegar(`/contatos/${lead.id}`)}
               >
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span>{lead.nome}</span>

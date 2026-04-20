@@ -3,7 +3,7 @@
 import { Droppable } from "@hello-pangea/dnd"
 import { Users } from "lucide-react"
 import { KanbanCard } from "./KanbanCard"
-import type { KanbanLead } from "@/hooks/use-kanban"
+import type { KanbanContato } from "@/hooks/use-kanban"
 
 const coresColuna: Record<string, { bg: string; text: string; border: string }> = {
   acolhimento: { bg: "bg-zinc-100", text: "text-zinc-800", border: "border-zinc-300" },
@@ -21,7 +21,7 @@ const labelsColuna: Record<string, string> = {
 
 interface KanbanColunaProps {
   etapa: string
-  leads: KanbanLead[]
+  leads: KanbanContato[]
 }
 
 export function KanbanColuna({ etapa, leads }: KanbanColunaProps) {

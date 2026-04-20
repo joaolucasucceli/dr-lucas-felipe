@@ -10,7 +10,7 @@ interface LeadAgente {
 
 interface AgendamentoComLead {
   id: string
-  leadId: string
+  contatoId: string
   dataHora: string
   confirmacoesEnviadas: string[]
   lead: LeadAgente
@@ -36,11 +36,11 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
     .from("agendamentos")
     .select(`
       id,
-      leadId,
+      contatoId,
       dataHora,
       confirmacoesEnviadas,
       status,
-      lead:leads!agendamentos_leadId_fkey(id, nome, whatsapp)
+      lead:leads!agendamentos_contatoId_fkey(id, nome, whatsapp)
     `)
     .in("status", ["agendado", "remarcado"] as never)
     .gt("dataHora", agoraTs.toISOString())
@@ -50,7 +50,7 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
 
   type AgendamentoRaw = {
     id: string
-    leadId: string
+    contatoId: string
     dataHora: string
     confirmacoesEnviadas: string[] | null
     lead: LeadAgente | LeadAgente[] | null
@@ -70,7 +70,7 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
 
     const agendamento: AgendamentoComLead = {
       id: ag.id,
-      leadId: ag.leadId,
+      contatoId: ag.contatoId,
       dataHora: ag.dataHora,
       confirmacoesEnviadas: confirmacoes,
       lead: leadRaw,
@@ -137,7 +137,7 @@ export async function enviarConfirmacao(
         "x-api-secret": process.env.API_SECRET || "",
       },
       body: JSON.stringify({
-        leadId: agendamento.leadId,
+        contatoId: agendamento.contatoId,
         conteudo: mensagem,
         direcao: "agente",
       }),

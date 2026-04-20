@@ -30,8 +30,8 @@ interface EntradaAjuda {
 // Ordem importa: prefixos mais longos primeiro (ex: /configuracoes/google-agenda antes de /configuracoes)
 const MAPA_AJUDA: Array<{ prefix: string } & EntradaAjuda> = [
   { prefix: "/atendimentos", titulo: "Atendimentos", Componente: ModuloAtendimentos },
-  { prefix: "/leads", titulo: "Leads", Componente: ModuloLeads },
-  { prefix: "/pacientes", titulo: "Pacientes", Componente: ModuloPacientes },
+  { prefix: "/contatos", titulo: "Leads", Componente: ModuloLeads },
+  { prefix: "/contatos", titulo: "Pacientes", Componente: ModuloPacientes },
   { prefix: "/procedimentos", titulo: "Procedimentos", Componente: ModuloProcedimentos },
   { prefix: "/base-conhecimento", titulo: "Base de Conhecimento", Componente: ModuloBaseConhecimento },
   { prefix: "/midia-marketing", titulo: "Mídia Marketing", Componente: ModuloMidiaMarketing },

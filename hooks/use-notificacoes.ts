@@ -56,7 +56,7 @@ export function useNotificacoes() {
   }, [buscar])
 
   useRealtimeTabela("mensagens", buscar)
-  useRealtimeTabela("leads", buscar)
+  useRealtimeTabela("contatos", buscar)
 
   return {
     notificacoes,

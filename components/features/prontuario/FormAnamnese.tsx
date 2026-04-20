@@ -79,7 +79,7 @@ export function FormAnamnese({ anamnese, pacienteId, onAtualizar }: FormAnamnese
 
   const salvarCampo = useCallback(
     async (dados: Record<string, unknown>) => {
-      const res = await fetch(`/api/pacientes/${pacienteId}/prontuario/anamnese`, {
+      const res = await fetch(`/api/contatos/${pacienteId}/prontuario/anamnese`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dados),

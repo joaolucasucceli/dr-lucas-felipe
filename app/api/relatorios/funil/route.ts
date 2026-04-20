@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   const dataFimIso = dataFim.toISOString()
 
   let baseQuery = supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .select("statusFunil, criadoEm, ultimaMovimentacaoEm")
     .is("deletadoEm", null)
     .eq("arquivado", false)
@@ -57,18 +57,19 @@ export async function GET(request: NextRequest) {
 
   const totalEntradas = leadsAll?.length ?? 0
   const leadsConvertidos = (leadsAll ?? []).filter((l) =>
-    etapasConvertidas.includes(l.statusFunil)
+    l.statusFunil ? etapasConvertidas.includes(l.statusFunil) : false
   ).length
 
   const etapaCount: Record<string, number> = {}
   for (const lead of leadsAll ?? []) {
+    if (!lead.statusFunil) continue
     etapaCount[lead.statusFunil] = (etapaCount[lead.statusFunil] ?? 0) + 1
   }
 
   const leadsParaTempoMedio = (leadsAll ?? [])
     .filter(
       (l) =>
-        etapasConvertidas.includes(l.statusFunil) && l.ultimaMovimentacaoEm
+        l.statusFunil && etapasConvertidas.includes(l.statusFunil) && l.ultimaMovimentacaoEm
     )
     .slice(0, 100)
 

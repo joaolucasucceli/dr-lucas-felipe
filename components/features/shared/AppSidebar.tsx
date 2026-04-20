@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Kanban,
   UserSearch,
-  Users,
   Stethoscope,
   Brain,
   Film,
@@ -53,8 +52,8 @@ const navGroups: NavGroup[] = [
         icone: <Kanban className="h-4 w-4" />,
       },
       {
-        titulo: "Leads",
-        href: "/leads",
+        titulo: "Contatos",
+        href: "/contatos",
         icone: <UserSearch className="h-4 w-4" />,
       },
       {
@@ -68,12 +67,6 @@ const navGroups: NavGroup[] = [
   {
     label: "Operacional",
     itens: [
-      {
-        titulo: "Pacientes",
-        href: "/pacientes",
-        icone: <Users className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
       {
         titulo: "Procedimentos",
         href: "/procedimentos",

@@ -74,7 +74,7 @@ export function FormSinalVital({
       if (dataRegistro) dados.dataRegistro = new Date(dataRegistro).toISOString()
 
       const res = await fetch(
-        `/api/pacientes/${pacienteId}/prontuario/sinais-vitais`,
+        `/api/contatos/${pacienteId}/prontuario/sinais-vitais`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

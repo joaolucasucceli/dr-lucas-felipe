@@ -14,14 +14,14 @@ export async function POST(request: NextRequest) {
   if (erro) return erro
 
   const body = await request.json()
-  const { leadId, conversaId, midiaId } = body as {
-    leadId?: string
+  const { contatoId, conversaId, midiaId } = body as {
+    contatoId?: string
     conversaId?: string
     midiaId?: string
   }
 
-  if (!leadId || !conversaId || !midiaId) {
-    console.warn("[enviar-midia] Parametros obrigatorios ausentes:", { leadId, conversaId, midiaId })
+  if (!contatoId || !conversaId || !midiaId) {
+    console.warn("[enviar-midia] Parametros obrigatorios ausentes:", { contatoId, conversaId, midiaId })
     return NextResponse.json({
       ok: true,
       enviado: false,
@@ -46,13 +46,13 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .select("whatsapp")
-    .eq("id", leadId)
+    .eq("id", contatoId)
     .maybeSingle()
 
   if (!lead) {
-    console.warn("[enviar-midia] Lead nao encontrado:", { leadId })
+    console.warn("[enviar-midia] Lead nao encontrado:", { contatoId })
     return NextResponse.json({
       ok: true,
       enviado: false,
@@ -92,6 +92,10 @@ export async function POST(request: NextRequest) {
   // Midia e enviada SEM legenda. A descricao existe apenas para a IA escolher
   // qual enviar — reproduzir ela como caption no WhatsApp gera duplicacao com
   // o texto natural de contextualizacao que a IA escreve em seguida.
+  if (!lead.whatsapp) {
+    return NextResponse.json({ error: "Contato sem WhatsApp" }, { status: 400 })
+  }
+
   try {
     await enviarMidia(
       configWa.uazapiUrl,
@@ -120,7 +124,7 @@ export async function POST(request: NextRequest) {
     .insert({
       id: criarId(),
       conversaId,
-      leadId,
+      contatoId,
       messageIdWhatsapp: `agente_midia_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
       tipo,
       conteudo: midia.descricao.slice(0, 200),

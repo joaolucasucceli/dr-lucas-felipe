@@ -416,7 +416,7 @@ Você DEVE executar estes dois tool calls em ordem:
 1. Primeiro tool call: \`listar_midias({ conversaId })\` — retorna \`{ midias: [{id, descricao, jaEnviada}] }\`
 2. Se \`midias\` estiver vazio: pule o envio, responda sem prometer mídia
 3. Se vier populado: leia cada \`descricao\`, escolha o \`id\` que mais casa com o perfil do paciente (prefira \`jaEnviada: false\`)
-4. Segundo tool call: \`enviar_midia({ leadId, conversaId, midiaId })\`
+4. Segundo tool call: \`enviar_midia({ contatoId, conversaId, midiaId })\`
 5. Só depois que \`enviar_midia\` retornar \`{ enviado: true }\`: escreva no texto algo contextualizando a mídia que ACABOU de ser enviada
 
 ### Como enquadrar a resposta em texto

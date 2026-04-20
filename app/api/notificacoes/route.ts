@@ -21,7 +21,7 @@ export async function GET() {
     leadsNovosIAResult,
   ] = await Promise.all([
     supabaseAdmin
-      .from("leads")
+      .from("contatos")
       .select("id, nome, statusFunil, ultimaMovimentacaoEm")
       .is("deletadoEm", null)
       .eq("arquivado", false)
@@ -29,7 +29,7 @@ export async function GET() {
       .limit(5),
     usuarioIA
       ? supabaseAdmin
-          .from("leads")
+          .from("contatos")
           .select("id, nome, criadoEm")
           .eq("responsavelId", usuarioIA.id)
           .gte("criadoEm", vintQuatroHorasAtras)

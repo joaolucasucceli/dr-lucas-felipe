@@ -4,7 +4,7 @@ import useSWR from "swr"
 import { toast } from "sonner"
 import { useRealtimeTabela } from "@/lib/realtime"
 
-export interface KanbanLead {
+export interface KanbanContato {
   id: string
   nome: string
   whatsapp: string
@@ -27,7 +27,7 @@ interface UseKanbanParams {
 }
 
 interface KanbanData {
-  colunas: Record<string, KanbanLead[]>
+  colunas: Record<string, KanbanContato[]>
   total: number
 }
 
@@ -38,7 +38,7 @@ function buildUrl(params: UseKanbanParams) {
   if (params.responsavelId) searchParams.set("responsavelId", params.responsavelId)
   if (params.procedimentoInteresse) searchParams.set("procedimentoInteresse", params.procedimentoInteresse)
   const qs = searchParams.toString()
-  return `/api/leads/kanban${qs ? `?${qs}` : ""}`
+  return `/api/contatos/kanban${qs ? `?${qs}` : ""}`
 }
 
 export function useKanban(params: UseKanbanParams = {}) {
@@ -49,42 +49,42 @@ export function useKanban(params: UseKanbanParams = {}) {
     revalidateOnFocus: true,
   })
 
-  useRealtimeTabela("leads", () => mutate())
+  useRealtimeTabela("contatos", () => mutate())
   useRealtimeTabela("conversas", () => mutate())
 
-  async function moverLead(
-    leadId: string,
+  async function moverContato(
+    contatoId: string,
     novoStatus: string
   ): Promise<boolean> {
     if (!data) return false
 
-    let leadOriginal: KanbanLead | null = null
+    let contatoOriginal: KanbanContato | null = null
     let colunaOriginal = ""
 
     for (const [etapa, leads] of Object.entries(data.colunas)) {
-      const encontrado = leads.find((l) => l.id === leadId)
+      const encontrado = leads.find((l) => l.id === contatoId)
       if (encontrado) {
-        leadOriginal = encontrado
+        contatoOriginal = encontrado
         colunaOriginal = etapa
         break
       }
     }
 
-    if (!leadOriginal || colunaOriginal === novoStatus) return false
+    if (!contatoOriginal || colunaOriginal === novoStatus) return false
 
     const colunasOtimistas = { ...data.colunas }
     colunasOtimistas[colunaOriginal] = colunasOtimistas[colunaOriginal].filter(
-      (l) => l.id !== leadId
+      (l) => l.id !== contatoId
     )
     colunasOtimistas[novoStatus] = [
-      { ...leadOriginal, statusFunil: novoStatus, diasNaEtapa: 0 },
+      { ...contatoOriginal, statusFunil: novoStatus, diasNaEtapa: 0 },
       ...colunasOtimistas[novoStatus],
     ]
 
     mutate({ colunas: colunasOtimistas, total: data.total }, false)
 
     try {
-      const res = await fetch(`/api/leads/${leadId}/status`, {
+      const res = await fetch(`/api/contatos/${contatoId }/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ statusFunil: novoStatus }),
@@ -92,14 +92,14 @@ export function useKanban(params: UseKanbanParams = {}) {
 
       if (!res.ok) {
         const erro = await res.json()
-        throw new Error(erro.error || "Erro ao mover lead")
+        throw new Error(erro.error || "Erro ao mover contato")
       }
 
       mutate()
       return true
     } catch (err) {
       mutate(data, false)
-      toast.error(err instanceof Error ? err.message : "Erro ao mover lead")
+      toast.error(err instanceof Error ? err.message : "Erro ao mover contato")
       return false
     }
   }
@@ -110,6 +110,6 @@ export function useKanban(params: UseKanbanParams = {}) {
     carregando: isLoading,
     erro: error ? "Erro ao carregar kanban" : null,
     recarregar: () => mutate(),
-    moverLead,
+    moverContato,
   }
 }

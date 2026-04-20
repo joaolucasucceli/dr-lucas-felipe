@@ -55,7 +55,7 @@ export function NovoAtendimentoModal({
     debounceRef.current = setTimeout(async () => {
       setBuscando(true)
       try {
-        const res = await fetch(`/api/leads?busca=${encodeURIComponent(busca)}&arquivado=true`)
+        const res = await fetch(`/api/contatos?busca=${encodeURIComponent(busca)}&arquivado=true`)
         const data = await res.json()
         setResultados(data.dados?.slice(0, 8) || [])
       } catch {
@@ -73,7 +73,7 @@ export function NovoAtendimentoModal({
       const res = await fetch("/api/atendimentos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId: leadSelecionado.id }),
+        body: JSON.stringify({ contatoId: leadSelecionado.id }),
       })
       const data = await res.json()
       if (!res.ok) {

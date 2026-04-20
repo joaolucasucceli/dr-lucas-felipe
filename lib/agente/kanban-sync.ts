@@ -2,17 +2,17 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { criarId, agora } from "@/lib/db-utils"
 
 export async function sincronizarFunil(
-  leadId: string,
+  contatoId: string,
   novoStatus: string
 ): Promise<void> {
   await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .update({
       statusFunil: novoStatus as never,
       ultimaMovimentacaoEm: agora(),
       atualizadoEm: agora(),
     })
-    .eq("id", leadId)
+    .eq("id", contatoId)
 }
 
 export async function avancarEtapa(
@@ -31,30 +31,25 @@ interface ResultadoNovoCiclo {
   statusAnterior: string
 }
 
-export async function abrirNovoCiclo(leadId: string): Promise<ResultadoNovoCiclo> {
-  const { data: pacienteVinculado } = await supabaseAdmin
-    .from("pacientes")
-    .select("id")
-    .eq("leadOrigemId", leadId)
-    .maybeSingle()
+export async function abrirNovoCiclo(contatoId: string): Promise<ResultadoNovoCiclo> {
+  const { data: contato, error: contatoError } = await supabaseAdmin
+    .from("contatos")
+    .select("*")
+    .eq("id", contatoId)
+    .single()
 
-  if (pacienteVinculado) {
+  if (contatoError || !contato) {
+    throw new Error(`Contato ${contatoId} não encontrado`)
+  }
+
+  if (contato.tipo === "paciente") {
     throw new Error(
-      `Lead ${leadId} já foi convertido em paciente (${pacienteVinculado.id}). Novo ciclo bloqueado.`
+      `Contato ${contatoId} já é paciente. Novo ciclo de lead bloqueado.`
     )
   }
 
-  const { data: lead, error: leadError } = await supabaseAdmin
-    .from("leads")
-    .select("*")
-    .eq("id", leadId)
-    .single()
-
-  if (leadError || !lead) {
-    throw new Error(`Lead ${leadId} não encontrado`)
-  }
-
-  const statusAnterior = lead.statusFunil
+  const lead = contato
+  const statusAnterior = lead.statusFunil ?? "acolhimento"
   const novoCiclo = lead.cicloAtual + 1
   const dataFormatada = new Date().toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -72,7 +67,7 @@ export async function abrirNovoCiclo(leadId: string): Promise<ResultadoNovoCiclo
     .insert({
       id: conversaId,
       atualizadoEm: tsAgora,
-      leadId,
+      contatoId,
       etapa: "qualificacao",
       ciclo: novoCiclo,
     })
@@ -82,7 +77,7 @@ export async function abrirNovoCiclo(leadId: string): Promise<ResultadoNovoCiclo
   }
 
   const { error: updateError } = await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .update({
       cicloAtual: novoCiclo,
       ciclosCompletos: lead.ciclosCompletos + 1,
@@ -96,7 +91,7 @@ export async function abrirNovoCiclo(leadId: string): Promise<ResultadoNovoCiclo
         ? `${lead.sobreOPaciente}${notaRetorno}`
         : notaRetorno.trim(),
     })
-    .eq("id", leadId)
+    .eq("id", contatoId)
 
   if (updateError) {
     throw new Error(`Erro ao atualizar lead: ${updateError.message}`)

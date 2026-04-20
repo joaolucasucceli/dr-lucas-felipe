@@ -22,12 +22,12 @@ export interface ResultadoAplicacao {
  *  Faz append (nunca sobrescreve) em `sobreOPaciente`.
  *  Retorna resumo do que foi escrito para logar em analista_logs. */
 export async function aplicarMudancasAnalista(params: {
-  leadId: string
+  contatoId: string
   conversaId: string | null
   estadoAtual: EstadoAtualLead
   output: AnalistaOutput
 }): Promise<ResultadoAplicacao> {
-  const { leadId, conversaId, estadoAtual, output } = params
+  const { contatoId, conversaId, estadoAtual, output } = params
 
   const camposAtualizados: string[] = []
   const ignorados: string[] = []
@@ -65,9 +65,9 @@ export async function aplicarMudancasAnalista(params: {
   if (Object.keys(updateLead).length > 0) {
     updateLead.atualizadoEm = agora()
     const { error } = await supabaseAdmin
-      .from("leads")
+      .from("contatos")
       .update(updateLead as never)
-      .eq("id", leadId)
+      .eq("id", contatoId)
     if (error) {
       console.error("[analista-aplicar] Erro ao atualizar lead:", error.message)
       throw new Error(`Falha ao atualizar lead: ${error.message}`)
@@ -77,7 +77,8 @@ export async function aplicarMudancasAnalista(params: {
   // Etapa — so avanca se TRANSICOES_PERMITIDAS autoriza.
   let etapaAvancada: string | null = null
   if (output.etapaCorreta !== "manter" && output.etapaCorreta !== estadoAtual.statusFunil) {
-    const permitidas = TRANSICOES_PERMITIDAS[estadoAtual.statusFunil] || []
+    const etapaAtual = estadoAtual.statusFunil ?? "acolhimento"
+    const permitidas = TRANSICOES_PERMITIDAS[etapaAtual] || []
     if (permitidas.includes(output.etapaCorreta)) {
       const dataLead: Record<string, unknown> = {
         statusFunil: output.etapaCorreta,
@@ -86,9 +87,9 @@ export async function aplicarMudancasAnalista(params: {
       }
 
       const { error: errLead } = await supabaseAdmin
-        .from("leads")
+        .from("contatos")
         .update(dataLead as never)
-        .eq("id", leadId)
+        .eq("id", contatoId)
       if (errLead) {
         console.error("[analista-aplicar] Erro ao avancar etapa do lead:", errLead.message)
         throw new Error(`Falha ao avancar etapa: ${errLead.message}`)

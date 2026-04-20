@@ -135,7 +135,7 @@ export function FormRegistroCirurgico({
         dados.marcosRecuperacao = marcos.filter((m) => m.descricao.trim())
       }
 
-      const url = `/api/pacientes/${pacienteId}/prontuario/evolucoes/${evolucaoId}/registro-cirurgico`
+      const url = `/api/contatos/${pacienteId}/prontuario/evolucoes/${evolucaoId}/registro-cirurgico`
       const res = await fetch(url, {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },

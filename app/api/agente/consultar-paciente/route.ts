@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: leadExistente } = await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .select("*")
     .eq("whatsapp", whatsapp)
     .maybeSingle()
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: novoLead, error: criarError } = await supabaseAdmin
-      .from("leads")
+      .from("contatos")
       .insert({
         id: criarId(),
         atualizadoEm: agora(),
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   const { data: conversa } = await supabaseAdmin
     .from("conversas")
     .select("id, etapa")
-    .eq("leadId", lead.id)
+    .eq("contatoId", lead.id)
     .eq("ciclo", lead.cicloAtual)
     .order("criadoEm", { ascending: false })
     .limit(1)
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const { data: agendamentoCicloAnterior } = await supabaseAdmin
       .from("agendamentos")
       .select("procedimento:procedimentos(nome)")
-      .eq("leadId", lead.id)
+      .eq("contatoId", lead.id)
       .eq("ciclo", lead.cicloAtual - 1)
       .eq("status", "realizado")
       .not("procedimentoId", "is", null)

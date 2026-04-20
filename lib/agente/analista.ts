@@ -64,11 +64,11 @@ function calcularDivergencias(
   return divs
 }
 
-async function carregarEstadoAtual(leadId: string): Promise<EstadoAtualLead | null> {
+async function carregarEstadoAtual(contatoId: string): Promise<EstadoAtualLead | null> {
   const { data } = await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .select("nome, statusFunil, procedimentoInteresse, sobreOPaciente")
-    .eq("id", leadId)
+    .eq("id", contatoId)
     .maybeSingle()
   return data ?? null
 }
@@ -161,10 +161,10 @@ Retorne APENAS um JSON com a seguinte estrutura:
  * `aplicarMudancasAnalista` e marca `aplicado: true` no log.
  */
 export async function analisarConversa(params: {
-  leadId: string
+  contatoId: string
   conversaId: string | null
 }): Promise<void> {
-  const { leadId, conversaId } = params
+  const { contatoId, conversaId } = params
 
   let historico: MensagemHistorico[] = []
   let estadoAtual: EstadoAtualLead | null = null
@@ -174,9 +174,9 @@ export async function analisarConversa(params: {
   let aplicado = false
 
   try {
-    estadoAtual = await carregarEstadoAtual(leadId)
+    estadoAtual = await carregarEstadoAtual(contatoId)
     if (!estadoAtual) {
-      console.warn(`[Analista] Lead ${leadId} nao encontrado`)
+      console.warn(`[Analista] Lead ${contatoId } nao encontrado`)
       return
     }
 
@@ -196,13 +196,13 @@ export async function analisarConversa(params: {
     if (analistaWriteModeAtivo() && output && divergencias.length > 0) {
       try {
         const resultado = await aplicarMudancasAnalista({
-          leadId,
+          contatoId,
           conversaId,
           estadoAtual,
           output,
         })
         aplicado = resultado.camposAtualizados.length > 0 || resultado.etapaAvancada !== null
-        console.log(`[Analista] Aplicou mudancas em ${leadId}:`, JSON.stringify(resultado))
+        console.log(`[Analista] Aplicou mudancas em ${contatoId }:`, JSON.stringify(resultado))
       } catch (err) {
         console.error("[Analista] Falha ao aplicar mudancas:", err)
         erro = `Aplicacao falhou: ${err instanceof Error ? err.message : String(err)}`
@@ -216,7 +216,7 @@ export async function analisarConversa(params: {
   try {
     await supabaseAdmin.from("analista_logs").insert({
       id: criarId(),
-      leadId,
+      contatoId,
       conversaId,
       historicoMensagens: historico as unknown as Json,
       estadoAtualLead: (estadoAtual ?? null) as unknown as Json,

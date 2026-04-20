@@ -93,8 +93,8 @@ export function FormEvolucao({
       if (dataRegistro) dados.dataRegistro = new Date(dataRegistro).toISOString()
 
       const url = isEdit
-        ? `/api/pacientes/${pacienteId}/prontuario/evolucoes/${evolucao!.id}`
-        : `/api/pacientes/${pacienteId}/prontuario/evolucoes`
+        ? `/api/contatos/${pacienteId}/prontuario/evolucoes/${evolucao!.id}`
+        : `/api/contatos/${pacienteId}/prontuario/evolucoes`
 
       const res = await fetch(url, {
         method: isEdit ? "PATCH" : "POST",

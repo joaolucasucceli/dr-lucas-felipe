@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: leadExistente } = await supabaseAdmin
-      .from("leads")
+      .from("contatos")
       .select("*")
       .eq("whatsapp", msg.numero)
       .maybeSingle()
@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
       }
 
       const { data: novoLead, error: createErr } = await supabaseAdmin
-        .from("leads")
+        .from("contatos")
         .insert({
           id: criarId(),
           atualizadoEm: agora(),
@@ -334,7 +334,7 @@ export async function POST(request: NextRequest) {
       if (createErr) {
         if (createErr.code === "23505") {
           const { data: paralelo } = await supabaseAdmin
-            .from("leads")
+            .from("contatos")
             .select("*")
             .eq("whatsapp", msg.numero)
             .maybeSingle()
@@ -343,7 +343,7 @@ export async function POST(request: NextRequest) {
             // JLAU-552: nao reativa — nao deveria acontecer apos hash do whatsapp.
             console.error(
               "[Webhook] Conflito inesperado: lead paralelo soft-deletado com whatsapp nao hasheado",
-              { leadId: paralelo.id, whatsapp: msg.numero }
+              { contatoId: paralelo.id, whatsapp: msg.numero }
             )
             continue
           } else {
@@ -366,7 +366,7 @@ export async function POST(request: NextRequest) {
     const { data: conversaExistente } = await supabaseAdmin
       .from("conversas")
       .select("*")
-      .eq("leadId", lead!.id)
+      .eq("contatoId", lead!.id)
       .order("criadoEm", { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -379,7 +379,7 @@ export async function POST(request: NextRequest) {
         .insert({
           id: criarId(),
           atualizadoEm: agora(),
-          leadId: lead!.id,
+          contatoId: lead!.id,
         })
         .select("*")
         .single()
@@ -396,7 +396,7 @@ export async function POST(request: NextRequest) {
       .insert({
         id: criarId(),
         conversaId: conversa!.id,
-        leadId: lead!.id,
+        contatoId: lead!.id,
         messageIdWhatsapp: msg.id,
         tipo: msg.tipo,
         conteudo,
@@ -424,10 +424,10 @@ export async function POST(request: NextRequest) {
       // Descricao = caption do paciente (se houver); tipo classificavel manualmente depois.
       const captionPaciente = msg.conteudo?.trim() || null
       const { error: fotoErr } = await supabaseAdmin
-        .from("fotos_lead")
+        .from("fotos_contato")
         .insert({
           id: criarId(),
-          leadId: lead!.id,
+          contatoId: lead!.id,
           url: storedMediaUrl,
           tipoAnalise: "geral",
           descricao: captionPaciente,

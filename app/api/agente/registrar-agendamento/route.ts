@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   if (erro) return erro
 
   let body: {
-    leadId?: string
+    contatoId?: string
     conversaId?: string
     procedimentoId?: string
     dataHora?: string
@@ -22,11 +22,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  const { leadId, conversaId, procedimentoId, dataHora, observacao } = body
+  const { contatoId, conversaId, procedimentoId, dataHora, observacao } = body
 
-  if (!leadId || !conversaId || !dataHora) {
+  if (!contatoId || !conversaId || !dataHora) {
     return NextResponse.json(
-      { error: "leadId, conversaId e dataHora são obrigatórios" },
+      { error: "contatoId, conversaId e dataHora são obrigatórios" },
       { status: 400 }
     )
   }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     .insert({
       id: criarId(),
       atualizadoEm: agora(),
-      leadId,
+      contatoId,
       procedimentoId: procedimentoId || null,
       dataHora: inicio.toISOString(),
       status: "agendado",
@@ -55,13 +55,13 @@ export async function POST(request: NextRequest) {
   }
 
   await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .update({
       statusFunil: "consulta_agendada",
       ultimaMovimentacaoEm: agora(),
       atualizadoEm: agora(),
     })
-    .eq("id", leadId)
+    .eq("id", contatoId)
 
   await supabaseAdmin
     .from("conversas")
@@ -70,9 +70,9 @@ export async function POST(request: NextRequest) {
 
   const [{ data: lead }, procResult] = await Promise.all([
     supabaseAdmin
-      .from("leads")
+      .from("contatos")
       .select("nome, email, whatsapp")
-      .eq("id", leadId)
+      .eq("id", contatoId)
       .maybeSingle(),
     procedimentoId
       ? supabaseAdmin

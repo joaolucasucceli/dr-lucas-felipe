@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Clock, Bell, DoorOpen, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useLeadsFollowUpAtivos } from "@/hooks/use-leads-followup-ativos"
+import { useContatosFollowUpAtivos } from "@/hooks/use-contatos-followup-ativos"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 
 function UltimoFollowUp({ followUpEnviados }: { followUpEnviados: string[] }) {
@@ -34,7 +34,7 @@ function UltimoFollowUp({ followUpEnviados }: { followUpEnviados: string[] }) {
 
 export function LeadsFollowUpAtivos() {
   const router = useRouter()
-  const { leads, total, carregando } = useLeadsFollowUpAtivos()
+  const { contatos, total, carregando } = useContatosFollowUpAtivos()
 
   if (carregando) {
     return (
@@ -46,7 +46,7 @@ export function LeadsFollowUpAtivos() {
     )
   }
 
-  if (leads.length === 0) {
+  if (contatos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <CheckCircle2 className="mb-2 h-8 w-8 text-green-500" />
@@ -62,22 +62,22 @@ export function LeadsFollowUpAtivos() {
 
   return (
     <div className="space-y-2">
-      {leads.map((lead) => (
+      {contatos.map((c) => (
         <div
-          key={lead.id}
+          key={c.id}
           className="flex cursor-pointer items-center justify-between rounded-md border p-3 transition-colors hover:bg-muted/50"
-          onClick={() => router.push(`/leads/${lead.id}`)}
+          onClick={() => router.push(`/contatos/${c.id}`)}
         >
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">{lead.nome}</span>
-            <StatusBadge status={lead.statusFunil} variante="funil" />
+            <span className="text-sm font-medium">{c.nome}</span>
+            <StatusBadge status={c.statusFunil} variante="funil" />
           </div>
-          <UltimoFollowUp followUpEnviados={lead.followUpEnviados} />
+          <UltimoFollowUp followUpEnviados={c.followUpEnviados} />
         </div>
       ))}
       {total > 5 && (
         <Button variant="ghost" size="sm" className="w-full mt-1" asChild>
-          <Link href="/leads?filtro=followup">Ver todos ({total})</Link>
+          <Link href="/contatos?filtro=followup">Ver todos ({total})</Link>
         </Button>
       )}
     </div>

@@ -9,16 +9,16 @@ export async function POST(request: NextRequest) {
   if (auth.error) return auth.error
 
   const body = await request.json()
-  const { leadId } = body
+  const { contatoId } = body
 
-  if (!leadId) {
-    return NextResponse.json({ error: "leadId é obrigatório" }, { status: 400 })
+  if (!contatoId) {
+    return NextResponse.json({ error: "contatoId é obrigatório" }, { status: 400 })
   }
 
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .select("id, arquivado, cicloAtual, ciclosCompletos")
-    .eq("id", leadId)
+    .eq("id", contatoId)
     .is("deletadoEm", null)
     .maybeSingle()
 
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   const tsAgora = agora()
 
   const { error: leadError } = await supabaseAdmin
-    .from("leads")
+    .from("contatos")
     .update({
       cicloAtual: novoCiclo,
       ciclosCompletos: lead.ciclosCompletos + 1,
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       ultimaMovimentacaoEm: tsAgora,
       atualizadoEm: tsAgora,
     })
-    .eq("id", leadId)
+    .eq("id", contatoId)
 
   if (leadError) {
     return NextResponse.json({ error: leadError.message }, { status: 500 })
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     .insert({
       id: criarId(),
       atualizadoEm: tsAgora,
-      leadId,
+      contatoId,
       ciclo: novoCiclo,
       etapa: "acolhimento",
     })
