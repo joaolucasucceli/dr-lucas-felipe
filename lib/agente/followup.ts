@@ -3,19 +3,19 @@ import { openai } from "@/lib/openai"
 import { enviarMensagem } from "@/lib/uazapi"
 import { agora } from "@/lib/db-utils"
 
-interface LeadAgente {
+interface ContatoAgente {
   id: string
   nome: string
   whatsapp: string
   procedimentoInteresse: string | null
 }
 
-interface ConversaComLead {
+interface ConversaComContato {
   id: string
   contatoId: string
   ultimaMensagemEm: string | null
   followUpEnviados: string[]
-  lead: LeadAgente
+  contato: ContatoAgente
 }
 
 interface ConfigWhatsappAtivo {
@@ -24,7 +24,7 @@ interface ConfigWhatsappAtivo {
 }
 
 interface FollowUpPendente {
-  conversa: ConversaComLead
+  conversa: ConversaComContato
   tipo: "1h" | "6h" | "24h"
 }
 
@@ -40,7 +40,7 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
       ultimaMensagemEm,
       followUpEnviados,
       etapa,
-      lead:contatos!conversas_contatoId_fkey(id, nome, whatsapp, procedimentoInteresse, arquivado, deletadoEm)
+      contato:contatos!conversas_contatoId_fkey(id, nome, whatsapp, procedimentoInteresse, arquivado, deletadoEm)
     `)
     .is("encerradaEm", null)
     .not("ultimaMensagemEm", "is", null)
@@ -49,13 +49,13 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
 
   if (error || !conversas) return []
 
-  type LeadRaw = LeadAgente & { arquivado: boolean; deletadoEm: string | null }
+  type ContatoRaw = ContatoAgente & { arquivado: boolean; deletadoEm: string | null }
   type ConversaRaw = {
     id: string
     contatoId: string
     ultimaMensagemEm: string | null
     followUpEnviados: string[] | null
-    lead: LeadRaw | LeadRaw[] | null
+    contato: ContatoRaw | ContatoRaw[] | null
   }
 
   const pendentes: FollowUpPendente[] = []
@@ -64,23 +64,23 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
   const ha1hDate = new Date(ha1h)
 
   for (const conversaRaw of conversas as unknown as ConversaRaw[]) {
-    const leadRaw = Array.isArray(conversaRaw.lead) ? conversaRaw.lead[0] : conversaRaw.lead
-    if (!leadRaw || leadRaw.arquivado || leadRaw.deletadoEm) continue
+    const contatoRaw = Array.isArray(conversaRaw.contato) ? conversaRaw.contato[0] : conversaRaw.contato
+    if (!contatoRaw || contatoRaw.arquivado || contatoRaw.deletadoEm) continue
     if (!conversaRaw.ultimaMensagemEm) continue
 
     const ultimaMsg = new Date(conversaRaw.ultimaMensagemEm)
     const followUps = conversaRaw.followUpEnviados ?? []
 
-    const conversa: ConversaComLead = {
+    const conversa: ConversaComContato = {
       id: conversaRaw.id,
       contatoId: conversaRaw.contatoId,
       ultimaMensagemEm: conversaRaw.ultimaMensagemEm,
       followUpEnviados: followUps,
-      lead: {
-        id: leadRaw.id,
-        nome: leadRaw.nome,
-        whatsapp: leadRaw.whatsapp,
-        procedimentoInteresse: leadRaw.procedimentoInteresse,
+      contato: {
+        id: contatoRaw.id,
+        nome: contatoRaw.nome,
+        whatsapp: contatoRaw.whatsapp,
+        procedimentoInteresse: contatoRaw.procedimentoInteresse,
       },
     }
 
@@ -97,11 +97,11 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
 }
 
 async function gerarMensagemFollowUp(
-  lead: LeadAgente,
+  contato: ContatoAgente,
   tipo: "1h" | "6h" | "24h"
 ): Promise<string> {
-  const nome = lead.nome.replace(/^WhatsApp\s+/, "") || "paciente"
-  const procedimento = lead.procedimentoInteresse || "procedimentos estéticos"
+  const nome = contato.nome.replace(/^WhatsApp\s+/, "") || "paciente"
+  const procedimento = contato.procedimentoInteresse || "procedimentos estéticos"
 
   const templates: Record<string, string> = {
     "1h": `Oi ${nome}, tudo bem? Ainda tenho algumas informações sobre ${procedimento} pra compartilhar com você. Posso te ajudar?`,
@@ -131,16 +131,16 @@ async function gerarMensagemFollowUp(
 }
 
 export async function enviarFollowUp(
-  conversa: ConversaComLead,
+  conversa: ConversaComContato,
   tipo: "1h" | "6h" | "24h",
   configWa: ConfigWhatsappAtivo
 ): Promise<void> {
-  const mensagem = await gerarMensagemFollowUp(conversa.lead, tipo)
+  const mensagem = await gerarMensagemFollowUp(conversa.contato, tipo)
 
   await enviarMensagem(
     configWa.uazapiUrl,
     configWa.instanceToken!,
-    conversa.lead.whatsapp,
+    conversa.contato.whatsapp,
     mensagem
   )
 

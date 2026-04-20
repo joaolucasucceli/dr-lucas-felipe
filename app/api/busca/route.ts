@@ -11,11 +11,11 @@ export async function GET(request: NextRequest) {
   const q = searchParams.get("q") ?? ""
 
   if (q.length < 2) {
-    return NextResponse.json({ leads: [], procedimentos: [], total: 0 })
+    return NextResponse.json({ contatos: [], procedimentos: [], total: 0 })
   }
 
   const [
-    { data: leads },
+    { data: contatos },
     { data: procedimentos },
   ] = await Promise.all([
     supabaseAdmin
@@ -33,12 +33,12 @@ export async function GET(request: NextRequest) {
       .limit(5),
   ])
 
-  const leadsList = leads ?? []
+  const contatosList = contatos ?? []
   const procedimentosList = procedimentos ?? []
 
   return NextResponse.json({
-    leads: leadsList,
+    contatos: contatosList,
     procedimentos: procedimentosList,
-    total: leadsList.length + procedimentosList.length,
+    total: contatosList.length + procedimentosList.length,
   })
 }

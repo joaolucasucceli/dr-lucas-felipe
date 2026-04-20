@@ -20,16 +20,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "whatsapp é obrigatório" }, { status: 400 })
   }
 
-  const { data: leadExistente } = await supabaseAdmin
+  const { data: contatoExistente } = await supabaseAdmin
     .from("contatos")
     .select("*")
     .eq("whatsapp", whatsapp)
     .is("deletadoEm", null)
     .maybeSingle()
 
-  let lead = leadExistente
+  let contato = contatoExistente
 
-  if (!lead) {
+  if (!contato) {
     const { data: usuarioIa } = await supabaseAdmin
       .from("usuarios")
       .select("id")
@@ -39,10 +39,10 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (!usuarioIa) {
-      console.warn("[consultar-paciente] Nenhum usuário IA ativo encontrado — lead será criado sem responsável")
+      console.warn("[consultar-paciente] Nenhum usuário IA ativo encontrado — contato será criado sem responsável")
     }
 
-    const { data: novoLead, error: criarError } = await supabaseAdmin
+    const { data: novoContato, error: criarError } = await supabaseAdmin
       .from("contatos")
       .insert({
         id: criarId(),
@@ -56,32 +56,32 @@ export async function POST(request: NextRequest) {
       .select("*")
       .single()
 
-    if (criarError || !novoLead) {
+    if (criarError || !novoContato) {
       return NextResponse.json(
-        { error: criarError?.message || "Erro ao criar lead" },
+        { error: criarError?.message || "Erro ao criar contato" },
         { status: 500 }
       )
     }
 
-    lead = novoLead
+    contato = novoContato
   }
 
   const { data: conversa } = await supabaseAdmin
     .from("conversas")
     .select("id, etapa")
-    .eq("contatoId", lead.id)
-    .eq("ciclo", lead.cicloAtual)
+    .eq("contatoId", contato.id)
+    .eq("ciclo", contato.cicloAtual)
     .order("criadoEm", { ascending: false })
     .limit(1)
     .maybeSingle()
 
   let ultimoProcedimento: string | null = null
-  if (lead.ehRetorno && lead.ciclosCompletos > 0) {
+  if (contato.ehRetorno && contato.ciclosCompletos > 0) {
     const { data: agendamentoCicloAnterior } = await supabaseAdmin
       .from("agendamentos")
       .select("procedimento:procedimentos(nome)")
-      .eq("contatoId", lead.id)
-      .eq("ciclo", lead.cicloAtual - 1)
+      .eq("contatoId", contato.id)
+      .eq("ciclo", contato.cicloAtual - 1)
       .eq("status", "realizado")
       .not("procedimentoId", "is", null)
       .order("dataHora", { ascending: false })
@@ -96,20 +96,20 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({
-    lead: {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      statusFunil: lead.statusFunil,
-      procedimentoInteresse: lead.procedimentoInteresse,
-      origem: lead.origem,
-      ehRetorno: lead.ehRetorno,
-      cicloAtual: lead.cicloAtual,
-      ciclosCompletos: lead.ciclosCompletos,
-      responsavelId: lead.responsavelId,
+    contato: {
+      id: contato.id,
+      nome: contato.nome,
+      whatsapp: contato.whatsapp,
+      statusFunil: contato.statusFunil,
+      procedimentoInteresse: contato.procedimentoInteresse,
+      origem: contato.origem,
+      ehRetorno: contato.ehRetorno,
+      cicloAtual: contato.cicloAtual,
+      ciclosCompletos: contato.ciclosCompletos,
+      responsavelId: contato.responsavelId,
     },
     conversa: conversa ? { id: conversa.id, etapa: conversa.etapa } : null,
-    sobreOPaciente: lead.sobreOPaciente || null,
+    sobreOPaciente: contato.sobreOPaciente || null,
     ultimoProcedimento,
   })
 }

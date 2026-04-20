@@ -2,18 +2,18 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { enviarMensagem } from "@/lib/uazapi"
 import { agora } from "@/lib/db-utils"
 
-interface LeadAgente {
+interface ContatoAgente {
   id: string
   nome: string
   whatsapp: string
 }
 
-interface AgendamentoComLead {
+interface AgendamentoComContato {
   id: string
   contatoId: string
   dataHora: string
   confirmacoesEnviadas: string[]
-  lead: LeadAgente
+  contato: ContatoAgente
 }
 
 interface ConfigWhatsappAtivo {
@@ -24,7 +24,7 @@ interface ConfigWhatsappAtivo {
 type TipoConfirmacao = "6h" | "3h" | "30min"
 
 interface ConfirmacaoPendente {
-  agendamento: AgendamentoComLead
+  agendamento: AgendamentoComContato
   tipo: TipoConfirmacao
 }
 
@@ -40,7 +40,7 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
       dataHora,
       confirmacoesEnviadas,
       status,
-      lead:contatos!agendamentos_contatoId_fkey(id, nome, whatsapp)
+      contato:contatos!agendamentos_contatoId_fkey(id, nome, whatsapp)
     `)
     .in("status", ["agendado", "remarcado"] as never)
     .gt("dataHora", agoraTs.toISOString())
@@ -53,14 +53,14 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
     contatoId: string
     dataHora: string
     confirmacoesEnviadas: string[] | null
-    lead: LeadAgente | LeadAgente[] | null
+    contato: ContatoAgente | ContatoAgente[] | null
   }
 
   const pendentes: ConfirmacaoPendente[] = []
 
   for (const ag of data as unknown as AgendamentoRaw[]) {
-    const leadRaw = Array.isArray(ag.lead) ? ag.lead[0] : ag.lead
-    if (!leadRaw) continue
+    const contatoRaw = Array.isArray(ag.contato) ? ag.contato[0] : ag.contato
+    if (!contatoRaw) continue
 
     const dataHora = new Date(ag.dataHora)
     const diffMs = dataHora.getTime() - agoraTs.getTime()
@@ -68,12 +68,12 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
     const diffMinutos = diffMs / (60 * 1000)
     const confirmacoes = ag.confirmacoesEnviadas ?? []
 
-    const agendamento: AgendamentoComLead = {
+    const agendamento: AgendamentoComContato = {
       id: ag.id,
       contatoId: ag.contatoId,
       dataHora: ag.dataHora,
       confirmacoesEnviadas: confirmacoes,
-      lead: leadRaw,
+      contato: contatoRaw,
     }
 
     if (diffHoras >= 6 && diffHoras < 7 && !confirmacoes.includes("6h")) {
@@ -97,11 +97,11 @@ function formatarHora(data: Date): string {
 }
 
 function gerarMensagemConfirmacao(
-  lead: LeadAgente,
+  contato: ContatoAgente,
   dataHora: Date,
   tipo: TipoConfirmacao
 ): string {
-  const nome = lead.nome.replace(/^WhatsApp\s+/, "") || "paciente"
+  const nome = contato.nome.replace(/^WhatsApp\s+/, "") || "paciente"
   const hora = formatarHora(dataHora)
 
   const mensagens: Record<TipoConfirmacao, string> = {
@@ -114,17 +114,17 @@ function gerarMensagemConfirmacao(
 }
 
 export async function enviarConfirmacao(
-  agendamento: AgendamentoComLead,
+  agendamento: AgendamentoComContato,
   tipo: TipoConfirmacao,
   configWa: ConfigWhatsappAtivo
 ): Promise<void> {
   const dataHora = new Date(agendamento.dataHora)
-  const mensagem = gerarMensagemConfirmacao(agendamento.lead, dataHora, tipo)
+  const mensagem = gerarMensagemConfirmacao(agendamento.contato, dataHora, tipo)
 
   await enviarMensagem(
     configWa.uazapiUrl,
     configWa.instanceToken!,
-    agendamento.lead.whatsapp,
+    agendamento.contato.whatsapp,
     mensagem
   )
 

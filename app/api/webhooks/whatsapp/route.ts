@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
     // JLAU-584: fromMe = mensagens enviadas pela propria instancia.
     // Pode ser: (a) IA via registrar-mensagem; (b) atendente pelo WhatsApp pessoal da clinica
     // apos pausar a IA. Em (a) o dedup por messageIdWhatsapp (UNIQUE) protege duplicata.
-    // Em (b) registramos como remetente "atendente" para aparecer no historico do lead.
+    // Em (b) registramos como remetente "atendente" para aparecer no historico do contato.
     const ehAtendente = msg.fromMe === true
 
     const { data: existe } = await supabaseAdmin
@@ -291,21 +291,21 @@ export async function POST(request: NextRequest) {
       storedMediaUrl = await downloadEUploadMidia(msg.mediaUrl, msg.tipo, msg.id)
     }
 
-    const { data: leadExistente } = await supabaseAdmin
+    const { data: contatoExistente } = await supabaseAdmin
       .from("contatos")
       .select("*")
       .eq("whatsapp", msg.numero)
       .maybeSingle()
 
-    let lead = leadExistente
+    let contato = contatoExistente
 
-    if (lead && lead.deletadoEm) {
-      // JLAU-552: nao reativar lead soft-deletado. O DELETE ja hasheou o whatsapp,
+    if (contato && contato.deletadoEm) {
+      // JLAU-552: nao reativar contato soft-deletado. O DELETE ja hasheou o whatsapp,
       // entao na pratica essa query nao deveria encontrar o antigo — fallback defensivo.
-      lead = null
+      contato = null
     }
 
-    if (!lead) {
+    if (!contato) {
       const { data: usuarioIa } = await supabaseAdmin
         .from("usuarios")
         .select("id")
@@ -315,10 +315,10 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
 
       if (!usuarioIa) {
-        console.warn("[Webhook] Nenhum usuário IA ativo encontrado — lead será criado sem responsável")
+        console.warn("[Webhook] Nenhum usuário IA ativo encontrado — contato será criado sem responsável")
       }
 
-      const { data: novoLead, error: createErr } = await supabaseAdmin
+      const { data: novoContato, error: createErr } = await supabaseAdmin
         .from("contatos")
         .insert({
           id: criarId(),
@@ -343,31 +343,31 @@ export async function POST(request: NextRequest) {
           if (paralelo?.deletadoEm) {
             // JLAU-552: nao reativa — nao deveria acontecer apos hash do whatsapp.
             console.error(
-              "[Webhook] Conflito inesperado: lead paralelo soft-deletado com whatsapp nao hasheado",
+              "[Webhook] Conflito inesperado: contato paralelo soft-deletado com whatsapp nao hasheado",
               { contatoId: paralelo.id, whatsapp: msg.numero }
             )
             continue
           } else {
-            lead = paralelo
+            contato = paralelo
           }
 
-          if (!lead) {
-            console.error("[Webhook] Falha ao criar/encontrar lead após dup:", createErr.message)
+          if (!contato) {
+            console.error("[Webhook] Falha ao criar/encontrar contato após dup:", createErr.message)
             continue
           }
         } else {
-          console.error("[Webhook] Falha ao criar lead:", createErr.message)
+          console.error("[Webhook] Falha ao criar contato:", createErr.message)
           continue
         }
       } else {
-        lead = novoLead
+        contato = novoContato
       }
     }
 
     const { data: conversaExistente } = await supabaseAdmin
       .from("conversas")
       .select("*")
-      .eq("contatoId", lead!.id)
+      .eq("contatoId", contato!.id)
       .order("criadoEm", { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -380,7 +380,7 @@ export async function POST(request: NextRequest) {
         .insert({
           id: criarId(),
           atualizadoEm: agora(),
-          contatoId: lead!.id,
+          contatoId: contato!.id,
         })
         .select("*")
         .single()
@@ -397,7 +397,7 @@ export async function POST(request: NextRequest) {
       .insert({
         id: criarId(),
         conversaId: conversa!.id,
-        contatoId: lead!.id,
+        contatoId: contato!.id,
         messageIdWhatsapp: msg.id,
         tipo: msg.tipo,
         conteudo,
@@ -428,14 +428,14 @@ export async function POST(request: NextRequest) {
         .from("fotos_contato")
         .insert({
           id: criarId(),
-          contatoId: lead!.id,
+          contatoId: contato!.id,
           url: storedMediaUrl,
           tipoAnalise: "geral",
           descricao: captionPaciente,
         })
 
       if (fotoErr) {
-        console.error("[Webhook] Falha FotoLead:", fotoErr.message)
+        console.error("[Webhook] Falha FotoContato:", fotoErr.message)
       }
     }
 

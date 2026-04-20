@@ -78,7 +78,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
 
-  let contextoLead: {
+  let contextoContato: {
     nome?: string
     procedimento?: string
     etapa?: string
@@ -95,8 +95,8 @@ export async function processarMensagens(chatId: string): Promise<void> {
     const resultadoPaciente = JSON.parse(
       await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
     )
-    if (resultadoPaciente.lead) {
-      const statusAtual: string = resultadoPaciente.lead.statusFunil
+    if (resultadoPaciente.contato) {
+      const statusAtual: string = resultadoPaciente.contato.statusFunil
 
       if (STATUSES_SILENCIO.includes(statusAtual)) {
         return
@@ -104,50 +104,50 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
       if (STATUSES_RETORNO.includes(statusAtual)) {
         try {
-          const novoCiclo = await abrirNovoCiclo(resultadoPaciente.lead.id)
+          const novoCiclo = await abrirNovoCiclo(resultadoPaciente.contato.id)
           conversaId = novoCiclo.conversaId
-          const leadAtualizado = JSON.parse(
+          const contatoAtualizado = JSON.parse(
             await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
           )
-          if (leadAtualizado.lead) {
-            contextoLead = {
-              nome: leadAtualizado.lead.nome,
-              procedimento: leadAtualizado.lead.procedimentoInteresse,
-              etapa: leadAtualizado.lead.statusFunil,
-              sobreOPaciente: leadAtualizado.sobreOPaciente,
+          if (contatoAtualizado.contato) {
+            contextoContato = {
+              nome: contatoAtualizado.contato.nome,
+              procedimento: contatoAtualizado.contato.procedimentoInteresse,
+              etapa: contatoAtualizado.contato.statusFunil,
+              sobreOPaciente: contatoAtualizado.sobreOPaciente,
               ehRetorno: true,
-              cicloAtual: leadAtualizado.lead.cicloAtual,
-              ciclosCompletos: leadAtualizado.lead.ciclosCompletos,
-              ultimoProcedimento: leadAtualizado.ultimoProcedimento,
+              cicloAtual: contatoAtualizado.contato.cicloAtual,
+              ciclosCompletos: contatoAtualizado.contato.ciclosCompletos,
+              ultimoProcedimento: contatoAtualizado.ultimoProcedimento,
             }
-            contatoId = leadAtualizado.lead.id
+            contatoId = contatoAtualizado.contato.id
           }
         } catch (err) {
           console.error("[Agente] Erro ao abrir novo ciclo:", err)
-          contextoLead = {
-            nome: resultadoPaciente.lead.nome,
-            procedimento: resultadoPaciente.lead.procedimentoInteresse,
-            etapa: resultadoPaciente.lead.statusFunil,
+          contextoContato = {
+            nome: resultadoPaciente.contato.nome,
+            procedimento: resultadoPaciente.contato.procedimentoInteresse,
+            etapa: resultadoPaciente.contato.statusFunil,
             sobreOPaciente: resultadoPaciente.sobreOPaciente,
           }
-          contatoId = resultadoPaciente.lead.id
+          contatoId = resultadoPaciente.contato.id
           conversaId = resultadoPaciente.conversa?.id || null
         }
       } else {
         const nomeConfirmado = resultadoPaciente.sobreOPaciente
-          ? resultadoPaciente.lead.nome
+          ? resultadoPaciente.contato.nome
           : undefined
-        contextoLead = {
+        contextoContato = {
           nome: nomeConfirmado,
-          procedimento: resultadoPaciente.lead.procedimentoInteresse,
-          etapa: resultadoPaciente.lead.statusFunil,
+          procedimento: resultadoPaciente.contato.procedimentoInteresse,
+          etapa: resultadoPaciente.contato.statusFunil,
           sobreOPaciente: resultadoPaciente.sobreOPaciente,
-          ehRetorno: resultadoPaciente.lead.ehRetorno,
-          cicloAtual: resultadoPaciente.lead.cicloAtual,
-          ciclosCompletos: resultadoPaciente.lead.ciclosCompletos,
+          ehRetorno: resultadoPaciente.contato.ehRetorno,
+          cicloAtual: resultadoPaciente.contato.cicloAtual,
+          ciclosCompletos: resultadoPaciente.contato.ciclosCompletos,
           ultimoProcedimento: resultadoPaciente.ultimoProcedimento,
         }
-        contatoId = resultadoPaciente.lead.id
+        contatoId = resultadoPaciente.contato.id
         conversaId = resultadoPaciente.conversa?.id || null
       }
     }
@@ -165,14 +165,14 @@ export async function processarMensagens(chatId: string): Promise<void> {
       .maybeSingle()
 
     if (usuarioIa) {
-      const { data: leadAtual } = await supabaseAdmin
+      const { data: contatoAtual } = await supabaseAdmin
         .from("contatos")
         .select("responsavelId")
         .eq("id", contatoId)
         .maybeSingle()
 
-      if (leadAtual?.responsavelId && leadAtual.responsavelId !== usuarioIa.id) {
-        console.log(`[Agente] IA não é responsável pelo lead ${contatoId } — não responde`)
+      if (contatoAtual?.responsavelId && contatoAtual.responsavelId !== usuarioIa.id) {
+        console.log(`[Agente] IA não é responsável pelo contato ${contatoId } — não responde`)
         return
       }
     }
@@ -199,7 +199,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
   try {
     const memoria = await obterMemoria(chatId)
-    const systemPrompt = await gerarSystemPrompt(contextoLead)
+    const systemPrompt = await gerarSystemPrompt(contextoContato)
     const mensagens: ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
       ...memoria,

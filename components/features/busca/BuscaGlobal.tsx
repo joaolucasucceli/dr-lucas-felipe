@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/command"
 
 interface ResultadoBusca {
-  leads: { id: string; nome: string; whatsapp: string; statusFunil: string }[]
+  contatos: { id: string; nome: string; whatsapp: string; statusFunil: string }[]
   procedimentos: { id: string; nome: string; ativo: boolean }[]
   total: number
 }
@@ -65,18 +65,18 @@ export function BuscaGlobal({ aberto, onFechar }: BuscaGlobalProps) {
 
   const temResultados =
     resultado &&
-    (resultado.leads.length > 0 || resultado.procedimentos.length > 0)
+    (resultado.contatos.length > 0 || resultado.procedimentos.length > 0)
 
   return (
     <CommandDialog
       open={aberto}
       onOpenChange={(open) => !open && onFechar()}
       title="Busca global"
-      description="Buscar leads e procedimentos"
+      description="Buscar contatos e procedimentos"
     >
       <Command>
       <CommandInput
-        placeholder="Buscar leads, procedimentos..."
+        placeholder="Buscar contatos, procedimentos..."
         value={termo}
         onValueChange={setTermo}
       />
@@ -89,18 +89,18 @@ export function BuscaGlobal({ aberto, onFechar }: BuscaGlobalProps) {
           <CommandEmpty>Digite ao menos 2 caracteres para buscar.</CommandEmpty>
         )}
 
-        {resultado && resultado.leads.length > 0 && (
-          <CommandGroup heading="Leads">
-            {resultado.leads.map((lead) => (
+        {resultado && resultado.contatos.length > 0 && (
+          <CommandGroup heading="Contatos">
+            {resultado.contatos.map((contato) => (
               <CommandItem
-                key={lead.id}
-                value={`lead-${lead.id}-${lead.nome}`}
-                onSelect={() => navegar(`/contatos/${lead.id}`)}
+                key={contato.id}
+                value={`contato-${contato.id}-${contato.nome}`}
+                onSelect={() => navegar(`/contatos/${contato.id}`)}
               >
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span>{lead.nome}</span>
+                <span>{contato.nome}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {lead.whatsapp}
+                  {contato.whatsapp}
                 </span>
               </CommandItem>
             ))}

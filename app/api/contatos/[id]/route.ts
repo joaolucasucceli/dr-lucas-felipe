@@ -39,7 +39,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
   }
 
-  // Atendente só vê leads
+  // Atendente só vê contatos tipo lead
   if (auth.session.user.perfil === "atendente" && contato.tipo !== "lead") {
     return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
   }
@@ -149,7 +149,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
   }
 
-  // Atendente só mexe em lead
+  // Atendente só mexe em contato tipo lead
   if (auth.session.user.perfil === "atendente" && contatoAtual.tipo !== "lead") {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
   }

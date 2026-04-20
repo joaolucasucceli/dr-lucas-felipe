@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-export const captarLeadSiteSchema = z.object({
+export const captarContatoSiteSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   whatsapp: z
     .string()
@@ -16,4 +16,4 @@ export const captarLeadSiteSchema = z.object({
   _hp: z.string().optional(), // honeypot — checagem no handler, não no Zod (evita expor campo ao bot)
 })
 
-export type CaptarLeadSiteInput = z.infer<typeof captarLeadSiteSchema>
+export type CaptarContatoSiteInput = z.infer<typeof captarContatoSiteSchema>

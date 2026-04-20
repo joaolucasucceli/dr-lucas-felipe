@@ -15,7 +15,7 @@ function diasAtras(data: string): string {
   return `há ${dias} dias`
 }
 
-export function LeadsAlerta() {
+export function ContatosAlerta() {
   const router = useRouter()
   const { contatos, total, carregando } = useContatosAlerta()
 
@@ -37,7 +37,7 @@ export function LeadsAlerta() {
           Tudo certo!
         </p>
         <p className="text-xs text-muted-foreground">
-          Nenhum lead sem movimentação
+          Nenhum contato sem movimentação
         </p>
       </div>
     )

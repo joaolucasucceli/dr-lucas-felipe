@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from("agendamentos")
       .select(
-        "id, dataHora, duracao, status, criadoEm, lead:contatos!agendamentos_contatoId_fkey(nome, whatsapp), procedimento:procedimentos(nome)"
+        "id, dataHora, duracao, status, criadoEm, contato:contatos!agendamentos_contatoId_fkey(nome, whatsapp), procedimento:procedimentos(nome)"
       )
 
     if (dataInicioIso) {
@@ -95,14 +95,14 @@ export async function GET(request: NextRequest) {
       contentType = "application/json"
     } else {
       conteudo = linhasCsv(
-        ["id", "leadNome", "leadWhatsapp", "procedimento", "dataHora", "duracao", "status", "criadoEm"],
+        ["id", "contatoNome", "contatoWhatsapp", "procedimento", "dataHora", "duracao", "status", "criadoEm"],
         (agendamentos ?? []).map((a) => {
-          const lead = a.lead as unknown as { nome: string; whatsapp: string } | null
+          const contato = a.contato as unknown as { nome: string; whatsapp: string } | null
           const proc = a.procedimento as unknown as { nome: string } | null
           return [
             a.id,
-            lead?.nome ?? "",
-            lead?.whatsapp ?? "",
+            contato?.nome ?? "",
+            contato?.whatsapp ?? "",
             proc?.nome ?? "",
             a.dataHora,
             a.duracao,
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from("conversas")
       .select(
-        "id, atualizadoEm, encerradaEm, criadoEm, lead:contatos!conversas_contatoId_fkey(nome, whatsapp), mensagens:mensagens_whatsapp(id)"
+        "id, atualizadoEm, encerradaEm, criadoEm, contato:contatos!conversas_contatoId_fkey(nome, whatsapp), mensagens:mensagens_whatsapp(id)"
       )
 
     if (dataInicioIso) {
@@ -130,14 +130,14 @@ export async function GET(request: NextRequest) {
       id: string
       atualizadoEm: string
       encerradaEm: string | null
-      lead: { nome: string; whatsapp: string } | null
+      contato: { nome: string; whatsapp: string } | null
       mensagens: Array<{ id: string }>
     }
 
     const lista = ((conversas ?? []) as unknown as ConversaExport[]).map((c) => ({
       id: c.id,
-      leadNome: c.lead?.nome ?? "",
-      leadWhatsapp: c.lead?.whatsapp ?? "",
+      contatoNome: c.contato?.nome ?? "",
+      contatoWhatsapp: c.contato?.whatsapp ?? "",
       totalMensagens: c.mensagens?.length ?? 0,
       atualizadoEm: c.atualizadoEm,
       encerradaEm: c.encerradaEm,
@@ -148,11 +148,11 @@ export async function GET(request: NextRequest) {
       contentType = "application/json"
     } else {
       conteudo = linhasCsv(
-        ["id", "leadNome", "leadWhatsapp", "totalMensagens", "ultimaMensagemEm", "encerradaEm"],
+        ["id", "contatoNome", "contatoWhatsapp", "totalMensagens", "ultimaMensagemEm", "encerradaEm"],
         lista.map((c) => [
           c.id,
-          c.leadNome,
-          c.leadWhatsapp,
+          c.contatoNome,
+          c.contatoWhatsapp,
           c.totalMensagens,
           c.atualizadoEm,
           c.encerradaEm ?? "",

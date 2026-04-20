@@ -23,7 +23,7 @@ import { MetricCard } from "@/components/features/shared/MetricCard"
 import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { GraficoFunil } from "@/components/features/dashboard/GraficoFunil"
-import { LeadsAlerta } from "@/components/features/dashboard/LeadsAlerta"
+import { ContatosAlerta } from "@/components/features/dashboard/ContatosAlerta"
 import { CardResumoAnaJulia } from "@/components/features/dashboard/CardResumoAnaJulia"
 import { useDashboard } from "@/hooks/use-dashboard"
 import { exportarRelatorio } from "@/hooks/use-relatorio"
@@ -172,7 +172,7 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <LeadsAlerta />
+              <ContatosAlerta />
             </CardContent>
           </Card>
         </div>

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const busca = searchParams.get("busca")
   const alerta = searchParams.get("alerta") === "true"
 
-  // Atendente só vê leads; gestor vê tudo
+  // Atendente só vê contatos tipo lead; gestor vê tudo
   const perfil = auth.session.user.perfil
   let tipoFiltro: "lead" | "paciente" | null = null
   if (tipoParam) {

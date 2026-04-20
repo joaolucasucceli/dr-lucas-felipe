@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   const { data: agendamentosPeriodo } = await supabaseAdmin
     .from("agendamentos")
-    .select("status, procedimentoId, lead:contatos!agendamentos_contatoId_fkey(origem)")
+    .select("status, procedimentoId, contato:contatos!agendamentos_contatoId_fkey(origem)")
     .gte("criadoEm", dataInicioIso)
     .lte("criadoEm", dataFimIso)
 
@@ -75,8 +75,8 @@ export async function GET(request: NextRequest) {
 
   const agendamentosPorOrigem: Record<string, number> = {}
   for (const a of agendamentosPeriodo ?? []) {
-    const lead = a.lead as unknown as { origem: string | null } | null
-    const orig = lead?.origem || "Não informada"
+    const contato = a.contato as unknown as { origem: string | null } | null
+    const orig = contato?.origem || "Não informada"
     agendamentosPorOrigem[orig] = (agendamentosPorOrigem[orig] ?? 0) + 1
   }
 

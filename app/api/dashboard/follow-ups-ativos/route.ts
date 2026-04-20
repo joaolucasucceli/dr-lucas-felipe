@@ -6,7 +6,7 @@ export async function GET() {
   const { error } = await requireAuth()
   if (error) return error
 
-  const { data: leadsRaw } = await supabaseAdmin
+  const { data: contatosRaw } = await supabaseAdmin
     .from("contatos")
     .select(`
       id,
@@ -20,7 +20,7 @@ export async function GET() {
     .eq("arquivado", false)
     .limit(50)
 
-  type LeadComConversas = {
+  type ContatoComConversas = {
     id: string
     nome: string
     statusFunil: string
@@ -33,24 +33,24 @@ export async function GET() {
     }>
   }
 
-  const leadsComFollowUp = ((leadsRaw ?? []) as unknown as LeadComConversas[])
-    .map((lead) => {
-      const conversaAberta = lead.conversas
+  const contatosComFollowUp = ((contatosRaw ?? []) as unknown as ContatoComConversas[])
+    .map((contato) => {
+      const conversaAberta = contato.conversas
         .filter((c) => !c.encerradaEm && (c.followUpEnviados ?? []).length > 0)
         .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))[0]
 
       if (!conversaAberta) return null
 
       return {
-        id: lead.id,
-        nome: lead.nome,
-        statusFunil: lead.statusFunil,
-        procedimentoInteresse: lead.procedimentoInteresse,
+        id: contato.id,
+        nome: contato.nome,
+        statusFunil: contato.statusFunil,
+        procedimentoInteresse: contato.procedimentoInteresse,
         followUpEnviados: conversaAberta.followUpEnviados ?? [],
         ultimaMensagemEm: conversaAberta.ultimaMensagemEm,
       }
     })
-    .filter((l): l is NonNullable<typeof l> => l !== null)
+    .filter((c): c is NonNullable<typeof c> => c !== null)
     .sort((a, b) => {
       if (!a.ultimaMensagemEm) return 1
       if (!b.ultimaMensagemEm) return -1
@@ -58,7 +58,7 @@ export async function GET() {
     })
 
   return NextResponse.json({
-    contatos: leadsComFollowUp.slice(0, 5),
-    total: leadsComFollowUp.length,
+    contatos: contatosComFollowUp.slice(0, 5),
+    total: contatosComFollowUp.length,
   })
 }

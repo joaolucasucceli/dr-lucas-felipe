@@ -26,7 +26,7 @@ function obterContextoTemporal(): { horaSP: number; saudacao: "bom dia" | "boa t
   return { horaSP, saudacao }
 }
 
-/** Gera o system prompt da Ana Júlia com contexto dinâmico do lead */
+/** Gera o system prompt da Ana Júlia com contexto dinâmico do contato */
 export async function gerarSystemPrompt(contexto?: ContextoContato): Promise<string> {
   let contextoStr = ""
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
-import { captarLeadSiteSchema } from "@/lib/validations/lead-site"
+import { captarContatoSiteSchema } from "@/lib/validations/contato-site"
 import { criarId, agora } from "@/lib/db-utils"
 
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ sucesso: true }, { status: 201 })
     }
 
-    const resultado = captarLeadSiteSchema.safeParse(body)
+    const resultado = captarContatoSiteSchema.safeParse(body)
     if (!resultado.success) {
       const detalhes = resultado.error.flatten().fieldErrors
       return NextResponse.json(

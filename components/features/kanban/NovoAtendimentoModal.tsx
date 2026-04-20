@@ -34,7 +34,7 @@ export function NovoAtendimentoModal({
   const [busca, setBusca] = useState("")
   const [resultados, setResultados] = useState<ContatoBusca[]>([])
   const [buscando, setBuscando] = useState(false)
-  const [leadSelecionado, setLeadSelecionado] = useState<ContatoBusca | null>(null)
+  const [contatoSelecionado, setContatoSelecionado] = useState<ContatoBusca | null>(null)
   const [confirmando, setConfirmando] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -42,7 +42,7 @@ export function NovoAtendimentoModal({
     if (!aberto) {
       setBusca("")
       setResultados([])
-      setLeadSelecionado(null)
+      setContatoSelecionado(null)
     }
   }, [aberto])
 
@@ -67,13 +67,13 @@ export function NovoAtendimentoModal({
   }, [busca])
 
   async function handleConfirmar() {
-    if (!leadSelecionado) return
+    if (!contatoSelecionado) return
     setConfirmando(true)
     try {
       const res = await fetch("/api/atendimentos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contatoId: leadSelecionado.id }),
+        body: JSON.stringify({ contatoId: contatoSelecionado.id }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -105,7 +105,7 @@ export function NovoAtendimentoModal({
               value={busca}
               onChange={(e) => {
                 setBusca(e.target.value)
-                setLeadSelecionado(null)
+                setContatoSelecionado(null)
               }}
             />
           </div>
@@ -116,37 +116,37 @@ export function NovoAtendimentoModal({
             </div>
           )}
 
-          {!buscando && resultados.length > 0 && !leadSelecionado && (
+          {!buscando && resultados.length > 0 && !contatoSelecionado && (
             <div className="rounded-md border divide-y max-h-48 overflow-y-auto">
-              {resultados.map((lead) => (
+              {resultados.map((contato) => (
                 <button
-                  key={lead.id}
+                  key={contato.id}
                   className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
-                  onClick={() => setLeadSelecionado(lead)}
+                  onClick={() => setContatoSelecionado(contato)}
                 >
                   <div>
-                    <p className="font-medium">{lead.nome}</p>
-                    <p className="text-xs text-muted-foreground">{lead.whatsapp}</p>
+                    <p className="font-medium">{contato.nome}</p>
+                    <p className="text-xs text-muted-foreground">{contato.whatsapp}</p>
                   </div>
-                  <StatusBadge status={lead.statusFunil} />
+                  <StatusBadge status={contato.statusFunil} />
                 </button>
               ))}
             </div>
           )}
 
-          {!buscando && busca.trim() && resultados.length === 0 && !leadSelecionado && (
+          {!buscando && busca.trim() && resultados.length === 0 && !contatoSelecionado && (
             <p className="text-sm text-muted-foreground text-center py-4">
               Nenhum contato encontrado
             </p>
           )}
 
-          {leadSelecionado && (
+          {contatoSelecionado && (
             <div className="rounded-md border p-3 space-y-2">
-              <p className="text-sm font-medium">{leadSelecionado.nome}</p>
-              <p className="text-xs text-muted-foreground">{leadSelecionado.whatsapp}</p>
+              <p className="text-sm font-medium">{contatoSelecionado.nome}</p>
+              <p className="text-xs text-muted-foreground">{contatoSelecionado.whatsapp}</p>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Status atual:</span>
-                <StatusBadge status={leadSelecionado.statusFunil} />
+                <StatusBadge status={contatoSelecionado.statusFunil} />
               </div>
               <p className="text-xs text-muted-foreground">
                 Um novo ciclo de atendimento será iniciado a partir de "Acolhimento".
@@ -160,7 +160,7 @@ export function NovoAtendimentoModal({
             </Button>
             <Button
               onClick={handleConfirmar}
-              disabled={!leadSelecionado || confirmando}
+              disabled={!contatoSelecionado || confirmando}
             >
               {confirmando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmar

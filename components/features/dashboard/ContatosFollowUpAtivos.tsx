@@ -32,7 +32,7 @@ function UltimoFollowUp({ followUpEnviados }: { followUpEnviados: string[] }) {
   )
 }
 
-export function LeadsFollowUpAtivos() {
+export function ContatosFollowUpAtivos() {
   const router = useRouter()
   const { contatos, total, carregando } = useContatosFollowUpAtivos()
 

@@ -45,13 +45,12 @@ export async function abrirNovoCiclo(contatoId: string): Promise<ResultadoNovoCi
 
   if (contato.tipo === "paciente") {
     throw new Error(
-      `Contato ${contatoId} já é paciente. Novo ciclo de lead bloqueado.`
+      `Contato ${contatoId} já é paciente. Novo ciclo bloqueado.`
     )
   }
 
-  const lead = contato
-  const statusAnterior = lead.statusFunil ?? "acolhimento"
-  const novoCiclo = lead.cicloAtual + 1
+  const statusAnterior = contato.statusFunil ?? "acolhimento"
+  const novoCiclo = contato.cicloAtual + 1
   const dataFormatada = new Date().toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -81,21 +80,21 @@ export async function abrirNovoCiclo(contatoId: string): Promise<ResultadoNovoCi
     .from("contatos")
     .update({
       cicloAtual: novoCiclo,
-      ciclosCompletos: lead.ciclosCompletos + 1,
+      ciclosCompletos: contato.ciclosCompletos + 1,
       ehRetorno: true,
       statusFunil: "qualificacao",
       ultimaMovimentacaoEm: tsAgora,
       atualizadoEm: tsAgora,
       arquivado: false,
       arquivadoEm: null,
-      sobreOPaciente: lead.sobreOPaciente
-        ? `${lead.sobreOPaciente}${notaRetorno}`
+      sobreOPaciente: contato.sobreOPaciente
+        ? `${contato.sobreOPaciente}${notaRetorno}`
         : notaRetorno.trim(),
     })
     .eq("id", contatoId)
 
   if (updateError) {
-    throw new Error(`Erro ao atualizar lead: ${updateError.message}`)
+    throw new Error(`Erro ao atualizar contato: ${updateError.message}`)
   }
 
   return {
