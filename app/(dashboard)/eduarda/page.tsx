@@ -3,8 +3,7 @@
 import { useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { PageHeader } from "@/components/features/shared/PageHeader"
-import { ModuloEduarda } from "@/components/features/documentacao/modulos/ModuloEduarda"
+import { PerfilEduarda } from "@/components/features/colaboradores/PerfilEduarda"
 
 export default function EduardaPage() {
   const { data: session, status } = useSession()
@@ -19,15 +18,8 @@ export default function EduardaPage() {
   if (status === "loading" || !autorizado) return null
 
   return (
-    <div>
-      <PageHeader
-        titulo="Eduarda"
-        descricao="Analista que lê as conversas da Ana Júlia e escreve no CRM"
-      />
-
-      <div className="mt-6">
-        <ModuloEduarda />
-      </div>
+    <div className="mx-auto max-w-4xl">
+      <PerfilEduarda />
     </div>
   )
 }

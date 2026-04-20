@@ -21,8 +21,6 @@ import { ModuloBaseConhecimento } from "@/components/features/documentacao/modul
 import { ModuloMidiaMarketing } from "@/components/features/documentacao/modulos/ModuloMidiaMarketing"
 import { ModuloMeuPerfil } from "@/components/features/documentacao/modulos/ModuloMeuPerfil"
 import { ModuloConfiguracoes } from "@/components/features/documentacao/modulos/ModuloConfiguracoes"
-import { ModuloAnaJulia } from "@/components/features/documentacao/modulos/ModuloAnaJulia"
-import { ModuloEduarda } from "@/components/features/documentacao/modulos/ModuloEduarda"
 
 interface EntradaAjuda {
   titulo: string
@@ -31,8 +29,6 @@ interface EntradaAjuda {
 
 // Ordem importa: prefixos mais longos primeiro (ex: /configuracoes/google-agenda antes de /configuracoes)
 const MAPA_AJUDA: Array<{ prefix: string } & EntradaAjuda> = [
-  { prefix: "/ana-julia", titulo: "Ana Júlia", Componente: ModuloAnaJulia },
-  { prefix: "/eduarda", titulo: "Eduarda", Componente: ModuloEduarda },
   { prefix: "/atendimentos", titulo: "Atendimentos", Componente: ModuloAtendimentos },
   { prefix: "/leads", titulo: "Leads", Componente: ModuloLeads },
   { prefix: "/pacientes", titulo: "Pacientes", Componente: ModuloPacientes },
