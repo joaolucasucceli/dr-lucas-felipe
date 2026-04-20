@@ -20,7 +20,6 @@ export interface DashboardMetricas {
   leadsNovosNoPeriodo: number
   taxaConversao: number
   agendamentosNoPeriodo: number
-  agendamentosRealizados: number
   leadsPorEtapa: EtapaFunil[]
   leadsPorOrigem: OrigemLead[]
   mensagensEnviadasPelaIA: number

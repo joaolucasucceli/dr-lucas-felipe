@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.29.0"
+export const VERSAO_DOCUMENTACAO = "1.30.0"
 export const DATA_ATUALIZACAO = "2026-04-20"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -135,27 +135,23 @@ Gestão completa da base de pacientes e potenciais clientes.
 
 ## Módulo 3 — Atendimentos (Kanban)
 
-Visualização em kanban do funil de atendimento com 9 etapas.
+Visualização em kanban do funil de atendimento com **4 etapas**. Todas são movidas automaticamente pela dupla Ana Júlia (SDR) + Analista IA — o gestor não precisa mover cartão manualmente.
 
 ### Etapas do Funil
 
-| # | Etapa | Movimentação |
+| # | Etapa | Responsável |
 |---|-------|-------------|
-| 1 | Acolhimento | Automática (Ana Júlia) |
-| 2 | Qualificação | Automática (Ana Júlia) |
-| 3 | Agendamento | Automática (Ana Júlia) |
-| 4 | Consulta Agendada | Automática (Ana Júlia) |
-| 5 | Consulta Realizada | Manual |
-| 6 | Sinal Pago | Manual |
-| 7 | Procedimento Agendado | Manual |
-| 8 | Concluído | Manual |
-| 9 | Perdido | Manual |
+| 1 | Acolhimento | Ana Júlia (saudação + primeira coleta) |
+| 2 | Qualificação | Analista IA (nome + procedimento + respostas de qualificação) |
+| 3 | Agendamento | Ana Júlia (negocia horário com o paciente) |
+| 4 | Reunião Agendada | Ana Júlia (ao confirmar horário — cria evento no Google Calendar) |
+
+Depois da **Reunião Agendada**, o funil para. A IA continua respondendo a mensagens do paciente (dúvidas, remarcações, infos da clínica) mas **não avança mais**. A consulta presencial e o que acontece depois são gerenciados fora do sistema (Google Calendar é a fonte da verdade para a agenda do Dr. Lucas).
 
 ### Funcionalidades
 
-- **9 etapas do funil** — Visualização completa da jornada do paciente
-- **Movimentação automática** — Etapas 1 a 4 movidas pela Ana Júlia via WhatsApp
-- **Ação manual (etapas 5–8)** — Controle manual do time clínico
+- **4 etapas do funil** — Acolhimento → Qualificação → Agendamento → Reunião Agendada
+- **Movimentação automática** — Todas as etapas movidas pela dupla Ana Júlia + Analista IA via WhatsApp
 - **Filtros avançados** — Por responsável, etapa, procedimento ou nome
 - **Indicador "IA pausada"** — Cards com badge laranja sinalizam leads em que a IA foi pausada manualmente
 
@@ -165,63 +161,40 @@ O painel **não tem** aba de chat. A Ana Júlia conversa com o paciente direto n
 
 1. Abre o detalhe do lead em **Leads → (nome do lead)**
 2. Clica em **Pausar IA** no header do lead (ConfirmDialog confirma a ação)
-3. Responde o paciente **direto pelo WhatsApp pessoal** da clínica — a mensagem do atendente é registrada automaticamente no histórico do lead (webhook identifica \`fromMe=true\` como "atendente")
+3. Responde o paciente **direto pelo WhatsApp pessoal** da clínica — a mensagem do atendente é registrada automaticamente no histórico do lead (webhook identifica fromMe=true como "atendente")
 4. Quando quiser devolver o controle, volta no detalhe do lead e clica em **Retomar IA**
 
 A Ana Júlia **não responde** enquanto a IA está pausada naquela conversa. As demais conversas continuam no modo IA normalmente — a pausa é por conversa, não global.
 
+### Conversão Lead → Paciente (manual)
+
+Quando o lead chega em "Reunião Agendada", o gestor pode converter o lead em paciente manualmente:
+
+1. Abre o detalhe do lead
+2. Clica em **Converter em Paciente** no header
+3. ConfirmDialog e toast confirmam a criação do paciente
+4. O lead é arquivado e um novo prontuário é criado
+
+O sistema **não converte automaticamente** — é sempre decisão do gestor.
+
 ### Como usar
 
-1. Observe cada coluna representando uma etapa (número no cabeçalho = quantidade de leads)
+1. Cada coluna representa uma etapa (número no cabeçalho = quantidade de leads)
 2. Badge laranja **IA pausada** no card indica que o atendente humano assumiu essa conversa via WhatsApp
-3. Use o menu do card (três pontos) para mudar a etapa de um lead nas colunas 5 a 8
-4. Ao mover para "Perdido", informe o motivo (alimenta relatórios de perda)
+3. Arraste manualmente se quiser ajustar alguma etapa (raramente necessário — a IA faz sozinha)
 
 ### Permissões
 
 | Perfil | Acesso |
 |--------|--------|
-| Gestor | Total — move, arquiva, reatribui leads e pausa/retoma IA |
+| Gestor | Total — move, arquiva, pausa/retoma IA e converte em paciente |
 | Atendente | Total — move, atualiza cards e pausa/retoma IA |
-
-> A Ana Júlia move leads automaticamente até "Consulta Agendada" (etapa 4). A partir daí, o time clínico assume.
-
----
-
-## Módulo 4 — Agendamentos
-
-Agenda integrada com Google Calendar e confirmações automáticas.
-
-### Funcionalidades
-
-- **Visualização em lista** — Tabela filtrável por status, data e paciente
-- **Calendário semanal** — Grade visual 8h–20h com slots clicáveis
-- **Sincronização Google** — Agendamentos criam eventos automáticos no Google Calendar
-- **Confirmações automáticas** — Lembretes via WhatsApp 6h, 3h e 30min antes
-
-### Status de Agendamento
-
-\`agendado\` → \`confirmado\` → \`realizado\` | \`cancelado\` | \`remarcado\`
-
-### Como usar
-
-1. Clique em "Novo Agendamento" e selecione paciente, procedimento, data e horário
-2. Alterne entre "Lista" e "Calendário" para diferentes perspectivas
-3. Atualize o status conforme o atendimento progride
-4. Prefira "Remarcado" a "Cancelado" quando o paciente quer outro horário
-
-### Permissões
-
-| Perfil | Acesso |
-|--------|--------|
-| Gestor | Total — cria, edita e cancela |
-| Atendente | Total — cria, edita e cancela |
 
 > Configure o Google Agenda em Configurações antes de criar agendamentos para garantir sincronização.
 
 ---
 
-## Módulo 5 — Procedimentos
+## Módulo 4 — Procedimentos
 
 Catálogo de procedimentos da clínica com duração e orientações.
 
@@ -250,7 +223,7 @@ Catálogo de procedimentos da clínica com duração e orientações.
 
 ---
 
-## Módulo 6 — Pacientes & Prontuário
+## Módulo 5 — Pacientes & Prontuário
 
 Gestão completa de pacientes clínicos com prontuário médico estruturado. Módulo exclusivo do Gestor.
 
@@ -398,9 +371,9 @@ Cada módulo abaixo documenta uma das IAs separadamente.
 
 ---
 
-## Módulo 7 — Ana Júlia (SDR)
+## Módulo 6 — Ana Júlia (SDR)
 
-Agente conversacional que atende pacientes no WhatsApp. SDR pura — **não escreve no CRM** (isso é trabalho da Analista IA, Módulo 8).
+Agente conversacional que atende pacientes no WhatsApp. SDR pura — **não escreve no CRM** (isso é trabalho da Analista IA, Módulo 7).
 
 ### Arquitetura do Agente
 
@@ -507,7 +480,7 @@ Proteções:
 
 ---
 
-## Módulo 8 — Analista IA
+## Módulo 7 — Analista IA
 
 Segundo agente IA do sistema. Lê cada conversa da Ana Júlia e **escreve estruturadamente no CRM** — nome do paciente, procedimento de interesse, texto cumulativo sobre o paciente, avanço de etapa no funil. Usa GPT-4o-mini, rodando em fire-and-forget após cada resposta da Ana Júlia.
 
@@ -658,7 +631,7 @@ Todos os dados editáveis (WhatsApp, CRM, Instagram, contato) ficam em:
 
 ---
 
-## Módulo 9 — Exportação de Dados
+## Módulo 8 — Exportação de Dados
 
 Exportação de relatórios em CSV, disponível no Dashboard (botão de download).
 
@@ -685,7 +658,7 @@ Exportação de relatórios em CSV, disponível no Dashboard (botão de download
 
 ---
 
-## Módulo 10 — Configurações
+## Módulo 9 — Configurações
 
 Integrações, automações e configurações gerais do sistema.
 
@@ -761,7 +734,7 @@ Gerenciamento de acesso e perfis dos usuários da plataforma.
 \`\`\`
 id | nome | whatsapp (único) | email | statusFunil | etapaConversa
 origem | sobreOPaciente (append-only) | responsavelId
-arquivado | motivoPerda | cicloAtual | ciclosCompletos | ehRetorno
+arquivado | cicloAtual | ciclosCompletos | ehRetorno
 \`\`\`
 
 ### Agendamento

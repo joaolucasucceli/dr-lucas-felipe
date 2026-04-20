@@ -1,15 +1,13 @@
 import { supabaseAdmin } from "@/lib/supabase"
 import { agora } from "@/lib/db-utils"
-import { obterNovoResponsavelPorStatus } from "@/lib/leads/auto-atribuir-responsavel"
 import type { AnalistaOutput, EstadoAtualLead } from "@/lib/agente/analista-types"
 
 /** Transicoes validas de statusFunil controladas pela Analista.
- *  Analista nunca regride etapa nem avanca para estados operados por humanos
- *  (consulta_agendada em diante, perdido). */
+ *  Analista nunca regride etapa nem avanca para consulta_agendada
+ *  (esse avanco e responsabilidade da tool `registrar_agendamento`). */
 const TRANSICOES_PERMITIDAS: Record<string, string[]> = {
   acolhimento: ["qualificacao"],
-  qualificacao: ["pre_agendamento"],
-  pre_agendamento: ["verificacao_humana"],
+  qualificacao: ["agendamento"],
 }
 
 export interface ResultadoAplicacao {
@@ -81,13 +79,11 @@ export async function aplicarMudancasAnalista(params: {
   if (output.etapaCorreta !== "manter" && output.etapaCorreta !== estadoAtual.statusFunil) {
     const permitidas = TRANSICOES_PERMITIDAS[estadoAtual.statusFunil] || []
     if (permitidas.includes(output.etapaCorreta)) {
-      const novoResponsavelId = await obterNovoResponsavelPorStatus(output.etapaCorreta)
       const dataLead: Record<string, unknown> = {
         statusFunil: output.etapaCorreta,
         ultimaMovimentacaoEm: agora(),
         atualizadoEm: agora(),
       }
-      if (novoResponsavelId) dataLead.responsavelId = novoResponsavelId
 
       const { error: errLead } = await supabaseAdmin
         .from("leads")

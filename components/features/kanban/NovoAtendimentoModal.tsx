@@ -55,7 +55,7 @@ export function NovoAtendimentoModal({
     debounceRef.current = setTimeout(async () => {
       setBuscando(true)
       try {
-        const res = await fetch(`/api/leads?busca=${encodeURIComponent(busca)}&arquivado=false`)
+        const res = await fetch(`/api/leads?busca=${encodeURIComponent(busca)}&arquivado=true`)
         const data = await res.json()
         setResultados(data.dados?.slice(0, 8) || [])
       } catch {

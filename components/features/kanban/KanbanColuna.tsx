@@ -8,27 +8,15 @@ import type { KanbanLead } from "@/hooks/use-kanban"
 const coresColuna: Record<string, { bg: string; text: string; border: string }> = {
   acolhimento: { bg: "bg-zinc-100", text: "text-zinc-800", border: "border-zinc-300" },
   qualificacao: { bg: "bg-blue-50", text: "text-blue-800", border: "border-blue-300" },
-  pre_agendamento: { bg: "bg-indigo-50", text: "text-indigo-800", border: "border-indigo-300" },
-  verificacao_humana: { bg: "bg-orange-50", text: "text-orange-800", border: "border-orange-300" },
+  agendamento: { bg: "bg-indigo-50", text: "text-indigo-800", border: "border-indigo-300" },
   consulta_agendada: { bg: "bg-purple-50", text: "text-purple-800", border: "border-purple-300" },
-  consulta_realizada: { bg: "bg-green-50", text: "text-green-800", border: "border-green-300" },
-  sinal_pago: { bg: "bg-emerald-50", text: "text-emerald-800", border: "border-emerald-300" },
-  procedimento_agendado: { bg: "bg-amber-50", text: "text-amber-800", border: "border-amber-300" },
-  concluido: { bg: "bg-green-100", text: "text-green-900", border: "border-green-400" },
-  perdido: { bg: "bg-red-50", text: "text-red-800", border: "border-red-300" },
 }
 
 const labelsColuna: Record<string, string> = {
   acolhimento: "Acolhimento",
   qualificacao: "Qualificação",
-  pre_agendamento: "Pré-Agendamento",
-  verificacao_humana: "Verificação",
-  consulta_agendada: "Consulta Agendada",
-  consulta_realizada: "Consulta Realizada",
-  sinal_pago: "Sinal Pago",
-  procedimento_agendado: "Proc. Agendado",
-  concluido: "Concluído",
-  perdido: "Perdido",
+  agendamento: "Agendamento",
+  consulta_agendada: "Reunião Agendada",
 }
 
 interface KanbanColunaProps {
@@ -47,9 +35,7 @@ export function KanbanColuna({ etapa, leads }: KanbanColunaProps) {
       >
         <h3 className={`text-xs font-semibold ${cores.text}`}>{label}</h3>
         <span
-          className={`flex h-5 min-w-5 items-center justify-center gap-1 rounded-full ${cores.bg} ${cores.text} px-1.5 text-[10px] font-bold ${
-            etapa === "verificacao_humana" && leads.length > 0 ? "animate-pulse" : ""
-          }`}
+          className={`flex h-5 min-w-5 items-center justify-center gap-1 rounded-full ${cores.bg} ${cores.text} px-1.5 text-[10px] font-bold`}
         >
           <Users className="h-3 w-3" />
           {leads.length}

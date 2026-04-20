@@ -13,7 +13,6 @@ export interface KanbanLead {
   criadoEm: string
   atualizadoEm: string
   ultimaMovimentacaoEm: string | null
-  motivoPerda: string | null
   ehRetorno: boolean
   cicloAtual: number
   diasNaEtapa: number
@@ -50,18 +49,15 @@ export function useKanban(params: UseKanbanParams = {}) {
     revalidateOnFocus: true,
   })
 
-  // Realtime: atualizar quando leads ou conversas mudarem
   useRealtimeTabela("leads", () => mutate())
   useRealtimeTabela("conversas", () => mutate())
 
   async function moverLead(
     leadId: string,
-    novoStatus: string,
-    motivoPerda?: string
+    novoStatus: string
   ): Promise<boolean> {
     if (!data) return false
 
-    // Encontrar o lead e sua coluna atual
     let leadOriginal: KanbanLead | null = null
     let colunaOriginal = ""
 
@@ -76,7 +72,6 @@ export function useKanban(params: UseKanbanParams = {}) {
 
     if (!leadOriginal || colunaOriginal === novoStatus) return false
 
-    // Atualização otimista
     const colunasOtimistas = { ...data.colunas }
     colunasOtimistas[colunaOriginal] = colunasOtimistas[colunaOriginal].filter(
       (l) => l.id !== leadId
@@ -89,13 +84,10 @@ export function useKanban(params: UseKanbanParams = {}) {
     mutate({ colunas: colunasOtimistas, total: data.total }, false)
 
     try {
-      const body: Record<string, string> = { statusFunil: novoStatus }
-      if (motivoPerda) body.motivoPerda = motivoPerda
-
       const res = await fetch(`/api/leads/${leadId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ statusFunil: novoStatus }),
       })
 
       if (!res.ok) {
@@ -106,7 +98,6 @@ export function useKanban(params: UseKanbanParams = {}) {
       mutate()
       return true
     } catch (err) {
-      // Reverter
       mutate(data, false)
       toast.error(err instanceof Error ? err.message : "Erro ao mover lead")
       return false

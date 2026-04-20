@@ -6,14 +6,8 @@ import { requireAuth } from "@/lib/auth-helpers"
 const ETAPAS_FUNIL: string[] = [
   "acolhimento",
   "qualificacao",
-  "pre_agendamento",
-  "verificacao_humana",
+  "agendamento",
   "consulta_agendada",
-  "consulta_realizada",
-  "sinal_pago",
-  "procedimento_agendado",
-  "concluido",
-  "perdido",
 ]
 
 export async function GET(request: NextRequest) {
@@ -35,7 +29,6 @@ export async function GET(request: NextRequest) {
       criadoEm,
       atualizadoEm,
       ultimaMovimentacaoEm,
-      motivoPerda,
       ehRetorno,
       cicloAtual,
       responsavel:usuarios!leads_responsavelId_fkey(id, nome),
@@ -81,7 +74,6 @@ export async function GET(request: NextRequest) {
     criadoEm: string
     atualizadoEm: string
     ultimaMovimentacaoEm: string | null
-    motivoPerda: string | null
     ehRetorno: boolean
     cicloAtual: number
     responsavel: { id: string; nome: string } | null

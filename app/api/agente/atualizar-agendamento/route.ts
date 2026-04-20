@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
   await supabaseAdmin
     .from("leads")
     .update({
-      statusFunil: "pre_agendamento" as never,
+      statusFunil: "agendamento" as never,
       ultimaMovimentacaoEm: agora(),
       atualizadoEm: agora(),
     })
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
   if (conversa) {
     await supabaseAdmin
       .from("conversas")
-      .update({ etapa: "pre_agendamento" as never, atualizadoEm: agora() })
+      .update({ etapa: "agendamento" as never, atualizadoEm: agora() })
       .eq("id", conversa.id)
   }
 

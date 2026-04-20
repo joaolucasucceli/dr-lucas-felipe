@@ -131,7 +131,7 @@ Retorne APENAS um JSON com a seguinte estrutura:
     "score": number
   },
   "sobreOPacienteAdicionar": string | null,
-  "etapaCorreta": "acolhimento" | "qualificacao" | "pre_agendamento" | "verificacao_humana" | "consulta_agendada" | "manter",
+  "etapaCorreta": "acolhimento" | "qualificacao" | "agendamento" | "manter",
   "agendamentoDetectado": { "dataIso": string | null, "hora": string | null, "confianca": number } | null,
   "justificativa": string,
   "confiancaGeral": number

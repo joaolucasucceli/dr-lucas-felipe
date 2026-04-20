@@ -10,39 +10,21 @@ interface LeadAlerta {
   ultimaMovimentacaoEm: string | null
 }
 
-interface AgendamentoProximo {
-  id: string
-  dataHora: string
-  status: string
-  lead: { nome: string }
-}
-
 interface LeadNovoIA {
   id: string
   nome: string
   criadoEm: string
 }
 
-interface LeadVerificacaoPendente {
-  id: string
-  nome: string
-  procedimentoInteresse: string | null
-  ultimaMovimentacaoEm: string | null
-}
-
 export interface DadosNotificacoes {
   leadsAlerta: LeadAlerta[]
-  agendamentosProximos: AgendamentoProximo[]
   leadsNovosIA: LeadNovoIA[]
-  leadsVerificacaoPendente: LeadVerificacaoPendente[]
   total: number
 }
 
 const dadosVazios: DadosNotificacoes = {
   leadsAlerta: [],
-  agendamentosProximos: [],
   leadsNovosIA: [],
-  leadsVerificacaoPendente: [],
   total: 0,
 }
 
@@ -73,9 +55,7 @@ export function useNotificacoes() {
     return () => clearInterval(interval)
   }, [buscar])
 
-  // Realtime: atualizar quando mensagens, agendamentos ou leads mudarem
   useRealtimeTabela("mensagens", buscar)
-  useRealtimeTabela("agendamentos", buscar)
   useRealtimeTabela("leads", buscar)
 
   return {

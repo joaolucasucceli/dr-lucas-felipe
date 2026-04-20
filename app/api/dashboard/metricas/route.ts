@@ -7,47 +7,24 @@ const labelsFunil: Record<string, string> = {
   acolhimento: "Acolhimento",
   qualificacao: "Qualificação",
   agendamento: "Agendamento",
-  consulta_agendada: "Consulta Agendada",
-  consulta_realizada: "Consulta Realizada",
-  sinal_pago: "Sinal Pago",
-  procedimento_agendado: "Procedimento Agendado",
-  concluido: "Concluído",
-  perdido: "Perdido",
+  consulta_agendada: "Reunião Agendada",
 }
 
 const coresFunil: Record<string, string> = {
   acolhimento: "#a1a1aa",
   qualificacao: "#93c5fd",
-  pre_agendamento: "#a5b4fc",
-  verificacao_humana: "#fdba74",
+  agendamento: "#a5b4fc",
   consulta_agendada: "#c4b5fd",
-  consulta_realizada: "#86efac",
-  sinal_pago: "#6ee7b7",
-  procedimento_agendado: "#fcd34d",
-  concluido: "#bbf7d0",
-  perdido: "#fca5a5",
 }
 
 const ordemFunil = [
   "acolhimento",
   "qualificacao",
-  "pre_agendamento",
-  "verificacao_humana",
+  "agendamento",
   "consulta_agendada",
-  "consulta_realizada",
-  "sinal_pago",
-  "procedimento_agendado",
-  "concluido",
-  "perdido",
 ]
 
-const etapasConvertidas = [
-  "consulta_agendada",
-  "consulta_realizada",
-  "sinal_pago",
-  "procedimento_agendado",
-  "concluido",
-]
+const etapasConvertidas = ["consulta_agendada"]
 
 function calcularDataInicio(periodo: string): Date | null {
   const agoraTs = new Date()
@@ -115,13 +92,6 @@ export async function GET(request: NextRequest) {
       .select("id", { count: "exact", head: true })
     return dataInicioIso ? q.gte("criadoEm", dataInicioIso) : q
   })()
-  const agendamentosRealizadosP = (() => {
-    const q = supabaseAdmin
-      .from("agendamentos")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "realizado")
-    return dataInicioIso ? q.gte("criadoEm", dataInicioIso) : q
-  })()
 
   const leadsPorEtapaP = supabaseAdmin
     .from("leads")
@@ -158,7 +128,6 @@ export async function GET(request: NextRequest) {
   })()
 
   const leadsAlertaP = baseLeads()
-    .not("statusFunil", "in", "(concluido,perdido)")
     .or(`ultimaMovimentacaoEm.lt.${ha3dias},and(ultimaMovimentacaoEm.is.null,atualizadoEm.lt.${ha3dias})`)
 
   const pacientesRetornoP = baseLeads().eq("ehRetorno", true)
@@ -175,7 +144,6 @@ export async function GET(request: NextRequest) {
     leadsNovosRes,
     leadsConvertidosRes,
     agendamentosNoPeriodoRes,
-    agendamentosRealizadosRes,
     leadsPorEtapaRes,
     leadsPorOrigemRes,
     mensagensIaRes,
@@ -190,7 +158,6 @@ export async function GET(request: NextRequest) {
     leadsNovosP,
     leadsConvertidosP,
     agendamentosNoPeriodoP,
-    agendamentosRealizadosP,
     leadsPorEtapaP,
     leadsPorOrigemP,
     mensagensIaP,
@@ -206,7 +173,6 @@ export async function GET(request: NextRequest) {
   const leadsNovosNoPeriodo = leadsNovosRes.count ?? 0
   const leadsConvertidos = leadsConvertidosRes.count ?? 0
   const agendamentosNoPeriodo = agendamentosNoPeriodoRes.count ?? 0
-  const agendamentosRealizados = agendamentosRealizadosRes.count ?? 0
   const mensagensEnviadasPelaIA = mensagensIaRes.count ?? 0
   const leadsEmAlerta = leadsAlertaRes.count ?? 0
   const pacientesRetorno = pacientesRetornoRes.count ?? 0
@@ -258,7 +224,6 @@ export async function GET(request: NextRequest) {
     leadsNovosNoPeriodo,
     taxaConversao,
     agendamentosNoPeriodo,
-    agendamentosRealizados,
     leadsPorEtapa,
     leadsPorOrigem,
     mensagensEnviadasPelaIA: isAtendente ? 0 : mensagensEnviadasPelaIA,

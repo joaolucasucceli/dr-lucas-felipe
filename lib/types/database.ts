@@ -719,7 +719,6 @@ export type Database = {
           ehRetorno: boolean
           email: string | null
           id: string
-          motivoPerda: string | null
           nome: string
           origem: string | null
           procedimentoInteresse: string | null
@@ -742,7 +741,6 @@ export type Database = {
           ehRetorno?: boolean
           email?: string | null
           id: string
-          motivoPerda?: string | null
           nome: string
           origem?: string | null
           procedimentoInteresse?: string | null
@@ -765,7 +763,6 @@ export type Database = {
           ehRetorno?: boolean
           email?: string | null
           id?: string
-          motivoPerda?: string | null
           nome?: string
           origem?: string | null
           procedimentoInteresse?: string | null
@@ -1277,11 +1274,6 @@ export type Database = {
         | "qualificacao"
         | "agendamento"
         | "consulta_agendada"
-        | "consulta_realizada"
-        | "sinal_pago"
-        | "procedimento_agendado"
-        | "concluido"
-        | "perdido"
       ModoConversa: "ia" | "humano"
       Perfil: "gestor" | "atendente"
       StatusAgendamento:
@@ -1295,11 +1287,6 @@ export type Database = {
         | "qualificacao"
         | "agendamento"
         | "consulta_agendada"
-        | "consulta_realizada"
-        | "sinal_pago"
-        | "procedimento_agendado"
-        | "concluido"
-        | "perdido"
       StatusSprint: "planejada" | "em_andamento" | "concluida"
       TipoAnestesia:
         | "local"
@@ -1468,11 +1455,6 @@ export const Constants = {
         "qualificacao",
         "agendamento",
         "consulta_agendada",
-        "consulta_realizada",
-        "sinal_pago",
-        "procedimento_agendado",
-        "concluido",
-        "perdido",
       ],
       ModoConversa: ["ia", "humano"],
       Perfil: ["gestor", "atendente"],
@@ -1488,11 +1470,6 @@ export const Constants = {
         "qualificacao",
         "agendamento",
         "consulta_agendada",
-        "consulta_realizada",
-        "sinal_pago",
-        "procedimento_agendado",
-        "concluido",
-        "perdido",
       ],
       StatusSprint: ["planejada", "em_andamento", "concluida"],
       TipoAnestesia: [

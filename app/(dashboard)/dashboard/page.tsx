@@ -99,9 +99,6 @@ export default function DashboardPage() {
               <DropdownMenuItem onClick={() => exportarRelatorio("leads")}>
                 Exportar Leads
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportarRelatorio("agendamentos")}>
-                Exportar Agendamentos
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportarRelatorio("conversas")}>
                 Exportar Conversas
               </DropdownMenuItem>
@@ -126,7 +123,7 @@ export default function DashboardPage() {
         <MetricCard
           titulo="Agendamentos"
           valor={metricas.agendamentosNoPeriodo}
-          descricao={`${metricas.agendamentosRealizados} realizados`}
+          descricao="Consultas marcadas pela IA"
           icone={<Calendar className="h-5 w-5" />}
         />
         {isGestor ? (

@@ -12,8 +12,8 @@ import type { ChatCompletionMessageParam } from "openai/resources/chat/completio
 
 const MAX_TOOL_ITERATIONS = 10
 
-const STATUSES_SILENCIO = ["verificacao_humana", "consulta_realizada", "sinal_pago", "procedimento_agendado"]
-const STATUSES_RETORNO = ["concluido", "perdido", "arquivado"]
+const STATUSES_SILENCIO: string[] = []
+const STATUSES_RETORNO: string[] = []
 
 export function segmentarResposta(texto: string): string[] {
   if (!texto) return []

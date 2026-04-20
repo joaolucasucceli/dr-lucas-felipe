@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Bell, AlertTriangle, Calendar, Bot, X, ClipboardCheck } from "lucide-react"
+import { Bell, AlertTriangle, Bot, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -18,15 +18,6 @@ function formatarDataRelativa(iso: string) {
   if (dias > 0) return `há ${dias} dia${dias > 1 ? "s" : ""}`
   if (horas > 0) return `há ${horas}h`
   return "agora"
-}
-
-function formatarHora(iso: string) {
-  return new Date(iso).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
 }
 
 export function PainelNotificacoes() {
@@ -94,38 +85,8 @@ export function PainelNotificacoes() {
             </p>
           )}
 
-          {!dispensadas && notificacoes.leadsVerificacaoPendente.length > 0 && (
-            <div className="p-2">
-              <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-                <ClipboardCheck className="mr-1 inline h-3 w-3 text-orange-500" />
-                Verificação pendente
-              </p>
-              {notificacoes.leadsVerificacaoPendente.map((lead) => (
-                <button
-                  key={lead.id}
-                  onClick={() => navegar(`/leads/${lead.id}`)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted"
-                >
-                  <span className="flex-1 truncate">
-                    {lead.nome}
-                    {lead.procedimentoInteresse && (
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        — {lead.procedimentoInteresse}
-                      </span>
-                    )}
-                  </span>
-                  <span className="shrink-0 text-xs text-orange-600">
-                    {lead.ultimaMovimentacaoEm
-                      ? formatarDataRelativa(lead.ultimaMovimentacaoEm)
-                      : "agora"}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
           {!dispensadas && notificacoes.leadsAlerta.length > 0 && (
-            <div className={notificacoes.leadsVerificacaoPendente.length > 0 ? "border-t p-2" : "p-2"}>
+            <div className="p-2">
               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                 <AlertTriangle className="mr-1 inline h-3 w-3 text-yellow-500" />
                 Leads em alerta
@@ -147,29 +108,8 @@ export function PainelNotificacoes() {
             </div>
           )}
 
-          {!dispensadas && notificacoes.agendamentosProximos.length > 0 && (
-            <div className="border-t p-2">
-              <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-                <Calendar className="mr-1 inline h-3 w-3 text-blue-500" />
-                Agendamentos próximos
-              </p>
-              {notificacoes.agendamentosProximos.map((ag) => (
-                <button
-                  key={ag.id}
-                  onClick={() => navegar("/agendamentos")}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted"
-                >
-                  <span className="flex-1 truncate">{ag.lead.nome}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {formatarHora(ag.dataHora)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
           {!dispensadas && notificacoes.leadsNovosIA.length > 0 && (
-            <div className="border-t p-2">
+            <div className={notificacoes.leadsAlerta.length > 0 ? "border-t p-2" : "p-2"}>
               <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                 <Bot className="mr-1 inline h-3 w-3 text-green-500" />
                 Novos leads da IA

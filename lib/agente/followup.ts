@@ -45,7 +45,7 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
     .is("encerradaEm", null)
     .not("ultimaMensagemEm", "is", null)
     .lt("ultimaMensagemEm", ha1h)
-    .in("etapa", ["acolhimento", "qualificacao", "pre_agendamento"] as never)
+    .in("etapa", ["acolhimento", "qualificacao", "agendamento"] as never)
 
   if (error || !conversas) return []
 

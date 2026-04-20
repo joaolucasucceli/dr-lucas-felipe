@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Visão Geral do Projeto
 
-**Central Dr. Lucas** — sistema web para gestão de atendimento da clínica do Dr. Lucas Felipe. Dois módulos integrados em uma única aplicação Next.js:
+**Central Dr. Lucas** — sistema web para gestão de atendimento da clínica do Dr. Lucas Felipe. Sistema **100% autônomo** — a IA faz todo o processo do funil (acolhimento → reunião agendada). Dois módulos integrados em uma única aplicação Next.js:
 
-1. **Painel de Gestão** — kanban, leads, agendamentos, procedimentos, métricas, roadmap
-2. **Agente IA WhatsApp ("Ana Júlia")** — atendimento autônomo de pacientes via API Routes, alimentando o painel em tempo real
+1. **Painel de Gestão** — kanban (4 etapas), leads, pacientes, procedimentos, métricas, roadmap
+2. **Agente IA WhatsApp ("Ana Júlia" + Analista IA)** — atendimento autônomo de pacientes via API Routes, alimentando o painel em tempo real
 
 ## Stack Tecnológica
 
@@ -50,9 +50,9 @@ npm run typecheck
 
 Dois perfis: **Gestor** (acesso total), **Atendente** (operacional). O agente IA é um usuário especial do tipo Atendente (`tipo: "ia"`) que opera exclusivamente via API Routes, nunca pelo painel.
 
-### Funil Kanban (9 colunas)
+### Funil Kanban (4 colunas)
 
-Colunas 1-4 são movidas automaticamente pelo agente IA. Colunas 5-8 exigem ação manual do Atendente/Gestor. Coluna 9 (Perdido) é manual.
+Funil simplificado: **Acolhimento → Qualificação → Agendamento → Reunião Agendada**. Todas as colunas são movidas automaticamente pela dupla Ana Júlia (SDR) + Analista IA. Depois de "Reunião Agendada", o funil para — a IA continua respondendo mas não avança mais. Conversão Lead→Paciente é manual (botão no detalhe do lead, só gestor).
 
 ### Arquitetura do Agente IA (dual: SDR + Analista)
 
@@ -61,7 +61,7 @@ Dois agentes IA trabalham em paralelo:
 - **Ana Júlia** (GPT-4o) — SDR que conversa com o paciente no WhatsApp. Fluxo do webhook: `POST /api/webhooks/whatsapp` → detectar tipo de conteúdo → processar mídia → buffer Redis (debounce 20s, `{chat_id}_buf_dr-lucas`) → concatenar → GPT-4o com system prompt + memória Redis (20 msgs, `{chat_id}_mem_dr-lucas`) → segmentar resposta → Uazapi com delay aleatório 3-5s entre mensagens.
 - **Analista** (GPT-4o-mini, JLAU-571) — disparada em fire-and-forget ao final do loop da Ana Júlia. Lê histórico + estado do lead e escreve direto no CRM (nome, procedimento, sobreOPaciente, statusFunil). Controlada pela env `ANALISTA_WRITE_MODE=true` (padrão em produção); sem a flag, roda em shadow mode (só loga em `analista_logs`).
 
-O agente tem 3 etapas no funil: Qualificação → Agendamento → Gestão do Agendamento, usando 7 ferramentas em `/api/agente/*` (Ana Júlia sem tools de data entry — quem escreve no CRM é a Analista IA).
+A Ana Júlia conduz a conversa até o horário fechar (usando as 7 ferramentas em `/api/agente/*` incluindo `registrar_agendamento`); a Analista IA avança o funil de Acolhimento → Qualificação → Agendamento. A etapa final (`consulta_agendada`) só é atingida pela tool `registrar_agendamento` da Ana Júlia.
 
 ### Segurança da API
 
@@ -118,7 +118,7 @@ lib/documentacao/conteudo.ts
 | Novo modelo de dados | Atualizar seção "Modelo de Dados — Referência Rápida" |
 | Nova rota de API | Atualizar se for relevante para o usuário final |
 | Mudança no funil kanban | Atualizar seção do Módulo 3 — Atendimentos |
-| Nova ferramenta do agente IA | Atualizar tabela de ferramentas no Módulo 6 — Ana Júlia |
+| Nova ferramenta do agente IA | Atualizar tabela de ferramentas no Módulo 6 — Ana Júlia (SDR) |
 
 ### Campos a atualizar sempre
 
@@ -129,12 +129,12 @@ lib/documentacao/conteudo.ts
 
 | Métrica | Quantidade |
 |---------|-----------|
-| Páginas | 21 (18 dashboard + 2 públicas + 1 root) |
-| Endpoints API | 81 |
+| Páginas | 20 (17 dashboard + 2 públicas + 1 root) |
+| Endpoints API | 76 |
 | Tabelas no banco | 24 |
 | Enums | 12 |
-| Componentes | 98 (28 UI + 70 features) |
-| Hooks customizados | 21 |
+| Componentes | 92 (28 UI + 64 features) |
+| Hooks customizados | 20 |
 
 ## Issues Conhecidas
 

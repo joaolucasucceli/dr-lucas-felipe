@@ -3,7 +3,6 @@ import {
   Kanban,
   UserSearch,
   Users,
-  CalendarDays,
   Stethoscope,
   Brain,
   Film,
@@ -17,7 +16,6 @@ import { ModuloDashboard } from "@/components/features/documentacao/modulos/Modu
 import { ModuloAtendimentos } from "@/components/features/documentacao/modulos/ModuloAtendimentos"
 import { ModuloLeads } from "@/components/features/documentacao/modulos/ModuloLeads"
 import { ModuloPacientes } from "@/components/features/documentacao/modulos/ModuloPacientes"
-import { ModuloAgendamentos } from "@/components/features/documentacao/modulos/ModuloAgendamentos"
 import { ModuloProcedimentos } from "@/components/features/documentacao/modulos/ModuloProcedimentos"
 import { ModuloBaseConhecimento } from "@/components/features/documentacao/modulos/ModuloBaseConhecimento"
 import { ModuloMidiaMarketing } from "@/components/features/documentacao/modulos/ModuloMidiaMarketing"
@@ -49,12 +47,6 @@ export default function DocumentacaoPage() {
       titulo: "Pacientes",
       icone: <Users className="h-3.5 w-3.5" />,
       conteudo: <ModuloPacientes />,
-    },
-    {
-      valor: "agendamentos",
-      titulo: "Agendamentos",
-      icone: <CalendarDays className="h-3.5 w-3.5" />,
-      conteudo: <ModuloAgendamentos />,
     },
     {
       valor: "procedimentos",

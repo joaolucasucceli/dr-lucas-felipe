@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { User, Calendar, Stethoscope } from "lucide-react"
+import { User, Stethoscope } from "lucide-react"
 import {
   Command,
   CommandDialog,
@@ -14,13 +14,6 @@ import {
 
 interface ResultadoBusca {
   leads: { id: string; nome: string; whatsapp: string; statusFunil: string }[]
-  agendamentos: {
-    id: string
-    dataHora: string
-    status: string
-    lead: { nome: string }
-    procedimento: { nome: string } | null
-  }[]
   procedimentos: { id: string; nome: string; ativo: boolean }[]
   total: number
 }
@@ -70,31 +63,20 @@ export function BuscaGlobal({ aberto, onFechar }: BuscaGlobalProps) {
     window.location.href = href
   }
 
-  function formatarData(iso: string) {
-    return new Date(iso).toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
-
   const temResultados =
     resultado &&
-    (resultado.leads.length > 0 ||
-      resultado.agendamentos.length > 0 ||
-      resultado.procedimentos.length > 0)
+    (resultado.leads.length > 0 || resultado.procedimentos.length > 0)
 
   return (
     <CommandDialog
       open={aberto}
       onOpenChange={(open) => !open && onFechar()}
       title="Busca global"
-      description="Buscar leads, agendamentos e procedimentos"
+      description="Buscar leads e procedimentos"
     >
       <Command>
       <CommandInput
-        placeholder="Buscar leads, agendamentos..."
+        placeholder="Buscar leads, procedimentos..."
         value={termo}
         onValueChange={setTermo}
       />
@@ -119,24 +101,6 @@ export function BuscaGlobal({ aberto, onFechar }: BuscaGlobalProps) {
                 <span>{lead.nome}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
                   {lead.whatsapp}
-                </span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-
-        {resultado && resultado.agendamentos.length > 0 && (
-          <CommandGroup heading="Agendamentos">
-            {resultado.agendamentos.map((ag) => (
-              <CommandItem
-                key={ag.id}
-                value={`agendamento-${ag.id}-${ag.lead.nome}`}
-                onSelect={() => navegar("/agendamentos")}
-              >
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>{ag.lead.nome}</span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {formatarData(ag.dataHora)}
                 </span>
               </CommandItem>
             ))}

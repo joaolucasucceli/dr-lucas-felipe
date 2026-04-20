@@ -17,15 +17,16 @@ export async function POST(request: NextRequest) {
 
   const { data: lead } = await supabaseAdmin
     .from("leads")
-    .select("id, statusFunil, cicloAtual, ciclosCompletos")
+    .select("id, arquivado, cicloAtual, ciclosCompletos")
     .eq("id", leadId)
+    .is("deletadoEm", null)
     .maybeSingle()
 
   if (!lead) {
     return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
   }
 
-  if (lead.statusFunil !== "concluido" && lead.statusFunil !== "perdido") {
+  if (!lead.arquivado) {
     return NextResponse.json(
       { error: "Lead já possui atendimento em andamento" },
       { status: 409 }
@@ -42,7 +43,8 @@ export async function POST(request: NextRequest) {
       ciclosCompletos: lead.ciclosCompletos + 1,
       ehRetorno: true,
       statusFunil: "acolhimento",
-      motivoPerda: null,
+      arquivado: false,
+      arquivadoEm: null,
       ultimaMovimentacaoEm: tsAgora,
       atualizadoEm: tsAgora,
     })

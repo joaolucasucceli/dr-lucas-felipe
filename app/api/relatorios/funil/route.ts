@@ -6,49 +6,25 @@ import { requireRole } from "@/lib/auth-helpers"
 const labelsFunil: Record<string, string> = {
   acolhimento: "Acolhimento",
   qualificacao: "Qualificação",
-  pre_agendamento: "Pré-Agendamento",
-  verificacao_humana: "Verificação",
-  consulta_agendada: "Consulta Agendada",
-  consulta_realizada: "Consulta Realizada",
-  sinal_pago: "Sinal Pago",
-  procedimento_agendado: "Procedimento Agendado",
-  concluido: "Concluído",
-  perdido: "Perdido",
+  agendamento: "Agendamento",
+  consulta_agendada: "Reunião Agendada",
 }
 
 const coresFunil: Record<string, string> = {
   acolhimento: "#a1a1aa",
   qualificacao: "#93c5fd",
-  pre_agendamento: "#a5b4fc",
-  verificacao_humana: "#fdba74",
+  agendamento: "#a5b4fc",
   consulta_agendada: "#c4b5fd",
-  consulta_realizada: "#86efac",
-  sinal_pago: "#6ee7b7",
-  procedimento_agendado: "#fcd34d",
-  concluido: "#bbf7d0",
-  perdido: "#fca5a5",
 }
 
 const ordemFunil = [
   "acolhimento",
   "qualificacao",
-  "pre_agendamento",
-  "verificacao_humana",
+  "agendamento",
   "consulta_agendada",
-  "consulta_realizada",
-  "sinal_pago",
-  "procedimento_agendado",
-  "concluido",
-  "perdido",
 ]
 
-const etapasConvertidas = [
-  "consulta_agendada",
-  "consulta_realizada",
-  "sinal_pago",
-  "procedimento_agendado",
-  "concluido",
-]
+const etapasConvertidas = ["consulta_agendada"]
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole("gestor")

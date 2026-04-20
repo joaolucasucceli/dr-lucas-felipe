@@ -16,7 +16,6 @@ export async function GET() {
     )
     .is("deletadoEm", null)
     .eq("arquivado", false)
-    .not("statusFunil", "in", "(concluido,perdido)")
     .or(
       `ultimaMovimentacaoEm.lt.${ha3dias},and(ultimaMovimentacaoEm.is.null,atualizadoEm.lt.${ha3dias})`
     )
