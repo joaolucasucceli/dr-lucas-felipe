@@ -40,7 +40,7 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
       dataHora,
       confirmacoesEnviadas,
       status,
-      lead:leads!agendamentos_contatoId_fkey(id, nome, whatsapp)
+      lead:contatos!agendamentos_contatoId_fkey(id, nome, whatsapp)
     `)
     .in("status", ["agendado", "remarcado"] as never)
     .gt("dataHora", agoraTs.toISOString())

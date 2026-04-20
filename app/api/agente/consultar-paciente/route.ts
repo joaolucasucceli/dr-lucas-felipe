@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     .from("contatos")
     .select("*")
     .eq("whatsapp", whatsapp)
+    .is("deletadoEm", null)
     .maybeSingle()
 
   let lead = leadExistente

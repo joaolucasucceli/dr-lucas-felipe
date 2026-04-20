@@ -40,7 +40,7 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
       ultimaMensagemEm,
       followUpEnviados,
       etapa,
-      lead:leads!conversas_contatoId_fkey(id, nome, whatsapp, procedimentoInteresse, arquivado, deletadoEm)
+      lead:contatos!conversas_contatoId_fkey(id, nome, whatsapp, procedimentoInteresse, arquivado, deletadoEm)
     `)
     .is("encerradaEm", null)
     .not("ultimaMensagemEm", "is", null)

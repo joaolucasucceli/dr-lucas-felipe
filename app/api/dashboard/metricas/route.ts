@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
       .select("id", { count: "exact", head: true })
       .is("deletadoEm", null)
       .eq("arquivado", false)
+      .eq("tipo", "lead")
 
   const totalLeadsP = baseLeads()
   const leadsNovosP = (() => {
@@ -98,12 +99,14 @@ export async function GET(request: NextRequest) {
     .select("statusFunil")
     .is("deletadoEm", null)
     .eq("arquivado", false)
+    .eq("tipo", "lead")
 
   const leadsPorOrigemP = supabaseAdmin
     .from("contatos")
     .select("origem")
     .is("deletadoEm", null)
     .eq("arquivado", false)
+    .eq("tipo", "lead")
 
   const mensagensIaP = (() => {
     const q = supabaseAdmin
@@ -130,7 +133,13 @@ export async function GET(request: NextRequest) {
   const leadsAlertaP = baseLeads()
     .or(`ultimaMovimentacaoEm.lt.${ha3dias},and(ultimaMovimentacaoEm.is.null,atualizadoEm.lt.${ha3dias})`)
 
-  const pacientesRetornoP = baseLeads().eq("ehRetorno", true)
+  const pacientesRetornoP = supabaseAdmin
+    .from("contatos")
+    .select("id", { count: "exact", head: true })
+    .is("deletadoEm", null)
+    .eq("arquivado", false)
+    .eq("tipo", "paciente")
+    .eq("ehRetorno", true)
   const leadsHojeP = baseLeads().gte("criadoEm", inicioHoje)
   const agendamentosSemanaP = supabaseAdmin
     .from("agendamentos")

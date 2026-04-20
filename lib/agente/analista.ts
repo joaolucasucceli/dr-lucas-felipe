@@ -69,6 +69,7 @@ async function carregarEstadoAtual(contatoId: string): Promise<EstadoAtualContat
     .from("contatos")
     .select("nome, statusFunil, procedimentoInteresse, sobreOPaciente")
     .eq("id", contatoId)
+    .is("deletadoEm", null)
     .maybeSingle()
   return data ?? null
 }

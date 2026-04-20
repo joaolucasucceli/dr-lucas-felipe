@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   const { data: agendamentosPeriodo } = await supabaseAdmin
     .from("agendamentos")
-    .select("status, procedimentoId, lead:leads!agendamentos_contatoId_fkey(origem)")
+    .select("status, procedimentoId, lead:contatos!agendamentos_contatoId_fkey(origem)")
     .gte("criadoEm", dataInicioIso)
     .lte("criadoEm", dataFimIso)
 

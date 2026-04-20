@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       .from("contatos")
       .select("id, responsavelId")
       .eq("whatsapp", whatsapp)
+      .is("deletadoEm", null)
       .maybeSingle()
 
     const consentimentoEm = agora()

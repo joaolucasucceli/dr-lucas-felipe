@@ -36,6 +36,7 @@ export async function abrirNovoCiclo(contatoId: string): Promise<ResultadoNovoCi
     .from("contatos")
     .select("*")
     .eq("id", contatoId)
+    .is("deletadoEm", null)
     .single()
 
   if (contatoError || !contato) {

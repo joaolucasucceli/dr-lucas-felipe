@@ -1,4 +1,4 @@
-interface ContextoLead {
+interface ContextoContato {
   nome?: string
   procedimento?: string
   etapa?: string
@@ -27,7 +27,7 @@ function obterContextoTemporal(): { horaSP: number; saudacao: "bom dia" | "boa t
 }
 
 /** Gera o system prompt da Ana Júlia com contexto dinâmico do lead */
-export async function gerarSystemPrompt(contexto?: ContextoLead): Promise<string> {
+export async function gerarSystemPrompt(contexto?: ContextoContato): Promise<string> {
   let contextoStr = ""
 
   if (contexto) {
