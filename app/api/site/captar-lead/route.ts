@@ -31,10 +31,10 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (!usuarioIa) {
-      console.warn("[captar-lead] Nenhum usuário IA ativo encontrado — lead será criado sem responsável")
+      console.warn("[captar-lead] Nenhum usuário IA ativo encontrado — contato será criado sem responsável")
     }
 
-    const { data: leadExistente } = await supabaseAdmin
+    const { data: contatoExistente } = await supabaseAdmin
       .from("contatos")
       .select("id, responsavelId")
       .eq("whatsapp", whatsapp)
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     const consentimentoEm = agora()
 
-    if (leadExistente) {
+    if (contatoExistente) {
       const dadosUpdate: Record<string, unknown> = {
         nome,
         procedimentoInteresse,
@@ -56,14 +56,14 @@ export async function POST(request: Request) {
         atualizadoEm: consentimentoEm,
       }
 
-      if (!leadExistente.responsavelId && usuarioIa) {
+      if (!contatoExistente.responsavelId && usuarioIa) {
         dadosUpdate.responsavelId = usuarioIa.id
       }
 
       await supabaseAdmin
         .from("contatos")
         .update(dadosUpdate)
-        .eq("id", leadExistente.id)
+        .eq("id", contatoExistente.id)
     } else {
       await supabaseAdmin
         .from("contatos")
