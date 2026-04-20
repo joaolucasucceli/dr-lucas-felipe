@@ -80,7 +80,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         tabela === "mensagens_whatsapp" &&
         (payload as Record<string, string>).remetente === "paciente"
       ) {
-        toast.info("Nova mensagem recebida")
+        toast.info("Nova mensagem de paciente no WhatsApp")
       }
     }
 

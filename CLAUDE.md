@@ -130,7 +130,7 @@ lib/documentacao/conteudo.ts
 | Métrica | Quantidade |
 |---------|-----------|
 | Páginas | 21 (18 dashboard + 2 públicas + 1 root) |
-| Endpoints API | 88 |
+| Endpoints API | 81 |
 | Tabelas no banco | 24 |
 | Enums | 12 |
 | Componentes | 98 (28 UI + 70 features) |

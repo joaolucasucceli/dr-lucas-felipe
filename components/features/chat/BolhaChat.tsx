@@ -5,7 +5,6 @@ import { format } from "date-fns"
 import Image from "next/image"
 import { Reply, FileText, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { ReprodutorAudio } from "@/components/features/chat/ReprodutorAudio"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 
 export interface MensagemChat {
@@ -180,7 +179,15 @@ function MidiaPreview({ mensagem }: { mensagem: MensagemChat }) {
   }
 
   if (tipo === "audio") {
-    return <ReprodutorAudio src={mediaUrl} transcricao={extrairCaption(conteudo)} />
+    const transcricao = extrairCaption(conteudo)
+    return (
+      <div className="space-y-2">
+        <audio src={mediaUrl} controls className="max-w-[280px]" />
+        {transcricao && (
+          <p className="text-xs italic text-muted-foreground">{transcricao}</p>
+        )}
+      </div>
+    )
   }
 
   return null

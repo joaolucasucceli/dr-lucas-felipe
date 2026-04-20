@@ -7,8 +7,8 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.28.0"
-export const DATA_ATUALIZACAO = "2026-04-17"
+export const VERSAO_DOCUMENTACAO = "1.29.0"
+export const DATA_ATUALIZACAO = "2026-04-20"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
 > Versão ${VERSAO_DOCUMENTACAO} · Atualizado em ${DATA_ATUALIZACAO}
@@ -157,19 +157,32 @@ Visualização em kanban do funil de atendimento com 9 etapas.
 - **Movimentação automática** — Etapas 1 a 4 movidas pela Ana Júlia via WhatsApp
 - **Ação manual (etapas 5–8)** — Controle manual do time clínico
 - **Filtros avançados** — Por responsável, etapa, procedimento ou nome
+- **Indicador "IA pausada"** — Cards com badge laranja sinalizam leads em que a IA foi pausada manualmente
+
+### Sistema 100% autônomo — atendimento sem chat no painel
+
+O painel **não tem** aba de chat. A Ana Júlia conversa com o paciente direto no WhatsApp de forma totalmente autônoma. Se o atendente humano precisar intervir em uma conversa específica:
+
+1. Abre o detalhe do lead em **Leads → (nome do lead)**
+2. Clica em **Pausar IA** no header do lead (ConfirmDialog confirma a ação)
+3. Responde o paciente **direto pelo WhatsApp pessoal** da clínica — a mensagem do atendente é registrada automaticamente no histórico do lead (webhook identifica \`fromMe=true\` como "atendente")
+4. Quando quiser devolver o controle, volta no detalhe do lead e clica em **Retomar IA**
+
+A Ana Júlia **não responde** enquanto a IA está pausada naquela conversa. As demais conversas continuam no modo IA normalmente — a pausa é por conversa, não global.
 
 ### Como usar
 
 1. Observe cada coluna representando uma etapa (número no cabeçalho = quantidade de leads)
-2. Use o menu do card (três pontos) para mudar a etapa de um lead nas colunas 5 a 8
-3. Ao mover para "Perdido", informe o motivo (alimenta relatórios de perda)
+2. Badge laranja **IA pausada** no card indica que o atendente humano assumiu essa conversa via WhatsApp
+3. Use o menu do card (três pontos) para mudar a etapa de um lead nas colunas 5 a 8
+4. Ao mover para "Perdido", informe o motivo (alimenta relatórios de perda)
 
 ### Permissões
 
 | Perfil | Acesso |
 |--------|--------|
-| Gestor | Total — move, arquiva e reatribui leads |
-| Atendente | Total — move e atualiza cards |
+| Gestor | Total — move, arquiva, reatribui leads e pausa/retoma IA |
+| Atendente | Total — move, atualiza cards e pausa/retoma IA |
 
 > A Ana Júlia move leads automaticamente até "Consulta Agendada" (etapa 4). A partir daí, o time clínico assume.
 
