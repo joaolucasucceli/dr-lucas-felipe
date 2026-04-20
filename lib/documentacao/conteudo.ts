@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.31.0"
+export const VERSAO_DOCUMENTACAO = "1.32.0"
 export const DATA_ATUALIZACAO = "2026-04-20"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -394,7 +394,7 @@ POST /api/webhooks/whatsapp
 2. **Agendamento** — Consulta disponibilidade e registra consulta no sistema
 3. **Gestão do Agendamento** — Confirmações, remarcações e pós-consulta
 
-### Ferramentas do Agente (8 endpoints)
+### Ferramentas do Agente (9 endpoints)
 
 A Ana Júlia tem ferramentas de **conversa, consulta e agendamento** — data entry estruturado de qualificação (nome, procedimento, sobreOPaciente, avanço de etapa até \`agendamento\`) é feito pela Analista IA em pipeline separado.
 
@@ -402,6 +402,7 @@ A Ana Júlia tem ferramentas de **conversa, consulta e agendamento** — data en
 |----------|--------|
 | \`/api/agente/consultar-paciente\` | Busca informações do paciente (cria lead novo se não existir) |
 | \`/api/agente/consultar-procedimentos\` | Lista procedimentos ativos |
+| \`/api/agente/consultar-base-conhecimento\` | Consulta a base de conhecimento (clínica, pagamento, pós-operatório, sobre o Dr. Lucas, geral). Ana Júlia NÃO tem esses dados pré-carregados — consulta sob demanda, filtrando por seção ou palavra-chave |
 | \`/api/agente/consultar-agenda\` | Retorna slots livres do Dr. Lucas cruzando Google Calendar + expediente + agendamentos existentes (até 10 slots, próximos 14 dias). Ana Júlia chama antes de propor horário |
 | \`/api/agente/registrar-agendamento\` | Cria agendamento com o \`dataIso\` de um slot retornado pelo \`consultar-agenda\`. Cria evento no Google Calendar e avança funil pra \`consulta_agendada\` |
 | \`/api/agente/atualizar-agendamento\` | Remarca ou cancela agendamento existente |
@@ -415,17 +416,19 @@ A Ana Júlia tem ferramentas de **conversa, consulta e agendamento** — data en
 
 > **Segurança do webhook:** em produção, a env \`WEBHOOK_SECRET\` é obrigatória — sem ela, o webhook retorna 500 e recusa qualquer mensagem. Em desenvolvimento, segue opcional. Mensagens duplicadas (mesma \`messageIdWhatsapp\`) e leads duplicados (mesmo número de WhatsApp) são protegidos por constraint atômica do banco, eliminando race conditions em mensagens paralelas.
 
-### Base de Conhecimento Dinâmica
+### Base de Conhecimento — Consulta sob demanda
 
-A Ana Júlia carrega uma **base de conhecimento dinâmica** do banco a cada conversa. Cada item tem título, conteúdo, seção (clínica, procedimentos, pós-operatório, pagamento, geral), ordem e status (ativo/inativo).
+A Ana Júlia consulta a **base de conhecimento** via tool \`consultar_base_conhecimento\` apenas quando o paciente perguntar sobre tópicos cobertos pela base (localização, pagamento, pós-operatório, sobre o Dr. Lucas, políticas gerais). O conteúdo **não** fica pré-carregado no prompt — é buscado em tempo real no banco.
 
-O Gestor pode atualizar o conhecimento da agente sem deploy pelo menu **Clínica → Base de Conhecimento** no painel.
+Cada artigo tem título, conteúdo, seção (clínica, procedimentos, pós-operatório, pagamento, geral), ordem e status (ativo/inativo). O Gestor atualiza pelo menu **Clínica → Base de Conhecimento** e a próxima consulta da Ana Júlia já retorna o novo conteúdo.
 
-Quando o banco está vazio, o agente usa apenas o prompt fixo. Com itens cadastrados, eles são injetados no system prompt agrupados por seção. O fluxo:
+Fluxo da tool:
 
-1. Gestor cria/edita item em \`/base-conhecimento\`
-2. Próxima conversa do agente já carrega o novo conteúdo
-3. A Ana Júlia usa esses textos como referência ao responder o paciente
+1. Paciente pergunta ("onde é a clínica?", "aceita cartão?", "cuidados depois?")
+2. Ana Júlia chama \`consultar_base_conhecimento({ secao })\` ou \`{ filtro }\`
+3. Endpoint retorna \`{ secoes: [{ secao, artigos: [{ titulo, conteudo }] }] }\` — apenas itens ativos
+4. Ana Júlia parafraseia o conteúdo na resposta (nunca inventa fora do que veio)
+5. Se retornar vazio, responde "essa info o Dr. Lucas te passa na consulta" e redireciona pra agendamento
 
 > **Boas práticas:** mantenha cada item curto e factual. Use a seção certa (paciente fala em pagamento → Ana Júlia consulta seção "pagamento"). Desative em vez de excluir, para preservar histórico.
 

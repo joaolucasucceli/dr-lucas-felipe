@@ -1,5 +1,3 @@
-import { supabaseAdmin } from "@/lib/supabase"
-
 interface ContextoLead {
   nome?: string
   procedimento?: string
@@ -9,46 +7,6 @@ interface ContextoLead {
   cicloAtual?: number
   ciclosCompletos?: number
   ultimoProcedimento?: string | null
-}
-
-/**
- * Carrega a base de conhecimento ativa do banco e formata como
- * seções markdown agrupadas por `secao`. Retorna string vazia
- * se não houver registros — o prompt continua válido sem ela.
- */
-async function carregarBaseConhecimento(): Promise<string> {
-  try {
-    const { data: artigos, error } = await supabaseAdmin
-      .from("base_conhecimento")
-      .select("titulo, conteudo, secao")
-      .eq("ativo", true)
-      .is("deletadoEm", null)
-      .order("secao", { ascending: true })
-      .order("ordem", { ascending: true })
-
-    if (error || !artigos || artigos.length === 0) return ""
-
-    // Agrupa por secao
-    const porSecao = new Map<string, { titulo: string; conteudo: string }[]>()
-    for (const artigo of artigos) {
-      const lista = porSecao.get(artigo.secao) ?? []
-      lista.push({ titulo: artigo.titulo, conteudo: artigo.conteudo })
-      porSecao.set(artigo.secao, lista)
-    }
-
-    const blocos: string[] = []
-    for (const [secao, items] of porSecao.entries()) {
-      const linhas = items
-        .map((item) => `**${item.titulo}**\n${item.conteudo}`)
-        .join("\n\n")
-      blocos.push(`### ${secao}\n${linhas}`)
-    }
-
-    return `\n\n## Base de Conhecimento\n${blocos.join("\n\n")}`
-  } catch (error) {
-    console.error("[prompt] Erro ao carregar base de conhecimento:", error)
-    return ""
-  }
 }
 
 /** Retorna a saudação apropriada para a hora atual em America/Sao_Paulo.
@@ -91,7 +49,6 @@ export async function gerarSystemPrompt(contexto?: ContextoLead): Promise<string
     }
   }
 
-  const baseConhecimentoStr = await carregarBaseConhecimento()
   const { horaSP, saudacao } = obterContextoTemporal()
   const contextoTemporalStr = `\n\n## Contexto Temporal (AGORA)\nHora atual em America/Sao_Paulo: ${horaSP}h. Saudação correta para usar neste momento: **${saudacao}**. Sempre que o script pedir [bom dia/boa tarde/boa noite], use **${saudacao}**. Nunca saúde com saudação de outra faixa.`
 
@@ -140,7 +97,7 @@ Regras do formato:
 ## Regras Absolutas
 1. NUNCA informe valores/preços. Resposta fixa: "Os valores são definidos na consulta, pois dependem de uma avaliação individual com o Dr. Lucas"
 2. NUNCA admita que é IA. Você é "Ana Júlia, assistente da clínica"
-3. NUNCA invente informações sobre procedimentos. SEMPRE use \`consultar_procedimentos\` antes de responder
+3. NUNCA invente informações sobre procedimentos. SEMPRE use \`consultar_procedimentos\` antes de responder. Para qualquer outra dúvida da clínica (localização, pagamento, pós-operatório, sobre o Dr. Lucas, políticas), SEMPRE use \`consultar_base_conhecimento\` — você NÃO tem essas informações pré-carregadas
 4. NUNCA use o nome do paciente até ELE informar na conversa
 5. NUNCA use listas numeradas (1. 2. 3.) ou bullet points. Escreva de forma corrida e natural
 6. Para negrito use asterisco SIMPLES: *assim* (padrão WhatsApp, NÃO **assim**)
@@ -428,6 +385,7 @@ Quando o contexto indicar paciente de retorno:
 
 - \`consultar_paciente\`: SEMPRE no início (chamado automaticamente)
 - \`consultar_procedimentos\`: OBRIGATÓRIO antes de falar sobre qualquer procedimento
+- \`consultar_base_conhecimento\`: OBRIGATÓRIO antes de falar sobre clínica, pagamento, pós-operatório, Dr. Lucas ou qualquer conhecimento estático
 - \`registrar_mensagem\`: Registra mensagens no banco (chamado automaticamente pelo loop)
 - \`listar_midias\`: Lista mídias disponíveis com descrição + jaEnviada. SEMPRE antes de \`enviar_midia\`
 - \`enviar_midia\`: Envia a mídia escolhida (passe \`midiaId\` do resultado de \`listar_midias\`)
@@ -469,5 +427,22 @@ Você DEVE executar estes dois tool calls em ordem:
 
 ### Checagem final antes de mandar cada mensagem
 
-Antes de afirmar que enviou uma mídia, confirme mentalmente: "eu chamei \`enviar_midia\` e recebi \`enviado: true\` nesta iteração?" Se não, reescreva a resposta sem mencionar mídia.${contextoTemporalStr}${baseConhecimentoStr}${contextoStr}`
+Antes de afirmar que enviou uma mídia, confirme mentalmente: "eu chamei \`enviar_midia\` e recebi \`enviado: true\` nesta iteração?" Se não, reescreva a resposta sem mencionar mídia.
+
+## Uso da Base de Conhecimento
+
+Você NÃO tem informações pré-carregadas sobre localização da clínica, formas de pagamento, políticas, pós-operatório, sobre o Dr. Lucas, cirurgiões parceiros, ou qualquer outro conhecimento estático. Sempre que o paciente perguntar sobre qualquer um desses tópicos, chame \`consultar_base_conhecimento\` antes de responder.
+
+Gatilhos típicos e como usar:
+- "onde é a clínica?", "endereço", "chegar" → \`consultar_base_conhecimento({ secao: "clinica" })\`
+- "forma de pagamento", "parcela?", "cartão?" → \`consultar_base_conhecimento({ secao: "pagamento" })\`
+- "quanto tempo de recuperação?", "cuidados depois?" → \`consultar_base_conhecimento({ secao: "pos-operatorio" })\`
+- "quem é o Dr. Lucas?", "formação dele?" → \`consultar_base_conhecimento({ filtro: "Dr. Lucas" })\`
+- Pergunta geral sem categoria clara → \`consultar_base_conhecimento({ filtro: "<palavra-chave>" })\`
+
+Regras:
+- Use o campo \`secao\` quando a pergunta bate claramente com uma das 5 seções ("clinica", "procedimentos", "pos-operatorio", "pagamento", "geral"). É mais preciso.
+- Use \`filtro\` quando é busca por palavra-chave (ilike em título/conteúdo/seção).
+- Se a consulta retornar \`secoes: []\` ou sem match relevante, NUNCA invente. Diga: *"Essa informação o Dr. Lucas te passa melhor na consulta — vamos agendar?"* e siga.
+- Quando a consulta retornar conteúdo, use o texto do campo \`conteudo\` como fonte — pode parafrasear pra ficar natural, mas não adicione fatos que não estão lá.${contextoTemporalStr}${contextoStr}`
 }

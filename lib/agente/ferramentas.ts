@@ -60,6 +60,28 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "consultar_base_conhecimento",
+      description:
+        "Consulta a base de conhecimento da clínica: políticas, cuidados pré/pós-operatório, informações sobre o Dr. Lucas, forma de pagamento, localização, cirurgiões parceiros, tudo que não é procedimento específico. SEMPRE use antes de responder perguntas sobre esses tópicos — você NÃO tem essas informações pré-carregadas. Nunca invente. Se retornar vazio, diga que o Dr. Lucas passa a info na consulta.",
+      parameters: {
+        type: "object",
+        properties: {
+          secao: {
+            type: "string",
+            enum: ["clinica", "procedimentos", "pos-operatorio", "pagamento", "geral"],
+            description: "Filtro por seção exata (opcional). Use quando souber a seção — retorna resultado mais focado.",
+          },
+          filtro: {
+            type: "string",
+            description: "Texto para buscar em título, conteúdo ou seção (ilike). Deixe vazio pra retornar tudo da seção (ou tudo se seção também vazia).",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "consultar_procedimentos",
       description:
         "Consulta os procedimentos disponíveis na clínica. NUNCA inclua valores/preços na resposta ao paciente.",

@@ -61,7 +61,7 @@ Dois agentes IA trabalham em paralelo:
 - **Ana Júlia** (GPT-4o) — SDR que conversa com o paciente no WhatsApp. Fluxo do webhook: `POST /api/webhooks/whatsapp` → detectar tipo de conteúdo → processar mídia → buffer Redis (debounce 20s, `{chat_id}_buf_dr-lucas`) → concatenar → GPT-4o com system prompt + memória Redis (20 msgs, `{chat_id}_mem_dr-lucas`) → segmentar resposta → Uazapi com delay aleatório 3-5s entre mensagens.
 - **Analista** (GPT-4o-mini, JLAU-571) — disparada em fire-and-forget ao final do loop da Ana Júlia. Lê histórico + estado do lead e escreve direto no CRM (nome, procedimento, sobreOPaciente, statusFunil). Controlada pela env `ANALISTA_WRITE_MODE=true` (padrão em produção); sem a flag, roda em shadow mode (só loga em `analista_logs`).
 
-A Ana Júlia conduz a conversa até o horário fechar (usando as 8 ferramentas em `/api/agente/*` — incluindo `consultar_agenda` que cruza Google Calendar + expediente e `registrar_agendamento`); a Analista IA avança o funil de Acolhimento → Qualificação → Agendamento. A etapa final (`consulta_agendada`) só é atingida pela tool `registrar_agendamento` da Ana Júlia.
+A Ana Júlia conduz a conversa até o horário fechar (usando as 9 ferramentas em `/api/agente/*` — incluindo `consultar_base_conhecimento` para dúvidas da clínica, `consultar_agenda` que cruza Google Calendar + expediente, e `registrar_agendamento`); a Analista IA avança o funil de Acolhimento → Qualificação → Agendamento. A etapa final (`consulta_agendada`) só é atingida pela tool `registrar_agendamento` da Ana Júlia.
 
 ### Segurança da API
 
@@ -130,7 +130,7 @@ lib/documentacao/conteudo.ts
 | Métrica | Quantidade |
 |---------|-----------|
 | Páginas | 20 (17 dashboard + 2 públicas + 1 root) |
-| Endpoints API | 77 |
+| Endpoints API | 78 |
 | Tabelas no banco | 24 |
 | Enums | 12 |
 | Componentes | 92 (28 UI + 64 features) |
