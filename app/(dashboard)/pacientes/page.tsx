@@ -2,11 +2,13 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Plus } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { Plus, Ban, CheckCircle2, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/features/shared/PageHeader"
-import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
+import { DataTable, type ColunaConfig, type AcaoEmMassa } from "@/components/features/shared/DataTable"
 import { EmptyState } from "@/components/features/shared/EmptyState"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { ErrorState } from "@/components/features/shared/ErrorState"
@@ -31,6 +33,7 @@ function mascararCpf(cpf: string | null): string {
 
 export default function PacientesPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [pagina, setPagina] = useState(1)
   const [busca, setBusca] = useState("")
   const [formAberto, setFormAberto] = useState(false)
@@ -40,6 +43,56 @@ export default function PacientesPage() {
     porPagina: 10,
     busca: busca || undefined,
   })
+
+  const ehGestor = session?.user?.perfil === "gestor"
+
+  async function executarBatch(acao: "desativar" | "reativar" | "excluir", ids: string[]) {
+    try {
+      const res = await fetch("/api/pacientes/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, acao }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erro na operação")
+      const verbo = acao === "excluir" ? "excluído(s)" : acao === "desativar" ? "desativado(s)" : "reativado(s)"
+      toast.success(`${data.sucesso} de ${data.total} paciente(s) ${verbo}`)
+      recarregar()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro na operação")
+    }
+  }
+
+  const acoesEmMassa: AcaoEmMassa[] = ehGestor
+    ? [
+        {
+          label: "Desativar",
+          icone: <Ban className="h-4 w-4" />,
+          onClick: (ids) => executarBatch("desativar", ids),
+          confirmacao: {
+            titulo: "Desativar pacientes?",
+            descricao: (qtd) => `${qtd} paciente(s) serão marcados como inativos.`,
+            textoBotao: "Desativar",
+          },
+        },
+        {
+          label: "Reativar",
+          icone: <CheckCircle2 className="h-4 w-4" />,
+          onClick: (ids) => executarBatch("reativar", ids),
+        },
+        {
+          label: "Excluir",
+          icone: <Trash2 className="h-4 w-4" />,
+          variante: "destrutivo",
+          onClick: (ids) => executarBatch("excluir", ids),
+          confirmacao: {
+            titulo: "Excluir pacientes?",
+            descricao: (qtd) => `${qtd} paciente(s) serão removidos permanentemente (soft-delete). Esta ação não pode ser desfeita.`,
+            textoBotao: "Excluir",
+          },
+        },
+      ]
+    : []
 
   const colunas: ColunaConfig<Paciente>[] = [
     { chave: "nome", titulo: "Nome", ordenavel: true },
@@ -103,6 +156,8 @@ export default function PacientesPage() {
             onPaginaChange={setPagina}
             carregando={carregando}
             onLinhaClick={(paciente) => router.push(`/pacientes/${paciente.id}`)}
+            selecionavel={ehGestor}
+            acoesEmMassa={acoesEmMassa}
             filtros={
               <div className="flex items-center gap-3">
                 <Input

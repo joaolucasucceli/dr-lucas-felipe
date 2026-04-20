@@ -76,7 +76,7 @@ A Ana Júlia conduz a conversa até o horário fechar (usando as 9 ferramentas e
 - **StatusBadge** é o único componente que define cores de status — nunca usar `Badge` com classes de cor inline
 - **ConfirmDialog** é o único diálogo de confirmação destrutiva — nunca criar AlertDialog inline
 - **MetricCard** é o único card de número/métrica — nunca criar card de métrica avulso
-- **DataTable** é a única tabela com filtro/paginação — todas as listagens usam ele
+- **DataTable** é a única tabela com filtro/paginação — todas as listagens usam ele. Suporta ações em massa via props `selecionavel` + `acoesEmMassa` (checkbox + toolbar). Cada entidade tem endpoint `POST /api/<entidade>/batch` com `{ ids, acao }`
 - **PageHeader** é obrigatório no topo de toda página
 
 ### Convenção de Estrutura de Pastas
@@ -130,7 +130,7 @@ lib/documentacao/conteudo.ts
 | Métrica | Quantidade |
 |---------|-----------|
 | Páginas | 20 (17 dashboard + 2 públicas + 1 root) |
-| Endpoints API | 78 |
+| Endpoints API | 84 |
 | Tabelas no banco | 24 |
 | Enums | 12 |
 | Componentes | 92 (28 UI + 64 features) |

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useSession } from "next-auth/react"
-import { Plus, MoreHorizontal, Pencil, UserX, UserCheck } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, UserX, UserCheck, Ban, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/features/shared/PageHeader"
-import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
+import { DataTable, type ColunaConfig, type AcaoEmMassa } from "@/components/features/shared/DataTable"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { EmptyState } from "@/components/features/shared/EmptyState"
@@ -68,6 +68,41 @@ export default function UsuariosPage() {
   })
 
   const isGestor = session?.user?.perfil === "gestor"
+
+  async function executarBatch(acao: "ativar" | "desativar", ids: string[]) {
+    try {
+      const res = await fetch("/api/usuarios/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, acao }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erro na operação")
+      const verbo = acao === "ativar" ? "ativado(s)" : "desativado(s)"
+      toast.success(`${data.sucesso} de ${data.total} usuário(s) ${verbo}`)
+      recarregar()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro na operação")
+    }
+  }
+
+  const acoesEmMassa: AcaoEmMassa[] = [
+    {
+      label: "Ativar",
+      icone: <CheckCircle2 className="h-4 w-4" />,
+      onClick: (ids) => executarBatch("ativar", ids),
+    },
+    {
+      label: "Desativar",
+      icone: <Ban className="h-4 w-4" />,
+      onClick: (ids) => executarBatch("desativar", ids),
+      confirmacao: {
+        titulo: "Desativar usuários?",
+        descricao: (qtd) => `${qtd} usuário(s) não poderão mais acessar o sistema. Seu próprio usuário e o usuário IA são ignorados.`,
+        textoBotao: "Desativar",
+      },
+    },
+  ]
 
   function handleEditar(usuario: Usuario) {
     setUsuarioEditando(usuario)
@@ -245,6 +280,9 @@ export default function UsuariosPage() {
           porPagina={10}
           onPaginaChange={setPagina}
           carregando={carregando}
+          selecionavel={isGestor}
+          acoesEmMassa={acoesEmMassa}
+          podeSelecionar={(u) => u.tipo !== "ia" && u.id !== session?.user?.id}
           filtros={
             <>
               <Select

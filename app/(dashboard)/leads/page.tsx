@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Plus, Download, X } from "lucide-react"
+import { Plus, Download, X, Archive, ArchiveRestore, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { PageHeader } from "@/components/features/shared/PageHeader"
-import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
+import { DataTable, type ColunaConfig, type AcaoEmMassa } from "@/components/features/shared/DataTable"
 import { EmptyState } from "@/components/features/shared/EmptyState"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { ErrorState } from "@/components/features/shared/ErrorState"
@@ -73,6 +73,56 @@ export default function LeadsPage() {
   const podecriar =
     session?.user?.perfil === "gestor" ||
     session?.user?.perfil === "atendente"
+  const ehGestor = session?.user?.perfil === "gestor"
+
+  async function executarBatch(acao: "excluir" | "arquivar" | "desarquivar", ids: string[]) {
+    try {
+      const res = await fetch("/api/leads/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, acao }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erro na operação")
+      toast.success(`${data.sucesso} de ${data.total} lead(s) ${acao === "excluir" ? "excluídos" : acao === "arquivar" ? "arquivados" : "desarquivados"}`)
+      recarregar()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro na operação")
+    }
+  }
+
+  const acoesEmMassa: AcaoEmMassa[] = [
+    {
+      label: "Arquivar",
+      icone: <Archive className="h-4 w-4" />,
+      onClick: (ids) => executarBatch("arquivar", ids),
+      confirmacao: {
+        titulo: "Arquivar leads?",
+        descricao: (qtd) => `${qtd} lead(s) serão arquivados e sumirão do kanban. Podem ser desarquivados depois.`,
+        textoBotao: "Arquivar",
+      },
+    },
+    {
+      label: "Desarquivar",
+      icone: <ArchiveRestore className="h-4 w-4" />,
+      onClick: (ids) => executarBatch("desarquivar", ids),
+    },
+    ...(ehGestor
+      ? [
+          {
+            label: "Excluir",
+            icone: <Trash2 className="h-4 w-4" />,
+            variante: "destrutivo" as const,
+            onClick: (ids: string[]) => executarBatch("excluir", ids),
+            confirmacao: {
+              titulo: "Excluir leads?",
+              descricao: (qtd: number) => `${qtd} lead(s) serão removidos permanentemente (soft-delete). Esta ação não pode ser desfeita.`,
+              textoBotao: "Excluir",
+            },
+          },
+        ]
+      : []),
+  ]
 
   useEffect(() => {
     fetch("/api/procedimentos?ativo=true")
@@ -198,6 +248,8 @@ export default function LeadsPage() {
             onPaginaChange={setPagina}
             carregando={carregando}
             onLinhaClick={(lead) => router.push(`/leads/${lead.id}`)}
+            selecionavel
+            acoesEmMassa={acoesEmMassa}
             filtros={
               <div className="flex flex-wrap items-center gap-3">
                 <Input

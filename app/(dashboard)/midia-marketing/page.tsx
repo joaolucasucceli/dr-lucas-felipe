@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Plus, MoreHorizontal, Pencil, EyeOff, Eye, Trash2, Film, ImageIcon } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, EyeOff, Eye, Trash2, Film, ImageIcon, Ban, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,16 +14,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { PageHeader } from "@/components/features/shared/PageHeader"
+import { DataTable, type ColunaConfig, type AcaoEmMassa } from "@/components/features/shared/DataTable"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { EmptyState } from "@/components/features/shared/EmptyState"
@@ -95,6 +88,134 @@ export default function MidiaMarketingPage() {
     }
   }
 
+  async function executarBatch(acao: "ativar" | "desativar" | "excluir", ids: string[]) {
+    try {
+      const res = await fetch("/api/midia-marketing/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, acao }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erro na operação")
+      const verbo = acao === "excluir" ? "excluída(s)" : acao === "ativar" ? "ativada(s)" : "desativada(s)"
+      toast.success(`${data.sucesso} de ${data.total} mídia(s) ${verbo}`)
+      recarregar()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro na operação")
+    }
+  }
+
+  const acoesEmMassa: AcaoEmMassa[] = [
+    {
+      label: "Ativar",
+      icone: <CheckCircle2 className="h-4 w-4" />,
+      onClick: (ids) => executarBatch("ativar", ids),
+    },
+    {
+      label: "Desativar",
+      icone: <Ban className="h-4 w-4" />,
+      onClick: (ids) => executarBatch("desativar", ids),
+      confirmacao: {
+        titulo: "Desativar mídias?",
+        descricao: (qtd) => `${qtd} mídia(s) não serão mais enviadas pela Ana Júlia.`,
+        textoBotao: "Desativar",
+      },
+    },
+    {
+      label: "Excluir",
+      icone: <Trash2 className="h-4 w-4" />,
+      variante: "destrutivo",
+      onClick: (ids) => executarBatch("excluir", ids),
+      confirmacao: {
+        titulo: "Excluir mídias?",
+        descricao: (qtd) => `${qtd} mídia(s) serão removidas permanentemente (soft-delete).`,
+        textoBotao: "Excluir",
+      },
+    },
+  ]
+
+  const colunas: ColunaConfig<MidiaMarketing>[] = [
+    {
+      chave: "tipo" as keyof MidiaMarketing,
+      titulo: "",
+      classesCelula: "w-10",
+      renderizar: (m) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setPreview(m)
+          }}
+          className="rounded p-1 hover:bg-muted transition-colors"
+          title="Ver preview"
+        >
+          {ehVideo(m.url) ? (
+            <Film className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+      ),
+    },
+    {
+      chave: "descricao",
+      titulo: "Descrição",
+      renderizar: (m) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setPreview(m)
+          }}
+          className="block w-full text-left text-sm hover:underline line-clamp-2 break-words pr-4"
+        >
+          {m.descricao}
+        </button>
+      ),
+    },
+    {
+      chave: "ativo",
+      titulo: "Status",
+      classesCelula: "w-24 whitespace-nowrap",
+      renderizar: (m) => (
+        <Badge variant={m.ativo ? "default" : "secondary"}>
+          {m.ativo ? "Ativo" : "Inativo"}
+        </Badge>
+      ),
+    },
+    {
+      chave: "acoes" as keyof MidiaMarketing,
+      titulo: "",
+      classesCelula: "w-10",
+      renderizar: (m) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => { setEditando(m); setFormAberto(true) }}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setConfirmToggle(m)}>
+              {m.ativo ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+              {m.ativo ? "Desativar" : "Ativar"}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => setConfirmExcluir(m)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ]
+
   return (
     <div>
       <PageHeader
@@ -108,95 +229,35 @@ export default function MidiaMarketingPage() {
       </PageHeader>
 
       <div className="mt-6">
-        <Input
-          placeholder="Buscar por descrição..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="mb-4 max-w-sm"
-        />
-
         {carregando ? (
           <SkeletonTabela linhas={5} />
         ) : erro ? (
           <ErrorState mensagem={erro} onTentar={recarregar} />
-        ) : dados.length === 0 ? (
+        ) : dados.length === 0 && !busca ? (
           <EmptyState
             titulo="Nenhuma mídia cadastrada"
             descricao="Cadastre fotos e vídeos com descrição detalhada — a IA usa a descrição para escolher qual enviar ao paciente."
           />
         ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10" />
-                  <TableHead className="w-full">Descrição</TableHead>
-                  <TableHead className="w-24">Status</TableHead>
-                  <TableHead className="w-10" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dados.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="w-10">
-                      <button
-                        type="button"
-                        onClick={() => setPreview(m)}
-                        className="rounded p-1 hover:bg-muted transition-colors"
-                        title="Ver preview"
-                      >
-                        {ehVideo(m.url) ? (
-                          <Film className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </TableCell>
-                    <TableCell className="min-w-0 max-w-0">
-                      <button
-                        type="button"
-                        onClick={() => setPreview(m)}
-                        className="block w-full text-left text-sm hover:underline line-clamp-2 break-words pr-4"
-                      >
-                        {m.descricao}
-                      </button>
-                    </TableCell>
-                    <TableCell className="w-24 whitespace-nowrap">
-                      <Badge variant={m.ativo ? "default" : "secondary"}>
-                        {m.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="w-10">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setEditando(m); setFormAberto(true) }}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setConfirmToggle(m)}>
-                            {m.ativo ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                            {m.ativo ? "Desativar" : "Ativar"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => setConfirmExcluir(m)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            colunas={colunas}
+            dados={dados}
+            total={dados.length}
+            pagina={1}
+            porPagina={dados.length || 10}
+            onPaginaChange={() => {}}
+            carregando={carregando}
+            selecionavel
+            acoesEmMassa={acoesEmMassa}
+            filtros={
+              <Input
+                placeholder="Buscar por descrição..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="max-w-sm"
+              />
+            }
+          />
         )}
       </div>
 

@@ -7,7 +7,7 @@
  * o arquivo .md a partir deste módulo.
  */
 
-export const VERSAO_DOCUMENTACAO = "1.32.0"
+export const VERSAO_DOCUMENTACAO = "1.33.0"
 export const DATA_ATUALIZACAO = "2026-04-20"
 
 export const DOCUMENTACAO_MD = `# Documentação — Central Dr. Lucas
@@ -883,7 +883,7 @@ dadosAntes (JSON) | dadosDepois (JSON) | ip | criadoEm
 - StatusBadge — único componente para cores de status
 - ConfirmDialog — único diálogo de confirmação destrutiva
 - MetricCard — único card de número/métrica
-- DataTable — única tabela com filtro/paginação
+- DataTable — única tabela com filtro/paginação. Suporta **ações em massa** via props \`selecionavel\` + \`acoesEmMassa\` — checkbox por linha + toolbar flutuante com contador aparece ao selecionar. Cada listagem define suas próprias ações (arquivar/excluir/ativar/desativar) chamando endpoints \`POST /api/<entidade>/batch\`
 
 ---
 

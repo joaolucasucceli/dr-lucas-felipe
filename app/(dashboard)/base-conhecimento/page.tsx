@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Plus, MoreHorizontal, Pencil, EyeOff, Eye, Trash2 } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, EyeOff, Eye, Trash2, Ban, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/features/shared/PageHeader"
-import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
+import { DataTable, type ColunaConfig, type AcaoEmMassa } from "@/components/features/shared/DataTable"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { EmptyState } from "@/components/features/shared/EmptyState"
@@ -68,6 +68,52 @@ export default function BaseConhecimentoPage() {
   }, [status, autorizado, router])
 
   if (status === "loading" || !autorizado) return null
+
+  async function executarBatch(acao: "ativar" | "desativar" | "excluir", ids: string[]) {
+    try {
+      const res = await fetch("/api/base-conhecimento/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, acao }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erro na operação")
+      const verbo = acao === "excluir" ? "excluído(s)" : acao === "ativar" ? "ativado(s)" : "desativado(s)"
+      toast.success(`${data.sucesso} de ${data.total} registro(s) ${verbo}`)
+      recarregar()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro na operação")
+    }
+  }
+
+  const acoesEmMassa: AcaoEmMassa[] = [
+    {
+      label: "Ativar",
+      icone: <CheckCircle2 className="h-4 w-4" />,
+      onClick: (ids) => executarBatch("ativar", ids),
+    },
+    {
+      label: "Desativar",
+      icone: <Ban className="h-4 w-4" />,
+      onClick: (ids) => executarBatch("desativar", ids),
+      confirmacao: {
+        titulo: "Desativar registros?",
+        descricao: (qtd) => `${qtd} registro(s) da base de conhecimento não serão mais usados pela Ana Júlia.`,
+        textoBotao: "Desativar",
+      },
+    },
+    {
+      label: "Excluir",
+      icone: <Trash2 className="h-4 w-4" />,
+      variante: "destrutivo",
+      onClick: (ids) => executarBatch("excluir", ids),
+      confirmacao: {
+        titulo: "Excluir registros?",
+        descricao: (qtd) => `${qtd} registro(s) serão removidos permanentemente (soft-delete).`,
+        textoBotao: "Excluir",
+      },
+    },
+  ]
 
   function handleEditar(registro: BaseConhecimento) {
     setEditando(registro)
@@ -240,6 +286,8 @@ export default function BaseConhecimentoPage() {
             porPagina={dados.length || 10}
             onPaginaChange={() => {}}
             carregando={carregando}
+            selecionavel
+            acoesEmMassa={acoesEmMassa}
             filtros={
               <Input
                 placeholder="Buscar por título ou conteúdo..."
