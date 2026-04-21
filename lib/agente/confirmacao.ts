@@ -76,11 +76,13 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
       contato: contatoRaw,
     }
 
-    if (diffHoras >= 6 && diffHoras < 7 && !confirmacoes.includes("6h")) {
+    // Janelas amplas + dedup por confirmacoesEnviadas previne lembrete perdido
+    // se o cron atrasar. Ordem: 6h -> 3h -> 30min.
+    if (diffHoras > 3 && diffHoras <= 6 && !confirmacoes.includes("6h")) {
       pendentes.push({ agendamento, tipo: "6h" })
-    } else if (diffHoras >= 3 && diffHoras < 4 && !confirmacoes.includes("3h")) {
+    } else if (diffHoras > 0.5 && diffHoras <= 3 && !confirmacoes.includes("3h")) {
       pendentes.push({ agendamento, tipo: "3h" })
-    } else if (diffMinutos >= 30 && diffMinutos < 60 && !confirmacoes.includes("30min")) {
+    } else if (diffMinutos > 0 && diffMinutos <= 30 && !confirmacoes.includes("30min")) {
       pendentes.push({ agendamento, tipo: "30min" })
     }
   }
@@ -105,9 +107,9 @@ function gerarMensagemConfirmacao(
   const hora = formatarHora(dataHora)
 
   const mensagens: Record<TipoConfirmacao, string> = {
-    "6h": `Oi ${nome}! Lembrete: você tem consulta com Dr. Lucas hoje às ${hora}. Confirma presença?`,
+    "6h": `Oi ${nome}! Lembrete: você tem avaliação com Dr. Lucas hoje às ${hora}. Confirma presença?`,
     "3h": `Oi ${nome}, só passando para confirmar: são ${hora} com o Dr. Lucas hoje! Tudo certo?`,
-    "30min": `Oi ${nome}! Sua consulta com Dr. Lucas é em aproximadamente 30 minutos. Qualquer dúvida é só chamar.`,
+    "30min": `Oi ${nome}! Sua avaliação com Dr. Lucas é em aproximadamente 30 minutos. Qualquer dúvida é só chamar.`,
   }
 
   return mensagens[tipo]

@@ -31,7 +31,7 @@ export default function LgpdPage() {
               <li>Histórico de conversas via WhatsApp com o atendente virtual</li>
               <li>Informações sobre procedimentos de interesse</li>
               <li>Fotos e imagens enviadas durante o atendimento</li>
-              <li>Dados de agendamentos e consultas realizadas</li>
+              <li>Dados de agendamentos e avaliações realizadas</li>
             </ul>
           </section>
 
@@ -39,7 +39,7 @@ export default function LgpdPage() {
             <h2 className="text-xl font-semibold mb-3">3. Finalidade do tratamento</h2>
             <p className="mb-2">Seus dados são utilizados exclusivamente para:</p>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Realizar e gerenciar agendamentos de consultas e procedimentos</li>
+              <li>Realizar e gerenciar agendamentos de avaliações e procedimentos</li>
               <li>Enviar confirmações e lembretes de compromissos</li>
               <li>Personalizar o atendimento prestado</li>
               <li>Cumprir obrigações legais e regulatórias</li>

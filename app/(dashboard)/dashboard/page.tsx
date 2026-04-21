@@ -123,7 +123,7 @@ export default function DashboardPage() {
         <MetricCard
           titulo="Agendamentos"
           valor={metricas.agendamentosNoPeriodo}
-          descricao="Consultas marcadas pela IA"
+          descricao="Avaliações marcadas pela IA"
           icone={<Calendar className="h-5 w-5" />}
         />
         {isGestor ? (

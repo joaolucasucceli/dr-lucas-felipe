@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
   const duracaoMin = procedimento?.duracaoMin ?? agendamento.duracao ?? 60
   const fim = new Date(inicio.getTime() + duracaoMin * 60_000)
   const tituloEvento = procedimento
-    ? `Consulta — ${procedimento.nome} (${lead?.nome ?? "Paciente"})`
-    : `Consulta — ${lead?.nome ?? "Paciente"}`
+    ? `Avaliação — ${procedimento.nome} (${lead?.nome ?? "Paciente"})`
+    : `Avaliação — ${lead?.nome ?? "Paciente"}`
   const descricaoEvento = [
     `Paciente: ${lead?.nome ?? "-"}`,
     lead?.whatsapp ? `WhatsApp: ${lead.whatsapp}` : null,
