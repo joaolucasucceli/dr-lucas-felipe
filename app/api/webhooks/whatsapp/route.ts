@@ -29,6 +29,19 @@ function extrairNumero(jid: string): string {
   return jid.split("@")[0]
 }
 
+/** Garante string ao extrair texto de campos que podem vir como string ou objeto
+ *  ({ text, caption, body, conversation }). Uazapi v2 mistura os dois formatos. */
+function extrairTexto(raw: unknown): string {
+  if (typeof raw === "string") return raw
+  if (raw == null) return ""
+  if (typeof raw === "object") {
+    const obj = raw as Record<string, unknown>
+    const candidato = obj.text ?? obj.caption ?? obj.body ?? obj.conversation
+    if (typeof candidato === "string") return candidato
+  }
+  return ""
+}
+
 const MIME_MAP: Record<string, string> = {
   imagem: "image/jpeg",
   audio: "audio/ogg",
@@ -106,10 +119,15 @@ function normalizarUazapiV2(payload: any): MensagemNormalizada | null {
     tipoMsg = "video"
   }
 
-  const conteudo = msg.content || msg.body || ""
+  // Uazapi v2 pode enviar content/body como string OU objeto estruturado
+  // ({ text, caption, body, conversation }). Blindar pra sempre extrair string.
+  const conteudo = extrairTexto(msg.content) || extrairTexto(msg.body) || ""
 
   const chat = payload.chat || {}
-  const nomeContato = chat.name || chat.wa_name || null
+  const nomeContato =
+    (typeof chat.name === "string" ? chat.name : null) ||
+    (typeof chat.wa_name === "string" ? chat.wa_name : null) ||
+    null
 
   if (!chatId || !messageId) {
     console.warn("[Webhook] UazapiGO — faltam chatId ou messageId", { chatId, messageId })
