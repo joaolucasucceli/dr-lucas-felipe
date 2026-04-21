@@ -1,35 +1,39 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarEvento } from "@/lib/google-calendar"
 import { criarId, agora } from "@/lib/db-utils"
 
+const schema = z.object({
+  contatoId: z.string().min(1),
+  conversaId: z.string().min(1),
+  procedimentoId: z.string().min(1).optional(),
+  dataHora: z.string().datetime({ offset: true }).or(z.string().min(10)),
+  observacao: z.string().optional(),
+})
+
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
   if (erro) return erro
 
-  let body: {
-    contatoId?: string
-    conversaId?: string
-    procedimentoId?: string
-    dataHora?: string
-    observacao?: string
-  }
+  let raw: unknown
   try {
-    body = await request.json()
+    raw = await request.json()
   } catch {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  const { contatoId, conversaId, procedimentoId, dataHora, observacao } = body
-
-  if (!contatoId || !conversaId || !dataHora) {
+  const parsed = schema.safeParse(raw)
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "contatoId, conversaId e dataHora são obrigatórios" },
+      { error: "Payload inválido", detalhes: parsed.error.flatten() },
       { status: 400 }
     )
   }
+
+  const { contatoId, conversaId, procedimentoId, dataHora, observacao } = parsed.data
 
   const inicio = new Date(dataHora)
 

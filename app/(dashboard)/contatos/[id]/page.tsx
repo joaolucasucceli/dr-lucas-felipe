@@ -9,7 +9,6 @@ import {
   ArchiveRestore,
   ArrowLeft,
   MessageCircle,
-  Phone,
   Star,
   Trash2,
   UserCog,
@@ -23,6 +22,8 @@ import { ErrorState } from "@/components/features/shared/ErrorState"
 import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
+import { PageHeader } from "@/components/features/shared/PageHeader"
+import { formatarWhatsapp } from "@/lib/format"
 import { GaleriaFotos } from "@/components/features/contatos/GaleriaFotos"
 import { useContato } from "@/hooks/use-contato"
 
@@ -104,62 +105,52 @@ export default function ContatoDetalhePage({ params }: PageProps) {
 
   const ehPaciente = contato.tipo === "paciente"
 
+  const descricaoHeader = [
+    ehPaciente ? "Paciente" : "Lead",
+    contato.arquivado ? "Arquivado" : null,
+    contato.whatsapp ? formatarWhatsapp(contato.whatsapp) : null,
+    contato.email || null,
+  ]
+    .filter(Boolean)
+    .join(" • ")
+
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/contatos")} className="gap-2 -ml-2">
-            <ArrowLeft className="h-4 w-4" />
-            Voltar
+      <Button variant="ghost" size="sm" onClick={() => router.push("/contatos")} className="gap-2 -ml-2">
+        <ArrowLeft className="h-4 w-4" />
+        Voltar
+      </Button>
+
+      <PageHeader titulo={contato.nome} descricao={descricaoHeader}>
+        {!ehPaciente && contato.statusFunil && (
+          <StatusBadge status={contato.statusFunil} />
+        )}
+        {ehGestor && !ehPaciente && (
+          <Button size="sm" onClick={() => setConfirmPromover(true)}>
+            <Star className="mr-2 h-4 w-4" />
+            Promover a paciente
           </Button>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{contato.nome}</h1>
-            <Badge variant={ehPaciente ? "default" : "secondary"} className="capitalize">
-              {contato.tipo}
-            </Badge>
-            {contato.arquivado && <Badge variant="outline">Arquivado</Badge>}
-          </div>
-          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-            {contato.whatsapp && (
-              <span className="flex items-center gap-1">
-                <Phone className="h-3 w-3" />
-                {contato.whatsapp}
-              </span>
-            )}
-            {contato.email && <span>{contato.email}</span>}
-            {!ehPaciente && contato.statusFunil && (
-              <StatusBadge status={contato.statusFunil} />
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {ehGestor && !ehPaciente && (
-            <Button size="sm" onClick={() => setConfirmPromover(true)}>
-              <Star className="mr-2 h-4 w-4" />
-              Promover a paciente
-            </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={handleArquivar}>
+          {contato.arquivado ? (
+            <>
+              <ArchiveRestore className="mr-2 h-4 w-4" />
+              Desarquivar
+            </>
+          ) : (
+            <>
+              <Archive className="mr-2 h-4 w-4" />
+              Arquivar
+            </>
           )}
-          <Button size="sm" variant="outline" onClick={handleArquivar}>
-            {contato.arquivado ? (
-              <>
-                <ArchiveRestore className="mr-2 h-4 w-4" />
-                Desarquivar
-              </>
-            ) : (
-              <>
-                <Archive className="mr-2 h-4 w-4" />
-                Arquivar
-              </>
-            )}
+        </Button>
+        {ehGestor && (
+          <Button size="sm" variant="destructive" onClick={() => setConfirmExcluir(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Excluir
           </Button>
-          {ehGestor && (
-            <Button size="sm" variant="destructive" onClick={() => setConfirmExcluir(true)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Excluir
-            </Button>
-          )}
-        </div>
-      </div>
+        )}
+      </PageHeader>
 
       <Tabs defaultValue="info">
         <TabsList>
@@ -190,7 +181,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
             </CardHeader>
             <CardContent className="grid gap-3 text-sm">
               <Linha label="Nome" valor={contato.nome} />
-              <Linha label="WhatsApp" valor={contato.whatsapp} />
+              <Linha label="WhatsApp" valor={formatarWhatsapp(contato.whatsapp)} />
               <Linha label="Email" valor={contato.email} />
               <Linha label="Procedimento de interesse" valor={contato.procedimentoInteresse} />
               <Linha label="Origem" valor={contato.origem} />

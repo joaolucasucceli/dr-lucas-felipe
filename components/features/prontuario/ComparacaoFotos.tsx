@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { formatarData } from "@/lib/format"
 import { Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -50,7 +49,7 @@ export function ComparacaoFotos({ fotos, aberto, onFechar }: ComparacaoFotosProp
   const fotoDepois = fotosDepois.find((f) => f.id === fotoDepoisId)
 
   const formatarLabel = (f: FotoProntuario) => {
-    const data = format(new Date(f.dataRegistro), "dd/MM/yyyy", { locale: ptBR })
+    const data = formatarData(f.dataRegistro, "dd/MM/yyyy")
     return f.descricao ? `${data} — ${f.descricao}` : data
   }
 

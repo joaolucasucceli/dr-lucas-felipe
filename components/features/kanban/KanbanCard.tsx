@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation"
 import { Draggable } from "@hello-pangea/dnd"
-import { formatDistanceToNow, format } from "date-fns"
+import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { formatarData } from "@/lib/format"
 import { AlertTriangle, Clock, Bell, DoorOpen, Repeat2, Pause } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
@@ -60,9 +61,9 @@ function FollowUpBadge({ followUpEnviados }: { followUpEnviados: string[] }) {
 export function KanbanCard({ lead, index }: KanbanCardProps) {
   const router = useRouter()
 
-  const dataMovimentacao = new Date(lead.ultimaMovimentacaoEm || lead.atualizadoEm)
-  const tempo = formatDistanceToNow(dataMovimentacao, { locale: ptBR, addSuffix: true })
-  const dataExata = format(dataMovimentacao, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+  const dataRaw = lead.ultimaMovimentacaoEm || lead.atualizadoEm
+  const tempo = formatDistanceToNow(new Date(dataRaw), { locale: ptBR, addSuffix: true })
+  const dataExata = formatarData(dataRaw, "dd/MM/yyyy 'às' HH:mm")
 
   return (
     <Draggable draggableId={lead.id} index={index}>

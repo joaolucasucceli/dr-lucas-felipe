@@ -1,40 +1,37 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { atualizarEvento, cancelarEvento } from "@/lib/google-calendar"
 import { agora } from "@/lib/db-utils"
 
+const schema = z.object({
+  agendamentoId: z.string().min(1),
+  acao: z.enum(["remarcar", "cancelar"]),
+  novaDataHora: z.string().min(10).optional(),
+})
+
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
   if (erro) return erro
 
-  let body: {
-    agendamentoId?: string
-    acao?: string
-    novaDataHora?: string
-  }
+  let raw: unknown
   try {
-    body = await request.json()
+    raw = await request.json()
   } catch {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  const { agendamentoId, acao, novaDataHora } = body
-
-  if (!agendamentoId || !acao) {
+  const parsed = schema.safeParse(raw)
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "agendamentoId e acao são obrigatórios" },
+      { error: "Payload inválido", detalhes: parsed.error.flatten() },
       { status: 400 }
     )
   }
 
-  if (acao !== "remarcar" && acao !== "cancelar") {
-    return NextResponse.json(
-      { error: "acao deve ser 'remarcar' ou 'cancelar'" },
-      { status: 400 }
-    )
-  }
+  const { agendamentoId, acao, novaDataHora } = parsed.data
 
   const { data: agendamentoExistente } = await supabaseAdmin
     .from("agendamentos")

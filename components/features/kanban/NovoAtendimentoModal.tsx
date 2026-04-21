@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Loader2, Search } from "lucide-react"
+import { formatarWhatsapp } from "@/lib/format"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -126,7 +127,7 @@ export function NovoAtendimentoModal({
                 >
                   <div>
                     <p className="font-medium">{contato.nome}</p>
-                    <p className="text-xs text-muted-foreground">{contato.whatsapp}</p>
+                    <p className="text-xs text-muted-foreground">{formatarWhatsapp(contato.whatsapp)}</p>
                   </div>
                   <StatusBadge status={contato.statusFunil} />
                 </button>
@@ -143,7 +144,7 @@ export function NovoAtendimentoModal({
           {contatoSelecionado && (
             <div className="rounded-md border p-3 space-y-2">
               <p className="text-sm font-medium">{contatoSelecionado.nome}</p>
-              <p className="text-xs text-muted-foreground">{contatoSelecionado.whatsapp}</p>
+              <p className="text-xs text-muted-foreground">{formatarWhatsapp(contatoSelecionado.whatsapp)}</p>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Status atual:</span>
                 <StatusBadge status={contatoSelecionado.statusFunil} />

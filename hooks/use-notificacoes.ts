@@ -2,13 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useRealtimeTabela } from "@/lib/realtime"
-
-interface ContatoAlerta {
-  id: string
-  nome: string
-  statusFunil: string
-  ultimaMovimentacaoEm: string | null
-}
+import type { ContatoAlerta } from "./use-contatos-alerta"
 
 interface ContatoNovoIA {
   id: string

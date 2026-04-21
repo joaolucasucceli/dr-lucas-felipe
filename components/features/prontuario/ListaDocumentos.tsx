@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { formatarData } from "@/lib/format"
 import { Plus, FileText, Image, Download, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -135,7 +134,7 @@ export function ListaDocumentos({ pacienteId }: ListaDocumentosProps) {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>
-                        {format(new Date(doc.criadoEm), "dd/MM/yyyy", { locale: ptBR })}
+                        {formatarData(doc.criadoEm, "dd/MM/yyyy")}
                       </span>
                       <span>{formatarTamanho(doc.tamanhoBytes)}</span>
                       {doc.descricao && (

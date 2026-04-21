@@ -17,6 +17,7 @@ import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { useAgenda, type AgendamentoAgenda } from "@/hooks/use-agenda"
+import { formatarWhatsapp } from "@/lib/format"
 
 const TZ = "America/Sao_Paulo"
 
@@ -196,7 +197,7 @@ export default function AgendaPage() {
                             {ag.contato?.whatsapp && (
                               <>
                                 <span>•</span>
-                                <span>{ag.contato.whatsapp}</span>
+                                <span>{formatarWhatsapp(ag.contato.whatsapp)}</span>
                               </>
                             )}
                           </div>

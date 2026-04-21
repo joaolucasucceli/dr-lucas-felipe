@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { formatarData } from "@/lib/format"
 import { Plus, ChevronDown, ChevronUp, Pencil, Trash2, Stethoscope } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -89,7 +88,7 @@ export function TimelineEvolucao({ evolucoes, pacienteId, onAtualizar }: Timelin
                         <div className="flex items-center gap-2 mb-1">
                           <StatusBadge status={ev.tipo} variante="evolucao" />
                           <span className="text-sm text-muted-foreground">
-                            {format(new Date(ev.dataRegistro), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            {formatarData(ev.dataRegistro, "dd/MM/yyyy 'às' HH:mm")}
                           </span>
                         </div>
                         <h4 className="font-medium text-sm">{ev.titulo}</h4>

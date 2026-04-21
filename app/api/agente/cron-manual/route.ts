@@ -38,12 +38,12 @@ export async function POST() {
         try {
           await enviarFollowUp(conversa, tipo, configWa)
           resultado.followups++
-        } catch {
-          // Continuar com próximo
+        } catch (err) {
+          console.error("[cron-manual] followup falhou:", conversa.id, err)
         }
       }
-    } catch {
-      // Ignorar erro geral
+    } catch (err) {
+      console.error("[cron-manual] buscarConversasParaFollowUp falhou:", err)
     }
 
     try {
@@ -52,12 +52,12 @@ export async function POST() {
         try {
           await enviarConfirmacao(agendamento, tipo, configWa)
           resultado.confirmacoes++
-        } catch {
-          // Continuar com próximo
+        } catch (err) {
+          console.error("[cron-manual] confirmacao falhou:", agendamento.id, err)
         }
       }
-    } catch {
-      // Ignorar erro geral
+    } catch (err) {
+      console.error("[cron-manual] buscarAgendamentosParaConfirmacao falhou:", err)
     }
   }
 
@@ -81,12 +81,12 @@ export async function POST() {
           .update({ encerradaEm: agora(), atualizadoEm: agora() })
           .eq("id", conversa.id)
         resultado.autoClose++
-      } catch {
-        // Continuar
+      } catch (err) {
+        console.error("[cron-manual] auto-close falhou:", conversa.id, err)
       }
     }
-  } catch {
-    // Ignorar
+  } catch (err) {
+    console.error("[cron-manual] auto-close query falhou:", err)
   }
 
   return NextResponse.json(resultado)

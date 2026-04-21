@@ -1,36 +1,40 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarId, agora } from "@/lib/db-utils"
+
+const schema = z.object({
+  conversaId: z.string().min(1).optional(),
+  contatoId: z.string().min(1),
+  conteudo: z.string().min(1),
+  direcao: z.enum(["agente", "paciente"]),
+  tipo: z.string().min(1).optional(),
+  messageIdWhatsapp: z.string().min(1).optional(),
+})
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
   if (erro) return erro
 
-  let body: {
-    conversaId?: string
-    contatoId?: string
-    conteudo?: string
-    direcao?: string
-    tipo?: string
-    messageIdWhatsapp?: string
-  }
+  let raw: unknown
   try {
-    body = await request.json()
+    raw = await request.json()
   } catch {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  const { contatoId, conteudo, direcao, tipo, messageIdWhatsapp } = body
-  let { conversaId } = body
-
-  if (!contatoId || !conteudo || !direcao) {
+  const parsed = schema.safeParse(raw)
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "contatoId, conteudo e direcao são obrigatórios" },
+      { error: "Payload inválido", detalhes: parsed.error.flatten() },
       { status: 400 }
     )
   }
+
+  const { contatoId, conteudo, direcao, tipo, messageIdWhatsapp } = parsed.data
+  let { conversaId } = parsed.data
 
   if (!conversaId) {
     const novoId = criarId()

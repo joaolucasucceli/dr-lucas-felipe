@@ -82,8 +82,9 @@ A Ana Júlia conduz a conversa até o horário fechar (usando as 9 ferramentas e
 ### Convenção de Estrutura de Pastas
 
 - `app/(dashboard)/` — páginas do painel agrupadas sob layout do dashboard com sidebar + verificação de perfil
-- `app/api/agente/` — ferramentas do agente IA (7 endpoints) + endpoints auxiliares (processar, cron-manual, limpar-memoria)
-- `lib/agente/` — internos do agente: buffer, memória, processamento de mídia, prompt, ferramentas, sincronização do kanban, analista (JLAU-571)
+- `app/api/agente/` — ferramentas do agente IA (9 endpoints) + endpoints auxiliares (processar, cron-manual, limpar-memoria)
+- `lib/agente/` — internos do agente: buffer, memória, processamento de mídia, prompt, ferramentas, sincronização do kanban, analista (JLAU-571), tipos compartilhados (`types.ts`)
+- `lib/format.ts` — helpers `formatarData()` (timezone SP) e `formatarWhatsapp()` (+55 (DD) 9XXXX-XXXX)
 - `supabase/migrations/` — migrations SQL aplicadas manualmente no Supabase (sem Prisma)
 - `lib/supabase.ts` — clients Supabase (`supabaseAdmin` para server-side com service role e `supabaseAnon` para client-side)
 - `lib/types/database.ts` — types TypeScript gerados pelo Supabase CLI (`npm run db:types`)
@@ -102,12 +103,12 @@ A Ana Júlia conduz a conversa até o horário fechar (usando as 9 ferramentas e
 
 | Métrica | Quantidade |
 |---------|-----------|
-| Páginas | 20 (17 dashboard + 2 públicas + 1 root) |
-| Endpoints API | 80 |
+| Páginas | 20 (18 dashboard + 2 públicas + 1 root) |
+| Endpoints API | ~85 |
 | Tabelas no banco | 24 |
 | Enums | 12 |
-| Componentes | 92 (28 UI + 64 features) |
-| Hooks customizados | 19 |
+| Componentes | 94 (28 UI + 66 features) |
+| Hooks customizados | 20 |
 
 ## Issues Conhecidas
 
@@ -115,7 +116,13 @@ _Nenhuma issue técnica conhecida no momento. Issues abertas no Linear são entr
 
 ## Estado do Projeto
 
-Sistema em produção com todos os módulos core implementados. Sprint 2 (chat atendente + gestão de instâncias) concluída em 2026-04-04 — 18 tasks implementadas. Sprint 1 (validação do agente IA) planejada no ClickUp com 22 tasks de teste end-to-end.
+Sistema em **modo manutenção** após auditoria final de entrega (JLAU-609, 2026-04-21). Todos os módulos core entregues:
+- Site público institucional (8 seções)
+- Painel de gestão (18 páginas)
+- Agente IA WhatsApp (arquitetura dual Ana Júlia + Analista)
+- Pacientes + Protocolos (bônus)
+
+Itens em aberto no Linear aguardam ação do cliente (credenciais Google/WhatsApp) ou dependem de tráfego real. Não há bugs estruturais.
 
 ## Idioma
 

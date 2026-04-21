@@ -1,12 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase"
 import { enviarMensagem } from "@/lib/uazapi"
 import { agora } from "@/lib/db-utils"
-
-interface ContatoAgente {
-  id: string
-  nome: string
-  whatsapp: string
-}
+import type { ContatoAgente, ConfigWhatsappAtivo } from "./types"
 
 interface AgendamentoComContato {
   id: string
@@ -14,11 +9,6 @@ interface AgendamentoComContato {
   dataHora: string
   confirmacoesEnviadas: string[]
   contato: ContatoAgente
-}
-
-interface ConfigWhatsappAtivo {
-  uazapiUrl: string
-  instanceToken: string | null
 }
 
 type TipoConfirmacao = "6h" | "3h" | "30min"

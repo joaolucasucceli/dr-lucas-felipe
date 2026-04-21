@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { User, Stethoscope } from "lucide-react"
+import { formatarWhatsapp } from "@/lib/format"
 import {
   Command,
   CommandDialog,
@@ -100,7 +101,7 @@ export function BuscaGlobal({ aberto, onFechar }: BuscaGlobalProps) {
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span>{contato.nome}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {contato.whatsapp}
+                  {formatarWhatsapp(contato.whatsapp)}
                 </span>
               </CommandItem>
             ))}

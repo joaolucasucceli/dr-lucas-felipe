@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { format, isPast, parseISO } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { isPast, parseISO } from "date-fns"
+import { formatarData } from "@/lib/format"
 import { Pencil, Clock, Stethoscope } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -156,9 +156,9 @@ export function DetalheRegistroCirurgico({
                       </p>
                       {marco.dataPrevista && (
                         <p className="text-[10px] text-muted-foreground">
-                          Previsto: {format(parseISO(marco.dataPrevista), "dd/MM/yyyy", { locale: ptBR })}
+                          Previsto: {formatarData(marco.dataPrevista, "dd/MM/yyyy")}
                           {marco.dataConcluida && (
-                            <> — Concluído: {format(parseISO(marco.dataConcluida), "dd/MM/yyyy", { locale: ptBR })}</>
+                            <> — Concluído: {formatarData(marco.dataConcluida, "dd/MM/yyyy")}</>
                           )}
                         </p>
                       )}

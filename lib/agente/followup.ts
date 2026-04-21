@@ -2,13 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { openai } from "@/lib/openai"
 import { enviarMensagem } from "@/lib/uazapi"
 import { agora } from "@/lib/db-utils"
-
-interface ContatoAgente {
-  id: string
-  nome: string
-  whatsapp: string
-  procedimentoInteresse: string | null
-}
+import type { ContatoAgente, ConfigWhatsappAtivo } from "./types"
 
 interface ConversaComContato {
   id: string
@@ -16,11 +10,6 @@ interface ConversaComContato {
   ultimaMensagemEm: string | null
   followUpEnviados: string[]
   contato: ContatoAgente
-}
-
-interface ConfigWhatsappAtivo {
-  uazapiUrl: string
-  instanceToken: string | null
 }
 
 interface FollowUpPendente {

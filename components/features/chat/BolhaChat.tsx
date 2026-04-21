@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { format } from "date-fns"
+import { formatarData } from "@/lib/format"
 import Image from "next/image"
 import { Reply, FileText, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -253,7 +253,7 @@ export function BolhaChat({ mensagem, onResponder, onScrollToReply }: BolhaChatP
             ehSticker ? "text-muted-foreground/80" : "text-muted-foreground/70"
           )}
         >
-          {format(new Date(mensagem.criadoEm), "HH:mm")}
+          {formatarData(mensagem.criadoEm, "HH:mm")}
         </span>
 
         {/* Botão reply (hover) */}

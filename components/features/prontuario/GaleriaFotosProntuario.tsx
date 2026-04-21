@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { format } from "date-fns"
+import { format, parse } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { formatarData } from "@/lib/format"
 import { Plus, Trash2, Upload, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -157,7 +158,7 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
   // Agrupar por data
   const grupos = fotosFiltradas.reduce<Record<string, FotoProntuario[]>>(
     (acc, foto) => {
-      const data = format(new Date(foto.dataRegistro), "yyyy-MM-dd")
+      const data = formatarData(foto.dataRegistro, "yyyy-MM-dd")
       if (!acc[data]) acc[data] = []
       acc[data].push(foto)
       return acc
@@ -216,7 +217,7 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
                 .map(([data, fotosGrupo]) => (
                   <div key={data}>
                     <p className="text-xs font-medium text-muted-foreground mb-3">
-                      {format(new Date(data), "dd 'de' MMMM 'de' yyyy", {
+                      {format(parse(data, "yyyy-MM-dd", new Date()), "dd 'de' MMMM 'de' yyyy", {
                         locale: ptBR,
                       })}
                     </p>

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, CheckCircle, CheckCircle2, Edit2, Loader2, Plus, RefreshCw, Trash2, Wifi, WifiOff } from "lucide-react"
+import { ArrowLeft, CheckCircle, CheckCircle2, Edit2, Loader2, RefreshCw, Wifi, WifiOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { LoadingState } from "@/components/features/shared/LoadingState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { useConfigWhatsapp } from "@/hooks/use-config-whatsapp"
+import { useQrCountdown, useWhatsappPolling } from "@/hooks/use-whatsapp-conexao"
 
 export default function WhatsAppConfigPage() {
   const router = useRouter()
@@ -23,34 +24,23 @@ export default function WhatsAppConfigPage() {
 
   const [url, setUrl] = useState("")
   const [token, setToken] = useState("")
-  const [nome, setNome] = useState("")
   const [qrcode, setQrcode] = useState("")
-  const [qrSegs, setQrSegs] = useState(0)
-  const qrExpiraRef = useRef<number | null>(null)
   const [editandoCredenciais, setEditandoCredenciais] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [confirmarDesconectar, setConfirmarDesconectar] = useState(false)
   const [reconfigurandoWebhook, setReconfigurandoWebhook] = useState(false)
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Countdown quando QR está visível
-  useEffect(() => {
-    if (qrcode) {
-      qrExpiraRef.current = Date.now() + 120_000
-      setQrSegs(120)
-      const iv = setInterval(() => {
-        const restante = Math.max(0, Math.ceil(((qrExpiraRef.current ?? 0) - Date.now()) / 1000))
-        setQrSegs(restante)
-        if (restante === 0) clearInterval(iv)
-      }, 1000)
-      return () => clearInterval(iv)
-    } else {
-      qrExpiraRef.current = null
-      setQrSegs(0)
-    }
-  }, [qrcode])
+  const qrSegs = useQrCountdown(qrcode)
+  const aguardandoQr = qrcode !== "" || status === "connecting"
 
-  // Inicializar estado de credenciais
+  const onConnected = useCallback(() => {
+    setQrcode("")
+    recarregar()
+  }, [recarregar])
+
+  useWhatsappPolling(aguardandoQr, onConnected)
+
+  // Inicializar estado de credenciais ao carregar config
   useEffect(() => {
     if (carregando) return
     if (configurado && config) {
@@ -61,39 +51,6 @@ export default function WhatsAppConfigPage() {
       setEditandoCredenciais(true)
     }
   }, [carregando, configurado, config])
-
-  // Polling quando aguardando conexão
-  useEffect(() => {
-    const aguardando = qrcode !== "" || status === "connecting"
-
-    if (!aguardando) {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current)
-        pollingRef.current = null
-      }
-      return
-    }
-
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch("/api/whatsapp/status")
-        const data = await res.json()
-        if (data.ativo && data.status === "connected") {
-          setQrcode("")
-          recarregar()
-        }
-      } catch {
-        // Ignorar erros de polling
-      }
-    }, 5000)
-
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current)
-        pollingRef.current = null
-      }
-    }
-  }, [qrcode, status, recarregar])
 
   if (carregando) return <LoadingState />
   if (erro) {
@@ -214,8 +171,6 @@ export default function WhatsAppConfigPage() {
       setReconfigurandoWebhook(false)
     }
   }
-
-  const aguardandoQr = qrcode !== "" || status === "connecting"
 
   // Step indicator
   const passo = !configurado ? 1 : !conectado ? 2 : 3

@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { formatarData } from "@/lib/format"
 import { Plus, Trash2, Activity } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -216,7 +215,7 @@ export function SinaisVitais({ pacienteId }: SinaisVitaisProps) {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {format(new Date(sinal.dataRegistro), "dd/MM/yy HH:mm", { locale: ptBR })}
+                          {formatarData(sinal.dataRegistro, "dd/MM/yy HH:mm")}
                         </TableCell>
                         <TableCell>
                           <Button

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { z } from "zod"
 import { validarApiSecret } from "@/lib/api-auth"
 import { processarMensagens } from "@/lib/agente/loop"
 import { agendarProcessamento, deveProcessar } from "@/lib/agente/buffer"
@@ -14,21 +15,30 @@ const DEBOUNCE_MS = 20_000
 // WhatsApp expira o presence "composing" em ~15s — renova a meio-caminho do debounce.
 const REFRESH_DIGITANDO_MS = 10_000
 
+const schema = z.object({
+  chatId: z.string().min(1),
+})
+
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
   if (erro) return erro
 
-  let body: { chatId?: string }
+  let raw: unknown
   try {
-    body = await request.json()
+    raw = await request.json()
   } catch {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
-  const { chatId } = body
-  if (!chatId) {
-    return NextResponse.json({ error: "chatId é obrigatório" }, { status: 400 })
+  const parsed = schema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Payload inválido", detalhes: parsed.error.flatten() },
+      { status: 400 }
+    )
   }
+
+  const { chatId } = parsed.data
 
   // Se ja ha um debounce em andamento, outra instancia vai processar. Retorna rapido.
   const podeProcessar = await deveProcessar(chatId)

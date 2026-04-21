@@ -70,7 +70,8 @@ async function downloadEUploadMidia(
 
     const { data } = supabaseAdmin.storage.from("atendimento-midias").getPublicUrl(path)
     return data.publicUrl
-  } catch {
+  } catch (err) {
+    console.error("[webhook-whatsapp] download/upload midia falhou:", err)
     return null
   }
 }
@@ -485,10 +486,10 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({ chatId: msg.chatId }),
       }).catch((err) => {
-        console.error("[Webhook] Erro ao acionar processar:", err)
+        console.error("[webhook-whatsapp] erro ao acionar processar:", err)
       })
-    } catch {
-      // Redis não configurado — mensagem já salva no banco, ok
+    } catch (err) {
+      console.warn("[webhook-whatsapp] buffer/Redis indisponivel — msg salva no banco:", err)
     }
   }
 
