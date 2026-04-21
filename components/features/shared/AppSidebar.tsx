@@ -12,6 +12,7 @@ import {
   HeartPulse,
   BrainCog,
   Sparkles,
+  Calendar,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,11 @@ const navGroups: NavGroup[] = [
         titulo: "Atendimentos",
         href: "/atendimentos",
         icone: <Kanban className="h-4 w-4" />,
+      },
+      {
+        titulo: "Agenda",
+        href: "/agenda",
+        icone: <Calendar className="h-4 w-4" />,
       },
       {
         titulo: "Contatos",
