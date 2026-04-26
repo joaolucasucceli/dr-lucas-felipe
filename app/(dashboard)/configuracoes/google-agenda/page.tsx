@@ -2,14 +2,20 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { Loader2, CheckCircle2 } from "lucide-react"
+import { Loader2, CheckCircle2, MoreHorizontal, RefreshCw, Trash2, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { LoadingState } from "@/components/features/shared/LoadingState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
@@ -25,6 +31,7 @@ function GoogleAgendaConfigInner() {
   const [salvando, setSalvando] = useState(false)
   const [conectando, setConectando] = useState(false)
   const [confirmRemover, setConfirmRemover] = useState(false)
+  const [editandoCredenciais, setEditandoCredenciais] = useState(false)
 
   // Detectar retorno do OAuth
   useEffect(() => {
@@ -84,6 +91,7 @@ function GoogleAgendaConfigInner() {
       }
 
       toast.success("Credenciais salvas")
+      setEditandoCredenciais(false)
       recarregar()
     } catch {
       toast.error("Erro ao salvar credenciais")
@@ -120,6 +128,7 @@ function GoogleAgendaConfigInner() {
       toast.success("Configuração removida")
       setClientId("")
       setClientSecret("")
+      setEditandoCredenciais(false)
       recarregar()
     } catch {
       toast.error("Erro ao remover configuração")
@@ -146,6 +155,9 @@ function GoogleAgendaConfigInner() {
     )
   }
 
+  const conectado = configurado && config?.conectado
+  const passo = !configurado ? 1 : !config?.conectado ? 2 : 3
+
   return (
     <div>
       <PageHeader
@@ -154,155 +166,223 @@ function GoogleAgendaConfigInner() {
       />
 
       {/* Step indicator */}
-      {(() => {
-        const passo = !configurado ? 1 : !config?.conectado ? 2 : 3
-        const passos = [
+      <div className="mt-4 flex items-center gap-1">
+        {[
           { num: 1, label: "Credenciais" },
           { num: 2, label: "Autorizar Google" },
           { num: 3, label: "Conectado" },
-        ]
-        return (
-          <div className="mt-4 flex items-center gap-1">
-            {passos.map((p, i) => (
-              <div key={p.num} className="flex items-center gap-1">
-                {i > 0 && <div className="h-px w-6 bg-border" />}
-                <div className={cn(
-                  "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                  p.num < passo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                  p.num === passo ? "bg-primary text-primary-foreground" :
-                  "bg-muted text-muted-foreground"
-                )}>
-                  {p.num < passo ? <CheckCircle2 className="h-3 w-3" /> : <span>{p.num}</span>}
-                  {p.label}
-                </div>
-              </div>
-            ))}
+        ].map((p, i) => (
+          <div key={p.num} className="flex items-center gap-1">
+            {i > 0 && <div className="h-px w-6 bg-border" />}
+            <div className={cn(
+              "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+              p.num < passo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+              p.num === passo ? "bg-primary text-primary-foreground" :
+              "bg-muted text-muted-foreground"
+            )}>
+              {p.num < passo ? <CheckCircle2 className="h-3 w-3" /> : <span>{p.num}</span>}
+              {p.label}
+            </div>
           </div>
-        )
-      })()}
+        ))}
+      </div>
 
       <div className="mt-6 grid gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Credenciais de Integração</CardTitle>
-            {configurado && config?.conectado ? (
-              <Badge variant="default" className="flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Conectado
-              </Badge>
-            ) : configurado ? (
-              <Badge variant="secondary">Credenciais salvas</Badge>
-            ) : (
-              <Badge variant="secondary">Não configurado</Badge>
-            )}
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label>Client ID</Label>
-              <Input
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                onFocus={() => handleFocus(clientId, setClientId)}
-                placeholder="571255265442-xxx.apps.googleusercontent.com"
-              />
-            </div>
+        {/* ESTADO 3 — Conectado */}
+        {conectado && !editandoCredenciais && (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                <CheckCircle2 className="h-7 w-7 text-green-700 dark:text-green-400" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold">Sincronização ativa</h3>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  Sua agenda está conectada ao Google Calendar. A Ana Júlia já consulta horários disponíveis e cria eventos automaticamente quando agenda uma avaliação.
+                </p>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground">
+                    <MoreHorizontal className="mr-1 h-4 w-4" />
+                    Gerenciar integração
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center">
+                  <DropdownMenuItem onClick={() => setEditandoCredenciais(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Editar credenciais
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleConectar} disabled={conectando}>
+                    {conectando ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    Reconectar Google
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setConfirmRemover(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remover integração
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </CardContent>
+          </Card>
+        )}
 
-            <div className="grid gap-2">
-              <Label>Client Secret</Label>
-              <Input
-                type="password"
-                value={clientSecret}
-                onChange={(e) => setClientSecret(e.target.value)}
-                onFocus={() => handleFocus(clientSecret, setClientSecret)}
-                placeholder="GOCSPX-..."
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2 pt-2">
-              <Button onClick={handleSalvar} disabled={salvando}>
-                {salvando ? (
+        {/* ESTADO 2 — Credenciais salvas mas nao conectado */}
+        {configurado && !config?.conectado && !editandoCredenciais && (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold">Quase lá — autorize o Google</h3>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  As credenciais foram salvas. Falta autorizar o acesso à sua conta do Google Calendar.
+                </p>
+              </div>
+              <Button onClick={handleConectar} disabled={conectando} size="lg">
+                {conectando ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvando...
+                    Redirecionando...
                   </>
                 ) : (
-                  "Salvar Credenciais"
+                  "Conectar com Google"
                 )}
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground">
+                    <MoreHorizontal className="mr-1 h-4 w-4" />
+                    Gerenciar credenciais
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center">
+                  <DropdownMenuItem onClick={() => setEditandoCredenciais(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Editar credenciais
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setConfirmRemover(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remover integração
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </CardContent>
+          </Card>
+        )}
 
-              {configurado && !config?.conectado && (
-                <Button onClick={handleConectar} disabled={conectando} variant="secondary">
-                  {conectando ? (
+        {/* ESTADO 1 — Nao configurado OU editando credenciais */}
+        {(!configurado || editandoCredenciais) && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>
+                {editandoCredenciais ? "Editar credenciais" : "Credenciais de Integração"}
+              </CardTitle>
+              {editandoCredenciais && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditandoCredenciais(false)
+                    if (config) {
+                      setClientId(config.clientId)
+                      setClientSecret(config.clientSecret)
+                    }
+                  }}
+                >
+                  Cancelar
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="grid gap-2">
+                <Label>Client ID</Label>
+                <Input
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  onFocus={() => handleFocus(clientId, setClientId)}
+                  placeholder="571255265442-xxx.apps.googleusercontent.com"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Client Secret</Label>
+                <Input
+                  type="password"
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                  onFocus={() => handleFocus(clientSecret, setClientSecret)}
+                  placeholder="GOCSPX-..."
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button onClick={handleSalvar} disabled={salvando}>
+                  {salvando ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Redirecionando...
+                      Salvando...
                     </>
                   ) : (
-                    "Conectar com Google"
+                    "Salvar Credenciais"
                   )}
                 </Button>
-              )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-              {configurado && config?.conectado && (
-                <Button onClick={handleConectar} disabled={conectando} variant="outline">
-                  {conectando ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Redirecionando...
-                    </>
-                  ) : (
-                    "Reconectar"
-                  )}
-                </Button>
-              )}
-
-              {configurado && (
-                <Button variant="destructive" onClick={() => setConfirmRemover(true)}>
-                  Remover Configuração
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Como obter as credenciais</CardTitle>
-          </CardHeader>
-          <CardContent className="prose prose-sm max-w-none text-muted-foreground">
-            <ol className="list-decimal space-y-2 pl-4">
-              <li>
-                Acesse o <strong>Google Cloud Console</strong> (console.cloud.google.com)
-              </li>
-              <li>Crie um novo projeto ou selecione um existente</li>
-              <li>
-                Ative a <strong>Google Calendar API</strong> em &quot;APIs &amp; Services&quot; → &quot;Library&quot;
-              </li>
-              <li>
-                Crie credenciais <strong>OAuth 2.0</strong> em &quot;Credentials&quot; → &quot;Create Credentials&quot; →{" "}
-                &quot;OAuth client ID&quot; (tipo: <strong>Web application</strong>)
-              </li>
-              <li>
-                Em &quot;Authorized redirect URIs&quot; adicione:{" "}
-                <code className="text-xs bg-muted px-1 py-0.5 rounded">
-                  https://dr-lucas-central.vercel.app/api/configuracoes/google-agenda/callback
-                </code>
-              </li>
-              <li>
-                Copie o <strong>Client ID</strong> e o <strong>Client Secret</strong>, cole aqui e clique em{" "}
-                <strong>Salvar Credenciais</strong>
-              </li>
-              <li>
-                Clique em <strong>Conectar com Google</strong> e autorize o acesso — o token será salvo automaticamente
-              </li>
-            </ol>
-          </CardContent>
-        </Card>
+        {/* Card de instrucoes — aparece apenas durante setup inicial */}
+        {!configurado && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Como obter as credenciais</CardTitle>
+            </CardHeader>
+            <CardContent className="prose prose-sm max-w-none text-muted-foreground">
+              <ol className="list-decimal space-y-2 pl-4">
+                <li>
+                  Acesse o <strong>Google Cloud Console</strong> (console.cloud.google.com)
+                </li>
+                <li>Crie um novo projeto ou selecione um existente</li>
+                <li>
+                  Ative a <strong>Google Calendar API</strong> em &quot;APIs &amp; Services&quot; → &quot;Library&quot;
+                </li>
+                <li>
+                  Crie credenciais <strong>OAuth 2.0</strong> em &quot;Credentials&quot; → &quot;Create Credentials&quot; →{" "}
+                  &quot;OAuth client ID&quot; (tipo: <strong>Web application</strong>)
+                </li>
+                <li>
+                  Em &quot;Authorized redirect URIs&quot; adicione:{" "}
+                  <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                    https://dr-lucas-central.vercel.app/api/configuracoes/google-agenda/callback
+                  </code>
+                </li>
+                <li>
+                  Copie o <strong>Client ID</strong> e o <strong>Client Secret</strong>, cole aqui e clique em{" "}
+                  <strong>Salvar Credenciais</strong>
+                </li>
+                <li>
+                  Clique em <strong>Conectar com Google</strong> e autorize o acesso — o token será salvo automaticamente
+                </li>
+              </ol>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <ConfirmDialog
-        titulo="Remover configuração"
-        descricao="Tem certeza que deseja remover a integração com o Google Agenda? Os agendamentos existentes não serão afetados."
+        titulo="Remover integração"
+        descricao="Tem certeza que deseja remover a integração com o Google Agenda? Os agendamentos existentes não serão afetados, mas a Ana Júlia deixará de criar eventos no Google Calendar."
         aberto={confirmRemover}
         onFechar={() => setConfirmRemover(false)}
         onConfirmar={handleRemover}
