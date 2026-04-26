@@ -41,6 +41,13 @@ const OPCOES_STATUS_FUNIL = [
   { value: "consulta_agendada", label: "Consulta agendada" },
 ]
 
+const ROTULO_ETAPA: Record<string, string> = {
+  acolhimento: "Acolhimento",
+  qualificacao: "Qualificação",
+  agendamento: "Agendamento",
+  consulta_agendada: "Consulta agendada",
+}
+
 const OPCOES_SEXO = [
   { value: "feminino", label: "Feminino" },
   { value: "masculino", label: "Masculino" },
@@ -215,14 +222,16 @@ export default function ContatoDetalhePage({ params }: PageProps) {
       <Tabs defaultValue="info">
         <TabsList>
           <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="historico">
-            Histórico
-            {contato.conversas.length > 0 && (
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {contato.conversas.length}
-              </Badge>
-            )}
-          </TabsTrigger>
+          {!ehPaciente && (
+            <TabsTrigger value="historico">
+              Histórico de atendimento
+              {contato.conversas.length > 0 && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {contato.conversas.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="fotos">
             Fotos
             {contato.fotos.length > 0 && (
@@ -400,28 +409,29 @@ export default function ContatoDetalhePage({ params }: PageProps) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="historico" className="mt-6">
-          {contato.conversas.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                Sem conversas registradas.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {contato.conversas.map((conversa) => (
-                <Card key={conversa.id}>
-                  <CardHeader className="flex flex-row items-center justify-between pb-3">
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                      <CardTitle className="text-sm">
-                        Ciclo {conversa.ciclo} — {conversa.etapa}
-                      </CardTitle>
-                    </div>
-                    <Badge variant={conversa.modoConversa === "ia" ? "default" : "outline"} className="text-xs">
-                      {conversa.modoConversa === "ia" ? "Ana Júlia" : "Atendente"}
-                    </Badge>
-                  </CardHeader>
+        {!ehPaciente && (
+          <TabsContent value="historico" className="mt-6">
+            {contato.conversas.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Sem conversas registradas.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {contato.conversas.map((conversa) => (
+                  <Card key={conversa.id}>
+                    <CardHeader className="flex flex-row items-center justify-between pb-3">
+                      <div className="flex items-center gap-2">
+                        <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm">
+                          {ROTULO_ETAPA[conversa.etapa] ?? conversa.etapa}
+                        </CardTitle>
+                      </div>
+                      <Badge variant={conversa.modoConversa === "ia" ? "default" : "outline"} className="text-xs">
+                        {conversa.modoConversa === "ia" ? "Ana Júlia" : "Atendente"}
+                      </Badge>
+                    </CardHeader>
                   <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
                     {conversa.mensagens.length === 0 ? (
                       <p className="text-xs text-muted-foreground">Sem mensagens</p>
@@ -452,7 +462,8 @@ export default function ContatoDetalhePage({ params }: PageProps) {
               ))}
             </div>
           )}
-        </TabsContent>
+          </TabsContent>
+        )}
 
         <TabsContent value="fotos" className="mt-6">
           <GaleriaFotos
