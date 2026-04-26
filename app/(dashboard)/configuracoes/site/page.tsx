@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +14,6 @@ import { ErrorState } from "@/components/features/shared/ErrorState"
 import { useConfigSite } from "@/hooks/use-config-site"
 
 export default function SiteConfigPage() {
-  const router = useRouter()
   const { configurado, config, carregando, erro, recarregar } = useConfigSite()
   const [salvando, setSalvando] = useState(false)
 
@@ -100,12 +98,7 @@ export default function SiteConfigPage() {
       <PageHeader
         titulo="Configurações do Site"
         descricao="Dados de contato, WhatsApp e informações do médico exibidos na landing page"
-      >
-        <Button variant="outline" onClick={() => router.push("/configuracoes")}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Configurações
-        </Button>
-      </PageHeader>
+      />
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2 lg:items-start">
         {/* Médico */}

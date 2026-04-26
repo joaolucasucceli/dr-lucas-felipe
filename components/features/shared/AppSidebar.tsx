@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { signOut } from "next-auth/react"
 import {
   LayoutDashboard,
   Kanban,
@@ -13,12 +14,21 @@ import {
   BrainCog,
   Sparkles,
   Calendar,
+  CalendarDays,
+  MessageCircle,
+  Globe,
+  Users,
+  Tags,
+  User,
+  LogOut,
+  Menu,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { UserAvatar } from "@/components/features/shared/UserAvatar"
 import { cn } from "@/lib/utils"
-import { Menu } from "lucide-react"
 import { useNaoLidas } from "@/hooks/use-nao-lidas"
 
 interface NavItem {
@@ -103,10 +113,53 @@ const navGroups: NavGroup[] = [
       },
     ],
   },
+  {
+    label: "Sistema",
+    itens: [
+      {
+        titulo: "Google Agenda",
+        href: "/configuracoes/google-agenda",
+        icone: <CalendarDays className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "WhatsApp",
+        href: "/configuracoes/whatsapp",
+        icone: <MessageCircle className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "Site",
+        href: "/configuracoes/site",
+        icone: <Globe className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "Usuários",
+        href: "/configuracoes/usuarios",
+        icone: <Users className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+      {
+        titulo: "Tipos de Procedimento",
+        href: "/configuracoes/tipos-procedimento",
+        icone: <Tags className="h-4 w-4" />,
+        perfis: ["gestor"],
+      },
+    ],
+  },
 ]
+
+const perfilLabels: Record<string, string> = {
+  gestor: "Gestor",
+  atendente: "Atendente",
+}
 
 interface AppSidebarProps {
   perfil: string
+  nome: string
+  email: string
+  fotoUrl?: string | null
 }
 
 function NavContent({ perfil }: { perfil: string }) {
@@ -159,26 +212,64 @@ function NavContent({ perfil }: { perfil: string }) {
   )
 }
 
-export function AppSidebar({ perfil }: AppSidebarProps) {
-  return (
-    <>
-      {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 border-r bg-muted/40 md:block">
-        <div className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
-          <HeartPulse className="h-5 w-5 text-primary" />
-          Central Dr. Lucas
-        </div>
-        <ScrollArea className="h-[calc(100svh-3.5rem)]">
-          <NavContent perfil={perfil} />
-        </ScrollArea>
-      </aside>
+function ContaFooter({ nome, email, perfil, fotoUrl }: { nome: string; email: string; perfil: string; fotoUrl?: string | null }) {
+  const pathname = usePathname()
+  const meuPerfilAtivo = pathname === "/meu-perfil" || pathname.startsWith("/meu-perfil/")
 
-      {/* Mobile sidebar trigger (rendered in header) */}
-    </>
+  return (
+    <div className="border-t p-2">
+      <div className="flex items-center gap-2 px-2 py-2">
+        <UserAvatar nome={nome} src={fotoUrl} tamanho="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{nome}</p>
+          <p className="truncate text-xs text-muted-foreground">{email}</p>
+        </div>
+        <Badge variant="secondary" className="shrink-0 text-[10px]">
+          {perfilLabels[perfil] || perfil}
+        </Badge>
+      </div>
+      <div className="mt-1 grid gap-1">
+        <Link
+          href="/meu-perfil"
+          className={cn(
+            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            meuPerfilAtivo
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          )}
+        >
+          <User className="h-4 w-4" />
+          Meu Perfil
+        </Link>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+        >
+          <LogOut className="h-4 w-4" />
+          Sair
+        </button>
+      </div>
+    </div>
   )
 }
 
-export function MobileSidebarTrigger({ perfil }: AppSidebarProps) {
+export function AppSidebar({ perfil, nome, email, fotoUrl }: AppSidebarProps) {
+  return (
+    <aside className="hidden w-64 shrink-0 flex-col border-r bg-muted/40 md:flex">
+      <div className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
+        <HeartPulse className="h-5 w-5 text-primary" />
+        Central Dr. Lucas
+      </div>
+      <ScrollArea className="flex-1">
+        <NavContent perfil={perfil} />
+      </ScrollArea>
+      <ContaFooter nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} />
+    </aside>
+  )
+}
+
+export function MobileSidebarTrigger({ perfil, nome, email, fotoUrl }: AppSidebarProps) {
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -187,14 +278,15 @@ export function MobileSidebarTrigger({ perfil }: AppSidebarProps) {
           <span className="sr-only">Abrir menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-64 p-0">
+      <SheetContent side="left" className="flex w-64 flex-col p-0">
         <SheetTitle className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
           <HeartPulse className="h-5 w-5 text-primary" />
           Central Dr. Lucas
         </SheetTitle>
-        <ScrollArea className="h-[calc(100svh-3.5rem)]">
+        <ScrollArea className="flex-1">
           <NavContent perfil={perfil} />
         </ScrollArea>
+        <ContaFooter nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} />
       </SheetContent>
     </Sheet>
   )

@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { Loader2, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +17,6 @@ import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { useConfigGoogle } from "@/hooks/use-config-google"
 
 function GoogleAgendaConfigInner() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const { configurado, config, carregando, erro, recarregar } = useConfigGoogle()
 
@@ -152,12 +151,7 @@ function GoogleAgendaConfigInner() {
       <PageHeader
         titulo="Google Agenda"
         descricao="Conecte o sistema ao Google Calendar para sincronizar agendamentos"
-      >
-        <Button variant="outline" onClick={() => router.push("/configuracoes")}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Configurações
-        </Button>
-      </PageHeader>
+      />
 
       {/* Step indicator */}
       {(() => {
