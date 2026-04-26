@@ -1,8 +1,8 @@
 // ============================================================
 // Configuração centralizada do site — Dr. Lucas Ferreira
-// Estes valores são usados como FALLBACK quando o banco de dados
-// não tem ConfigSite cadastrada. Os dados reais são gerenciados
-// pelo painel em /configuracoes/site.
+// Fonte única da verdade para todos os textos institucionais.
+// Edição é feita direto no código quando o Dr. Lucas pedir
+// (não há mais editor no painel).
 // ============================================================
 
 const config = {
@@ -49,8 +49,8 @@ export interface SiteConfigProps {
   contatoCidade: string
 }
 
-/** Monta o objeto SiteConfigProps a partir do fallback estático */
-export function buildFallbackConfig(): SiteConfigProps {
+/** Monta o objeto SiteConfigProps a partir do SITE_CONFIG */
+export function buildSiteConfig(): SiteConfigProps {
   return {
     whatsappLink: WHATSAPP_LINK,
     medicoNome: config.medico.nomeCompleto,

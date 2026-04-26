@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { supabaseAdmin } from "@/lib/supabase"
 import { Navbar } from "./(site)/components/Navbar"
 import { HeroSection } from "./(site)/components/HeroSection"
 import { SobreSection } from "./(site)/components/SobreSection"
@@ -10,7 +9,7 @@ import { ResultadosSection } from "./(site)/components/ResultadosSection"
 import { DiferenciaisSection } from "./(site)/components/DiferenciaisSection"
 import { FooterSite } from "./(site)/components/FooterSite"
 import { WhatsappFab } from "./(site)/components/WhatsappFab"
-import { buildFallbackConfig, type SiteConfigProps } from "./(site)/components/site-config"
+import { buildSiteConfig } from "./(site)/components/site-config"
 
 export const metadata: Metadata = {
   title: "Dr. Lucas Ferreira | Estética Avançada — Contorno Corporal",
@@ -33,48 +32,8 @@ export const metadata: Metadata = {
   },
 }
 
-async function getSiteConfig(): Promise<SiteConfigProps> {
-  try {
-    const { data: dbConfig } = await supabaseAdmin
-      .from("config_site")
-      .select(
-        "whatsappNumero, whatsappMensagem, medicoNome, medicoEspecialidade, medicoCrm, instagramUrl, contatoTelefone, contatoEndereco, contatoCidade"
-      )
-      .eq("ativo", true)
-      .order("criadoEm", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (!dbConfig || !dbConfig.whatsappNumero) {
-      return buildFallbackConfig()
-    }
-
-    const numero = dbConfig.whatsappNumero
-    const mensagem =
-      dbConfig.whatsappMensagem ||
-      "Olá! Gostaria de agendar uma avaliação com o Dr. Lucas Ferreira."
-    const whatsappLink = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`
-
-    const fallback = buildFallbackConfig()
-
-    return {
-      whatsappLink,
-      medicoNome: dbConfig.medicoNome || fallback.medicoNome,
-      medicoEspecialidade:
-        dbConfig.medicoEspecialidade || fallback.medicoEspecialidade,
-      medicoCrm: dbConfig.medicoCrm || fallback.medicoCrm,
-      instagramUrl: dbConfig.instagramUrl || fallback.instagramUrl,
-      contatoTelefone: dbConfig.contatoTelefone || fallback.contatoTelefone,
-      contatoEndereco: dbConfig.contatoEndereco || fallback.contatoEndereco,
-      contatoCidade: dbConfig.contatoCidade || fallback.contatoCidade,
-    }
-  } catch {
-    return buildFallbackConfig()
-  }
-}
-
-export default async function HomePage() {
-  const config = await getSiteConfig()
+export default function HomePage() {
+  const config = buildSiteConfig()
 
   const jsonLd = {
     "@context": "https://schema.org",

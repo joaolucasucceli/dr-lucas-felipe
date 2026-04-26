@@ -13,7 +13,6 @@ import {
   Calendar,
   CalendarDays,
   MessageCircle,
-  Globe,
   Users,
   BookOpen,
   LogOut,
@@ -108,12 +107,6 @@ const navGroups: NavGroup[] = [
         titulo: "WhatsApp",
         href: "/configuracoes/whatsapp",
         icone: <MessageCircle className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
-      {
-        titulo: "Site",
-        href: "/configuracoes/site",
-        icone: <Globe className="h-4 w-4" />,
         perfis: ["gestor"],
       },
       {
