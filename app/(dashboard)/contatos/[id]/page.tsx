@@ -243,10 +243,10 @@ export default function ContatoDetalhePage({ params }: PageProps) {
           {ehPaciente && <TabsTrigger value="prontuario">Prontuário</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="info" className="mt-6 space-y-4">
+        <TabsContent value="info" className="mt-6 grid gap-4 lg:grid-cols-2 lg:items-start">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Dados básicos</CardTitle>
+              <CardTitle className="text-base">Dados do contato</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-5 sm:grid-cols-2">
               <CampoEditavel
@@ -303,88 +303,67 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                   permiteVazio={false}
                 />
               )}
-            </CardContent>
-          </Card>
 
-          {ehPaciente && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Dados do paciente</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-5 sm:grid-cols-2">
-                <CampoEditavel
-                  label="CPF"
-                  valor={contato.cpf}
-                  onSalvar={(v) => salvarCampo("cpf", v ?? "")}
-                  normalizar={normalizarCpf}
-                  mascara={formatarCpf}
-                  validador={validarCpf}
-                  placeholder="000.000.000-00"
-                />
-                <CampoEditavel
-                  label="Data de nascimento"
-                  valor={dataNascimentoInput}
-                  tipo="date"
-                  onSalvar={(v) => salvarCampo("dataNascimento", v ?? "")}
-                />
-                <CampoEditavel
-                  label="Sexo"
-                  valor={contato.sexo}
-                  tipo="select"
-                  opcoes={OPCOES_SEXO}
-                  onSalvar={(v) => salvarCampo("sexo", v)}
-                />
-                <CampoEditavel
-                  label="Cidade"
-                  valor={contato.cidade}
-                  onSalvar={(v) => salvarCampo("cidade", v ?? "")}
-                />
-                <CampoEditavel
-                  label="Estado"
-                  valor={contato.estado}
-                  tipo="select"
-                  opcoes={OPCOES_ESTADO}
-                  onSalvar={(v) => salvarCampo("estado", v ?? "")}
-                  rotuloVazio="Não informado"
-                />
-                <div className="sm:col-span-2">
+              {ehPaciente && (
+                <>
                   <CampoEditavel
-                    label="Endereço"
-                    valor={contato.endereco}
-                    onSalvar={(v) => salvarCampo("endereco", v ?? "")}
+                    label="CPF"
+                    valor={contato.cpf}
+                    onSalvar={(v) => salvarCampo("cpf", v ?? "")}
+                    normalizar={normalizarCpf}
+                    mascara={formatarCpf}
+                    validador={validarCpf}
+                    placeholder="000.000.000-00"
                   />
-                </div>
-                <CampoEditavel
-                  label="Contato de emergência"
-                  valor={contato.contatoEmergencia}
-                  onSalvar={(v) => salvarCampo("contatoEmergencia", v ?? "")}
-                />
-                <CampoEditavel
-                  label="Telefone de emergência"
-                  valor={contato.contatoEmergenciaTel}
-                  tipo="tel"
-                  onSalvar={(v) => salvarCampo("contatoEmergenciaTel", v ?? "")}
-                  normalizar={normalizarDigitos}
-                  mascara={formatarWhatsapp}
-                />
-              </CardContent>
-            </Card>
-          )}
+                  <CampoEditavel
+                    label="Data de nascimento"
+                    valor={dataNascimentoInput}
+                    tipo="date"
+                    onSalvar={(v) => salvarCampo("dataNascimento", v ?? "")}
+                  />
+                  <CampoEditavel
+                    label="Sexo"
+                    valor={contato.sexo}
+                    tipo="select"
+                    opcoes={OPCOES_SEXO}
+                    onSalvar={(v) => salvarCampo("sexo", v)}
+                  />
+                  <CampoEditavel
+                    label="Cidade"
+                    valor={contato.cidade}
+                    onSalvar={(v) => salvarCampo("cidade", v ?? "")}
+                  />
+                  <CampoEditavel
+                    label="Estado"
+                    valor={contato.estado}
+                    tipo="select"
+                    opcoes={OPCOES_ESTADO}
+                    onSalvar={(v) => salvarCampo("estado", v ?? "")}
+                    rotuloVazio="Não informado"
+                  />
+                  <div className="sm:col-span-2">
+                    <CampoEditavel
+                      label="Endereço"
+                      valor={contato.endereco}
+                      onSalvar={(v) => salvarCampo("endereco", v ?? "")}
+                    />
+                  </div>
+                  <CampoEditavel
+                    label="Contato de emergência"
+                    valor={contato.contatoEmergencia}
+                    onSalvar={(v) => salvarCampo("contatoEmergencia", v ?? "")}
+                  />
+                  <CampoEditavel
+                    label="Telefone de emergência"
+                    valor={contato.contatoEmergenciaTel}
+                    tipo="tel"
+                    onSalvar={(v) => salvarCampo("contatoEmergenciaTel", v ?? "")}
+                    normalizar={normalizarDigitos}
+                    mascara={formatarWhatsapp}
+                  />
+                </>
+              )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Sobre o contato</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <NotasContato texto={contato.sobreOPaciente} onAdicionar={adicionarNota} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Metadados</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-5 sm:grid-cols-2">
               <CampoEditavel
                 label="Consentimento LGPD"
                 valor={contato.consentimentoLgpd ? "Sim" : "Não"}
@@ -405,6 +384,15 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                   editavel={false}
                 />
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Observações sobre o contato</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NotasContato texto={contato.sobreOPaciente} onAdicionar={adicionarNota} />
             </CardContent>
           </Card>
         </TabsContent>
