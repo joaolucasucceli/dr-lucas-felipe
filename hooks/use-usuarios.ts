@@ -16,7 +16,6 @@ interface UseUsuariosParams {
   pagina: number
   porPagina: number
   perfil?: string
-  ativo?: string
   busca?: string
 }
 
@@ -42,7 +41,6 @@ export function useUsuarios(params: UseUsuariosParams): UseUsuariosReturn {
     searchParams.set("pagina", String(params.pagina))
     searchParams.set("porPagina", String(params.porPagina))
     if (params.perfil) searchParams.set("perfil", params.perfil)
-    if (params.ativo) searchParams.set("ativo", params.ativo)
     if (params.busca) searchParams.set("busca", params.busca)
 
     try {
@@ -58,7 +56,7 @@ export function useUsuarios(params: UseUsuariosParams): UseUsuariosReturn {
     } finally {
       setCarregando(false)
     }
-  }, [params.pagina, params.porPagina, params.perfil, params.ativo, params.busca])
+  }, [params.pagina, params.porPagina, params.perfil, params.busca])
 
   useEffect(() => {
     buscar()

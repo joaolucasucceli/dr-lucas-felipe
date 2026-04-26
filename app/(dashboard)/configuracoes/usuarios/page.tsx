@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useSession } from "next-auth/react"
-import { Plus, MoreHorizontal, Pencil, UserX, UserCheck, Ban, CheckCircle2 } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -43,16 +43,10 @@ const perfilLabels: Record<string, string> = {
   atendente: "Atendente",
 }
 
-const tipoLabels: Record<string, string> = {
-  humano: "Humano",
-  ia: "IA",
-}
-
 export default function UsuariosPage() {
   const { data: session } = useSession()
   const [pagina, setPagina] = useState(1)
   const [filtroPerfil, setFiltroPerfil] = useState<string>("")
-  const [filtroAtivo, setFiltroAtivo] = useState<string>("")
 
   const [formAberto, setFormAberto] = useState(false)
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null)
@@ -64,42 +58,36 @@ export default function UsuariosPage() {
     pagina,
     porPagina: 10,
     perfil: filtroPerfil || undefined,
-    ativo: filtroAtivo || undefined,
   })
 
   const isGestor = session?.user?.perfil === "gestor"
 
-  async function executarBatch(acao: "ativar" | "desativar", ids: string[]) {
+  async function executarBatchExcluir(ids: string[]) {
     try {
       const res = await fetch("/api/usuarios/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, acao }),
+        body: JSON.stringify({ ids, acao: "excluir" }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Erro na operação")
-      const verbo = acao === "ativar" ? "ativado(s)" : "desativado(s)"
-      toast.success(`${data.sucesso} de ${data.total} usuário(s) ${verbo}`)
+      if (!res.ok) throw new Error(data.error || "Erro ao excluir")
+      toast.success(`${data.sucesso} de ${data.total} usuário(s) excluído(s)`)
       recarregar()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro na operação")
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir")
     }
   }
 
   const acoesEmMassa: AcaoEmMassa[] = [
     {
-      label: "Ativar",
-      icone: <CheckCircle2 className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("ativar", ids),
-    },
-    {
-      label: "Desativar",
-      icone: <Ban className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("desativar", ids),
+      label: "Excluir",
+      icone: <Trash2 className="h-4 w-4" />,
+      onClick: (ids) => executarBatchExcluir(ids),
       confirmacao: {
-        titulo: "Desativar usuários?",
-        descricao: (qtd) => `${qtd} usuário(s) não poderão mais acessar o sistema. Seu próprio usuário e o usuário IA são ignorados.`,
-        textoBotao: "Desativar",
+        titulo: "Excluir usuários?",
+        descricao: (qtd) =>
+          `${qtd} usuário(s) serão removidos permanentemente e não poderão mais acessar o sistema. Seu próprio usuário é ignorado.`,
+        textoBotao: "Excluir",
       },
     },
   ]
@@ -109,33 +97,29 @@ export default function UsuariosPage() {
     setFormAberto(true)
   }
 
-  function handleToggleAtivo(usuario: Usuario) {
+  function handleExcluir(usuario: Usuario) {
     setUsuarioAlvo(usuario)
     setConfirmAberto(true)
   }
 
-  async function confirmarToggleAtivo() {
+  async function confirmarExcluir() {
     if (!usuarioAlvo) return
 
     try {
       const res = await fetch(`/api/usuarios/${usuarioAlvo.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ativo: !usuarioAlvo.ativo }),
+        method: "DELETE",
       })
 
       if (!res.ok) {
         const erro = await res.json()
-        toast.error(erro.error || "Erro ao atualizar usuário")
+        toast.error(erro.error || "Erro ao excluir usuário")
         return
       }
 
-      toast.success(
-        usuarioAlvo.ativo ? "Usuário desativado" : "Usuário ativado"
-      )
+      toast.success("Usuário excluído")
       recarregar()
     } catch {
-      toast.error("Erro ao atualizar usuário")
+      toast.error("Erro ao excluir usuário")
     } finally {
       setConfirmAberto(false)
       setUsuarioAlvo(null)
@@ -169,25 +153,6 @@ export default function UsuariosPage() {
       ),
     },
     {
-      chave: "tipo",
-      titulo: "Tipo",
-      classesCelula: "hidden md:table-cell",
-      renderizar: (u) => (
-        <Badge variant={u.tipo === "ia" ? "default" : "outline"}>
-          {tipoLabels[u.tipo] || u.tipo}
-        </Badge>
-      ),
-    },
-    {
-      chave: "ativo",
-      titulo: "Status",
-      renderizar: (u) => (
-        <Badge variant={u.ativo ? "default" : "destructive"}>
-          {u.ativo ? "Ativo" : "Inativo"}
-        </Badge>
-      ),
-    },
-    {
       chave: "criadoEm",
       titulo: "Criado em",
       classesCelula: "hidden lg:table-cell",
@@ -211,19 +176,13 @@ export default function UsuariosPage() {
                     <Pencil className="mr-2 h-4 w-4" />
                     Editar
                   </DropdownMenuItem>
-                  {u.tipo !== "ia" && (
-                    <DropdownMenuItem onClick={() => handleToggleAtivo(u)}>
-                      {u.ativo ? (
-                        <>
-                          <UserX className="mr-2 h-4 w-4" />
-                          Desativar
-                        </>
-                      ) : (
-                        <>
-                          <UserCheck className="mr-2 h-4 w-4" />
-                          Ativar
-                        </>
-                      )}
+                  {u.id !== session?.user?.id && (
+                    <DropdownMenuItem
+                      onClick={() => handleExcluir(u)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -282,43 +241,24 @@ export default function UsuariosPage() {
           carregando={carregando}
           selecionavel={isGestor}
           acoesEmMassa={acoesEmMassa}
-          podeSelecionar={(u) => u.tipo !== "ia" && u.id !== session?.user?.id}
+          podeSelecionar={(u) => u.id !== session?.user?.id}
           filtros={
-            <>
-              <Select
-                value={filtroPerfil}
-                onValueChange={(v) => {
-                  setFiltroPerfil(v === "todos" ? "" : v)
-                  setPagina(1)
-                }}
-              >
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Todos os perfis" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os perfis</SelectItem>
-                  <SelectItem value="gestor">Gestor</SelectItem>
-                  <SelectItem value="atendente">Atendente</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filtroAtivo}
-                onValueChange={(v) => {
-                  setFiltroAtivo(v === "todos" ? "" : v)
-                  setPagina(1)
-                }}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="true">Ativos</SelectItem>
-                  <SelectItem value="false">Inativos</SelectItem>
-                </SelectContent>
-              </Select>
-            </>
+            <Select
+              value={filtroPerfil}
+              onValueChange={(v) => {
+                setFiltroPerfil(v === "todos" ? "" : v)
+                setPagina(1)
+              }}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Todos os perfis" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os perfis</SelectItem>
+                <SelectItem value="gestor">Gestor</SelectItem>
+                <SelectItem value="atendente">Atendente</SelectItem>
+              </SelectContent>
+            </Select>
           }
         />
         )}
@@ -339,22 +279,16 @@ export default function UsuariosPage() {
       />
 
       <ConfirmDialog
-        titulo={
-          usuarioAlvo?.ativo ? "Desativar usuário" : "Ativar usuário"
-        }
-        descricao={
-          usuarioAlvo?.ativo
-            ? `Tem certeza que deseja desativar ${usuarioAlvo?.nome}? O usuário não poderá mais acessar o sistema.`
-            : `Tem certeza que deseja reativar ${usuarioAlvo?.nome}?`
-        }
+        titulo="Excluir usuário"
+        descricao={`Tem certeza que deseja excluir ${usuarioAlvo?.nome}? O usuário não poderá mais acessar o sistema.`}
         aberto={confirmAberto}
         onFechar={() => {
           setConfirmAberto(false)
           setUsuarioAlvo(null)
         }}
-        onConfirmar={confirmarToggleAtivo}
-        variante={usuarioAlvo?.ativo ? "destrutivo" : "padrao"}
-        textoBotao={usuarioAlvo?.ativo ? "Desativar" : "Ativar"}
+        onConfirmar={confirmarExcluir}
+        variante="destrutivo"
+        textoBotao="Excluir"
       />
     </div>
   )

@@ -76,7 +76,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   const router = useRouter()
   const { data: session } = useSession()
   const { contato, carregando, erro, recarregar } = useContato(id)
-  const { dados: usuarios } = useUsuarios({ pagina: 1, porPagina: 100, ativo: "true" })
+  const { dados: usuarios } = useUsuarios({ pagina: 1, porPagina: 100 })
 
   const [confirmExcluir, setConfirmExcluir] = useState(false)
   const [confirmPromover, setConfirmPromover] = useState(false)

@@ -7,7 +7,7 @@ import { agora } from "@/lib/db-utils"
 
 const schema = z.object({
   ids: z.array(z.string().cuid()).min(1).max(100),
-  acao: z.enum(["ativar", "desativar", "excluir"]),
+  acao: z.literal("excluir"),
 })
 
 export async function POST(request: NextRequest) {
@@ -23,27 +23,20 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { ids, acao } = parsed.data
+  const { ids } = parsed.data
 
   // Protecoes: nunca afetar o proprio usuario nem o usuario IA
   const idsFiltrados = ids.filter((id) => id !== auth.session.user.id)
   if (idsFiltrados.length === 0) {
     return NextResponse.json(
-      { error: "Nenhum usuário válido selecionado (não é possível alterar seu próprio usuário)" },
+      { error: "Nenhum usuário válido selecionado (não é possível excluir seu próprio usuário)" },
       { status: 400 }
     )
   }
 
-  const dadosUpdate =
-    acao === "excluir"
-      ? { deletadoEm: agora(), ativo: false, atualizadoEm: agora() }
-      : acao === "ativar"
-        ? { ativo: true, atualizadoEm: agora() }
-        : { ativo: false, atualizadoEm: agora() }
-
   const { data, error } = await supabaseAdmin
     .from("usuarios")
-    .update(dadosUpdate)
+    .update({ deletadoEm: agora(), ativo: false, atualizadoEm: agora() })
     .in("id", idsFiltrados)
     .neq("tipo", "ia")
     .is("deletadoEm", null)

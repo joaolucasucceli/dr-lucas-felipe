@@ -16,19 +16,16 @@ export async function GET(request: NextRequest) {
   const pagina = Number(searchParams.get("pagina") || "1")
   const porPagina = Number(searchParams.get("porPagina") || "10")
   const perfil = searchParams.get("perfil")
-  const ativo = searchParams.get("ativo")
   const busca = searchParams.get("busca")
 
   let query = supabaseAdmin
     .from("usuarios")
     .select(SELECT_USUARIO, { count: "exact" })
     .is("deletadoEm", null)
+    .neq("tipo", "ia")
 
   if (perfil === "gestor" || perfil === "atendente") {
     query = query.eq("perfil", perfil)
-  }
-  if (ativo !== null && ativo !== undefined && ativo !== "") {
-    query = query.eq("ativo", ativo === "true")
   }
   if (busca) {
     query = query.or(`nome.ilike.%${busca}%,email.ilike.%${busca}%`)

@@ -13,7 +13,6 @@ export const atualizarUsuarioSchema = z.object({
   email: z.string().email("Email inválido").optional(),
   senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional(),
   perfil: z.enum(["gestor", "atendente"]).optional(),
-  ativo: z.boolean().optional(),
 })
 
 export type CriarUsuarioInput = z.infer<typeof criarUsuarioSchema>
