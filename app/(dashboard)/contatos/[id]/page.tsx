@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
@@ -25,10 +25,43 @@ import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { formatarWhatsapp } from "@/lib/format"
 import { GaleriaFotos } from "@/components/features/contatos/GaleriaFotos"
+import { CampoEditavel } from "@/components/features/contatos/CampoEditavel"
+import { NotasContato } from "@/components/features/contatos/NotasContato"
 import { useContato } from "@/hooks/use-contato"
+import { useUsuarios } from "@/hooks/use-usuarios"
 
 interface PageProps {
   params: Promise<{ id: string }>
+}
+
+const OPCOES_STATUS_FUNIL = [
+  { value: "acolhimento", label: "Acolhimento" },
+  { value: "qualificacao", label: "Qualificação" },
+  { value: "agendamento", label: "Agendamento" },
+  { value: "consulta_agendada", label: "Consulta agendada" },
+]
+
+const OPCOES_SEXO = [
+  { value: "feminino", label: "Feminino" },
+  { value: "masculino", label: "Masculino" },
+]
+
+const ESTADOS_BR = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+]
+
+const OPCOES_ESTADO = ESTADOS_BR.map((uf) => ({ value: uf, label: uf }))
+
+const validarWhatsapp = (v: string) => /^\d{10,13}$/.test(v) ? null : "WhatsApp deve ter 10 a 13 dígitos"
+const validarEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "Email inválido"
+const validarCpf = (v: string) => v.length === 11 ? null : "CPF deve ter 11 dígitos"
+const normalizarDigitos = (v: string) => v.replace(/\D/g, "")
+const normalizarCpf = (v: string) => v.replace(/\D/g, "").slice(0, 11)
+const formatarCpf = (v: string) => {
+  const d = v.replace(/\D/g, "")
+  if (d.length !== 11) return v
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
 }
 
 export default function ContatoDetalhePage({ params }: PageProps) {
@@ -36,12 +69,38 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   const router = useRouter()
   const { data: session } = useSession()
   const { contato, carregando, erro, recarregar } = useContato(id)
+  const { dados: usuarios } = useUsuarios({ pagina: 1, porPagina: 100, ativo: "true" })
 
   const [confirmExcluir, setConfirmExcluir] = useState(false)
   const [confirmPromover, setConfirmPromover] = useState(false)
   const [processando, setProcessando] = useState(false)
 
   const ehGestor = session?.user?.perfil === "gestor"
+
+  const opcoesResponsavel = useMemo(
+    () =>
+      usuarios
+        .filter((u) => u.tipo === "humano")
+        .map((u) => ({ value: u.id, label: u.nome })),
+    [usuarios]
+  )
+
+  async function salvarCampo(campo: string, valor: unknown) {
+    const res = await fetch(`/api/contatos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [campo]: valor }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      throw new Error(json.error || "Erro ao salvar")
+    }
+    recarregar()
+  }
+
+  async function adicionarNota(nota: string) {
+    await salvarCampo("sobreOPaciente", nota)
+  }
 
   async function handleArquivar() {
     if (!contato) return
@@ -104,12 +163,13 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   }
 
   const ehPaciente = contato.tipo === "paciente"
+  const dataNascimentoInput = contato.dataNascimento
+    ? new Date(contato.dataNascimento).toISOString().slice(0, 10)
+    : ""
 
   const descricaoHeader = [
     ehPaciente ? "Paciente" : "Lead",
     contato.arquivado ? "Arquivado" : null,
-    contato.whatsapp ? formatarWhatsapp(contato.whatsapp) : null,
-    contato.email || null,
   ]
     .filter(Boolean)
     .join(" • ")
@@ -179,70 +239,165 @@ export default function ContatoDetalhePage({ params }: PageProps) {
             <CardHeader>
               <CardTitle className="text-base">Dados básicos</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-3 text-sm">
-              <Linha label="Nome" valor={contato.nome} />
-              <Linha label="WhatsApp" valor={formatarWhatsapp(contato.whatsapp)} />
-              <Linha label="Email" valor={contato.email} />
-              <Linha label="Procedimento de interesse" valor={contato.procedimentoInteresse} />
-              <Linha label="Origem" valor={contato.origem} />
-              <Linha
+            <CardContent className="grid gap-5 sm:grid-cols-2">
+              <CampoEditavel
+                label="Nome"
+                valor={contato.nome}
+                onSalvar={(v) => salvarCampo("nome", v)}
+                permiteVazio={false}
+                validador={(v) => (v.trim().length >= 2 ? null : "Mínimo 2 caracteres")}
+              />
+              <CampoEditavel
+                label="WhatsApp"
+                valor={contato.whatsapp}
+                tipo="tel"
+                onSalvar={(v) => salvarCampo("whatsapp", v ?? "")}
+                normalizar={normalizarDigitos}
+                mascara={formatarWhatsapp}
+                validador={validarWhatsapp}
+                placeholder="5511999998888"
+              />
+              <CampoEditavel
+                label="Email"
+                valor={contato.email}
+                tipo="email"
+                onSalvar={(v) => salvarCampo("email", v ?? "")}
+                validador={validarEmail}
+                placeholder="email@exemplo.com"
+              />
+              <CampoEditavel
+                label="Procedimento de interesse"
+                valor={contato.procedimentoInteresse}
+                onSalvar={(v) => salvarCampo("procedimentoInteresse", v ?? "")}
+              />
+              <CampoEditavel
+                label="Origem"
+                valor={contato.origem}
+                onSalvar={(v) => salvarCampo("origem", v ?? "")}
+                placeholder="instagram, indicação, site…"
+              />
+              <CampoEditavel
                 label="Responsável"
-                valor={contato.responsavel ? contato.responsavel.nome : null}
+                valor={contato.responsavelId}
+                tipo="select"
+                opcoes={opcoesResponsavel}
+                onSalvar={(v) => salvarCampo("responsavelId", v)}
+                rotuloVazio="Sem responsável"
               />
-              {ehPaciente && (
-                <>
-                  <Linha label="CPF" valor={contato.cpf} />
-                  <Linha
-                    label="Data de nascimento"
-                    valor={
-                      contato.dataNascimento
-                        ? new Date(contato.dataNascimento).toLocaleDateString("pt-BR")
-                        : null
-                    }
-                  />
-                  <Linha label="Sexo" valor={contato.sexo} />
-                  <Linha label="Endereço" valor={contato.endereco} />
-                  <Linha
-                    label="Cidade / Estado"
-                    valor={
-                      contato.cidade && contato.estado
-                        ? `${contato.cidade} / ${contato.estado}`
-                        : null
-                    }
-                  />
-                  <Linha label="Contato de emergência" valor={contato.contatoEmergencia} />
-                  <Linha label="Tel. emergência" valor={contato.contatoEmergenciaTel} />
-                </>
-              )}
-              <Linha
-                label="Consentimento LGPD"
-                valor={contato.consentimentoLgpd ? "Sim" : "Não"}
-              />
-              <Linha
-                label="Criado em"
-                valor={new Date(contato.criadoEm).toLocaleDateString("pt-BR")}
-              />
-              {contato.promovidoEm && (
-                <Linha
-                  label="Promovido a paciente em"
-                  valor={new Date(contato.promovidoEm).toLocaleDateString("pt-BR")}
+              {!ehPaciente && (
+                <CampoEditavel
+                  label="Status do funil"
+                  valor={contato.statusFunil}
+                  tipo="select"
+                  opcoes={OPCOES_STATUS_FUNIL}
+                  onSalvar={(v) => salvarCampo("statusFunil", v)}
+                  permiteVazio={false}
                 />
               )}
             </CardContent>
           </Card>
 
-          {contato.sobreOPaciente && (
+          {ehPaciente && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Sobre o contato</CardTitle>
+                <CardTitle className="text-base">Dados do paciente</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap text-muted-foreground">
-                  {contato.sobreOPaciente}
-                </p>
+              <CardContent className="grid gap-5 sm:grid-cols-2">
+                <CampoEditavel
+                  label="CPF"
+                  valor={contato.cpf}
+                  onSalvar={(v) => salvarCampo("cpf", v ?? "")}
+                  normalizar={normalizarCpf}
+                  mascara={formatarCpf}
+                  validador={validarCpf}
+                  placeholder="000.000.000-00"
+                />
+                <CampoEditavel
+                  label="Data de nascimento"
+                  valor={dataNascimentoInput}
+                  tipo="date"
+                  onSalvar={(v) => salvarCampo("dataNascimento", v ?? "")}
+                />
+                <CampoEditavel
+                  label="Sexo"
+                  valor={contato.sexo}
+                  tipo="select"
+                  opcoes={OPCOES_SEXO}
+                  onSalvar={(v) => salvarCampo("sexo", v)}
+                />
+                <CampoEditavel
+                  label="Cidade"
+                  valor={contato.cidade}
+                  onSalvar={(v) => salvarCampo("cidade", v ?? "")}
+                />
+                <CampoEditavel
+                  label="Estado"
+                  valor={contato.estado}
+                  tipo="select"
+                  opcoes={OPCOES_ESTADO}
+                  onSalvar={(v) => salvarCampo("estado", v ?? "")}
+                  rotuloVazio="Não informado"
+                />
+                <div className="sm:col-span-2">
+                  <CampoEditavel
+                    label="Endereço"
+                    valor={contato.endereco}
+                    onSalvar={(v) => salvarCampo("endereco", v ?? "")}
+                  />
+                </div>
+                <CampoEditavel
+                  label="Contato de emergência"
+                  valor={contato.contatoEmergencia}
+                  onSalvar={(v) => salvarCampo("contatoEmergencia", v ?? "")}
+                />
+                <CampoEditavel
+                  label="Telefone de emergência"
+                  valor={contato.contatoEmergenciaTel}
+                  tipo="tel"
+                  onSalvar={(v) => salvarCampo("contatoEmergenciaTel", v ?? "")}
+                  normalizar={normalizarDigitos}
+                  mascara={formatarWhatsapp}
+                />
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Sobre o contato</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NotasContato texto={contato.sobreOPaciente} onAdicionar={adicionarNota} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Metadados</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-5 sm:grid-cols-2">
+              <CampoEditavel
+                label="Consentimento LGPD"
+                valor={contato.consentimentoLgpd ? "Sim" : "Não"}
+                onSalvar={async () => {}}
+                editavel={false}
+              />
+              <CampoEditavel
+                label="Criado em"
+                valor={new Date(contato.criadoEm).toLocaleDateString("pt-BR")}
+                onSalvar={async () => {}}
+                editavel={false}
+              />
+              {contato.promovidoEm && (
+                <CampoEditavel
+                  label="Promovido a paciente em"
+                  valor={new Date(contato.promovidoEm).toLocaleDateString("pt-BR")}
+                  onSalvar={async () => {}}
+                  editavel={false}
+                />
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="historico" className="mt-6">
@@ -386,15 +541,6 @@ export default function ContatoDetalhePage({ params }: PageProps) {
         textoBotao="Excluir"
         carregando={processando}
       />
-    </div>
-  )
-}
-
-function Linha({ label, valor }: { label: string; valor: string | null | undefined }) {
-  return (
-    <div className="grid grid-cols-2 gap-4 py-2 border-b border-border/50 last:border-0">
-      <span className="text-muted-foreground text-sm">{label}</span>
-      <span className="text-sm">{valor || "—"}</span>
     </div>
   )
 }
