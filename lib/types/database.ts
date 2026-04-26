@@ -30,6 +30,7 @@ export type Database = {
           procedimentoId: string | null
           sincronizado: boolean
           status: Database["public"]["Enums"]["StatusAgendamento"]
+          tipo: Database["public"]["Enums"]["TipoAgendamento"]
         }
         Insert: {
           atualizadoEm: string
@@ -46,6 +47,7 @@ export type Database = {
           procedimentoId?: string | null
           sincronizado?: boolean
           status?: Database["public"]["Enums"]["StatusAgendamento"]
+          tipo?: Database["public"]["Enums"]["TipoAgendamento"]
         }
         Update: {
           atualizadoEm?: string
@@ -62,6 +64,7 @@ export type Database = {
           procedimentoId?: string | null
           sincronizado?: boolean
           status?: Database["public"]["Enums"]["StatusAgendamento"]
+          tipo?: Database["public"]["Enums"]["TipoAgendamento"]
         }
         Relationships: [
           {
@@ -1158,6 +1161,13 @@ export type Database = {
         | "agendamento"
         | "consulta_agendada"
       StatusSprint: "planejada" | "em_andamento" | "concluida"
+      TipoAgendamento:
+        | "diagnostico"
+        | "consulta_online"
+        | "consulta_presencial"
+        | "procedimento"
+        | "retorno"
+        | "pos_operatorio"
       TipoAnestesia:
         | "local"
         | "sedacao"
@@ -1343,6 +1353,14 @@ export const Constants = {
         "consulta_agendada",
       ],
       StatusSprint: ["planejada", "em_andamento", "concluida"],
+      TipoAgendamento: [
+        "diagnostico",
+        "consulta_online",
+        "consulta_presencial",
+        "procedimento",
+        "retorno",
+        "pos_operatorio",
+      ],
       TipoAnestesia: [
         "local",
         "sedacao",
