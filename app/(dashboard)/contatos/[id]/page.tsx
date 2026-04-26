@@ -23,7 +23,7 @@ import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { PageHeader } from "@/components/features/shared/PageHeader"
-import { formatarWhatsapp } from "@/lib/format"
+import { formatarData, formatarWhatsapp } from "@/lib/format"
 import { GaleriaFotos } from "@/components/features/contatos/GaleriaFotos"
 import { CampoEditavel } from "@/components/features/contatos/CampoEditavel"
 import { NotasContato } from "@/components/features/contatos/NotasContato"
@@ -372,14 +372,14 @@ export default function ContatoDetalhePage({ params }: PageProps) {
               />
               <CampoEditavel
                 label="Criado em"
-                valor={new Date(contato.criadoEm).toLocaleDateString("pt-BR")}
+                valor={formatarData(contato.criadoEm, "dd/MM/yyyy")}
                 onSalvar={async () => {}}
                 editavel={false}
               />
               {contato.promovidoEm && (
                 <CampoEditavel
                   label="Promovido a paciente em"
-                  valor={new Date(contato.promovidoEm).toLocaleDateString("pt-BR")}
+                  valor={formatarData(contato.promovidoEm, "dd/MM/yyyy")}
                   onSalvar={async () => {}}
                   editavel={false}
                 />
@@ -439,7 +439,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                               : m.remetente === "atendente"
                                 ? "Atendente"
                                 : "Ana Júlia"}{" "}
-                            · {new Date(m.criadoEm).toLocaleString("pt-BR")}
+                            · {formatarData(m.criadoEm, "dd/MM/yyyy 'as' HH:mm")}
                           </div>
                           <div className="whitespace-pre-wrap">{m.conteudo}</div>
                         </div>

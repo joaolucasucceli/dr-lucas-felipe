@@ -15,16 +15,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
+import { FormDialog } from "@/components/features/shared/FormDialog"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { EmptyState } from "@/components/features/shared/EmptyState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
@@ -90,7 +84,8 @@ export default function TiposProcedimentoPage() {
     setNomeForm("")
   }
 
-  async function handleSalvar() {
+  async function handleSalvar(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     if (!nomeForm.trim() || nomeForm.trim().length < 2) {
       toast.error("Nome deve ter pelo menos 2 caracteres")
       return
@@ -285,31 +280,26 @@ export default function TiposProcedimentoPage() {
         )}
       </div>
 
-      <Dialog open={formAberto} onOpenChange={(open) => { if (!open) fecharForm() }}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{editando ? "Editar Tipo" : "Novo Tipo de Procedimento"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-3 py-2">
-            <div className="grid gap-2">
-              <Label htmlFor="tipo-nome">Nome</Label>
-              <Input
-                id="tipo-nome"
-                value={nomeForm}
-                onChange={(e) => setNomeForm(e.target.value)}
-                placeholder="ex: Cirúrgico"
-                onKeyDown={(e) => { if (e.key === "Enter") handleSalvar() }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={fecharForm}>Cancelar</Button>
-            <Button onClick={handleSalvar} disabled={salvando}>
-              {salvando ? "Salvando..." : editando ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormDialog
+        aberto={formAberto}
+        onFechar={fecharForm}
+        titulo="Tipo de Procedimento"
+        editando={!!editando}
+        isSubmitting={salvando}
+        onSubmit={handleSalvar}
+        largura="sm"
+      >
+        <div className="grid gap-2">
+          <Label htmlFor="tipo-nome">Nome</Label>
+          <Input
+            id="tipo-nome"
+            value={nomeForm}
+            onChange={(e) => setNomeForm(e.target.value)}
+            placeholder="ex: Cirúrgico"
+            autoFocus
+          />
+        </div>
+      </FormDialog>
 
       <ConfirmDialog
         titulo={

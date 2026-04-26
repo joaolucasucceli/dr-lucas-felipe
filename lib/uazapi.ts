@@ -235,7 +235,7 @@ export async function baixarMidia(
   }
 }
 
-// JLAU-551: padrao validado no projeto Innovate LED.
+// JLAU-551: padrao validado em producao.
 // POST /message/presence com { number: chatId, presence }.
 // O campo `number` aceita o chatId completo com sufixo @s.whatsapp.net.
 export async function enviarDigitando(
