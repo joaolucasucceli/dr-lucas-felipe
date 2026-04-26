@@ -17,8 +17,7 @@ import { ModuloAtendimentos } from "@/components/features/documentacao/modulos/M
 import { ModuloLeads } from "@/components/features/documentacao/modulos/ModuloLeads"
 import { ModuloPacientes } from "@/components/features/documentacao/modulos/ModuloPacientes"
 import { ModuloProcedimentos } from "@/components/features/documentacao/modulos/ModuloProcedimentos"
-import { ModuloBaseConhecimento } from "@/components/features/documentacao/modulos/ModuloBaseConhecimento"
-import { ModuloMidiaMarketing } from "@/components/features/documentacao/modulos/ModuloMidiaMarketing"
+import { ModuloConteudoIA } from "@/components/features/documentacao/modulos/ModuloConteudoIA"
 import { ModuloConfiguracoes } from "@/components/features/documentacao/modulos/ModuloConfiguracoes"
 
 interface EntradaAjuda {
@@ -32,8 +31,7 @@ const MAPA_AJUDA: Array<{ prefix: string } & EntradaAjuda> = [
   { prefix: "/contatos", titulo: "Leads", Componente: ModuloLeads },
   { prefix: "/contatos", titulo: "Pacientes", Componente: ModuloPacientes },
   { prefix: "/procedimentos", titulo: "Procedimentos", Componente: ModuloProcedimentos },
-  { prefix: "/base-conhecimento", titulo: "Base de Conhecimento", Componente: ModuloBaseConhecimento },
-  { prefix: "/midia-marketing", titulo: "Mídia Marketing", Componente: ModuloMidiaMarketing },
+  { prefix: "/conteudo-ia", titulo: "Conteúdo da IA", Componente: ModuloConteudoIA },
   { prefix: "/configuracoes", titulo: "Configurações", Componente: ModuloConfiguracoes },
   { prefix: "/dashboard", titulo: "Dashboard", Componente: ModuloDashboard },
 ]

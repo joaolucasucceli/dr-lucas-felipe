@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { Plus, MoreHorizontal, Pencil, EyeOff, Eye, Trash2, Ban, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { PageHeader } from "@/components/features/shared/PageHeader"
 import { DataTable, type ColunaConfig, type AcaoEmMassa } from "@/components/features/shared/DataTable"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
@@ -47,27 +44,16 @@ function truncar(texto: string, max = 80): string {
   return texto.slice(0, max).trim() + "…"
 }
 
-export default function BaseConhecimentoPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+export function BaseConhecimentoSecao() {
   const [busca, setBusca] = useState("")
   const [formAberto, setFormAberto] = useState(false)
   const [editando, setEditando] = useState<BaseConhecimento | null>(null)
   const [confirmToggle, setConfirmToggle] = useState<BaseConhecimento | null>(null)
   const [confirmExcluir, setConfirmExcluir] = useState<BaseConhecimento | null>(null)
 
-  const autorizado = session?.user?.perfil === "gestor"
-
   const { dados, carregando, erro, recarregar } = useBaseConhecimento({
     busca: busca || undefined,
   })
-
-  useEffect(() => {
-    if (status === "unauthenticated") router.replace("/login")
-    if (status === "authenticated" && !autorizado) router.replace("/dashboard")
-  }, [status, autorizado, router])
-
-  if (status === "loading" || !autorizado) return null
 
   async function executarBatch(acao: "ativar" | "desativar" | "excluir", ids: string[]) {
     try {
@@ -237,22 +223,12 @@ export default function BaseConhecimentoPage() {
   ]
 
   if (erro) {
-    return (
-      <div>
-        <PageHeader titulo="Base de Conhecimento" />
-        <div className="mt-6">
-          <ErrorState mensagem={erro} onTentar={recarregar} />
-        </div>
-      </div>
-    )
+    return <ErrorState mensagem={erro} onTentar={recarregar} />
   }
 
   return (
     <div>
-      <PageHeader
-        titulo="Base de Conhecimento"
-        descricao="Conteúdos que a Ana Júlia usa para responder os pacientes no WhatsApp"
-      >
+      <div className="mb-4 flex justify-end">
         <Button
           onClick={() => {
             setEditando(null)
@@ -262,43 +238,41 @@ export default function BaseConhecimentoPage() {
           <Plus className="mr-2 h-4 w-4" />
           Novo Conhecimento
         </Button>
-      </PageHeader>
-
-      <div className="mt-6">
-        {carregando && dados.length === 0 ? (
-          <SkeletonTabela linhas={5} colunas={5} />
-        ) : !carregando && dados.length === 0 && !busca ? (
-          <EmptyState
-            titulo="Nenhum conteúdo cadastrado"
-            descricao="Cadastre informações que a Ana Júlia poderá usar nas conversas."
-            textoBotao="Novo Conhecimento"
-            onAcao={() => {
-              setEditando(null)
-              setFormAberto(true)
-            }}
-          />
-        ) : (
-          <DataTable
-            colunas={colunas}
-            dados={dados}
-            total={dados.length}
-            pagina={1}
-            porPagina={dados.length || 10}
-            onPaginaChange={() => {}}
-            carregando={carregando}
-            selecionavel
-            acoesEmMassa={acoesEmMassa}
-            filtros={
-              <Input
-                placeholder="Buscar por título ou conteúdo..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                className="w-[280px]"
-              />
-            }
-          />
-        )}
       </div>
+
+      {carregando && dados.length === 0 ? (
+        <SkeletonTabela linhas={5} colunas={5} />
+      ) : !carregando && dados.length === 0 && !busca ? (
+        <EmptyState
+          titulo="Nenhum conteúdo cadastrado"
+          descricao="Cadastre informações que a Ana Júlia poderá usar nas conversas."
+          textoBotao="Novo Conhecimento"
+          onAcao={() => {
+            setEditando(null)
+            setFormAberto(true)
+          }}
+        />
+      ) : (
+        <DataTable
+          colunas={colunas}
+          dados={dados}
+          total={dados.length}
+          pagina={1}
+          porPagina={dados.length || 10}
+          onPaginaChange={() => {}}
+          carregando={carregando}
+          selecionavel
+          acoesEmMassa={acoesEmMassa}
+          filtros={
+            <Input
+              placeholder="Buscar por título ou conteúdo..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="w-[280px]"
+            />
+          }
+        />
+      )}
 
       <BaseConhecimentoForm
         registro={editando}

@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import { Plus, MoreHorizontal, Pencil, EyeOff, Eye, Trash2, Film, ImageIcon, Ban, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -15,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { PageHeader } from "@/components/features/shared/PageHeader"
 import { DataTable, type ColunaConfig, type AcaoEmMassa } from "@/components/features/shared/DataTable"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
@@ -36,9 +33,7 @@ function ehVideo(url: string): boolean {
   return /\.(mp4|webm|mov|avi|mkv|m4v)(\?|$)/i.test(url)
 }
 
-export default function MidiaMarketingPage() {
-  const { data: session } = useSession()
-  const router = useRouter()
+export function MidiaMarketingSecao() {
   const [busca, setBusca] = useState("")
   const [formAberto, setFormAberto] = useState(false)
   const [editando, setEditando] = useState<MidiaMarketing | null>(null)
@@ -47,12 +42,6 @@ export default function MidiaMarketingPage() {
   const [preview, setPreview] = useState<MidiaMarketing | null>(null)
 
   const { dados, carregando, erro, recarregar } = useMidiaMarketing({ busca })
-
-  const perfil = session?.user?.perfil
-  if (perfil && perfil !== "gestor") {
-    router.replace("/dashboard")
-    return null
-  }
 
   async function handleToggle() {
     if (!confirmToggle) return
@@ -218,48 +207,43 @@ export default function MidiaMarketingPage() {
 
   return (
     <div>
-      <PageHeader
-        titulo="Mídia Marketing"
-        descricao="Catálogo de mídias que a IA envia. A escolha é feita pela descrição — quanto mais detalhada, melhor."
-      >
+      <div className="mb-4 flex justify-end">
         <Button onClick={() => { setEditando(null); setFormAberto(true) }}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Mídia
         </Button>
-      </PageHeader>
-
-      <div className="mt-6">
-        {carregando ? (
-          <SkeletonTabela linhas={5} />
-        ) : erro ? (
-          <ErrorState mensagem={erro} onTentar={recarregar} />
-        ) : dados.length === 0 && !busca ? (
-          <EmptyState
-            titulo="Nenhuma mídia cadastrada"
-            descricao="Cadastre fotos e vídeos com descrição detalhada — a IA usa a descrição para escolher qual enviar ao paciente."
-          />
-        ) : (
-          <DataTable
-            colunas={colunas}
-            dados={dados}
-            total={dados.length}
-            pagina={1}
-            porPagina={dados.length || 10}
-            onPaginaChange={() => {}}
-            carregando={carregando}
-            selecionavel
-            acoesEmMassa={acoesEmMassa}
-            filtros={
-              <Input
-                placeholder="Buscar por descrição..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                className="max-w-sm"
-              />
-            }
-          />
-        )}
       </div>
+
+      {carregando ? (
+        <SkeletonTabela linhas={5} />
+      ) : erro ? (
+        <ErrorState mensagem={erro} onTentar={recarregar} />
+      ) : dados.length === 0 && !busca ? (
+        <EmptyState
+          titulo="Nenhuma mídia cadastrada"
+          descricao="Cadastre fotos e vídeos com descrição detalhada — a IA usa a descrição para escolher qual enviar ao paciente."
+        />
+      ) : (
+        <DataTable
+          colunas={colunas}
+          dados={dados}
+          total={dados.length}
+          pagina={1}
+          porPagina={dados.length || 10}
+          onPaginaChange={() => {}}
+          carregando={carregando}
+          selecionavel
+          acoesEmMassa={acoesEmMassa}
+          filtros={
+            <Input
+              placeholder="Buscar por descrição..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="max-w-sm"
+            />
+          }
+        />
+      )}
 
       <MidiaMarketingForm
         aberto={formAberto}
