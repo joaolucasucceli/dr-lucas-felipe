@@ -113,7 +113,8 @@ export default function ProcedimentosPage() {
   ]
 
   function handleEditar(procedimento: Procedimento) {
-    router.push(`/procedimentos/${procedimento.id}`)
+    setProcedimentoEditando(procedimento)
+    setFormAberto(true)
   }
 
   function handleToggleAtivo(procedimento: Procedimento) {
@@ -153,7 +154,7 @@ export default function ProcedimentosPage() {
       ordenavel: true,
       renderizar: (p) => (
         <button
-          onClick={() => router.push(`/procedimentos/${p.id}`)}
+          onClick={() => handleEditar(p)}
           className="text-left font-medium hover:underline"
         >
           {p.nome}

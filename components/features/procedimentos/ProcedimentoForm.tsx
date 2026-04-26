@@ -149,7 +149,7 @@ export function ProcedimentoForm({
       editando={editando}
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit(onSubmit)}
-      largura="md"
+      largura="lg"
     >
       <div className="grid gap-2">
         <Label htmlFor="proc-nome">Nome</Label>

@@ -145,7 +145,7 @@ export function BaseConhecimentoForm({
       editando={editando}
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit(onSubmit)}
-      largura="md"
+      largura="lg"
     >
       <div className="grid gap-2">
         <Label htmlFor="bc-titulo">Título</Label>
