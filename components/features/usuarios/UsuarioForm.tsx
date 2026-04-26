@@ -4,11 +4,9 @@ import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -16,12 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { FormDialog } from "@/components/features/shared/FormDialog"
 
 const formSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -131,75 +124,56 @@ export function UsuarioForm({
   }
 
   return (
-    <Dialog open={aberto} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {editando ? "Editar Usuário" : "Novo Usuário"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="form-nome">Nome</Label>
-            <Input id="form-nome" {...register("nome")} />
-            {errors.nome && (
-              <p className="text-xs text-destructive">{errors.nome.message}</p>
-            )}
-          </div>
+    <FormDialog
+      aberto={aberto}
+      onFechar={() => handleOpenChange(false)}
+      titulo="Usuário"
+      editando={editando}
+      isSubmitting={isSubmitting}
+      onSubmit={handleSubmit(onSubmit)}
+      largura="sm"
+    >
+      <div className="grid gap-2">
+        <Label htmlFor="form-nome">Nome</Label>
+        <Input id="form-nome" {...register("nome")} />
+        {errors.nome && (
+          <p className="text-xs text-destructive">{errors.nome.message}</p>
+        )}
+      </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="form-email">Email</Label>
-            <Input id="form-email" type="email" {...register("email")} />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            )}
-          </div>
+      <div className="grid gap-2">
+        <Label htmlFor="form-email">Email</Label>
+        <Input id="form-email" type="email" {...register("email")} />
+        {errors.email && (
+          <p className="text-xs text-destructive">{errors.email.message}</p>
+        )}
+      </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="form-senha">
-              Senha{editando && " (deixe vazio para manter)"}
-            </Label>
-            <Input id="form-senha" type="password" {...register("senha")} />
-            {errors.senha && (
-              <p className="text-xs text-destructive">{errors.senha.message}</p>
-            )}
-          </div>
+      <div className="grid gap-2">
+        <Label htmlFor="form-senha">
+          Senha{editando && " (deixe vazio para manter)"}
+        </Label>
+        <Input id="form-senha" type="password" {...register("senha")} />
+        {errors.senha && (
+          <p className="text-xs text-destructive">{errors.senha.message}</p>
+        )}
+      </div>
 
-          <div className="grid gap-2">
-            <Label>Perfil</Label>
-            <Select
-              defaultValue={usuario?.perfil || "atendente"}
-              onValueChange={(v) => setValue("perfil", v as FormData["perfil"])}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gestor">Gestor</SelectItem>
-                <SelectItem value="atendente">Atendente</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : editando ? (
-                "Salvar"
-              ) : (
-                "Criar"
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <div className="grid gap-2">
+        <Label>Perfil</Label>
+        <Select
+          defaultValue={usuario?.perfil || "atendente"}
+          onValueChange={(v) => setValue("perfil", v as FormData["perfil"])}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="gestor">Gestor</SelectItem>
+            <SelectItem value="atendente">Atendente</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </FormDialog>
   )
 }

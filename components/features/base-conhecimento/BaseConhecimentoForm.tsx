@@ -4,11 +4,9 @@ import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
@@ -17,12 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { FormDialog } from "@/components/features/shared/FormDialog"
 import { SECOES_BASE_CONHECIMENTO } from "@/lib/validations/base-conhecimento"
 
 const formSchema = z.object({
@@ -145,89 +138,66 @@ export function BaseConhecimentoForm({
   }
 
   return (
-    <Dialog open={aberto} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {editando ? "Editar Conhecimento" : "Novo Conhecimento"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="bc-titulo">Título</Label>
-            <Input id="bc-titulo" {...register("titulo")} />
-            {errors.titulo && (
-              <p className="text-xs text-destructive">{errors.titulo.message}</p>
-            )}
-          </div>
+    <FormDialog
+      aberto={aberto}
+      onFechar={() => handleOpenChange(false)}
+      titulo="Conhecimento"
+      editando={editando}
+      isSubmitting={isSubmitting}
+      onSubmit={handleSubmit(onSubmit)}
+      largura="md"
+    >
+      <div className="grid gap-2">
+        <Label htmlFor="bc-titulo">Título</Label>
+        <Input id="bc-titulo" {...register("titulo")} />
+        {errors.titulo && (
+          <p className="text-xs text-destructive">{errors.titulo.message}</p>
+        )}
+      </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label>Seção</Label>
-              <Select
-                value={secaoSelecionada}
-                onValueChange={(v) =>
-                  setValue("secao", v as (typeof SECOES_BASE_CONHECIMENTO)[number])
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {SECOES_BASE_CONHECIMENTO.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {SECAO_LABELS[s] ?? s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.secao && (
-                <p className="text-xs text-destructive">{errors.secao.message}</p>
-              )}
-            </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-2">
+          <Label>Seção</Label>
+          <Select
+            value={secaoSelecionada}
+            onValueChange={(v) =>
+              setValue("secao", v as (typeof SECOES_BASE_CONHECIMENTO)[number])
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione..." />
+            </SelectTrigger>
+            <SelectContent>
+              {SECOES_BASE_CONHECIMENTO.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {SECAO_LABELS[s] ?? s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.secao && (
+            <p className="text-xs text-destructive">{errors.secao.message}</p>
+          )}
+        </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="bc-ordem">Ordem</Label>
-              <Input id="bc-ordem" type="number" min="0" {...register("ordem")} />
-            </div>
-          </div>
+        <div className="grid gap-2">
+          <Label htmlFor="bc-ordem">Ordem</Label>
+          <Input id="bc-ordem" type="number" min="0" {...register("ordem")} />
+        </div>
+      </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="bc-conteudo">Conteúdo</Label>
-            <Textarea
-              id="bc-conteudo"
-              rows={6}
-              {...register("conteudo")}
-              placeholder="Texto que o agente pode usar para responder pacientes"
-            />
-            {errors.conteudo && (
-              <p className="text-xs text-destructive">{errors.conteudo.message}</p>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : editando ? (
-                "Salvar"
-              ) : (
-                "Criar"
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <div className="grid gap-2">
+        <Label htmlFor="bc-conteudo">Conteúdo</Label>
+        <Textarea
+          id="bc-conteudo"
+          rows={6}
+          {...register("conteudo")}
+          placeholder="Texto que o agente pode usar para responder pacientes"
+        />
+        {errors.conteudo && (
+          <p className="text-xs text-destructive">{errors.conteudo.message}</p>
+        )}
+      </div>
+    </FormDialog>
   )
 }

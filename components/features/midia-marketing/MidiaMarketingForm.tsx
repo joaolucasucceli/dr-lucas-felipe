@@ -5,11 +5,11 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { Upload, Loader2 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
+import { FormDialog } from "@/components/features/shared/FormDialog"
 import { criarMidiaMarketingSchema } from "@/lib/validations/midia-marketing"
 import type { z } from "zod"
 
@@ -119,71 +119,64 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
   const tipoInferido = urlAtual ? inferirTipoArquivo(urlAtual) : null
 
   return (
-    <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{editando ? "Editar Mídia" : "Nova Mídia"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid gap-2">
-            <Label>
-              Descrição
-              <span className="ml-1 text-xs font-normal text-muted-foreground">
-                (usada pela IA para escolher qual mídia enviar)
-              </span>
-            </Label>
-            <Textarea
-              {...form.register("descricao")}
-              rows={5}
-              placeholder="Ex: Resultado de Mini Lipo em paciente feminina, sobrepeso, região abdominal, aos 6 meses. Abdome plano, cintura definida. Ideal para pacientes que querem eliminar gordura localizada."
-            />
-            {form.formState.errors.descricao && (
-              <p className="text-xs text-destructive">{form.formState.errors.descricao.message}</p>
-            )}
-          </div>
+    <FormDialog
+      aberto={aberto}
+      onFechar={onFechar}
+      titulo="Mídia"
+      editando={editando}
+      isSubmitting={form.formState.isSubmitting}
+      onSubmit={form.handleSubmit(onSubmit)}
+      largura="md"
+      desabilitarSalvar={uploading || !urlAtual}
+    >
+      <div className="grid gap-2">
+        <Label>
+          Descrição
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            (usada pela IA para escolher qual mídia enviar)
+          </span>
+        </Label>
+        <Textarea
+          {...form.register("descricao")}
+          rows={5}
+          placeholder="Ex: Resultado de Mini Lipo em paciente feminina, sobrepeso, região abdominal, aos 6 meses. Abdome plano, cintura definida. Ideal para pacientes que querem eliminar gordura localizada."
+        />
+        {form.formState.errors.descricao && (
+          <p className="text-xs text-destructive">{form.formState.errors.descricao.message}</p>
+        )}
+      </div>
 
-          <div className="grid gap-2">
-            <Label>Arquivo</Label>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*,video/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => inputRef.current?.click()}
-              disabled={uploading}
-              className="w-full justify-center gap-2"
-            >
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {uploading ? "Enviando..." : urlAtual ? "Trocar arquivo" : "Anexar imagem ou vídeo"}
-            </Button>
-            {uploading && <Progress value={progresso} className="h-1" />}
-          </div>
+      <div className="grid gap-2">
+        <Label>Arquivo</Label>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*,video/*"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="w-full justify-center gap-2"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? "Enviando..." : urlAtual ? "Trocar arquivo" : "Anexar imagem ou vídeo"}
+        </Button>
+        {uploading && <Progress value={progresso} className="h-1" />}
+      </div>
 
-          {urlAtual && (
-            <div className="rounded-md border p-2">
-              {tipoInferido === "imagem" ? (
-                <img src={urlAtual} alt="Preview" className="max-h-48 w-full rounded object-contain" />
-              ) : (
-                <video src={urlAtual} controls className="max-h-48 w-full rounded" />
-              )}
-            </div>
+      {urlAtual && (
+        <div className="rounded-md border p-2">
+          {tipoInferido === "imagem" ? (
+            <img src={urlAtual} alt="Preview" className="max-h-48 w-full rounded object-contain" />
+          ) : (
+            <video src={urlAtual} controls className="max-h-48 w-full rounded" />
           )}
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onFechar}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={uploading || !urlAtual}>
-              {editando ? "Salvar" : "Criar"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+      )}
+    </FormDialog>
   )
 }
