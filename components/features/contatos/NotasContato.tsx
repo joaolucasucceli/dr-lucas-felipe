@@ -35,12 +35,27 @@ export function NotasContato({ texto, onAdicionar }: NotasContatoProps) {
     }
   }
 
+  const notas = (texto ?? "")
+    .split(/\n---\n/)
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .reverse()
+
   return (
-    <div className="space-y-3">
-      {texto ? (
-        <p className="text-sm whitespace-pre-wrap text-foreground/90">{texto}</p>
-      ) : (
+    <div className="space-y-4">
+      {notas.length === 0 ? (
         <p className="text-sm text-muted-foreground italic">Nenhuma nota registrada ainda.</p>
+      ) : (
+        <div className="space-y-2">
+          {notas.map((nota, i) => (
+            <div
+              key={i}
+              className="rounded-md border-l-2 border-primary/40 bg-muted/40 px-3 py-2 text-sm whitespace-pre-wrap text-foreground/90"
+            >
+              {nota}
+            </div>
+          ))}
+        </div>
       )}
 
       {aberto ? (
