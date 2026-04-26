@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Calendar, Clock, ExternalLink, User } from "lucide-react"
+import { Calendar, Clock, ExternalLink, Plus, User } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
@@ -16,8 +17,10 @@ import { MetricCard } from "@/components/features/shared/MetricCard"
 import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
+import { AgendamentoForm } from "@/components/features/agendamentos/AgendamentoForm"
 import { useAgenda, type AgendamentoAgenda } from "@/hooks/use-agenda"
 import { formatarWhatsapp } from "@/lib/format"
+import { ROTULOS_TIPO_AGENDAMENTO } from "@/lib/validations/agendamento"
 
 const TZ = "America/Sao_Paulo"
 
@@ -77,7 +80,19 @@ function agruparPorDia(agendamentos: AgendamentoAgenda[]): {
 export default function AgendaPage() {
   const router = useRouter()
   const [periodo, setPeriodo] = useState("semana")
+  const [formAberto, setFormAberto] = useState(false)
+  const [agendamentoEditando, setAgendamentoEditando] = useState<AgendamentoAgenda | null>(null)
   const { agendamentos, total, carregando, erro, recarregar } = useAgenda(periodo)
+
+  function abrirNovo() {
+    setAgendamentoEditando(null)
+    setFormAberto(true)
+  }
+
+  function abrirEdicao(ag: AgendamentoAgenda) {
+    setAgendamentoEditando(ag)
+    setFormAberto(true)
+  }
 
   const metricas = useMemo(() => {
     const hojeChaveStr = chaveDia(new Date().toISOString())
@@ -93,7 +108,7 @@ export default function AgendaPage() {
     <div>
       <PageHeader
         titulo="Agenda"
-        descricao="Próximas avaliações agendadas pela Ana Júlia"
+        descricao="Agendamentos da clínica (Ana Júlia + manuais)"
       >
         <Select value={periodo} onValueChange={setPeriodo}>
           <SelectTrigger>
@@ -106,6 +121,10 @@ export default function AgendaPage() {
             <SelectItem value="passado">Últimos 30 dias</SelectItem>
           </SelectContent>
         </Select>
+        <Button onClick={abrirNovo}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo agendamento
+        </Button>
       </PageHeader>
 
       {carregando ? (
@@ -165,9 +184,7 @@ export default function AgendaPage() {
                       <div
                         key={ag.id}
                         className="flex cursor-pointer items-center gap-4 py-3 transition-colors hover:bg-muted/50 -mx-6 px-6"
-                        onClick={() =>
-                          ag.contato && router.push(`/contatos/${ag.contato.id}`)
-                        }
+                        onClick={() => abrirEdicao(ag)}
                       >
                         <div className="flex min-w-[70px] flex-col">
                           <span className="text-lg font-semibold tabular-nums">
@@ -179,14 +196,28 @@ export default function AgendaPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium truncate">
-                              {ag.contato?.nome || "Contato removido"}
-                            </span>
+                            {ag.contato ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  router.push(`/contatos/${ag.contato!.id}`)
+                                }}
+                                className="font-medium truncate hover:underline"
+                              >
+                                {ag.contato.nome}
+                              </button>
+                            ) : (
+                              <span className="font-medium truncate">Contato removido</span>
+                            )}
                             {ag.contato?.tipo === "paciente" && (
                               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                                 Paciente
                               </span>
                             )}
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {ROTULOS_TIPO_AGENDAMENTO[ag.tipo]}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             {ag.procedimento?.nome ? (
@@ -231,6 +262,13 @@ export default function AgendaPage() {
           </div>
         </>
       )}
+
+      <AgendamentoForm
+        agendamento={agendamentoEditando}
+        aberto={formAberto}
+        onFechar={() => setFormAberto(false)}
+        onSucesso={recarregar}
+      />
     </div>
   )
 }

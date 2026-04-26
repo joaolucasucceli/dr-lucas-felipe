@@ -8,8 +8,11 @@ export interface AgendamentoAgenda {
   dataHora: string
   duracao: number
   status: "agendado" | "confirmado" | "cancelado" | "realizado" | "remarcado"
+  tipo: "diagnostico" | "consulta_online" | "consulta_presencial" | "procedimento" | "retorno" | "pos_operatorio"
   observacao: string | null
   googleEventUrl: string | null
+  contatoId: string
+  procedimentoId: string | null
   criadoEm: string
   contato: {
     id: string

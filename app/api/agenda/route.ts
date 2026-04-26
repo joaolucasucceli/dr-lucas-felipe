@@ -59,8 +59,11 @@ export async function GET(request: NextRequest) {
       dataHora,
       duracao,
       status,
+      tipo,
       observacao,
       googleEventUrl,
+      contatoId,
+      procedimentoId,
       criadoEm,
       contato:contatos!agendamentos_contatoId_fkey(id, nome, whatsapp, tipo),
       procedimento:procedimentos(id, nome)
