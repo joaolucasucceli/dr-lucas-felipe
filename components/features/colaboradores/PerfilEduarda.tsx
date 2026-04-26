@@ -19,9 +19,9 @@ export function PerfilEduarda() {
       <PerfilColaboradorHero
         nome="Eduarda"
         cargo="Analista de CRM · Apoio comercial"
-        iniciais="E"
+        iniciais="ED"
         bio="Não conversa diretamente com paciente. O trabalho dela é ler cada conversa da Ana Júlia e manter o cadastro do lead sempre organizado e atualizado — pra que o time saiba em que pé cada atendimento está."
-        gradientClasses="from-violet-600 to-purple-400"
+        gradientClasses="from-violet-900 to-purple-700"
       />
 
       <SecaoPerfil titulo="Como é o dia a dia dela">
@@ -56,7 +56,7 @@ export function PerfilEduarda() {
         />
       </SecaoPerfil>
 
-      <SecaoPerfil titulo="O que ela atualiza no cadastro">
+      <SecaoPerfil titulo="Ferramentas que ela usa">
         <FerramentasGrid
           ferramentas={[
             {

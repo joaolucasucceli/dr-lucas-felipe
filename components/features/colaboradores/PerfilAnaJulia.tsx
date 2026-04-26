@@ -22,7 +22,7 @@ export function PerfilAnaJulia() {
         cargo="SDR · Atendimento comercial"
         iniciais="AJ"
         bio="Fala com todo paciente que chega no WhatsApp da clínica. Acolhe, tira dúvidas, consulta a agenda e conduz a conversa até fechar a avaliação com o Dr. Lucas."
-        gradientClasses="from-pink-500 to-rose-400"
+        gradientClasses="from-rose-900 to-pink-700"
       />
 
       <SecaoPerfil titulo="Como é o dia a dia dela">
@@ -57,7 +57,7 @@ export function PerfilAnaJulia() {
         />
       </SecaoPerfil>
 
-      <SecaoPerfil titulo="Ferramentas que ela usa no dia a dia">
+      <SecaoPerfil titulo="Ferramentas que ela usa">
         <FerramentasGrid
           ferramentas={[
             {
