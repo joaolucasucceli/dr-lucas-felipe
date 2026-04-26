@@ -19,7 +19,6 @@ import {
   Globe,
   Users,
   Tags,
-  User,
   LogOut,
   Menu,
 } from "lucide-react"
@@ -213,9 +212,6 @@ function NavContent({ perfil }: { perfil: string }) {
 }
 
 function ContaFooter({ nome, email, perfil, fotoUrl }: { nome: string; email: string; perfil: string; fotoUrl?: string | null }) {
-  const pathname = usePathname()
-  const meuPerfilAtivo = pathname === "/meu-perfil" || pathname.startsWith("/meu-perfil/")
-
   return (
     <div className="border-t p-2">
       <div className="flex items-center gap-2 px-2 py-2">
@@ -229,18 +225,6 @@ function ContaFooter({ nome, email, perfil, fotoUrl }: { nome: string; email: st
         </Badge>
       </div>
       <div className="mt-1 grid gap-1">
-        <Link
-          href="/meu-perfil"
-          className={cn(
-            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-            meuPerfilAtivo
-              ? "bg-accent text-accent-foreground"
-              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          )}
-        >
-          <User className="h-4 w-4" />
-          Meu Perfil
-        </Link>
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}

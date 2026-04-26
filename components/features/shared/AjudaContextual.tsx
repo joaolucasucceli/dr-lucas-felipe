@@ -19,7 +19,6 @@ import { ModuloPacientes } from "@/components/features/documentacao/modulos/Modu
 import { ModuloProcedimentos } from "@/components/features/documentacao/modulos/ModuloProcedimentos"
 import { ModuloBaseConhecimento } from "@/components/features/documentacao/modulos/ModuloBaseConhecimento"
 import { ModuloMidiaMarketing } from "@/components/features/documentacao/modulos/ModuloMidiaMarketing"
-import { ModuloMeuPerfil } from "@/components/features/documentacao/modulos/ModuloMeuPerfil"
 import { ModuloConfiguracoes } from "@/components/features/documentacao/modulos/ModuloConfiguracoes"
 
 interface EntradaAjuda {
@@ -35,7 +34,6 @@ const MAPA_AJUDA: Array<{ prefix: string } & EntradaAjuda> = [
   { prefix: "/procedimentos", titulo: "Procedimentos", Componente: ModuloProcedimentos },
   { prefix: "/base-conhecimento", titulo: "Base de Conhecimento", Componente: ModuloBaseConhecimento },
   { prefix: "/midia-marketing", titulo: "Mídia Marketing", Componente: ModuloMidiaMarketing },
-  { prefix: "/meu-perfil", titulo: "Meu Perfil", Componente: ModuloMeuPerfil },
   { prefix: "/configuracoes", titulo: "Configurações", Componente: ModuloConfiguracoes },
   { prefix: "/dashboard", titulo: "Dashboard", Componente: ModuloDashboard },
 ]
