@@ -24,9 +24,7 @@ import {
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { UserAvatar } from "@/components/features/shared/UserAvatar"
 import { cn } from "@/lib/utils"
 import { useNaoLidas } from "@/hooks/use-nao-lidas"
 
@@ -149,16 +147,8 @@ const navGroups: NavGroup[] = [
   },
 ]
 
-const perfilLabels: Record<string, string> = {
-  gestor: "Gestor",
-  atendente: "Atendente",
-}
-
 interface AppSidebarProps {
   perfil: string
-  nome: string
-  email: string
-  fotoUrl?: string | null
 }
 
 function NavContent({ perfil }: { perfil: string }) {
@@ -211,34 +201,22 @@ function NavContent({ perfil }: { perfil: string }) {
   )
 }
 
-function ContaFooter({ nome, email, perfil, fotoUrl }: { nome: string; email: string; perfil: string; fotoUrl?: string | null }) {
+function SairFooter() {
   return (
     <div className="border-t p-2">
-      <div className="flex items-center gap-2 px-2 py-2">
-        <UserAvatar nome={nome} src={fotoUrl} tamanho="sm" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{nome}</p>
-          <p className="truncate text-xs text-muted-foreground">{email}</p>
-        </div>
-        <Badge variant="secondary" className="shrink-0 text-[10px]">
-          {perfilLabels[perfil] || perfil}
-        </Badge>
-      </div>
-      <div className="mt-1 grid gap-1">
-        <button
-          type="button"
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-        >
-          <LogOut className="h-4 w-4" />
-          Sair
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => signOut({ callbackUrl: "/login" })}
+        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+      >
+        <LogOut className="h-4 w-4" />
+        Sair
+      </button>
     </div>
   )
 }
 
-export function AppSidebar({ perfil, nome, email, fotoUrl }: AppSidebarProps) {
+export function AppSidebar({ perfil }: AppSidebarProps) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r bg-muted/40 md:flex">
       <div className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
@@ -248,12 +226,12 @@ export function AppSidebar({ perfil, nome, email, fotoUrl }: AppSidebarProps) {
       <ScrollArea className="flex-1">
         <NavContent perfil={perfil} />
       </ScrollArea>
-      <ContaFooter nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} />
+      <SairFooter />
     </aside>
   )
 }
 
-export function MobileSidebarTrigger({ perfil, nome, email, fotoUrl }: AppSidebarProps) {
+export function MobileSidebarTrigger({ perfil }: AppSidebarProps) {
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -270,7 +248,7 @@ export function MobileSidebarTrigger({ perfil, nome, email, fotoUrl }: AppSideba
         <ScrollArea className="flex-1">
           <NavContent perfil={perfil} />
         </ScrollArea>
-        <ContaFooter nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} />
+        <SairFooter />
       </SheetContent>
     </Sheet>
   )

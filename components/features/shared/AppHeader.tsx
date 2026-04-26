@@ -22,13 +22,10 @@ const PainelNotificacoes = dynamic(
 )
 
 interface AppHeaderProps {
-  nome: string
-  email: string
   perfil: string
-  fotoUrl?: string | null
 }
 
-export function AppHeader({ nome, email, perfil, fotoUrl }: AppHeaderProps) {
+export function AppHeader({ perfil }: AppHeaderProps) {
   const [buscaAberta, setBuscaAberta] = useState(false)
 
   useEffect(() => {
@@ -45,7 +42,7 @@ export function AppHeader({ nome, email, perfil, fotoUrl }: AppHeaderProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b px-4 md:px-6">
       <div className="flex items-center gap-2">
-        <MobileSidebarTrigger perfil={perfil} nome={nome} email={email} fotoUrl={fotoUrl} />
+        <MobileSidebarTrigger perfil={perfil} />
       </div>
 
       <div className="flex items-center gap-1">
