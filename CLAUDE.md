@@ -6,13 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Central Dr. Lucas** — sistema web para gestão de atendimento da clínica do Dr. Lucas Felipe. Sistema **100% autônomo** — a IA faz todo o processo do funil (acolhimento → reunião agendada). Dois módulos integrados em uma única aplicação Next.js:
 
-1. **Painel de Gestão** — kanban (4 etapas), contatos (leads e pacientes), procedimentos, métricas, roadmap
+1. **Painel de Gestão** — kanban (4 etapas), contatos (leads e pacientes), procedimentos, agenda, conteúdo da IA (base de conhecimento + mídia marketing), métricas
 2. **Agente IA WhatsApp ("Ana Júlia" + Analista IA)** — atendimento autônomo de pacientes via API Routes, alimentando o painel em tempo real
 
 ## Stack Tecnológica
 
 - **Framework:** Next.js 16 (App Router + Turbopack)
 - **UI:** shadcn/ui 4 exclusivamente (preset `b1Ymqvi3U`) — nunca criar botões, inputs ou cards do zero
+- **Tema:** dark-only (forçado via `forcedTheme="dark"` no `ThemeProvider`)
 - **Estilização:** Tailwind CSS 4
 - **Banco de Dados:** PostgreSQL via Supabase (acesso direto via `@supabase/supabase-js`, sem ORM)
 - **Autenticação:** NextAuth.js 4 (Credentials Provider + JWT)
@@ -23,6 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Calendário:** Google Calendar API
 - **Data Fetching:** SWR
 - **Validação:** Zod
+- **Forms:** react-hook-form + `FormDialog` reutilizável (toda edição é modal, exceto Contato que tem página própria com autosave)
 - **Deploy:** Vercel
 
 ## Comandos Comuns
@@ -77,7 +79,14 @@ A Ana Júlia conduz a conversa até o horário fechar (usando as 9 ferramentas e
 - **ConfirmDialog** é o único diálogo de confirmação destrutiva — nunca criar AlertDialog inline
 - **MetricCard** é o único card de número/métrica — nunca criar card de métrica avulso
 - **DataTable** é a única tabela com filtro/paginação — todas as listagens usam ele. Suporta ações em massa via props `selecionavel` + `acoesEmMassa` (checkbox + toolbar). Cada entidade tem endpoint `POST /api/<entidade>/batch` com `{ ids, acao }`
+- **FormDialog** é o wrapper padrão pra toda criação/edição — exceto Contato que tem página própria com autosave. Larguras: `sm` (1-2 inputs), `md` (default), `lg` (textarea longa), `xl` (raro). Detalhes em [docs/vault/aprendizados/2026-04-26-padrao-modal-vs-pagina.md](docs/vault/aprendizados/2026-04-26-padrao-modal-vs-pagina.md)
 - **PageHeader** é obrigatório no topo de toda página
+
+### Layout do dashboard
+
+- `DashboardShell` envolve sidebar (`AppSidebar`) + header (`AppHeader`) + conteúdo
+- **Header** minimalista: só o ícone de Ajuda Contextual no desktop (mobile ganha o trigger do menu)
+- **Sidebar** com 5 grupos (gestor): Geral, Comercial, Operacional, Colaboradores, Sistema. Footer com botão Sair
 
 ### Convenção de Estrutura de Pastas
 
@@ -99,16 +108,18 @@ A Ana Júlia conduz a conversa até o horário fechar (usando as 9 ferramentas e
 - `MensagemWhatsapp.messageIdWhatsapp` é único — usado para dedup de mensagens do WhatsApp
 - Todos os nomes de campos dos modelos estão em português (camelCase)
 
-## Números do Sistema
+## Números do Sistema (atualizado 2026-04-26)
 
 | Métrica | Quantidade |
 |---------|-----------|
-| Páginas | 20 (18 dashboard + 2 públicas + 1 root) |
-| Endpoints API | ~85 |
+| Páginas dashboard | 12 (`/dashboard`, `/atendimentos`, `/agenda`, `/contatos` + `/contatos/[id]`, `/procedimentos`, `/conteudo-ia`, `/equipe-ia`, `/configuracoes/{google-agenda,whatsapp,site,usuarios}`) |
+| Páginas totais | 15 (12 dashboard + `/login` + `/lgpd` + raiz) |
+| Endpoints API | 83 |
 | Tabelas no banco | 24 |
 | Enums | 12 |
-| Componentes | 94 (28 UI + 66 features) |
-| Hooks customizados | 20 |
+| Componentes | 95 (29 UI + 66 features) |
+| Hooks customizados | 19 |
+| Migrations | 9 |
 
 ## Issues Conhecidas
 
@@ -116,11 +127,18 @@ _Nenhuma issue técnica conhecida no momento. Issues abertas no Linear são entr
 
 ## Estado do Projeto
 
-Sistema em **modo manutenção** após auditoria final de entrega (JLAU-609, 2026-04-21). Todos os módulos core entregues:
+Sistema em **modo manutenção** após auditoria final de entrega (JLAU-609, 2026-04-21) + ondas de simplificação de UI (JLAU-989 → JLAU-995, 2026-04-26). Todos os módulos core entregues:
 - Site público institucional (8 seções)
-- Painel de gestão (18 páginas)
+- Painel de gestão (12 páginas dashboard)
 - Agente IA WhatsApp (arquitetura dual Ana Júlia + Analista)
 - Pacientes + Protocolos (bônus)
+
+Refatorações recentes (2026-04-26):
+- **Sidebar consolidada**: 16 → 12 itens (gestor). Eliminado dropdown do header, Meu Perfil, Configurações (hub), Tipos de Procedimento (página), Mídia Marketing como página dedicada, perfis Ana Júlia/Eduarda separados
+- **Novas páginas com Tabs**: `/equipe-ia` (Ana Júlia + Eduarda), `/conteudo-ia` (Base de Conhecimento + Mídia Marketing)
+- **Header limpo**: removidos busca global, notificações, theme toggle. Sobra apenas Ajuda Contextual
+- **Tema dark-only** via `forcedTheme`
+- **Padrão modal consolidado** em 100% das edições (exceto Contato)
 
 Itens em aberto no Linear aguardam ação do cliente (credenciais Google/WhatsApp) ou dependem de tráfego real. Não há bugs estruturais.
 
