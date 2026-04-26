@@ -107,39 +107,7 @@ export default function SiteConfigPage() {
         </Button>
       </PageHeader>
 
-      <div className="mt-6 grid gap-6">
-        {/* WhatsApp */}
-        <Card>
-          <CardHeader>
-            <CardTitle>WhatsApp</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label>Número do WhatsApp</Label>
-              <Input
-                value={whatsappNumero}
-                onChange={(e) => setWhatsappNumero(e.target.value)}
-                placeholder="5511999999999 (55 + DDD + número)"
-              />
-              <p className="text-xs text-muted-foreground">
-                Formato: 55 + DDD + número (sem espaços ou caracteres especiais)
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label>Mensagem padrão</Label>
-              <Textarea
-                value={whatsappMensagem}
-                onChange={(e) => setWhatsappMensagem(e.target.value)}
-                placeholder="Olá! Gostaria de agendar uma avaliação..."
-                rows={2}
-              />
-              <p className="text-xs text-muted-foreground">
-                Mensagem pré-preenchida ao clicar nos botões de WhatsApp do site
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="mt-6 grid gap-4 lg:grid-cols-2 lg:items-start">
         {/* Médico */}
         <Card>
           <CardHeader>
@@ -173,62 +141,96 @@ export default function SiteConfigPage() {
           </CardContent>
         </Card>
 
-        {/* Contato */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Contato e Redes Sociais</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Telefone</Label>
-              <Input
-                value={contatoTelefone}
-                onChange={(e) => setContatoTelefone(e.target.value)}
-                placeholder="+55 11 99999-9999"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Instagram</Label>
-              <Input
-                value={instagramUrl}
-                onChange={(e) => setInstagramUrl(e.target.value)}
-                placeholder="https://instagram.com/dr.lucasfelipe"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Endereço</Label>
-              <Input
-                value={contatoEndereco}
-                onChange={(e) => setContatoEndereco(e.target.value)}
-                placeholder="Av. Paulista, 1000 — Sala 501"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Cidade</Label>
-              <Input
-                value={contatoCidade}
-                onChange={(e) => setContatoCidade(e.target.value)}
-                placeholder="São Paulo — SP"
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          {/* WhatsApp */}
+          <Card>
+            <CardHeader>
+              <CardTitle>WhatsApp</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="grid gap-2">
+                <Label>Número do WhatsApp</Label>
+                <Input
+                  value={whatsappNumero}
+                  onChange={(e) => setWhatsappNumero(e.target.value)}
+                  placeholder="5511999999999 (55 + DDD + número)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Formato: 55 + DDD + número (sem espaços ou caracteres especiais)
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label>Mensagem padrão</Label>
+                <Textarea
+                  value={whatsappMensagem}
+                  onChange={(e) => setWhatsappMensagem(e.target.value)}
+                  placeholder="Olá! Gostaria de agendar uma avaliação..."
+                  rows={2}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Mensagem pré-preenchida ao clicar nos botões de WhatsApp do site
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Salvar */}
-        <div className="flex justify-end">
-          <Button onClick={handleSalvar} disabled={salvando}>
-            {salvando ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Salvando...
-              </>
-            ) : configurado ? (
-              "Atualizar Configurações"
-            ) : (
-              "Salvar Configurações"
-            )}
-          </Button>
+          {/* Contato */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Contato e Redes Sociais</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Telefone</Label>
+                <Input
+                  value={contatoTelefone}
+                  onChange={(e) => setContatoTelefone(e.target.value)}
+                  placeholder="+55 11 99999-9999"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Instagram</Label>
+                <Input
+                  value={instagramUrl}
+                  onChange={(e) => setInstagramUrl(e.target.value)}
+                  placeholder="https://instagram.com/dr.lucasfelipe"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Endereço</Label>
+                <Input
+                  value={contatoEndereco}
+                  onChange={(e) => setContatoEndereco(e.target.value)}
+                  placeholder="Av. Paulista, 1000 — Sala 501"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Cidade</Label>
+                <Input
+                  value={contatoCidade}
+                  onChange={(e) => setContatoCidade(e.target.value)}
+                  placeholder="São Paulo — SP"
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
+      </div>
+
+      {/* Salvar */}
+      <div className="mt-6 flex justify-end">
+        <Button onClick={handleSalvar} disabled={salvando}>
+          {salvando ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Salvando...
+            </>
+          ) : configurado ? (
+            "Atualizar Configurações"
+          ) : (
+            "Salvar Configurações"
+          )}
+        </Button>
       </div>
     </div>
   )

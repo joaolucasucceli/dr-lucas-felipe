@@ -195,59 +195,71 @@ export default function ProcedimentoDetalhePage() {
         </div>
       </PageHeader>
 
-      <div className="mt-6 grid gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Informações</CardTitle>
-            <IndicadorSalvamento status={statusTexto} />
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label>Nome</Label>
-              <Input value={nome} onChange={(e) => setNome(e.target.value)} disabled={!isGestor} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Tipo</Label>
-              <Select value={tipo} onValueChange={handleTipoChange} disabled={!isGestor}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cirurgico">Cirúrgico</SelectItem>
-                  <SelectItem value="estetico">Estético</SelectItem>
-                  <SelectItem value="minimamente-invasivo">Minimamente Invasivo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Descrição</Label>
-              <Textarea
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                disabled={!isGestor}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="mt-6 grid gap-4 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Informações</CardTitle>
+              <IndicadorSalvamento status={statusTexto} />
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="grid gap-2">
+                <Label>Nome</Label>
+                <Input value={nome} onChange={(e) => setNome(e.target.value)} disabled={!isGestor} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Tipo</Label>
+                <Select value={tipo} onValueChange={handleTipoChange} disabled={!isGestor}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cirurgico">Cirúrgico</SelectItem>
+                    <SelectItem value="estetico">Estético</SelectItem>
+                    <SelectItem value="minimamente-invasivo">Minimamente Invasivo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Descrição</Label>
+                <Textarea
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  disabled={!isGestor}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Duração</CardTitle>
-            <IndicadorSalvamento status={statusDuracao} />
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2">
-              <Label>Duração (min)</Label>
-              <Input
-                type="number"
-                min="1"
-                value={duracaoMin}
-                onChange={(e) => setDuracaoMin(e.target.value)}
-                disabled={!isGestor}
-              />
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Duração</CardTitle>
+              <IndicadorSalvamento status={statusDuracao} />
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2">
+                <Label>Duração (min)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={duracaoMin}
+                  onChange={(e) => setDuracaoMin(e.target.value)}
+                  disabled={!isGestor}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Status</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center gap-3">
+              <Switch checked={ativo} onCheckedChange={handleAtivoChange} disabled={!isGestor} />
+              <span className="text-sm">{ativo ? "Ativo" : "Inativo"}</span>
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>
@@ -258,18 +270,8 @@ export default function ProcedimentoDetalhePage() {
               value={posOperatorio}
               onChange={(e) => setPosOperatorio(e.target.value)}
               disabled={!isGestor}
-              rows={4}
+              rows={12}
             />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Status</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-3">
-            <Switch checked={ativo} onCheckedChange={handleAtivoChange} disabled={!isGestor} />
-            <span className="text-sm">{ativo ? "Ativo" : "Inativo"}</span>
           </CardContent>
         </Card>
       </div>

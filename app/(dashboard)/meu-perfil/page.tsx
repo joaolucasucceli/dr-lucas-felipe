@@ -128,7 +128,8 @@ export default function MeuPerfilPage() {
     <div>
       <PageHeader titulo="Meu Perfil" descricao="Gerencie seus dados pessoais e senha" />
 
-      <div className="mt-6 max-w-lg space-y-6">
+      <div className="mt-6 grid gap-4 lg:grid-cols-3 lg:items-start">
+        <div className="space-y-4 lg:col-span-1">
         {/* Foto de perfil */}
         <Card>
           <CardHeader>
@@ -166,40 +167,6 @@ export default function MeuPerfilPage() {
               <p>Clique no ícone para trocar a foto.</p>
               <p>JPG, PNG ou WebP. Máximo 5MB.</p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Dados Pessoais</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSalvarDados} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome</Label>
-                <Input
-                  id="nome"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  required
-                  minLength={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" disabled={salvandoDados}>
-                {salvandoDados && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar
-              </Button>
-            </form>
           </CardContent>
         </Card>
 
@@ -249,6 +216,43 @@ export default function MeuPerfilPage() {
             </form>
           </CardContent>
         </Card>
+        </div>
+
+        <div className="lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Dados Pessoais</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSalvarDados} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome</Label>
+                <Input
+                  id="nome"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  required
+                  minLength={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" disabled={salvandoDados}>
+                {salvandoDados && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+        </div>
       </div>
     </div>
   )
