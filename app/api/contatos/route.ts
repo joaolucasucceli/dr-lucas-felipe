@@ -6,7 +6,7 @@ import { criarContatoSchema, tipoContatoSchema } from "@/lib/validations/contato
 import { criarId, agora } from "@/lib/db-utils"
 
 const SELECT_CONTATO =
-  "id, tipo, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, arquivado, cpf, ativo, criadoEm, promovidoEm, responsavel:usuarios!contatos_responsavelId_fkey(id, nome)"
+  "id, tipo, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, arquivado, cpf, criadoEm, promovidoEm, responsavel:usuarios!contatos_responsavelId_fkey(id, nome)"
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()

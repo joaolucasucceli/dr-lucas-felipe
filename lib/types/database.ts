@@ -65,7 +65,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "agendamentos_contatoid_fkey"
+            foreignKeyName: "agendamentos_contatoId_fkey"
             columns: ["contatoId"]
             isOneToOne: false
             referencedRelation: "contatos"
@@ -122,7 +122,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "analista_logs_contatoid_fkey"
+            foreignKeyName: "analista_logs_contatoId_fkey"
             columns: ["contatoId"]
             isOneToOne: false
             referencedRelation: "contatos"
@@ -516,7 +516,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "contatos_responsavelid_fkey"
+            foreignKeyName: "contatos_responsavelId_fkey"
             columns: ["responsavelId"]
             isOneToOne: false
             referencedRelation: "usuarios"
@@ -573,7 +573,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "conversas_contatoid_fkey"
+            foreignKeyName: "conversas_contatoId_fkey"
             columns: ["contatoId"]
             isOneToOne: false
             referencedRelation: "contatos"
@@ -774,7 +774,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "mensagens_whatsapp_contatoid_fkey"
+            foreignKeyName: "mensagens_whatsapp_contatoId_fkey"
             columns: ["contatoId"]
             isOneToOne: false
             referencedRelation: "contatos"
@@ -889,7 +889,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "prontuarios_contatoid_fkey"
+            foreignKeyName: "prontuarios_contatoId_fkey"
             columns: ["contatoId"]
             isOneToOne: false
             referencedRelation: "contatos"
