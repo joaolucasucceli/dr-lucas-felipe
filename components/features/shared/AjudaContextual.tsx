@@ -14,8 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ModuloDashboard } from "@/components/features/documentacao/modulos/ModuloDashboard"
 import { ModuloAtendimentos } from "@/components/features/documentacao/modulos/ModuloAtendimentos"
-import { ModuloLeads } from "@/components/features/documentacao/modulos/ModuloLeads"
-import { ModuloPacientes } from "@/components/features/documentacao/modulos/ModuloPacientes"
+import { ModuloContatos } from "@/components/features/documentacao/modulos/ModuloContatos"
 import { ModuloProcedimentos } from "@/components/features/documentacao/modulos/ModuloProcedimentos"
 import { ModuloConteudoIA } from "@/components/features/documentacao/modulos/ModuloConteudoIA"
 import { ModuloConfiguracoes } from "@/components/features/documentacao/modulos/ModuloConfiguracoes"
@@ -28,8 +27,7 @@ interface EntradaAjuda {
 // Ordem importa: prefixos mais longos primeiro (ex: /configuracoes/google-agenda antes de /configuracoes)
 const MAPA_AJUDA: Array<{ prefix: string } & EntradaAjuda> = [
   { prefix: "/atendimentos", titulo: "Atendimentos", Componente: ModuloAtendimentos },
-  { prefix: "/contatos", titulo: "Leads", Componente: ModuloLeads },
-  { prefix: "/contatos", titulo: "Pacientes", Componente: ModuloPacientes },
+  { prefix: "/contatos", titulo: "Contatos", Componente: ModuloContatos },
   { prefix: "/procedimentos", titulo: "Procedimentos", Componente: ModuloProcedimentos },
   { prefix: "/conteudo-ia", titulo: "Conteúdo da IA", Componente: ModuloConteudoIA },
   { prefix: "/configuracoes", titulo: "Configurações", Componente: ModuloConfiguracoes },
