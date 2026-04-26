@@ -113,8 +113,7 @@ export default function ProcedimentosPage() {
   ]
 
   function handleEditar(procedimento: Procedimento) {
-    setProcedimentoEditando(procedimento)
-    setFormAberto(true)
+    router.push(`/procedimentos/${procedimento.id}`)
   }
 
   function handleToggleAtivo(procedimento: Procedimento) {
@@ -148,7 +147,19 @@ export default function ProcedimentosPage() {
   }
 
   const colunas: ColunaConfig<Procedimento>[] = [
-    { chave: "nome", titulo: "Nome", ordenavel: true },
+    {
+      chave: "nome",
+      titulo: "Nome",
+      ordenavel: true,
+      renderizar: (p) => (
+        <button
+          onClick={() => router.push(`/procedimentos/${p.id}`)}
+          className="text-left font-medium hover:underline"
+        >
+          {p.nome}
+        </button>
+      ),
+    },
     {
       chave: "tipo",
       titulo: "Tipo",
