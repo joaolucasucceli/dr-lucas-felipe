@@ -11,7 +11,9 @@ import {
 } from "@/lib/agente/slots-agenda"
 
 const MAX_SLOTS = 10
-const DURACAO_DEFAULT_MIN = 60
+// Avaliacao online com Dr. Lucas e SEMPRE 60min — nao usar duracao do
+// procedimento (cirurgia nao e marcada via Ana Julia).
+const DURACAO_AVALIACAO_MIN = 60
 const DIAS_DEFAULT_RANGE = 14
 
 export async function POST(request: NextRequest) {
@@ -21,8 +23,6 @@ export async function POST(request: NextRequest) {
   let body: {
     dataInicio?: string
     dataFim?: string
-    duracaoMinutos?: number
-    procedimentoId?: string
   }
   try {
     body = await request.json()
@@ -38,17 +38,7 @@ export async function POST(request: NextRequest) {
     ? new Date(body.dataFim)
     : new Date(dataInicio.getTime() + DIAS_DEFAULT_RANGE * 24 * 60 * 60 * 1000)
 
-  let duracaoMin = body.duracaoMinutos ?? DURACAO_DEFAULT_MIN
-
-  if (body.procedimentoId) {
-    const { data: proc } = await supabaseAdmin
-      .from("procedimentos")
-      .select("duracaoMin")
-      .eq("id", body.procedimentoId)
-      .is("deletadoEm", null)
-      .maybeSingle()
-    if (proc?.duracaoMin) duracaoMin = proc.duracaoMin
-  }
+  const duracaoMin = DURACAO_AVALIACAO_MIN
 
   const eventosCalendar = await listarEventos(dataInicio, dataFim)
 
@@ -63,7 +53,7 @@ export async function POST(request: NextRequest) {
     ...eventosCalendar.map((e) => ({ inicio: e.inicio, fim: e.fim })),
     ...(agendamentosDb ?? []).map((a) => {
       const inicio = new Date(a.dataHora)
-      const dur = a.duracao ?? DURACAO_DEFAULT_MIN
+      const dur = a.duracao ?? DURACAO_AVALIACAO_MIN
       return { inicio, fim: new Date(inicio.getTime() + dur * 60_000) }
     }),
   ]

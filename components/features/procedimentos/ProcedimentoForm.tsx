@@ -185,13 +185,16 @@ export function ProcedimentoForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="proc-duracao">Duração (min)</Label>
+        <Label htmlFor="proc-duracao">Duração estimada da cirurgia (min)</Label>
         <Input
           id="proc-duracao"
           type="number"
           min="1"
           {...register("duracaoMin")}
         />
+        <p className="text-xs text-muted-foreground">
+          Tempo médio do procedimento em si — informação clínica que a Ana Júlia pode citar se a paciente perguntar. NÃO afeta o slot da avaliação online (sempre 1h).
+        </p>
         {errors.duracaoMin && (
           <p className="text-xs text-destructive">{errors.duracaoMin.message}</p>
         )}

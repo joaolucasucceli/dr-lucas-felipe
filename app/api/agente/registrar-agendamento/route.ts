@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     procedimentoId
       ? supabaseAdmin
           .from("procedimentos")
-          .select("nome, duracaoMin")
+          .select("nome")
           .eq("id", procedimentoId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -89,7 +89,9 @@ export async function POST(request: NextRequest) {
 
   const procedimento = procResult.data
 
-  const duracaoMin = procedimento?.duracaoMin ?? agendamento.duracao ?? 60
+  // Avaliacao online com Dr. Lucas e SEMPRE 60min — duracao do procedimento
+  // refere-se a cirurgia (info clinica), nao ao slot de reuniao.
+  const duracaoMin = 60
   const fim = new Date(inicio.getTime() + duracaoMin * 60_000)
   const tituloEvento = procedimento
     ? `Avaliação — ${procedimento.nome} (${lead?.nome ?? "Paciente"})`

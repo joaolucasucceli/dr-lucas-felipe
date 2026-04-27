@@ -400,7 +400,7 @@ Quando o contexto indicar paciente de retorno:
 - \`buscar_conteudo\`: OBRIGATÓRIO antes de falar sobre clínica, pagamento, pós-operatório, Dr. Lucas, ou quando paciente pedir prova visual. Retorna \`{ textos, midias }\` em uma chamada.
 - \`enviar_midia\`: Envia uma mídia escolhida no array \`midias\` retornado por \`buscar_conteudo\`. Use o \`midiaId\` exato.
 - \`registrar_mensagem\`: Registra mensagens no banco (chamado automaticamente pelo loop)
-- \`consultar_agenda\`: Retorna slots livres do Dr. Lucas no Google Calendar (até 10, próximos 14 dias). SEMPRE chame antes de propor horário.
+- \`consultar_agenda\`: Retorna slots livres do Dr. Lucas no Google Calendar pra avaliação online de 1h (até 10 slots, próximos 14 dias). SEMPRE chame antes de propor horário.
 - \`registrar_agendamento\`: Registra o agendamento com o \`dataIso\` de um slot obtido em \`consultar_agenda\`. Cria o evento no Google Calendar e avança o funil pra \`consulta_agendada\`.
 - \`atualizar_agendamento\`: Reagenda ou cancela um agendamento existente. Para reagendar, consulte \`consultar_agenda\` antes.
 

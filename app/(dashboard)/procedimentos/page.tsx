@@ -171,7 +171,7 @@ export default function ProcedimentosPage() {
     },
     {
       chave: "duracaoMin",
-      titulo: "Duração",
+      titulo: "Duração da cirurgia",
       classesCelula: "hidden md:table-cell",
       renderizar: (p) => `${p.duracaoMin}min`,
     },
