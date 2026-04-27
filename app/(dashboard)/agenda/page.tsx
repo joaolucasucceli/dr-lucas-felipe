@@ -15,7 +15,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,15 +31,15 @@ import {
 } from "@/components/ui/select"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { MetricCard } from "@/components/features/shared/MetricCard"
-import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
+import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
+import { DataTable, type ColunaConfig } from "@/components/features/shared/DataTable"
 import { AgendamentoForm } from "@/components/features/agendamentos/AgendamentoForm"
 import { ReagendarDialog } from "@/components/features/agendamentos/ReagendarDialog"
 import { useAgenda, type AgendamentoAgenda } from "@/hooks/use-agenda"
 import { formatarWhatsapp } from "@/lib/format"
-import { ROTULOS_TIPO_AGENDAMENTO } from "@/lib/validations/agendamento"
 
 const TZ = "America/Sao_Paulo"
 
@@ -53,25 +52,22 @@ function chaveDia(dataIso: string): string {
   }).format(new Date(dataIso))
 }
 
-function labelDia(chave: string): string {
-  const [ano, mes, dia] = chave.split("-").map(Number)
-  const data = new Date(`${chave}T12:00:00-03:00`)
-
+function formatarDiaCurto(dataIso: string): string {
   const hojeChave = chaveDia(new Date().toISOString())
   const amanhaTs = new Date()
   amanhaTs.setDate(amanhaTs.getDate() + 1)
   const amanhaChave = chaveDia(amanhaTs.toISOString())
+  const chaveItem = chaveDia(dataIso)
 
-  const formatoLongo = new Intl.DateTimeFormat("pt-BR", {
+  if (chaveItem === hojeChave) return "Hoje"
+  if (chaveItem === amanhaChave) return "Amanhã"
+
+  return new Intl.DateTimeFormat("pt-BR", {
     timeZone: TZ,
-    weekday: "long",
+    weekday: "short",
     day: "2-digit",
-    month: "long",
-  }).format(data)
-
-  if (chave === hojeChave) return `Hoje — ${formatoLongo}`
-  if (chave === amanhaChave) return `Amanhã — ${formatoLongo}`
-  return formatoLongo.charAt(0).toUpperCase() + formatoLongo.slice(1)
+    month: "2-digit",
+  }).format(new Date(dataIso))
 }
 
 function formatarHora(dataIso: string): string {
@@ -80,21 +76,6 @@ function formatarHora(dataIso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(dataIso))
-}
-
-function agruparPorDia(agendamentos: AgendamentoAgenda[]): {
-  chave: string
-  itens: AgendamentoAgenda[]
-}[] {
-  const mapa = new Map<string, AgendamentoAgenda[]>()
-  for (const ag of agendamentos) {
-    const chave = chaveDia(ag.dataHora)
-    if (!mapa.has(chave)) mapa.set(chave, [])
-    mapa.get(chave)!.push(ag)
-  }
-  return Array.from(mapa.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([chave, itens]) => ({ chave, itens }))
 }
 
 export default function AgendaPage() {
@@ -146,7 +127,106 @@ export default function AgendaPage() {
     return { hoje, confirmados, aguardando }
   }, [agendamentos])
 
-  const grupos = useMemo(() => agruparPorDia(agendamentos), [agendamentos])
+  const colunas: ColunaConfig<AgendamentoAgenda>[] = [
+    {
+      chave: "dataHora",
+      titulo: "Quando",
+      renderizar: (ag) => (
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold capitalize">
+            {formatarDiaCurto(ag.dataHora)}
+          </span>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {formatarHora(ag.dataHora)} · {ag.duracao}min
+          </span>
+        </div>
+      ),
+    },
+    {
+      chave: "contato",
+      titulo: "Paciente",
+      renderizar: (ag) =>
+        ag.contato ? (
+          <div className="flex flex-col">
+            <button
+              type="button"
+              onClick={() => router.push(`/contatos/${ag.contato!.id}`)}
+              className="text-left text-sm font-medium hover:underline"
+            >
+              {ag.contato.nome}
+            </button>
+            <span className="text-xs text-muted-foreground">
+              {formatarWhatsapp(ag.contato.whatsapp)}
+              {ag.contato.tipo === "paciente" && " · Paciente"}
+            </span>
+          </div>
+        ) : (
+          <span className="text-sm italic text-muted-foreground">Contato removido</span>
+        ),
+    },
+    {
+      chave: "procedimento",
+      titulo: "Procedimento",
+      classesCelula: "hidden md:table-cell",
+      renderizar: (ag) =>
+        ag.procedimento?.nome ? (
+          <span className="text-sm">{ag.procedimento.nome}</span>
+        ) : (
+          <span className="text-sm italic text-muted-foreground">—</span>
+        ),
+    },
+    {
+      chave: "status",
+      titulo: "Status",
+      renderizar: (ag) => <StatusBadge status={ag.status} variante="agendamento" />,
+    },
+    {
+      chave: "acoes" as keyof AgendamentoAgenda,
+      titulo: "",
+      classesCelula: "w-[100px]",
+      renderizar: (ag) => (
+        <div className="flex items-center justify-end gap-1">
+          {ag.googleEventUrl && (
+            <a
+              href={ag.googleEventUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground"
+              title="Abrir no Google Calendar"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => abrirEdicao(ag)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar observação
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setReagendando(ag)}>
+                <CalendarClock className="mr-2 h-4 w-4" />
+                Reagendar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setCancelando(ag)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Cancelar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div>
@@ -155,7 +235,7 @@ export default function AgendaPage() {
         descricao="Agendamentos da clínica (Ana Júlia + manuais)"
       >
         <Select value={periodo} onValueChange={setPeriodo}>
-          <SelectTrigger>
+          <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Período" />
           </SelectTrigger>
           <SelectContent>
@@ -171,11 +251,7 @@ export default function AgendaPage() {
         </Button>
       </PageHeader>
 
-      {carregando ? (
-        <div className="mt-6">
-          <SkeletonCard quantidade={3} />
-        </div>
-      ) : erro ? (
+      {erro ? (
         <div className="mt-6">
           <ErrorState mensagem={erro} onTentar={recarregar} />
         </div>
@@ -208,120 +284,20 @@ export default function AgendaPage() {
             />
           </div>
 
-          <div className="mt-8 space-y-6">
-            {grupos.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhum agendamento no período selecionado.
-                </CardContent>
-              </Card>
+          <div className="mt-6">
+            {carregando && agendamentos.length === 0 ? (
+              <SkeletonTabela linhas={5} colunas={5} />
             ) : (
-              grupos.map((grupo) => (
-                <Card key={grupo.chave}>
-                  <CardHeader>
-                    <CardTitle className="text-base font-semibold">
-                      {labelDia(grupo.chave)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="divide-y">
-                    {grupo.itens.map((ag) => (
-                      <div
-                        key={ag.id}
-                        className="flex items-center gap-4 py-3 -mx-6 px-6"
-                      >
-                        <div className="flex min-w-[70px] flex-col">
-                          <span className="text-lg font-semibold tabular-nums">
-                            {formatarHora(ag.dataHora)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {ag.duracao}min
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            {ag.contato ? (
-                              <button
-                                type="button"
-                                onClick={() => router.push(`/contatos/${ag.contato!.id}`)}
-                                className="font-medium truncate hover:underline"
-                              >
-                                {ag.contato.nome}
-                              </button>
-                            ) : (
-                              <span className="font-medium truncate">Contato removido</span>
-                            )}
-                            {ag.contato?.tipo === "paciente" && (
-                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                Paciente
-                              </span>
-                            )}
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              {ROTULOS_TIPO_AGENDAMENTO[ag.tipo]}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {ag.procedimento?.nome ? (
-                              <span className="truncate">{ag.procedimento.nome}</span>
-                            ) : (
-                              <span className="italic">Sem procedimento</span>
-                            )}
-                            {ag.contato?.whatsapp && (
-                              <>
-                                <span>•</span>
-                                <span>{formatarWhatsapp(ag.contato.whatsapp)}</span>
-                              </>
-                            )}
-                          </div>
-                          {ag.observacao && (
-                            <p className="mt-1 text-xs text-muted-foreground truncate">
-                              {ag.observacao}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <StatusBadge status={ag.status} variante="agendamento" />
-                          {ag.googleEventUrl && (
-                            <a
-                              href={ag.googleEventUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-foreground"
-                              title="Abrir no Google Calendar"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          )}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => abrirEdicao(ag)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setReagendando(ag)}>
-                                <CalendarClock className="mr-2 h-4 w-4" />
-                                Reagendar
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => setCancelando(ag)}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Cancelar agendamento
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              ))
+              <DataTable
+                colunas={colunas}
+                dados={agendamentos}
+                total={agendamentos.length}
+                pagina={1}
+                porPagina={agendamentos.length || 10}
+                onPaginaChange={() => {}}
+                carregando={carregando}
+                mensagemVazio="Nenhum agendamento no período selecionado."
+              />
             )}
           </div>
         </>
