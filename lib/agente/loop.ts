@@ -207,7 +207,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
     ]
 
     // Se o paciente pediu prova visual (gatilho), obrigamos o GPT-4o a chamar
-    // `listar_midias` na primeira iteracao. Sem isso, o modelo alucina
+    // `buscar_conteudo` na primeira iteracao. Sem isso, o modelo alucina
     // "enviei uma imagem" em texto, sem executar a tool.
     const forcarMidia = detectarGatilhoMidia(textoBuffer)
 
@@ -216,7 +216,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
       messages: mensagens,
       tools: ferramentasAgente,
       tool_choice: forcarMidia
-        ? { type: "function", function: { name: "listar_midias" } }
+        ? { type: "function", function: { name: "buscar_conteudo" } }
         : "auto",
     })
 
@@ -248,7 +248,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
         const toolsComIds = new Set([
           "registrar_mensagem",
           "registrar_agendamento",
-          "listar_midias",
+          "buscar_conteudo",
           "enviar_midia",
         ])
         if (toolsComIds.has(fn.name)) {
@@ -258,7 +258,9 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
 
-        if (fn.name === "listar_midias") {
+        // Lógica anti-alucinação: se busca retornou midias E o paciente
+        // pediu prova visual (gatilho), próxima iteração EXIGE enviar_midia.
+        if (fn.name === "buscar_conteudo" && forcarMidia) {
           try {
             const parsed = JSON.parse(resultado)
             if (Array.isArray(parsed?.midias) && parsed.midias.length > 0) {

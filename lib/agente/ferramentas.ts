@@ -60,17 +60,22 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "consultar_base_conhecimento",
+      name: "buscar_conteudo",
       description:
-        "Consulta a base de conhecimento da clínica: políticas, cuidados pré/pós-operatório, informações sobre o Dr. Lucas, forma de pagamento, localização, cirurgiões parceiros, tudo que não é procedimento específico. SEMPRE use antes de responder perguntas sobre esses tópicos — você NÃO tem essas informações pré-carregadas. Nunca invente. Se retornar vazio, diga que o Dr. Lucas passa a info na consulta.",
+        "Busca unificada de conteúdo da clínica: TEXTOS (políticas, pré/pós-operatório, sobre o Dr. Lucas, forma de pagamento, localização, cirurgiões parceiros) + MÍDIAS (fotos/vídeos antes-e-depois). Retorna { textos: [{titulo, conteudo}], midias: [{id, descricao, jaEnviada}] }. SEMPRE use antes de responder perguntas sobre clínica/Dr. Lucas/pós-op/pagamento OU quando o paciente pedir prova visual. Os textos retornados podem ser parafraseados na resposta. As mídias precisam ser enviadas via enviar_midia (não tente descrever sem enviar). Nunca invente — se retornar vazio em ambos, diga que o Dr. Lucas passa a info na avaliação.",
       parameters: {
         type: "object",
         properties: {
           filtro: {
             type: "string",
-            description: "Palavra-chave para buscar em título e conteúdo (ilike). Use o termo da pergunta do paciente. Deixe vazio pra retornar tudo da base.",
+            description: "Palavra-chave do tema. Buscado em titulo+conteudo dos textos e na descricao das mídias (ilike). Ex: 'endereço', 'pagamento', 'glúteo', 'lipo abdome'. Deixe vazio pra retornar tudo.",
+          },
+          conversaId: {
+            type: "string",
+            description: "ID da conversa ativa (para calcular jaEnviada nas mídias).",
           },
         },
+        required: ["conversaId"],
       },
     },
   },
@@ -184,27 +189,9 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "listar_midias",
-      description:
-        "Lista todas as mídias de marketing disponíveis com suas descrições. SEMPRE chame antes de enviar_midia. Use as descrições para escolher a mais apropriada ao contexto do paciente e evite as que já foram enviadas (jaEnviada: true).",
-      parameters: {
-        type: "object",
-        properties: {
-          conversaId: {
-            type: "string",
-            description: "ID da conversa ativa (para calcular quais mídias já foram enviadas)",
-          },
-        },
-        required: ["conversaId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "enviar_midia",
       description:
-        "Envia uma mídia específica para o paciente via WhatsApp. Passe o midiaId escolhido após ler a lista de listar_midias.",
+        "Envia uma mídia específica para o paciente via WhatsApp. Passe o midiaId escolhido após ler o array `midias` retornado por buscar_conteudo. Prefira midias com jaEnviada: false.",
       parameters: {
         type: "object",
         properties: {
