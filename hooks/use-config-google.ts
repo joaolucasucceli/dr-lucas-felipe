@@ -7,6 +7,7 @@ interface ConfigGoogle {
   clientId: string
   clientSecret: string
   conectado: boolean
+  calendarId: string | null
   ativo: boolean
   atualizadoEm: string
 }

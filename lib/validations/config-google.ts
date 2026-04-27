@@ -5,4 +5,9 @@ export const configGoogleSchema = z.object({
   clientSecret: z.string().min(10, "Client Secret deve ter pelo menos 10 caracteres"),
 })
 
+export const escolherCalendarIdSchema = z.object({
+  calendarId: z.string().min(1, "Selecione uma agenda"),
+})
+
 export type ConfigGoogleInput = z.infer<typeof configGoogleSchema>
+export type EscolherCalendarIdInput = z.infer<typeof escolherCalendarIdSchema>

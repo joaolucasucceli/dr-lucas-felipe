@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest) {
 
   const { data: config } = await supabaseAdmin
     .from("config_google_calendar")
-    .select("id, clientId, clientSecret, refreshToken, ativo, atualizadoEm")
+    .select("id, clientId, clientSecret, refreshToken, calendarId, ativo, atualizadoEm")
     .eq("ativo", true)
     .order("criadoEm", { ascending: false })
     .limit(1)
@@ -28,6 +28,7 @@ export async function GET(_request: NextRequest) {
       clientId: config.clientId,
       clientSecret: "••••••••" + config.clientSecret.slice(-4),
       conectado: !!config.refreshToken,
+      calendarId: config.calendarId,
       ativo: config.ativo,
       atualizadoEm: config.atualizadoEm,
     },

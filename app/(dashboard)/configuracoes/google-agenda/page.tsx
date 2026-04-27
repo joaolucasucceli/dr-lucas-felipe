@@ -20,6 +20,7 @@ import { PageHeader } from "@/components/features/shared/PageHeader"
 import { LoadingState } from "@/components/features/shared/LoadingState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
+import { SelecionarAgenda } from "@/components/features/google-agenda/SelecionarAgenda"
 import { useConfigGoogle } from "@/hooks/use-config-google"
 
 function GoogleAgendaConfigInner() {
@@ -190,49 +191,63 @@ function GoogleAgendaConfigInner() {
       <div className="mt-6 grid gap-6">
         {/* ESTADO 3 — Conectado */}
         {conectado && !editandoCredenciais && (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                <CheckCircle2 className="h-7 w-7 text-green-700 dark:text-green-400" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold">Sincronização ativa</h3>
-                <p className="max-w-md text-sm text-muted-foreground">
-                  Sua agenda está conectada ao Google Calendar. A Ana Júlia já consulta horários disponíveis e cria eventos automaticamente quando agenda uma avaliação.
-                </p>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground">
-                    <MoreHorizontal className="mr-1 h-4 w-4" />
-                    Gerenciar integração
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center">
-                  <DropdownMenuItem onClick={() => setEditandoCredenciais(true)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Editar credenciais
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleConectar} disabled={conectando}>
-                    {conectando ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                    )}
-                    Reconectar Google
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setConfirmRemover(true)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remover integração
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardContent>
-          </Card>
+          <>
+            <Card>
+              <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                  <CheckCircle2 className="h-7 w-7 text-green-700 dark:text-green-400" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold">Sincronização ativa</h3>
+                  <p className="max-w-md text-sm text-muted-foreground">
+                    Sua agenda está conectada ao Google Calendar. A Ana Júlia já consulta horários disponíveis e cria eventos automaticamente quando agenda uma avaliação.
+                  </p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                      <MoreHorizontal className="mr-1 h-4 w-4" />
+                      Gerenciar integração
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center">
+                    <DropdownMenuItem onClick={() => setEditandoCredenciais(true)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Editar credenciais
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleConectar} disabled={conectando}>
+                      {conectando ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                      )}
+                      Reconectar Google
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setConfirmRemover(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remover integração
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Agenda destino</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SelecionarAgenda
+                  calendarIdAtual={config?.calendarId ?? null}
+                  onSalvo={recarregar}
+                />
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {/* ESTADO 2 — Credenciais salvas mas nao conectado */}
