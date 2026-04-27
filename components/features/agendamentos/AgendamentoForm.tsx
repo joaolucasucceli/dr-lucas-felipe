@@ -25,6 +25,13 @@ import {
   type StatusAgendamento,
 } from "@/lib/validations/agendamento"
 import { formatarWhatsapp } from "@/lib/format"
+import {
+  REGEX_DATA_BR,
+  dataBrEHoraParaIso,
+  isoParaDataBr,
+  isoParaHora,
+  mascararDataBr,
+} from "@/lib/agendamento/data-br"
 import type { AgendamentoAgenda } from "@/hooks/use-agenda"
 
 const ROTULOS_STATUS: Record<StatusAgendamento, string> = {
@@ -34,12 +41,6 @@ const ROTULOS_STATUS: Record<StatusAgendamento, string> = {
   realizado: "Realizado",
   remarcado: "Remarcado",
 }
-
-// Input nativo type="datetime-local" tem formato MM/DD/AAAA em navegadores
-// com locale en-US — confunde usuario brasileiro. Usamos 2 inputs:
-// data em texto livre dd/mm[/aaaa] + hora type="time". Se o ano nao for
-// fornecido, completamos automatico (ano atual ou +1 se a data ja passou).
-const REGEX_DATA_BR = /^(\d{2})\/(\d{2})(?:\/(\d{4}))?$/
 
 // Avaliacao online com Dr. Lucas: tipo e duracao sao FIXOS no painel
 // (consulta_online + 60min). A clinica so agenda esse tipo via /agenda.
@@ -63,69 +64,6 @@ interface AgendamentoFormProps {
   onSucesso: () => void
 }
 
-function isoParaDataBr(iso: string | null | undefined): string {
-  if (!iso) return ""
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ""
-  const dd = String(d.getDate()).padStart(2, "0")
-  const mm = String(d.getMonth() + 1).padStart(2, "0")
-  const yyyy = d.getFullYear()
-  return `${dd}/${mm}/${yyyy}`
-}
-
-function isoParaHora(iso: string | null | undefined): string {
-  if (!iso) return ""
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ""
-  const hh = String(d.getHours()).padStart(2, "0")
-  const mn = String(d.getMinutes()).padStart(2, "0")
-  return `${hh}:${mn}`
-}
-
-function dataBrEHoraParaIso(dataBr: string, hora: string): string | null {
-  const m = dataBr.match(REGEX_DATA_BR)
-  if (!m) return null
-  const [, dd, mm, yyyyRaw] = m
-  const hm = hora.match(/^(\d{2}):(\d{2})$/)
-  if (!hm) return null
-  const [, hh, mn] = hm
-
-  // Se ano nao fornecido, usa ano atual; se a data ja passou, vai pro proximo ano.
-  let ano: number
-  if (yyyyRaw) {
-    ano = Number(yyyyRaw)
-  } else {
-    const hoje = new Date()
-    const candidato = new Date(
-      hoje.getFullYear(),
-      Number(mm) - 1,
-      Number(dd),
-      Number(hh),
-      Number(mn)
-    )
-    ano = candidato.getTime() < hoje.getTime() ? hoje.getFullYear() + 1 : hoje.getFullYear()
-  }
-
-  const d = new Date(ano, Number(mm) - 1, Number(dd), Number(hh), Number(mn))
-  if (isNaN(d.getTime())) return null
-  // Sanity check: campos batem (evita 31/02 virando 03/03)
-  if (
-    d.getFullYear() !== ano ||
-    d.getMonth() !== Number(mm) - 1 ||
-    d.getDate() !== Number(dd)
-  ) {
-    return null
-  }
-  return d.toISOString()
-}
-
-/** Mascara dd/mm/aaaa enquanto o usuario digita. */
-function mascararDataBr(valor: string): string {
-  const digitos = valor.replace(/\D/g, "").slice(0, 8)
-  if (digitos.length <= 2) return digitos
-  if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`
-  return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`
-}
 
 export function AgendamentoForm({
   agendamento,
@@ -353,66 +291,86 @@ export function AgendamentoForm({
         )}
       </div>
 
-      {/* Data + Hora + Procedimento (informativo) */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="grid gap-2">
-          <Label htmlFor="ag-data">Data</Label>
-          <Input
-            id="ag-data"
-            type="text"
-            inputMode="numeric"
-            placeholder="dd/mm"
-            maxLength={10}
-            {...register("dataBr", {
-              onChange: (e) => {
-                e.target.value = mascararDataBr(e.target.value)
-              },
-            })}
-          />
-          <p className="text-xs text-muted-foreground">
-            Ano vem automático. Use dd/mm/aaaa só pra outro ano.
+      {/* Data + Hora — escondidos na edicao (use \"Reagendar\" pra mudar data/hora) */}
+      {editando && agendamento && (
+        <div className="rounded-md border bg-muted/30 p-3 text-sm">
+          <p className="text-xs font-medium text-muted-foreground mb-1">
+            Agendado para
           </p>
-          {errors.dataBr && (
-            <p className="text-xs text-destructive">{errors.dataBr.message}</p>
-          )}
+          <p>
+            {isoParaDataBr(agendamento.dataHora)} às{" "}
+            {isoParaHora(agendamento.dataHora)}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Pra mudar data/hora, use a opção <strong>Reagendar</strong> no menu da agenda.
+          </p>
         </div>
+      )}
 
-        <div className="grid gap-2">
-          <Label htmlFor="ag-hora">Hora</Label>
-          <Input
-            id="ag-hora"
-            type="time"
-            step="60"
-            {...register("hora")}
-          />
-          {errors.hora && (
-            <p className="text-xs text-destructive">{errors.hora.message}</p>
-          )}
-        </div>
+      {!editando && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="ag-data">Data</Label>
+              <Input
+                id="ag-data"
+                type="text"
+                inputMode="numeric"
+                placeholder="dd/mm"
+                maxLength={10}
+                {...register("dataBr", {
+                  onChange: (e) => {
+                    e.target.value = mascararDataBr(e.target.value)
+                  },
+                })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Ano vem automático. Use dd/mm/aaaa só pra outro ano.
+              </p>
+              {errors.dataBr && (
+                <p className="text-xs text-destructive">{errors.dataBr.message}</p>
+              )}
+            </div>
 
-        <div className="grid gap-2">
-          <Label>Procedimento <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
-          <Select
-            value={procedimentoIdAtual || "__nenhum__"}
-            onValueChange={(v) => setValue("procedimentoId", v === "__nenhum__" ? null : v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__nenhum__">Nenhum</SelectItem>
-              {procedimentos.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ag-hora">Hora</Label>
+              <Input
+                id="ag-hora"
+                type="time"
+                step="60"
+                {...register("hora")}
+              />
+              {errors.hora && (
+                <p className="text-xs text-destructive">{errors.hora.message}</p>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Avaliação online com o Dr. Lucas — duração fixa de 1h.
+          </p>
+        </>
+      )}
+
+      {/* Procedimento — sempre visivel */}
+      <div className="grid gap-2">
+        <Label>Procedimento de interesse <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
+        <Select
+          value={procedimentoIdAtual || "__nenhum__"}
+          onValueChange={(v) => setValue("procedimentoId", v === "__nenhum__" ? null : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__nenhum__">Nenhum</SelectItem>
+            {procedimentos.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <p className="text-xs text-muted-foreground -mt-2">
-        Avaliação online com o Dr. Lucas — duração fixa de 1h.
-      </p>
 
       {/* Status (só edição) */}
       {editando && (

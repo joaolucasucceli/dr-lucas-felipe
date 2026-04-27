@@ -2,9 +2,27 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Calendar, Clock, ExternalLink, Plus, User } from "lucide-react"
+import {
+  Calendar,
+  CalendarClock,
+  Clock,
+  ExternalLink,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+  User,
+} from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
@@ -17,7 +35,9 @@ import { MetricCard } from "@/components/features/shared/MetricCard"
 import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
+import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { AgendamentoForm } from "@/components/features/agendamentos/AgendamentoForm"
+import { ReagendarDialog } from "@/components/features/agendamentos/ReagendarDialog"
 import { useAgenda, type AgendamentoAgenda } from "@/hooks/use-agenda"
 import { formatarWhatsapp } from "@/lib/format"
 import { ROTULOS_TIPO_AGENDAMENTO } from "@/lib/validations/agendamento"
@@ -82,6 +102,9 @@ export default function AgendaPage() {
   const [periodo, setPeriodo] = useState("semana")
   const [formAberto, setFormAberto] = useState(false)
   const [agendamentoEditando, setAgendamentoEditando] = useState<AgendamentoAgenda | null>(null)
+  const [reagendando, setReagendando] = useState<AgendamentoAgenda | null>(null)
+  const [cancelando, setCancelando] = useState<AgendamentoAgenda | null>(null)
+  const [processando, setProcessando] = useState(false)
   const { agendamentos, total, carregando, erro, recarregar } = useAgenda(periodo)
 
   function abrirNovo() {
@@ -92,6 +115,27 @@ export default function AgendaPage() {
   function abrirEdicao(ag: AgendamentoAgenda) {
     setAgendamentoEditando(ag)
     setFormAberto(true)
+  }
+
+  async function confirmarCancelamento() {
+    if (!cancelando) return
+    setProcessando(true)
+    try {
+      const res = await fetch(`/api/agendamentos/${cancelando.id}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}))
+        throw new Error(e.error || "Erro ao cancelar")
+      }
+      toast.success("Agendamento cancelado — paciente foi notificado")
+      recarregar()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao cancelar")
+    } finally {
+      setProcessando(false)
+      setCancelando(null)
+    }
   }
 
   const metricas = useMemo(() => {
@@ -183,8 +227,7 @@ export default function AgendaPage() {
                     {grupo.itens.map((ag) => (
                       <div
                         key={ag.id}
-                        className="flex cursor-pointer items-center gap-4 py-3 transition-colors hover:bg-muted/50 -mx-6 px-6"
-                        onClick={() => abrirEdicao(ag)}
+                        className="flex items-center gap-4 py-3 -mx-6 px-6"
                       >
                         <div className="flex min-w-[70px] flex-col">
                           <span className="text-lg font-semibold tabular-nums">
@@ -199,10 +242,7 @@ export default function AgendaPage() {
                             {ag.contato ? (
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  router.push(`/contatos/${ag.contato!.id}`)
-                                }}
+                                onClick={() => router.push(`/contatos/${ag.contato!.id}`)}
                                 className="font-medium truncate hover:underline"
                               >
                                 {ag.contato.nome}
@@ -245,13 +285,37 @@ export default function AgendaPage() {
                               href={ag.googleEventUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
                               className="text-muted-foreground hover:text-foreground"
                               title="Abrir no Google Calendar"
                             >
                               <ExternalLink className="h-4 w-4" />
                             </a>
                           )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => abrirEdicao(ag)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setReagendando(ag)}>
+                                <CalendarClock className="mr-2 h-4 w-4" />
+                                Reagendar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setCancelando(ag)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Cancelar agendamento
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     ))}
@@ -268,6 +332,28 @@ export default function AgendaPage() {
         aberto={formAberto}
         onFechar={() => setFormAberto(false)}
         onSucesso={recarregar}
+      />
+
+      <ReagendarDialog
+        agendamento={reagendando}
+        aberto={!!reagendando}
+        onFechar={() => setReagendando(null)}
+        onSucesso={recarregar}
+      />
+
+      <ConfirmDialog
+        titulo="Cancelar agendamento?"
+        descricao={
+          cancelando
+            ? `${cancelando.contato?.nome ?? "Paciente"} será notificado por email do cancelamento. O evento sai do Google Calendar.`
+            : ""
+        }
+        aberto={!!cancelando}
+        onFechar={() => setCancelando(null)}
+        onConfirmar={confirmarCancelamento}
+        variante="destrutivo"
+        textoBotao="Cancelar agendamento"
+        carregando={processando}
       />
     </div>
   )
