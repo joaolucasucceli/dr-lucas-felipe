@@ -1,4 +1,4 @@
-interface ContextoContato {
+export interface ContextoContato {
   nome?: string
   procedimento?: string
   etapa?: string
@@ -7,6 +7,12 @@ interface ContextoContato {
   cicloAtual?: number
   ciclosCompletos?: number
   ultimoProcedimento?: string | null
+  /** Agendamento futuro pendente de confirmacao — IA usa em confirmar_agendamento. */
+  agendamentoPendente?: {
+    id: string
+    dataHoraIso: string
+    label: string
+  }
 }
 
 /** Retorna a saudação apropriada para a hora atual em America/Sao_Paulo.
@@ -42,6 +48,12 @@ export async function gerarSystemPrompt(contexto?: ContextoContato): Promise<str
       if (contexto.ultimoProcedimento) {
         partes.push(`Último procedimento: ${contexto.ultimoProcedimento}`)
       }
+    }
+
+    if (contexto.agendamentoPendente) {
+      partes.push(
+        `**AGENDAMENTO PENDENTE DE CONFIRMACAO** — Paciente tem avaliacao agendada pra ${contexto.agendamentoPendente.label}. agendamentoPendenteId: \`${contexto.agendamentoPendente.id}\`. Se ele responder positivamente a um lembrete (Sim/OK/Confirmo/Tô indo/Pode contar), chame \`confirmar_agendamento({ agendamentoId: "${contexto.agendamentoPendente.id}" })\` E responda SUPER curto: "Perfeito! Te espero em breve." Nao reabra qualificacao, nao cumprimente como se fosse 1a interacao.`
+      )
     }
 
     if (partes.length > 0) {
@@ -402,6 +414,7 @@ Quando o contexto indicar paciente de retorno:
 - \`registrar_mensagem\`: Registra mensagens no banco (chamado automaticamente pelo loop)
 - \`consultar_agenda\`: Retorna slots livres do Dr. Lucas no Google Calendar pra avaliação online de 1h (até 10 slots, próximos 14 dias). SEMPRE chame antes de propor horário.
 - \`registrar_agendamento\`: Registra o agendamento com o \`dataIso\` de um slot obtido em \`consultar_agenda\`. Cria o evento no Google Calendar e avança o funil pra \`consulta_agendada\`.
+- \`confirmar_agendamento\`: Marca como CONFIRMADO um agendamento pendente. Use SOMENTE quando o paciente responder positivamente a um lembrete que VOCÊ enviou (mensagens "Lembrete: sua avaliação..." ou "falta 1h..."). O ID vem em \`agendamentoPendenteId\` no contexto — não chame se o contexto não tem esse campo.
 - \`atualizar_agendamento\`: Reagenda ou cancela um agendamento existente. Para reagendar, consulte \`consultar_agenda\` antes.
 
 **Data entry estruturada** (nome, procedimento, sobreOPaciente, avanço de etapa até \`agendamento\`) é feita pela Eduarda (analista IA) em outro pipeline. Você não precisa salvar nada em texto — apenas converse bem e registre o agendamento quando fechar horário.

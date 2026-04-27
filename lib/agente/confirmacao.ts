@@ -11,7 +11,7 @@ interface AgendamentoComContato {
   contato: ContatoAgente
 }
 
-type TipoConfirmacao = "6h" | "3h" | "30min"
+type TipoConfirmacao = "3h" | "1h" | "30min"
 
 interface ConfirmacaoPendente {
   agendamento: AgendamentoComContato
@@ -20,11 +20,13 @@ interface ConfirmacaoPendente {
 
 export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPendente[]> {
   const agoraTs = new Date()
-  const em7h = new Date(agoraTs.getTime() + 7 * 60 * 60 * 1000)
+  const em4h = new Date(agoraTs.getTime() + 4 * 60 * 60 * 1000)
 
   // So agendamentos criados pela IA recebem lembrete: a Ana Julia tem
   // contexto da conversa pra responder ao "Sim/Nao" do paciente. Manuais
   // (criados no painel) ficam fora — secretaria liga se quiser confirmar.
+  // Status 'confirmado' tambem fica fora — paciente ja respondeu, nao
+  // precisa encher.
   const { data, error } = await supabaseAdmin
     .from("agendamentos")
     .select(`
@@ -38,7 +40,7 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
     .in("status", ["agendado", "remarcado"] as never)
     .eq("criadoPor", "ia")
     .gt("dataHora", agoraTs.toISOString())
-    .lt("dataHora", em7h.toISOString())
+    .lt("dataHora", em4h.toISOString())
 
   if (error || !data) return []
 
@@ -71,11 +73,13 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
     }
 
     // Janelas amplas + dedup por confirmacoesEnviadas previne lembrete perdido
-    // se o cron atrasar. Ordem: 6h -> 3h -> 30min.
-    if (diffHoras > 3 && diffHoras <= 6 && !confirmacoes.includes("6h")) {
-      pendentes.push({ agendamento, tipo: "6h" })
-    } else if (diffHoras > 0.5 && diffHoras <= 3 && !confirmacoes.includes("3h")) {
+    // se o cron atrasar. Ordem: 3h -> 1h -> 30min. Janelas mais proximas
+    // pq lembrete com 1 dia de antecedencia nao gera resposta confiavel —
+    // o paciente confirma e esquece.
+    if (diffHoras > 1 && diffHoras <= 3 && !confirmacoes.includes("3h")) {
       pendentes.push({ agendamento, tipo: "3h" })
+    } else if (diffHoras > 0.5 && diffHoras <= 1 && !confirmacoes.includes("1h")) {
+      pendentes.push({ agendamento, tipo: "1h" })
     } else if (diffMinutos > 0 && diffMinutos <= 30 && !confirmacoes.includes("30min")) {
       pendentes.push({ agendamento, tipo: "30min" })
     }
@@ -101,9 +105,9 @@ function gerarMensagemConfirmacao(
   const hora = formatarHora(dataHora)
 
   const mensagens: Record<TipoConfirmacao, string> = {
-    "6h": `Oi ${nome}! Lembrete: você tem avaliação com Dr. Lucas hoje às ${hora}. Confirma presença?`,
-    "3h": `Oi ${nome}, só passando para confirmar: são ${hora} com o Dr. Lucas hoje! Tudo certo?`,
-    "30min": `Oi ${nome}! Sua avaliação com Dr. Lucas é em aproximadamente 30 minutos. Qualquer dúvida é só chamar.`,
+    "3h": `Oi ${nome}! Lembrete: sua avaliação com o Dr. Lucas é hoje às ${hora}. Confirma presença?`,
+    "1h": `Oi ${nome}, falta 1h pra sua avaliação com o Dr. Lucas (${hora}). Tudo certo pra estar online?`,
+    "30min": `Oi ${nome}! Sua avaliação com o Dr. Lucas é em aproximadamente 30 minutos. Qualquer dúvida é só chamar.`,
   }
 
   return mensagens[tipo]

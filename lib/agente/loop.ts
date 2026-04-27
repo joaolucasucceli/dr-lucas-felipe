@@ -2,7 +2,7 @@ import { openai } from "@/lib/openai"
 import { supabaseAdmin } from "@/lib/supabase"
 import { obterELimparBuffer } from "@/lib/agente/buffer"
 import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
-import { gerarSystemPrompt } from "@/lib/agente/prompt"
+import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
 import { detectarGatilhoMidia } from "@/lib/agente/gatilho-midia"
 import { abrirNovoCiclo } from "@/lib/agente/kanban-sync"
@@ -78,16 +78,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
 
-  let contextoContato: {
-    nome?: string
-    procedimento?: string
-    etapa?: string
-    sobreOPaciente?: string
-    ehRetorno?: boolean
-    cicloAtual?: number
-    ciclosCompletos?: number
-    ultimoProcedimento?: string | null
-  } = {}
+  let contextoContato: ContextoContato = {}
   let contatoId: string | null = null
   let conversaId: string | null = null
 
@@ -195,6 +186,41 @@ export async function processarMensagens(chatId: string): Promise<void> {
     await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
   } catch {
     console.warn("[Agente] Erro ao enviar indicador de digitacao")
+  }
+
+  // Busca agendamento futuro pendente de confirmacao pra IA reconhecer
+  // resposta de lembrete e chamar confirmar_agendamento.
+  if (contatoId && contextoContato) {
+    try {
+      const { data: ag } = await supabaseAdmin
+        .from("agendamentos")
+        .select("id, dataHora, status")
+        .eq("contatoId", contatoId)
+        .in("status", ["agendado", "remarcado"] as never)
+        .gt("dataHora", new Date().toISOString())
+        .order("dataHora", { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      if (ag) {
+        const data = new Date(ag.dataHora)
+        const label = new Intl.DateTimeFormat("pt-BR", {
+          timeZone: "America/Sao_Paulo",
+          weekday: "short",
+          day: "2-digit",
+          month: "long",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(data)
+        contextoContato.agendamentoPendente = {
+          id: ag.id,
+          dataHoraIso: ag.dataHora,
+          label,
+        }
+      }
+    } catch (err) {
+      console.warn("[Agente] Erro ao buscar agendamento pendente:", err)
+    }
   }
 
   try {

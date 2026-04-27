@@ -75,7 +75,7 @@ export function ReagendarDialog({
       const res = await fetch(`/api/agendamentos/${agendamento.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataHora: novaIso }),
+        body: JSON.stringify({ dataHora: novaIso, status: "remarcado" }),
       })
       if (!res.ok) {
         const e = await res.json().catch(() => ({}))

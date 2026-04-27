@@ -154,6 +154,24 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "confirmar_agendamento",
+      description:
+        "Marca um agendamento como CONFIRMADO. Use quando o paciente responder positivamente (Sim, Confirmo, OK, Pode confirmar, Tô confirmando) a um lembrete de presença que VOCÊ enviou. O ID do agendamento pendente está no contexto do paciente (agendamentoPendenteId). Não use sem ID válido — se não houver agendamento pendente no contexto, ignore.",
+      parameters: {
+        type: "object",
+        properties: {
+          agendamentoId: {
+            type: "string",
+            description: "ID do agendamento pendente (vem de agendamentoPendenteId no contexto)",
+          },
+        },
+        required: ["agendamentoId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "atualizar_agendamento",
       description:
         "Remarca ou cancela um agendamento existente do paciente.",
