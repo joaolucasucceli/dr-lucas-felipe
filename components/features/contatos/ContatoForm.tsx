@@ -29,6 +29,7 @@ const formSchema = z.object({
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   procedimentoInteresse: z.string().optional(),
   origem: z.string().optional(),
+  tipo: z.enum(["lead", "paciente"]),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -56,6 +57,7 @@ export function ContatoForm({
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -65,8 +67,11 @@ export function ContatoForm({
       email: "",
       procedimentoInteresse: "",
       origem: "",
+      tipo: "lead",
     },
   })
+
+  const tipoAtual = watch("tipo")
 
   useEffect(() => {
     if (!aberto) {
@@ -85,6 +90,7 @@ export function ContatoForm({
     const body: Record<string, unknown> = {
       nome: data.nome,
       whatsapp: data.whatsapp,
+      tipo: data.tipo,
     }
 
     if (data.email) body.email = data.email
@@ -104,7 +110,7 @@ export function ContatoForm({
         return
       }
 
-      toast.success("Contato criado")
+      toast.success(data.tipo === "paciente" ? "Paciente criado" : "Lead criado")
       reset()
       onSucesso()
     } catch {
@@ -119,6 +125,27 @@ export function ContatoForm({
           <DialogTitle>Novo Contato</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label>Tipo</Label>
+            <Select
+              value={tipoAtual}
+              onValueChange={(v) => setValue("tipo", v as "lead" | "paciente")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lead">Lead</SelectItem>
+                <SelectItem value="paciente">Paciente</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {tipoAtual === "paciente"
+                ? "Paciente já fechou — prontuário será criado automaticamente."
+                : "Lead em qualificação. Vira paciente depois que decide fazer."}
+            </p>
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="contato-nome">Nome</Label>
             <Input id="contato-nome" {...register("nome")} />

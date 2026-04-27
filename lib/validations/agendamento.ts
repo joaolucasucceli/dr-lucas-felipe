@@ -21,8 +21,8 @@ export type TipoAgendamento = (typeof TIPOS_AGENDAMENTO)[number]
 export type StatusAgendamento = (typeof STATUS_AGENDAMENTO)[number]
 
 export const ROTULOS_TIPO_AGENDAMENTO: Record<TipoAgendamento, string> = {
-  diagnostico: "Diagnóstico",
-  consulta_online: "Consulta online",
+  diagnostico: "Avaliação online",
+  consulta_online: "Avaliação online",
   consulta_presencial: "Consulta presencial",
   procedimento: "Procedimento",
   retorno: "Retorno",
@@ -32,9 +32,11 @@ export const ROTULOS_TIPO_AGENDAMENTO: Record<TipoAgendamento, string> = {
 export const criarAgendamentoSchema = z.object({
   contatoId: z.string().min(1, "Contato é obrigatório"),
   procedimentoId: z.string().nullable().optional(),
-  tipo: z.enum(TIPOS_AGENDAMENTO),
+  // tipo e duracao sao IGNORADOS no POST: o servidor forca consulta_online + 60min
+  // (a clinica so agenda avaliacao online com Dr. Lucas pelo painel).
+  tipo: z.enum(TIPOS_AGENDAMENTO).optional(),
   dataHora: z.string().datetime({ offset: true }).or(z.string().min(10)),
-  duracao: z.number().int().positive().default(60),
+  duracao: z.number().int().positive().optional(),
   observacao: z.string().nullable().optional(),
   status: z.enum(STATUS_AGENDAMENTO).default("agendado"),
 })

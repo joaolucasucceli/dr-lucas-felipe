@@ -21,10 +21,7 @@ import { FormDialog } from "@/components/features/shared/FormDialog"
 import { useProcedimentos } from "@/hooks/use-procedimentos"
 import { useContatos } from "@/hooks/use-contatos"
 import {
-  TIPOS_AGENDAMENTO,
   STATUS_AGENDAMENTO,
-  ROTULOS_TIPO_AGENDAMENTO,
-  type TipoAgendamento,
   type StatusAgendamento,
 } from "@/lib/validations/agendamento"
 import { formatarWhatsapp } from "@/lib/format"
@@ -38,15 +35,12 @@ const ROTULOS_STATUS: Record<StatusAgendamento, string> = {
   remarcado: "Remarcado",
 }
 
+// Avaliacao online com Dr. Lucas: tipo e duracao sao FIXOS no painel
+// (consulta_online + 60min). A clinica so agenda esse tipo via /agenda.
 const formSchema = z.object({
   contatoId: z.string().min(1, "Selecione um contato"),
   procedimentoId: z.string().nullable().optional(),
-  tipo: z.enum(TIPOS_AGENDAMENTO),
   dataHora: z.string().min(10, "Data/hora obrigatória"),
-  duracao: z
-    .union([z.string(), z.number()])
-    .transform((v) => (typeof v === "string" ? parseInt(v, 10) : v))
-    .refine((v) => !isNaN(v) && v > 0, "Duração deve ser positiva"),
   observacao: z.string().nullable().optional(),
   status: z.enum(STATUS_AGENDAMENTO),
 })
@@ -106,15 +100,12 @@ export function AgendamentoForm({
     defaultValues: {
       contatoId: "",
       procedimentoId: null,
-      tipo: "consulta_online",
       dataHora: "",
-      duracao: 60,
       observacao: "",
       status: "agendado",
     },
   })
 
-  const tipoAtual = watch("tipo")
   const procedimentoIdAtual = watch("procedimentoId")
   const contatoIdAtual = watch("contatoId")
 
@@ -125,9 +116,7 @@ export function AgendamentoForm({
       reset({
         contatoId: agendamento.contatoId,
         procedimentoId: agendamento.procedimentoId,
-        tipo: agendamento.tipo,
         dataHora: isoParaInput(agendamento.dataHora),
-        duracao: agendamento.duracao,
         observacao: agendamento.observacao,
         status: agendamento.status,
       })
@@ -145,9 +134,7 @@ export function AgendamentoForm({
       reset({
         contatoId: "",
         procedimentoId: null,
-        tipo: "consulta_online",
         dataHora: "",
-        duracao: 60,
         observacao: "",
         status: "agendado",
       })
@@ -157,15 +144,6 @@ export function AgendamentoForm({
     }
   }, [agendamento, aberto, reset])
 
-  // Quando seleciona um procedimento, herda a duração padrão se ainda for default
-  useEffect(() => {
-    if (!procedimentoIdAtual) return
-    const proc = procedimentos.find((p) => p.id === procedimentoIdAtual)
-    if (proc && proc.duracaoMin) {
-      setValue("duracao", proc.duracaoMin)
-    }
-  }, [procedimentoIdAtual, procedimentos, setValue])
-
   function selecionarContato(c: { id: string; nome: string; whatsapp: string | null }) {
     setContatoSelecionado(c)
     setValue("contatoId", c.id, { shouldValidate: true })
@@ -174,12 +152,14 @@ export function AgendamentoForm({
   }
 
   async function onSubmit(values: FormData) {
+    // Avaliacao online: tipo e duracao sempre fixos (clinica nao agenda
+    // outros tipos pelo painel — Ana Julia tambem so agenda esse).
     const payload = {
       contatoId: values.contatoId,
       procedimentoId: values.procedimentoId || null,
-      tipo: values.tipo,
+      tipo: "consulta_online" as const,
       dataHora: new Date(values.dataHora).toISOString(),
-      duracao: typeof values.duracao === "string" ? parseInt(values.duracao, 10) : values.duracao,
+      duracao: 60,
       observacao: values.observacao || null,
       status: values.status,
     }
@@ -303,27 +283,8 @@ export function AgendamentoForm({
         )}
       </div>
 
-      {/* Tipo + Data/hora */}
+      {/* Data/hora + Procedimento (informativo) */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label>Tipo de agendamento</Label>
-          <Select
-            value={tipoAtual}
-            onValueChange={(v) => setValue("tipo", v as TipoAgendamento)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TIPOS_AGENDAMENTO.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {ROTULOS_TIPO_AGENDAMENTO[t]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="grid gap-2">
           <Label htmlFor="ag-data">Data e hora</Label>
           <Input
@@ -334,13 +295,13 @@ export function AgendamentoForm({
           {errors.dataHora && (
             <p className="text-xs text-destructive">{errors.dataHora.message}</p>
           )}
+          <p className="text-xs text-muted-foreground">
+            Avaliação online com o Dr. Lucas — duração fixa de 1h.
+          </p>
         </div>
-      </div>
 
-      {/* Procedimento + Duração */}
-      <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label>Procedimento (opcional)</Label>
+          <Label>Procedimento de interesse <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
           <Select
             value={procedimentoIdAtual || "__nenhum__"}
             onValueChange={(v) => setValue("procedimentoId", v === "__nenhum__" ? null : v)}
@@ -357,20 +318,6 @@ export function AgendamentoForm({
               ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <div className="grid gap-2">
-          <Label htmlFor="ag-duracao">Duração (min)</Label>
-          <Input
-            id="ag-duracao"
-            type="number"
-            min="5"
-            step="5"
-            {...register("duracao")}
-          />
-          {errors.duracao && (
-            <p className="text-xs text-destructive">{errors.duracao.message as string}</p>
-          )}
         </div>
       </div>
 

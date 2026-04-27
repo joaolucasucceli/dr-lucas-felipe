@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { whatsapp, consentimentoLgpd, ...resto } = parsed.data
+  const { whatsapp, consentimentoLgpd, tipo: tipoSolicitado, ...resto } = parsed.data
 
   const { data: existente } = await supabaseAdmin
     .from("contatos")
@@ -105,10 +105,10 @@ export async function POST(request: NextRequest) {
 
   const tsAgora = agora()
 
-  // Lead nasce sob responsabilidade da IA por padrao (atendimento autonomo).
-  // Gestor pode reatribuir manualmente depois.
+  // Contato criado manual nasce sob responsabilidade da IA quando for lead
+  // (atendimento autonomo). Pra paciente: sem responsavel default.
   let responsavelIdDefault: string | null = null
-  if (!resto.responsavelId) {
+  if (!resto.responsavelId && tipoSolicitado === "lead") {
     const { data: iaUser } = await supabaseAdmin
       .from("usuarios")
       .select("id")
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
   const insertData = {
     id: criarId(),
-    tipo: "lead" as const,
+    tipo: "lead" as const, // sempre cria como lead; promove logo apos se preciso
     whatsapp,
     atualizadoEm: tsAgora,
     consentimentoLgpd: consentimentoLgpd ?? false,
@@ -139,6 +139,29 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Se foi criado como paciente, promove na sequencia (cria prontuario +
+  // anamnese vazia via promoverContatoPaciente).
+  if (tipoSolicitado === "paciente") {
+    const { promoverContatoPaciente } = await import(
+      "@/lib/contatos/promover-paciente"
+    )
+    try {
+      await promoverContatoPaciente(contato.id, auth.session.user.id)
+      const { data: contatoPaciente } = await supabaseAdmin
+        .from("contatos")
+        .select(
+          "id, tipo, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, criadoEm"
+        )
+        .eq("id", contato.id)
+        .single()
+      return NextResponse.json(contatoPaciente ?? contato, { status: 201 })
+    } catch (err) {
+      console.error("[Contatos] Falha ao promover apos criar:", err)
+      // Contato ja foi criado como lead — devolve assim mesmo, gestor
+      // pode promover manualmente depois.
+    }
   }
 
   return NextResponse.json(contato, { status: 201 })

@@ -26,7 +26,12 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { contatoId, procedimentoId, tipo, dataHora, duracao, observacao, status } = parsed.data
+  const { contatoId, procedimentoId, dataHora, observacao, status } = parsed.data
+
+  // A clinica so faz avaliacao online com Dr. Lucas (1h fixa). Tipo e
+  // duracao sao forcados aqui pra evitar bypass do form.
+  const tipo = "consulta_online" as const
+  const duracao = 60
   const inicio = new Date(dataHora)
 
   const tsAgora = agora()

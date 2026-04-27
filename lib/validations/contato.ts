@@ -23,6 +23,8 @@ export const criarContatoSchema = z.object({
   statusFunil: z.enum(STATUS_FUNIL_VALUES).default("acolhimento"),
   responsavelId: z.string().cuid().optional(),
   consentimentoLgpd: z.boolean().optional(),
+  // Permite criar direto como paciente (cria prontuario na sequencia).
+  tipo: z.enum(TIPO_CONTATO).default("lead"),
 })
 
 export const atualizarContatoSchema = z.object({
