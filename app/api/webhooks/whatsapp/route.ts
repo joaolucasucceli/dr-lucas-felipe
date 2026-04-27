@@ -53,15 +53,48 @@ const MIME_MAP: Record<string, string> = {
 }
 
 async function downloadEUploadMidia(
-  mediaUrl: string,
+  mediaUrl: string | null,
   tipo: TipoMensagem,
-  messageId: string
+  messageId: string,
+  configWa: { uazapiUrl?: string | null; instanceToken?: string | null } | null
 ): Promise<string | null> {
   try {
-    const res = await fetch(mediaUrl)
-    if (!res.ok) return null
+    let buffer: Buffer | null = null
+    let mimetypeDetectado: string | null = null
 
-    const buffer = Buffer.from(await res.arrayBuffer())
+    // 1. Tenta URL direta (Uazapi v1 padrao ou link publico). Pode falhar
+    // com 401/403/404 quando a Uazapi exige token.
+    if (mediaUrl) {
+      try {
+        const res = await fetch(mediaUrl)
+        if (res.ok) {
+          buffer = Buffer.from(await res.arrayBuffer())
+        }
+      } catch {
+        // segue pro fallback
+      }
+    }
+
+    // 2. Fallback Uazapi v2: POST /message/download via baixarMidia.
+    // Necessario porque a v2 nao manda mediaUrl publica no payload do
+    // webhook — exige chamada explicita pra obter base64.
+    if (!buffer && configWa?.uazapiUrl && configWa?.instanceToken) {
+      const baixado = await baixarMidia(
+        configWa.uazapiUrl,
+        configWa.instanceToken,
+        messageId
+      )
+      if (baixado?.base64) {
+        buffer = Buffer.from(baixado.base64, "base64")
+        mimetypeDetectado = baixado.mimetype
+      }
+    }
+
+    if (!buffer) {
+      console.warn(`[webhook-whatsapp] sem buffer pra midia ${messageId} (tipo ${tipo})`)
+      return null
+    }
+
     const ext =
       tipo === "imagem"
         ? "jpg"
@@ -78,13 +111,11 @@ async function downloadEUploadMidia(
     // usado pela aba "Fotos" do contato no painel). Demais tipos ficam
     // num bucket de midias gerais.
     const bucket = tipo === "imagem" ? BUCKET_FOTOS_CONTATO : "atendimento-midias"
+    const contentType = mimetypeDetectado || MIME_MAP[tipo] || "application/octet-stream"
 
     const { error } = await supabaseAdmin.storage
       .from(bucket)
-      .upload(path, buffer, {
-        contentType: MIME_MAP[tipo] || "application/octet-stream",
-        upsert: true,
-      })
+      .upload(path, buffer, { contentType, upsert: true })
 
     if (error) {
       console.error(`[webhook-whatsapp] upload em '${bucket}' falhou:`, error.message)
@@ -316,8 +347,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (msg.mediaUrl && msg.tipo !== "texto") {
-      storedMediaUrl = await downloadEUploadMidia(msg.mediaUrl, msg.tipo, msg.id)
+    if (msg.tipo !== "texto") {
+      // Carrega config Uazapi pra fallback /message/download (v2) caso
+      // o payload nao tenha mediaUrl publica.
+      const { data: configWaMidia } = await supabaseAdmin
+        .from("config_whatsapp")
+        .select("uazapiUrl, instanceToken")
+        .eq("ativo", true)
+        .maybeSingle()
+
+      storedMediaUrl = await downloadEUploadMidia(
+        msg.mediaUrl,
+        msg.tipo,
+        msg.id,
+        configWaMidia
+      )
     }
 
     const { data: contatoExistente } = await supabaseAdmin

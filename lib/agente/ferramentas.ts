@@ -257,13 +257,19 @@ export async function executarFerramenta(
     const data = await res.json()
 
     if (!res.ok) {
-      // Log para observabilidade, mas a resposta (mesmo 4xx/5xx) e repassada
-      // a IA para que ela ajuste o proximo turn com base no erro semantico.
-      // Mascarar como "concluido" fazia a IA alucinar sucesso ao paciente.
+      // 4xx/5xx: a IA precisa de sinal CANONICO de falha pra nao alucinar
+      // sucesso. Padronizamos { ok: false, error, httpStatus } pra ela
+      // saber que a tool falhou e poder responder com graca ao paciente.
+      const errorMsg =
+        (data as { error?: string })?.error || `Falha HTTP ${res.status}`
       console.error(
-        `[Ferramenta] ${nome} retornou HTTP ${res.status}:`,
-        JSON.stringify(data).slice(0, 300)
+        `[Ferramenta] ${nome} retornou HTTP ${res.status}: ${errorMsg}`
       )
+      return JSON.stringify({
+        ok: false,
+        error: errorMsg,
+        httpStatus: res.status,
+      })
     }
 
     return JSON.stringify(data)

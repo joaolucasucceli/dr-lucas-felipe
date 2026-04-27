@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
     .from("midia_marketing")
     .select("id, descricao, url")
     .eq("id", midiaId)
-    .eq("ativo", true)
     .is("deletadoEm", null)
     .maybeSingle()
 

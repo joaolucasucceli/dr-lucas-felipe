@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarEvento } from "@/lib/google-calendar"
 import { criarId, agora } from "@/lib/db-utils"
+import { validarSlotManual } from "@/lib/agendamento/validar-slot"
 
 const schema = z.object({
   contatoId: z.string().min(1),
@@ -37,6 +38,14 @@ export async function POST(request: NextRequest) {
   const { contatoId, conversaId, procedimentoId, dataHora, observacao, email } = parsed.data
 
   const inicio = new Date(dataHora)
+
+  // Mesma validacao do POST manual: bloqueia conflito, fora-de-expediente,
+  // feriado, data passada. Combinado com executarFerramenta retornando
+  // { ok: false } em 4xx, a IA recebe motivo e pode oferecer outro slot.
+  const validacao = await validarSlotManual(inicio, 60)
+  if (!validacao.ok) {
+    return NextResponse.json({ error: validacao.motivo }, { status: 400 })
+  }
 
   // Se IA passou email, salva no contato pra reuso (Google Calendar invite,
   // futura comunicacao). Antes de criar evento, pra garantir que a busca
