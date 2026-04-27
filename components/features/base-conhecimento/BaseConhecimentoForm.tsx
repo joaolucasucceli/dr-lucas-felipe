@@ -100,6 +100,10 @@ export function BaseConhecimentoForm({
       onSubmit={handleSubmit(onSubmit)}
       largura="lg"
     >
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Use para informações que a Ana Júlia precisa consultar (endereço, formas de pagamento, formação do Dr. Lucas, pós-operatório). Não use para scripts ou regras de comportamento — isso fica no prompt da IA.
+      </p>
+
       <div className="grid gap-2">
         <Label htmlFor="bc-titulo">Título</Label>
         <Input id="bc-titulo" {...register("titulo")} />
@@ -112,7 +116,7 @@ export function BaseConhecimentoForm({
         <Label htmlFor="bc-conteudo">Conteúdo</Label>
         <Textarea
           id="bc-conteudo"
-          rows={8}
+          className="min-h-[180px] max-h-[400px]"
           {...register("conteudo")}
           placeholder="Texto que a Ana Júlia pode usar para responder pacientes"
         />

@@ -96,7 +96,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "consultar_agenda",
       description:
-        "Consulta os horários disponíveis para avaliação presencial com o Dr. Lucas no Google Calendar, cruzando com o expediente da clínica (seg-sex 8h-18h, sáb 8h-12h). Retorna até 10 slots livres nos próximos 14 dias. SEMPRE use antes de propor horários ao paciente — nunca invente horário disponível. Se o paciente deu preferência ('semana que vem de manhã'), filtre os slots retornados antes de propor 2-3.",
+        "Consulta os horários disponíveis para avaliação online (gratuita) com o Dr. Lucas no Google Calendar, cruzando com o expediente da clínica (seg-sex 8h-18h, sáb 8h-12h). Retorna até 10 slots livres nos próximos 14 dias. SEMPRE use antes de propor horários ao paciente — nunca invente horário disponível. Se o paciente deu preferência ('semana que vem de manhã'), filtre os slots retornados antes de propor 2-3.",
       parameters: {
         type: "object",
         properties: {
@@ -125,7 +125,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "registrar_agendamento",
       description:
-        "Cria um agendamento de avaliação presencial para o paciente. Avança automaticamente o funil para 'consulta_agendada'.",
+        "Cria um agendamento de avaliação online (gratuita) para o paciente. Avança automaticamente o funil para 'consulta_agendada'.",
       parameters: {
         type: "object",
         properties: {

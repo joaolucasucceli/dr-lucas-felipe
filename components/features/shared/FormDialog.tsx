@@ -51,15 +51,24 @@ export function FormDialog({
 }: FormDialogProps) {
   return (
     <Dialog open={aberto} onOpenChange={(open) => !open && onFechar()}>
-      <DialogContent className={cn(LARGURAS[largura], className)}>
+      <DialogContent
+        className={cn(
+          LARGURAS[largura],
+          "max-h-[85vh] overflow-hidden flex flex-col",
+          className
+        )}
+      >
         <DialogHeader>
           <DialogTitle>
             {editando ? `Editar ${titulo}` : `Novo ${titulo}`}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="grid gap-4">
+        <form
+          onSubmit={onSubmit}
+          className="grid gap-4 overflow-y-auto pr-1 -mr-1"
+        >
           {children}
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2 sticky bottom-0 bg-background">
             <Button type="button" variant="outline" onClick={onFechar}>
               Cancelar
             </Button>
