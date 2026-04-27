@@ -15,9 +15,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
@@ -219,24 +217,9 @@ export default function ContatoDetalhePage({ params }: PageProps) {
         )}
       </PageHeader>
 
-      <Tabs defaultValue="info">
-        <TabsList>
-          <TabsTrigger value="info">Informações</TabsTrigger>
-          {!ehPaciente && (
-            <TabsTrigger value="historico">Histórico de atendimento</TabsTrigger>
-          )}
-          <TabsTrigger value="fotos">
-            Fotos
-            {contato.fotos.length > 0 && (
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {contato.fotos.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          {ehPaciente && <TabsTrigger value="prontuario">Prontuário</TabsTrigger>}
-        </TabsList>
-
-        <TabsContent value="info" className="mt-6 grid gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        {/* Coluna esquerda: Dados → Fotos → Observações */}
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Dados do contato</CardTitle>
@@ -382,95 +365,111 @@ export default function ContatoDetalhePage({ params }: PageProps) {
 
           <Card>
             <CardHeader>
+              <CardTitle className="text-base">
+                Fotos
+                {contato.fotos.length > 0 && (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    ({contato.fotos.length})
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GaleriaFotos
+                contatoId={contato.id}
+                fotosIniciais={contato.fotos.map((f) => ({
+                  id: f.id,
+                  url: f.url,
+                  descricao: f.descricao,
+                  categoria: f.categoria,
+                  tipoAnalise: f.tipoAnalise,
+                  criadoEm: f.criadoEm,
+                }))}
+                isGestor={ehGestor}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="text-base">Observações sobre o contato</CardTitle>
             </CardHeader>
             <CardContent>
               <NotasContato texto={contato.sobreOPaciente} onAdicionar={adicionarNota} />
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        {!ehPaciente && (
-          <TabsContent value="historico" className="mt-6">
-            {contato.conversas.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                  Sem conversas registradas.
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {contato.conversas.map((conversa) => (
-                  <Card key={conversa.id}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-3">
-                      <div className="flex items-center gap-2">
-                        <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle className="text-sm">
-                          {ROTULO_ETAPA[conversa.etapa] ?? conversa.etapa}
-                        </CardTitle>
-                      </div>
-                      <Badge variant={conversa.modoConversa === "ia" ? "default" : "outline"} className="text-xs">
-                        {conversa.modoConversa === "ia" ? "Ana Júlia" : "Atendente"}
-                      </Badge>
-                    </CardHeader>
-                  <CardContent className="space-y-2 max-h-[480px] overflow-y-auto">
-                    {conversa.mensagens.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Sem mensagens</p>
-                    ) : (
-                      conversa.mensagens.map((m) => {
-                        const ehLead = m.remetente === "paciente"
-                        const rotuloRemetente = ehLead
-                          ? "Lead"
-                          : m.remetente === "atendente"
-                            ? "Atendente"
-                            : "Ana Júlia"
-                        return (
-                          <div
-                            key={m.id}
-                            className={`flex ${ehLead ? "justify-start" : "justify-end"}`}
-                          >
-                            <div
-                              className={`max-w-[75%] rounded-2xl p-3 text-sm ${
-                                ehLead
-                                  ? "bg-muted rounded-bl-sm"
-                                  : "bg-primary/15 rounded-br-sm"
-                              }`}
-                            >
-                              <div className="text-[10px] uppercase text-muted-foreground mb-1">
-                                {rotuloRemetente}{" "}·{" "}
-                                {formatarData(m.criadoEm, "dd/MM/yyyy 'às' HH:mm")}
-                              </div>
-                              <div className="whitespace-pre-wrap">{m.conteudo}</div>
-                            </div>
+        {/* Coluna direita: Histórico (lead) ou Prontuário (paciente) */}
+        <div className="space-y-6">
+          {!ehPaciente && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Histórico de atendimento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {contato.conversas.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center p-6">
+                    Sem conversas registradas.
+                  </p>
+                ) : (
+                  <div className="space-y-6">
+                    {contato.conversas.map((conversa) => (
+                      <div key={conversa.id} className="space-y-2">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">
+                              {ROTULO_ETAPA[conversa.etapa] ?? conversa.etapa}
+                            </span>
                           </div>
-                        )
-                      })
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                          <span className="text-xs text-muted-foreground">
+                            {conversa.modoConversa === "ia" ? "Ana Júlia" : "Atendente"}
+                          </span>
+                        </div>
+                        <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                          {conversa.mensagens.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">Sem mensagens</p>
+                          ) : (
+                            conversa.mensagens.map((m) => {
+                              const ehLead = m.remetente === "paciente"
+                              const rotuloRemetente = ehLead
+                                ? "Lead"
+                                : m.remetente === "atendente"
+                                  ? "Atendente"
+                                  : "Ana Júlia"
+                              return (
+                                <div
+                                  key={m.id}
+                                  className={`flex ${ehLead ? "justify-start" : "justify-end"}`}
+                                >
+                                  <div
+                                    className={`max-w-[85%] rounded-2xl p-3 text-sm ${
+                                      ehLead
+                                        ? "bg-muted rounded-bl-sm"
+                                        : "bg-primary/15 rounded-br-sm"
+                                    }`}
+                                  >
+                                    <div className="text-[10px] uppercase text-muted-foreground mb-1">
+                                      {rotuloRemetente}{" "}·{" "}
+                                      {formatarData(m.criadoEm, "dd/MM/yyyy 'às' HH:mm")}
+                                    </div>
+                                    <div className="whitespace-pre-wrap">{m.conteudo}</div>
+                                  </div>
+                                </div>
+                              )
+                            })
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
-          </TabsContent>
-        )}
 
-        <TabsContent value="fotos" className="mt-6">
-          <GaleriaFotos
-            contatoId={contato.id}
-            fotosIniciais={contato.fotos.map((f) => ({
-              id: f.id,
-              url: f.url,
-              descricao: f.descricao,
-              categoria: f.categoria,
-              tipoAnalise: f.tipoAnalise,
-              criadoEm: f.criadoEm,
-            }))}
-            isGestor={ehGestor}
-          />
-        </TabsContent>
-
-        {ehPaciente && (
-          <TabsContent value="prontuario" className="mt-6">
+          {ehPaciente && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -502,7 +501,8 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                       </div>
                     </div>
                     <div className="text-center text-sm text-muted-foreground">
-                      Nº Prontuário: <span className="font-mono">{contato.prontuario.numero}</span>
+                      Nº Prontuário:{" "}
+                      <span className="font-mono">{contato.prontuario.numero}</span>
                     </div>
                     <div className="flex justify-center">
                       <Link href={`/contatos/${id}/prontuario`}>
@@ -517,9 +517,9 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+          )}
+        </div>
+      </div>
 
       <ConfirmDialog
         titulo="Promover a paciente?"

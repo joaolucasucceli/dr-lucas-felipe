@@ -104,6 +104,20 @@ export async function POST(request: NextRequest) {
   }
 
   const tsAgora = agora()
+
+  // Lead nasce sob responsabilidade da IA por padrao (atendimento autonomo).
+  // Gestor pode reatribuir manualmente depois.
+  let responsavelIdDefault: string | null = null
+  if (!resto.responsavelId) {
+    const { data: iaUser } = await supabaseAdmin
+      .from("usuarios")
+      .select("id")
+      .eq("tipo", "ia")
+      .is("deletadoEm", null)
+      .maybeSingle()
+    responsavelIdDefault = iaUser?.id ?? null
+  }
+
   const insertData = {
     id: criarId(),
     tipo: "lead" as const,
@@ -112,6 +126,7 @@ export async function POST(request: NextRequest) {
     consentimentoLgpd: consentimentoLgpd ?? false,
     consentimentoLgpdEm: consentimentoLgpd ? tsAgora : null,
     ...resto,
+    responsavelId: resto.responsavelId ?? responsavelIdDefault,
   } as never
 
   const { data: contato, error } = await supabaseAdmin

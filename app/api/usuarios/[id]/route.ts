@@ -111,12 +111,37 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     )
   }
 
+  // Reapontar contatos onde esse usuario era responsavel:
+  // - leads -> IA (atendimento autonomo continua)
+  // - pacientes -> null (cabe ao gestor reatribuir manualmente)
+  const tsAgora = agora()
+  const { data: iaUser } = await supabaseAdmin
+    .from("usuarios")
+    .select("id")
+    .eq("tipo", "ia")
+    .is("deletadoEm", null)
+    .maybeSingle()
+
+  if (iaUser) {
+    await supabaseAdmin
+      .from("contatos")
+      .update({ responsavelId: iaUser.id, atualizadoEm: tsAgora })
+      .eq("responsavelId", id)
+      .eq("tipo", "lead")
+  }
+
+  await supabaseAdmin
+    .from("contatos")
+    .update({ responsavelId: null, atualizadoEm: tsAgora })
+    .eq("responsavelId", id)
+    .eq("tipo", "paciente")
+
   const { error } = await supabaseAdmin
     .from("usuarios")
     .update({
-      deletadoEm: agora(),
+      deletadoEm: tsAgora,
       ativo: false,
-      atualizadoEm: agora(),
+      atualizadoEm: tsAgora,
     })
     .eq("id", id)
 

@@ -34,9 +34,32 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Reapontar contatos antes do soft-delete: leads -> IA, pacientes -> null
+  const tsAgora = agora()
+  const { data: iaUser } = await supabaseAdmin
+    .from("usuarios")
+    .select("id")
+    .eq("tipo", "ia")
+    .is("deletadoEm", null)
+    .maybeSingle()
+
+  if (iaUser) {
+    await supabaseAdmin
+      .from("contatos")
+      .update({ responsavelId: iaUser.id, atualizadoEm: tsAgora })
+      .in("responsavelId", idsFiltrados)
+      .eq("tipo", "lead")
+  }
+
+  await supabaseAdmin
+    .from("contatos")
+    .update({ responsavelId: null, atualizadoEm: tsAgora })
+    .in("responsavelId", idsFiltrados)
+    .eq("tipo", "paciente")
+
   const { data, error } = await supabaseAdmin
     .from("usuarios")
-    .update({ deletadoEm: agora(), ativo: false, atualizadoEm: agora() })
+    .update({ deletadoEm: tsAgora, ativo: false, atualizadoEm: tsAgora })
     .in("id", idsFiltrados)
     .neq("tipo", "ia")
     .is("deletadoEm", null)
