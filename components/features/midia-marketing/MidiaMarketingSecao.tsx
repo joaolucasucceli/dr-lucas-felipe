@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, MoreHorizontal, Pencil, EyeOff, Eye, Trash2, Film, ImageIcon, Ban, CheckCircle2 } from "lucide-react"
+import { forwardRef, useImperativeHandle, useState } from "react"
+import { MoreHorizontal, Pencil, EyeOff, Eye, Trash2, Film, ImageIcon, Ban, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,13 +33,25 @@ function ehVideo(url: string): boolean {
   return /\.(mp4|webm|mov|avi|mkv|m4v)(\?|$)/i.test(url)
 }
 
-export function MidiaMarketingSecao() {
+export interface MidiaMarketingSecaoHandle {
+  abrirNovo: () => void
+}
+
+export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
+  function MidiaMarketingSecao(_, ref) {
   const [busca, setBusca] = useState("")
   const [formAberto, setFormAberto] = useState(false)
   const [editando, setEditando] = useState<MidiaMarketing | null>(null)
   const [confirmToggle, setConfirmToggle] = useState<MidiaMarketing | null>(null)
   const [confirmExcluir, setConfirmExcluir] = useState<MidiaMarketing | null>(null)
   const [preview, setPreview] = useState<MidiaMarketing | null>(null)
+
+  useImperativeHandle(ref, () => ({
+    abrirNovo: () => {
+      setEditando(null)
+      setFormAberto(true)
+    },
+  }))
 
   const { dados, carregando, erro, recarregar } = useMidiaMarketing({ busca })
 
@@ -207,13 +219,6 @@ export function MidiaMarketingSecao() {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <Button onClick={() => { setEditando(null); setFormAberto(true) }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Mídia
-        </Button>
-      </div>
-
       {carregando ? (
         <SkeletonTabela linhas={5} />
       ) : erro ? (
@@ -222,6 +227,8 @@ export function MidiaMarketingSecao() {
         <EmptyState
           titulo="Nenhuma mídia cadastrada"
           descricao="Cadastre fotos e vídeos com descrição detalhada — a IA usa a descrição para escolher qual enviar ao paciente."
+          textoBotao="Nova Mídia"
+          onAcao={() => { setEditando(null); setFormAberto(true) }}
         />
       ) : (
         <DataTable
@@ -296,4 +303,4 @@ export function MidiaMarketingSecao() {
       </Dialog>
     </div>
   )
-}
+})

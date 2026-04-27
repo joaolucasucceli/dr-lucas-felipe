@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { forwardRef, useImperativeHandle, useState } from "react"
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,11 +32,23 @@ function truncar(texto: string, max = 80): string {
   return texto.slice(0, max).trim() + "…"
 }
 
-export function BaseConhecimentoSecao() {
+export interface BaseConhecimentoSecaoHandle {
+  abrirNovo: () => void
+}
+
+export const BaseConhecimentoSecao = forwardRef<BaseConhecimentoSecaoHandle>(
+  function BaseConhecimentoSecao(_, ref) {
   const [busca, setBusca] = useState("")
   const [formAberto, setFormAberto] = useState(false)
   const [editando, setEditando] = useState<BaseConhecimento | null>(null)
   const [confirmExcluir, setConfirmExcluir] = useState<BaseConhecimento | null>(null)
+
+  useImperativeHandle(ref, () => ({
+    abrirNovo: () => {
+      setEditando(null)
+      setFormAberto(true)
+    },
+  }))
 
   const { dados, carregando, erro, recarregar } = useBaseConhecimento({
     busca: busca || undefined,
@@ -142,18 +154,6 @@ export function BaseConhecimentoSecao() {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <Button
-          onClick={() => {
-            setEditando(null)
-            setFormAberto(true)
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Conhecimento
-        </Button>
-      </div>
-
       {carregando && dados.length === 0 ? (
         <SkeletonTabela linhas={5} colunas={3} />
       ) : !carregando && dados.length === 0 && !busca ? (
@@ -213,4 +213,4 @@ export function BaseConhecimentoSecao() {
       />
     </div>
   )
-}
+})
