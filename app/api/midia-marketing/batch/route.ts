@@ -7,7 +7,7 @@ import { agora } from "@/lib/db-utils"
 
 const schema = z.object({
   ids: z.array(z.string().cuid()).min(1).max(100),
-  acao: z.enum(["ativar", "desativar", "excluir"]),
+  acao: z.literal("excluir"),
 })
 
 export async function POST(request: NextRequest) {
@@ -23,18 +23,11 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { ids, acao } = parsed.data
-
-  const dadosUpdate =
-    acao === "excluir"
-      ? { deletadoEm: agora(), ativo: false, atualizadoEm: agora() }
-      : acao === "ativar"
-        ? { ativo: true, atualizadoEm: agora() }
-        : { ativo: false, atualizadoEm: agora() }
+  const { ids } = parsed.data
 
   const { data, error } = await supabaseAdmin
     .from("midia_marketing")
-    .update(dadosUpdate)
+    .update({ deletadoEm: agora(), atualizadoEm: agora() })
     .in("id", ids)
     .is("deletadoEm", null)
     .select("id")

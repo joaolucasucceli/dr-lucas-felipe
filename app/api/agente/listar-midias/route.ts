@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
   const { data: midias } = await supabaseAdmin
     .from("midia_marketing")
     .select("id, descricao, url")
-    .eq("ativo", true)
     .is("deletadoEm", null)
 
   if (!midias || midias.length === 0) {

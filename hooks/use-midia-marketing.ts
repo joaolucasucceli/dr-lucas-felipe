@@ -6,7 +6,6 @@ interface MidiaMarketing {
   id: string
   descricao: string
   url: string
-  ativo: boolean
   criadoEm: string
 }
 

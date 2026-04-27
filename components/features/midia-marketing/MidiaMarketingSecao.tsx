@@ -1,9 +1,8 @@
 "use client"
 
 import { forwardRef, useImperativeHandle, useState } from "react"
-import { MoreHorizontal, Pencil, EyeOff, Eye, Trash2, Film, ImageIcon, Ban, CheckCircle2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Film, ImageIcon } from "lucide-react"
 import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -25,7 +24,6 @@ interface MidiaMarketing {
   id: string
   descricao: string
   url: string
-  ativo: boolean
   criadoEm: string
 }
 
@@ -42,7 +40,6 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
   const [busca, setBusca] = useState("")
   const [formAberto, setFormAberto] = useState(false)
   const [editando, setEditando] = useState<MidiaMarketing | null>(null)
-  const [confirmToggle, setConfirmToggle] = useState<MidiaMarketing | null>(null)
   const [confirmExcluir, setConfirmExcluir] = useState<MidiaMarketing | null>(null)
   const [preview, setPreview] = useState<MidiaMarketing | null>(null)
 
@@ -54,24 +51,6 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
   }))
 
   const { dados, carregando, erro, recarregar } = useMidiaMarketing({ busca })
-
-  async function handleToggle() {
-    if (!confirmToggle) return
-    try {
-      const res = await fetch(`/api/midia-marketing/${confirmToggle.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ativo: !confirmToggle.ativo }),
-      })
-      if (!res.ok) throw new Error()
-      toast.success(confirmToggle.ativo ? "Mídia desativada" : "Mídia ativada")
-      recarregar()
-    } catch {
-      toast.error("Erro ao atualizar")
-    } finally {
-      setConfirmToggle(null)
-    }
-  }
 
   async function handleExcluir() {
     if (!confirmExcluir) return
@@ -89,47 +68,31 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
     }
   }
 
-  async function executarBatch(acao: "ativar" | "desativar" | "excluir", ids: string[]) {
+  async function executarBatchExcluir(ids: string[]) {
     try {
       const res = await fetch("/api/midia-marketing/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, acao }),
+        body: JSON.stringify({ ids, acao: "excluir" }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Erro na operação")
-      const verbo = acao === "excluir" ? "excluída(s)" : acao === "ativar" ? "ativada(s)" : "desativada(s)"
-      toast.success(`${data.sucesso} de ${data.total} mídia(s) ${verbo}`)
+      if (!res.ok) throw new Error(data.error || "Erro ao excluir")
+      toast.success(`${data.sucesso} de ${data.total} mídia(s) excluída(s)`)
       recarregar()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro na operação")
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir")
     }
   }
 
   const acoesEmMassa: AcaoEmMassa[] = [
     {
-      label: "Ativar",
-      icone: <CheckCircle2 className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("ativar", ids),
-    },
-    {
-      label: "Desativar",
-      icone: <Ban className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("desativar", ids),
-      confirmacao: {
-        titulo: "Desativar mídias?",
-        descricao: (qtd) => `${qtd} mídia(s) não serão mais enviadas pela Ana Júlia.`,
-        textoBotao: "Desativar",
-      },
-    },
-    {
       label: "Excluir",
       icone: <Trash2 className="h-4 w-4" />,
       variante: "destrutivo",
-      onClick: (ids) => executarBatch("excluir", ids),
+      onClick: (ids) => executarBatchExcluir(ids),
       confirmacao: {
         titulo: "Excluir mídias?",
-        descricao: (qtd) => `${qtd} mídia(s) serão removidas permanentemente (soft-delete).`,
+        descricao: (qtd) => `${qtd} mídia(s) serão removidas permanentemente. A Ana Júlia deixa de enviá-las.`,
         textoBotao: "Excluir",
       },
     },
@@ -175,16 +138,6 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
       ),
     },
     {
-      chave: "ativo",
-      titulo: "Status",
-      classesCelula: "w-24 whitespace-nowrap",
-      renderizar: (m) => (
-        <Badge variant={m.ativo ? "default" : "secondary"}>
-          {m.ativo ? "Ativo" : "Inativo"}
-        </Badge>
-      ),
-    },
-    {
       chave: "acoes" as keyof MidiaMarketing,
       titulo: "",
       classesCelula: "w-10",
@@ -200,12 +153,8 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
               <Pencil className="mr-2 h-4 w-4" />
               Editar
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setConfirmToggle(m)}>
-              {m.ativo ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-              {m.ativo ? "Desativar" : "Ativar"}
-            </DropdownMenuItem>
             <DropdownMenuItem
-              className="text-destructive"
+              className="text-destructive focus:text-destructive"
               onClick={() => setConfirmExcluir(m)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -260,17 +209,8 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
       />
 
       <ConfirmDialog
-        titulo={confirmToggle?.ativo ? "Desativar mídia" : "Ativar mídia"}
-        descricao={`Tem certeza que deseja ${confirmToggle?.ativo ? "desativar" : "ativar"} essa mídia?`}
-        aberto={!!confirmToggle}
-        onFechar={() => setConfirmToggle(null)}
-        onConfirmar={handleToggle}
-        textoBotao={confirmToggle?.ativo ? "Desativar" : "Ativar"}
-      />
-
-      <ConfirmDialog
         titulo="Excluir mídia"
-        descricao="Tem certeza que deseja excluir essa mídia?"
+        descricao="Tem certeza que deseja excluir essa mídia? A Ana Júlia deixa de enviá-la."
         aberto={!!confirmExcluir}
         onFechar={() => setConfirmExcluir(null)}
         onConfirmar={handleExcluir}

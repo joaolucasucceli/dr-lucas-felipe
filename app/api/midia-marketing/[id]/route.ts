@@ -75,7 +75,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
   const { error } = await supabaseAdmin
     .from("midia_marketing")
-    .update({ deletadoEm: agora(), ativo: false, atualizadoEm: agora() })
+    .update({ deletadoEm: agora(), atualizadoEm: agora() })
     .eq("id", id)
 
   if (error) {

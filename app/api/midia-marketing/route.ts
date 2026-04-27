@@ -11,16 +11,12 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const busca = searchParams.get("busca")
-  const ativo = searchParams.get("ativo")
 
   let query = supabaseAdmin
     .from("midia_marketing")
     .select("*")
     .is("deletadoEm", null)
 
-  if (ativo !== null && ativo !== undefined && ativo !== "") {
-    query = query.eq("ativo", ativo === "true")
-  }
   if (busca) query = query.ilike("descricao", `%${busca}%`)
 
   const { data, error } = await query.order("criadoEm", { ascending: false })

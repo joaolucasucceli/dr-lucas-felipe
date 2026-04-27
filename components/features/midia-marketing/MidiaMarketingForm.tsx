@@ -23,7 +23,6 @@ interface Props {
     id: string
     descricao: string
     url: string
-    ativo: boolean
   } | null
 }
 
@@ -39,14 +38,14 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
 
   const form = useForm<FormData>({
     resolver: zodResolver(criarMidiaMarketingSchema) as never,
-    defaultValues: { descricao: "", url: "", ativo: true },
+    defaultValues: { descricao: "", url: "" },
   })
 
   useEffect(() => {
     if (aberto && registro) {
-      form.reset({ descricao: registro.descricao, url: registro.url, ativo: registro.ativo })
+      form.reset({ descricao: registro.descricao, url: registro.url })
     } else if (aberto) {
-      form.reset({ descricao: "", url: "", ativo: true })
+      form.reset({ descricao: "", url: "" })
     }
   }, [aberto, registro, form])
 

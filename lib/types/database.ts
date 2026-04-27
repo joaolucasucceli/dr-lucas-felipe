@@ -792,7 +792,6 @@ export type Database = {
       }
       midia_marketing: {
         Row: {
-          ativo: boolean | null
           atualizadoEm: string | null
           criadoEm: string | null
           deletadoEm: string | null
@@ -801,7 +800,6 @@ export type Database = {
           url: string
         }
         Insert: {
-          ativo?: boolean | null
           atualizadoEm?: string | null
           criadoEm?: string | null
           deletadoEm?: string | null
@@ -810,7 +808,6 @@ export type Database = {
           url: string
         }
         Update: {
-          ativo?: boolean | null
           atualizadoEm?: string | null
           criadoEm?: string | null
           deletadoEm?: string | null
