@@ -2,7 +2,6 @@
 
 import { use, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { useSession } from "next-auth/react"
 import {
   Archive,
@@ -25,6 +24,7 @@ import { formatarData, formatarWhatsapp } from "@/lib/format"
 import { GaleriaFotos } from "@/components/features/contatos/GaleriaFotos"
 import { CampoEditavel } from "@/components/features/contatos/CampoEditavel"
 import { NotasContato } from "@/components/features/contatos/NotasContato"
+import { PainelProntuarioInline } from "@/components/features/prontuario/PainelProntuarioInline"
 import { useContato } from "@/hooks/use-contato"
 import { useUsuarios } from "@/hooks/use-usuarios"
 
@@ -475,46 +475,15 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                 <CardTitle className="text-base flex items-center gap-2">
                   <UserCog className="h-4 w-4" />
                   Prontuário
+                  {contato.prontuario && (
+                    <span className="ml-auto text-xs font-normal text-muted-foreground font-mono">
+                      Nº {String(contato.prontuario.numero).padStart(4, "0")}
+                    </span>
+                  )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {contato.prontuario ? (
-                  <>
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-2xl font-bold">
-                          {contato.prontuario._count?.evolucoes ?? 0}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Evoluções</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold">
-                          {contato.prontuario._count?.documentos ?? 0}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Documentos</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold">
-                          {contato.prontuario._count?.fotos ?? 0}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Fotos médicas</div>
-                      </div>
-                    </div>
-                    <div className="text-center text-sm text-muted-foreground">
-                      Nº Prontuário:{" "}
-                      <span className="font-mono">{contato.prontuario.numero}</span>
-                    </div>
-                    <div className="flex justify-center">
-                      <Link href={`/contatos/${id}/prontuario`}>
-                        <Button size="sm">Abrir prontuário</Button>
-                      </Link>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-sm text-muted-foreground text-center p-6">
-                    Prontuário não encontrado
-                  </div>
-                )}
+              <CardContent>
+                <PainelProntuarioInline pacienteId={id} />
               </CardContent>
             </Card>
           )}
