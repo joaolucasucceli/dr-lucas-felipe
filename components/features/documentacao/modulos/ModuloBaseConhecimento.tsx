@@ -1,4 +1,4 @@
-import { Brain, BookOpen, Bot, ToggleLeft } from "lucide-react"
+import { Brain, BookOpen, Bot, Trash2 } from "lucide-react"
 import { HeroBanner } from "../HeroBanner"
 import { FeaturesGrid } from "../FeaturesGrid"
 import { ComoUsarSection } from "../ComoUsarSection"
@@ -11,39 +11,39 @@ export function ModuloBaseConhecimento() {
         icone={<Brain />}
         titulo="Base de Conhecimento"
         subtitulo="Informações da clínica que a Ana Júlia consulta quando precisa"
-        gradientClasses="from-violet-600 to-purple-400"
+        gradientClasses="from-violet-900 to-purple-700"
       />
 
       <FeaturesGrid
         features={[
           {
             icone: <BookOpen />,
-            titulo: "Artigos por seção",
-            descricao: "Clínica, procedimentos, pós-operatório, pagamento e geral. Cada artigo tem título e conteúdo.",
+            titulo: "Título e conteúdo",
+            descricao: "Cada registro é uma informação simples — um título descritivo e o texto que a Ana Júlia pode usar.",
           },
           {
             icone: <Bot />,
             titulo: "Consulta sob demanda",
-            descricao: "Ana Júlia busca um artigo só quando o paciente pergunta algo relacionado. Não fica na memória da IA.",
+            descricao: "Ana Júlia busca por palavra-chave só quando o paciente pergunta algo relacionado. Não fica na memória da IA.",
           },
           {
-            icone: <ToggleLeft />,
-            titulo: "Ativar e desativar",
-            descricao: "Desative temporariamente um artigo sem perder o conteúdo. Inativos somem da consulta.",
+            icone: <Trash2 />,
+            titulo: "Existe ou não existe",
+            descricao: "Não há ativar/desativar. Se o registro está aqui, a Ana Júlia usa. Pra parar de usar, exclua.",
           },
         ]}
       />
 
       <ComoUsarSection
         passos={[
-          { numero: 1, titulo: "Abra a base", descricao: "No menu, clique em 'Base de Conhecimento'. A tabela lista todos os artigos." },
-          { numero: 2, titulo: "Crie um artigo", descricao: "'Novo Artigo': escolha seção, título e conteúdo. A IA passa a consultar imediatamente." },
-          { numero: 3, titulo: "Atualize quando mudar", descricao: "Edite quando horário, forma de pagamento ou info da clínica mudar." },
+          { numero: 1, titulo: "Abra a base", descricao: "No menu, abra 'Conteúdo da IA' → aba 'Base de Conhecimento'. A tabela lista tudo cadastrado." },
+          { numero: 2, titulo: "Crie um registro", descricao: "'Novo Conhecimento': preencha título e conteúdo. A Ana Júlia passa a consultar imediatamente." },
+          { numero: 3, titulo: "Atualize quando mudar", descricao: "Edite sempre que horário, forma de pagamento ou info da clínica mudar." },
         ]}
       />
 
       <DicaImportante
-        texto="Conteúdo desatualizado = resposta errada. Sempre que algo mudar na clínica (horário, forma de pagamento, localização), edite o artigo correspondente."
+        texto="Conteúdo desatualizado = resposta errada. Sempre que algo mudar na clínica (horário, forma de pagamento, localização), edite o registro correspondente."
         variante="aviso"
       />
     </div>

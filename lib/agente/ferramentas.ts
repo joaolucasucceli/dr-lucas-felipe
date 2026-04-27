@@ -66,14 +66,9 @@ export const ferramentasAgente: ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {
-          secao: {
-            type: "string",
-            enum: ["clinica", "procedimentos", "pos-operatorio", "pagamento", "geral"],
-            description: "Filtro por seção exata (opcional). Use quando souber a seção — retorna resultado mais focado.",
-          },
           filtro: {
             type: "string",
-            description: "Texto para buscar em título, conteúdo ou seção (ilike). Deixe vazio pra retornar tudo da seção (ou tudo se seção também vazia).",
+            description: "Palavra-chave para buscar em título e conteúdo (ilike). Use o termo da pergunta do paciente. Deixe vazio pra retornar tudo da base.",
           },
         },
       },

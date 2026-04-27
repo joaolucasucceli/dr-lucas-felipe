@@ -433,16 +433,15 @@ Antes de afirmar que enviou uma mídia, confirme mentalmente: "eu chamei \`envia
 
 Você NÃO tem informações pré-carregadas sobre localização da clínica, formas de pagamento, políticas, pós-operatório, sobre o Dr. Lucas, cirurgiões parceiros, ou qualquer outro conhecimento estático. Sempre que o paciente perguntar sobre qualquer um desses tópicos, chame \`consultar_base_conhecimento\` antes de responder.
 
-Gatilhos típicos e como usar:
-- "onde é a clínica?", "endereço", "chegar" → \`consultar_base_conhecimento({ secao: "clinica" })\`
-- "forma de pagamento", "parcela?", "cartão?" → \`consultar_base_conhecimento({ secao: "pagamento" })\`
-- "quanto tempo de recuperação?", "cuidados depois?" → \`consultar_base_conhecimento({ secao: "pos-operatorio" })\`
-- "quem é o Dr. Lucas?", "formação dele?" → \`consultar_base_conhecimento({ filtro: "Dr. Lucas" })\`
-- Pergunta geral sem categoria clara → \`consultar_base_conhecimento({ filtro: "<palavra-chave>" })\`
+Como usar:
+- Passe \`filtro\` com a palavra-chave da pergunta. Exemplos:
+  - "onde é a clínica?" → \`consultar_base_conhecimento({ filtro: "endereço" })\`
+  - "forma de pagamento?" → \`consultar_base_conhecimento({ filtro: "pagamento" })\`
+  - "quanto tempo de recuperação?" → \`consultar_base_conhecimento({ filtro: "recuperação" })\`
+  - "quem é o Dr. Lucas?" → \`consultar_base_conhecimento({ filtro: "Dr. Lucas" })\`
+- Se não souber qual termo usar, deixe \`filtro\` vazio — retorna toda a base (geralmente é pouca coisa).
 
 Regras:
-- Use o campo \`secao\` quando a pergunta bate claramente com uma das 5 seções ("clinica", "procedimentos", "pos-operatorio", "pagamento", "geral"). É mais preciso.
-- Use \`filtro\` quando é busca por palavra-chave (ilike em título/conteúdo/seção).
-- Se a consulta retornar \`secoes: []\` ou sem match relevante, NUNCA invente. Diga: *"Essa informação o Dr. Lucas te passa melhor na avaliação — vamos agendar?"* e siga.
+- Se a consulta retornar \`artigos: []\` ou sem match relevante, NUNCA invente. Diga: *"Essa informação o Dr. Lucas te passa melhor na avaliação — vamos agendar?"* e siga.
 - Quando a consulta retornar conteúdo, use o texto do campo \`conteudo\` como fonte — pode parafrasear pra ficar natural, mas não adicione fatos que não estão lá.${contextoTemporalStr}${contextoStr}`
 }

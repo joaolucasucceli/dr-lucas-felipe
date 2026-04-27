@@ -6,16 +6,11 @@ interface BaseConhecimento {
   id: string
   titulo: string
   conteudo: string
-  secao: string
-  ordem: number
-  ativo: boolean
   criadoEm: string
   atualizadoEm: string
 }
 
 interface UseBaseConhecimentoParams {
-  ativo?: string
-  secao?: string
   busca?: string
 }
 
@@ -39,8 +34,6 @@ export function useBaseConhecimento(
 
     try {
       const searchParams = new URLSearchParams()
-      if (params.ativo) searchParams.set("ativo", params.ativo)
-      if (params.secao) searchParams.set("secao", params.secao)
       if (params.busca) searchParams.set("busca", params.busca)
 
       const res = await fetch(`/api/base-conhecimento?${searchParams.toString()}`)
@@ -56,7 +49,7 @@ export function useBaseConhecimento(
     } finally {
       setCarregando(false)
     }
-  }, [params.ativo, params.secao, params.busca])
+  }, [params.busca])
 
   useEffect(() => {
     buscar()

@@ -263,36 +263,27 @@ export type Database = {
       }
       base_conhecimento: {
         Row: {
-          ativo: boolean
           atualizadoEm: string
           conteudo: string
           criadoEm: string
           deletadoEm: string | null
           id: string
-          ordem: number
-          secao: string
           titulo: string
         }
         Insert: {
-          ativo?: boolean
           atualizadoEm: string
           conteudo: string
           criadoEm?: string
           deletadoEm?: string | null
           id: string
-          ordem?: number
-          secao: string
           titulo: string
         }
         Update: {
-          ativo?: boolean
           atualizadoEm?: string
           conteudo?: string
           criadoEm?: string
           deletadoEm?: string | null
           id?: string
-          ordem?: number
-          secao?: string
           titulo?: string
         }
         Relationships: []

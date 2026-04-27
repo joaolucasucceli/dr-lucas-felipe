@@ -1,9 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, MoreHorizontal, Pencil, EyeOff, Eye, Trash2, Ban, CheckCircle2 } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -24,19 +23,8 @@ interface BaseConhecimento {
   id: string
   titulo: string
   conteudo: string
-  secao: string
-  ordem: number
-  ativo: boolean
   criadoEm: string
   atualizadoEm: string
-}
-
-const SECAO_LABELS: Record<string, string> = {
-  clinica: "Clínica",
-  procedimentos: "Procedimentos",
-  "pos-operatorio": "Pós-operatório",
-  pagamento: "Pagamento",
-  geral: "Geral",
 }
 
 function truncar(texto: string, max = 80): string {
@@ -48,54 +36,38 @@ export function BaseConhecimentoSecao() {
   const [busca, setBusca] = useState("")
   const [formAberto, setFormAberto] = useState(false)
   const [editando, setEditando] = useState<BaseConhecimento | null>(null)
-  const [confirmToggle, setConfirmToggle] = useState<BaseConhecimento | null>(null)
   const [confirmExcluir, setConfirmExcluir] = useState<BaseConhecimento | null>(null)
 
   const { dados, carregando, erro, recarregar } = useBaseConhecimento({
     busca: busca || undefined,
   })
 
-  async function executarBatch(acao: "ativar" | "desativar" | "excluir", ids: string[]) {
+  async function executarBatchExcluir(ids: string[]) {
     try {
       const res = await fetch("/api/base-conhecimento/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, acao }),
+        body: JSON.stringify({ ids, acao: "excluir" }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Erro na operação")
-      const verbo = acao === "excluir" ? "excluído(s)" : acao === "ativar" ? "ativado(s)" : "desativado(s)"
-      toast.success(`${data.sucesso} de ${data.total} registro(s) ${verbo}`)
+      if (!res.ok) throw new Error(data.error || "Erro ao excluir")
+      toast.success(`${data.sucesso} de ${data.total} registro(s) excluído(s)`)
       recarregar()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro na operação")
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir")
     }
   }
 
   const acoesEmMassa: AcaoEmMassa[] = [
     {
-      label: "Ativar",
-      icone: <CheckCircle2 className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("ativar", ids),
-    },
-    {
-      label: "Desativar",
-      icone: <Ban className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("desativar", ids),
-      confirmacao: {
-        titulo: "Desativar registros?",
-        descricao: (qtd) => `${qtd} registro(s) da base de conhecimento não serão mais usados pela Ana Júlia.`,
-        textoBotao: "Desativar",
-      },
-    },
-    {
       label: "Excluir",
       icone: <Trash2 className="h-4 w-4" />,
       variante: "destrutivo",
-      onClick: (ids) => executarBatch("excluir", ids),
+      onClick: (ids) => executarBatchExcluir(ids),
       confirmacao: {
         titulo: "Excluir registros?",
-        descricao: (qtd) => `${qtd} registro(s) serão removidos permanentemente (soft-delete).`,
+        descricao: (qtd) =>
+          `${qtd} registro(s) serão removidos permanentemente. A Ana Júlia deixa de usá-los.`,
         textoBotao: "Excluir",
       },
     },
@@ -104,30 +76,6 @@ export function BaseConhecimentoSecao() {
   function handleEditar(registro: BaseConhecimento) {
     setEditando(registro)
     setFormAberto(true)
-  }
-
-  async function confirmarToggle() {
-    if (!confirmToggle) return
-    try {
-      const res = await fetch(`/api/base-conhecimento/${confirmToggle.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ativo: !confirmToggle.ativo }),
-      })
-
-      if (!res.ok) {
-        const erro = await res.json()
-        toast.error(erro.error || "Erro ao atualizar registro")
-        return
-      }
-
-      toast.success(confirmToggle.ativo ? "Registro desativado" : "Registro ativado")
-      recarregar()
-    } catch {
-      toast.error("Erro ao atualizar registro")
-    } finally {
-      setConfirmToggle(null)
-    }
   }
 
   async function confirmarExcluir() {
@@ -153,33 +101,12 @@ export function BaseConhecimentoSecao() {
   }
 
   const colunas: ColunaConfig<BaseConhecimento>[] = [
-    {
-      chave: "secao",
-      titulo: "Seção",
-      renderizar: (r) => (
-        <Badge variant="secondary">{SECAO_LABELS[r.secao] ?? r.secao}</Badge>
-      ),
-    },
     { chave: "titulo", titulo: "Título", ordenavel: true },
     {
       chave: "conteudo",
       titulo: "Conteúdo",
-      classesCelula: "hidden md:table-cell text-sm text-muted-foreground",
-      renderizar: (r) => truncar(r.conteudo, 100),
-    },
-    {
-      chave: "ordem",
-      titulo: "Ordem",
-      classesCelula: "hidden lg:table-cell text-sm",
-    },
-    {
-      chave: "ativo",
-      titulo: "Status",
-      renderizar: (r) => (
-        <Badge variant={r.ativo ? "default" : "destructive"}>
-          {r.ativo ? "Ativo" : "Inativo"}
-        </Badge>
-      ),
+      classesCelula: "text-sm text-muted-foreground",
+      renderizar: (r) => truncar(r.conteudo, 120),
     },
     {
       chave: "acoes" as keyof BaseConhecimento,
@@ -196,22 +123,9 @@ export function BaseConhecimentoSecao() {
               <Pencil className="mr-2 h-4 w-4" />
               Editar
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setConfirmToggle(r)}>
-              {r.ativo ? (
-                <>
-                  <EyeOff className="mr-2 h-4 w-4" />
-                  Desativar
-                </>
-              ) : (
-                <>
-                  <Eye className="mr-2 h-4 w-4" />
-                  Ativar
-                </>
-              )}
-            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setConfirmExcluir(r)}
-              className="text-destructive"
+              className="text-destructive focus:text-destructive"
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Excluir
@@ -241,7 +155,7 @@ export function BaseConhecimentoSecao() {
       </div>
 
       {carregando && dados.length === 0 ? (
-        <SkeletonTabela linhas={5} colunas={5} />
+        <SkeletonTabela linhas={5} colunas={3} />
       ) : !carregando && dados.length === 0 && !busca ? (
         <EmptyState
           titulo="Nenhum conteúdo cadastrado"
@@ -286,20 +200,6 @@ export function BaseConhecimentoSecao() {
           setEditando(null)
           recarregar()
         }}
-      />
-
-      <ConfirmDialog
-        titulo={confirmToggle?.ativo ? "Desativar conteúdo" : "Ativar conteúdo"}
-        descricao={
-          confirmToggle?.ativo
-            ? `Desativar "${confirmToggle?.titulo}"? A Ana Júlia deixará de usar esse conteúdo.`
-            : `Reativar "${confirmToggle?.titulo}"? A Ana Júlia voltará a usar esse conteúdo.`
-        }
-        aberto={!!confirmToggle}
-        onFechar={() => setConfirmToggle(null)}
-        onConfirmar={confirmarToggle}
-        variante={confirmToggle?.ativo ? "destrutivo" : "padrao"}
-        textoBotao={confirmToggle?.ativo ? "Desativar" : "Ativar"}
       />
 
       <ConfirmDialog

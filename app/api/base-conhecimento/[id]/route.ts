@@ -7,8 +7,7 @@ import { agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
-const SELECT_BASE =
-  "id, titulo, conteudo, secao, ordem, ativo, criadoEm, atualizadoEm"
+const SELECT_BASE = "id, titulo, conteudo, criadoEm, atualizadoEm"
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
@@ -89,11 +88,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
   const { error } = await supabaseAdmin
     .from("base_conhecimento")
-    .update({
-      deletadoEm: agora(),
-      ativo: false,
-      atualizadoEm: agora(),
-    })
+    .update({ deletadoEm: agora(), atualizadoEm: agora() })
     .eq("id", id)
 
   if (error) {
