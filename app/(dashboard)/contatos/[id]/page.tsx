@@ -223,14 +223,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
         <TabsList>
           <TabsTrigger value="info">Informações</TabsTrigger>
           {!ehPaciente && (
-            <TabsTrigger value="historico">
-              Histórico de atendimento
-              {contato.conversas.length > 0 && (
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  {contato.conversas.length}
-                </Badge>
-              )}
-            </TabsTrigger>
+            <TabsTrigger value="historico">Histórico de atendimento</TabsTrigger>
           )}
           <TabsTrigger value="fotos">
             Fotos
@@ -420,30 +413,38 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                         {conversa.modoConversa === "ia" ? "Ana Júlia" : "Atendente"}
                       </Badge>
                     </CardHeader>
-                  <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+                  <CardContent className="space-y-2 max-h-[480px] overflow-y-auto">
                     {conversa.mensagens.length === 0 ? (
                       <p className="text-xs text-muted-foreground">Sem mensagens</p>
                     ) : (
-                      conversa.mensagens.map((m) => (
-                        <div
-                          key={m.id}
-                          className={`rounded-md p-2 text-sm ${
-                            m.remetente === "paciente"
-                              ? "bg-muted"
-                              : "bg-primary/10"
-                          }`}
-                        >
-                          <div className="text-[10px] uppercase text-muted-foreground mb-1">
-                            {m.remetente === "paciente"
-                              ? "Paciente"
-                              : m.remetente === "atendente"
-                                ? "Atendente"
-                                : "Ana Júlia"}{" "}
-                            · {formatarData(m.criadoEm, "dd/MM/yyyy 'as' HH:mm")}
+                      conversa.mensagens.map((m) => {
+                        const ehLead = m.remetente === "paciente"
+                        const rotuloRemetente = ehLead
+                          ? "Lead"
+                          : m.remetente === "atendente"
+                            ? "Atendente"
+                            : "Ana Júlia"
+                        return (
+                          <div
+                            key={m.id}
+                            className={`flex ${ehLead ? "justify-start" : "justify-end"}`}
+                          >
+                            <div
+                              className={`max-w-[75%] rounded-2xl p-3 text-sm ${
+                                ehLead
+                                  ? "bg-muted rounded-bl-sm"
+                                  : "bg-primary/15 rounded-br-sm"
+                              }`}
+                            >
+                              <div className="text-[10px] uppercase text-muted-foreground mb-1">
+                                {rotuloRemetente}{" "}·{" "}
+                                {formatarData(m.criadoEm, "dd/MM/yyyy 'às' HH:mm")}
+                              </div>
+                              <div className="whitespace-pre-wrap">{m.conteudo}</div>
+                            </div>
                           </div>
-                          <div className="whitespace-pre-wrap">{m.conteudo}</div>
-                        </div>
-                      ))
+                        )
+                      })
                     )}
                   </CardContent>
                 </Card>
