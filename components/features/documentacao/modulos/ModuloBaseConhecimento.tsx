@@ -9,7 +9,7 @@ export function ModuloBaseConhecimento() {
     <div className="space-y-6">
       <HeroBanner
         icone={<Brain />}
-        titulo="Base de Conhecimento"
+        titulo="Conteúdo em Texto"
         subtitulo="Informações da clínica que a Ana Júlia consulta quando precisa"
         gradientClasses="from-violet-900 to-purple-700"
       />
@@ -36,8 +36,8 @@ export function ModuloBaseConhecimento() {
 
       <ComoUsarSection
         passos={[
-          { numero: 1, titulo: "Abra a base", descricao: "No menu, abra 'Conteúdo da IA' → aba 'Base de Conhecimento'. A tabela lista tudo cadastrado." },
-          { numero: 2, titulo: "Crie um registro", descricao: "'Novo Conhecimento': preencha título e conteúdo. A Ana Júlia passa a consultar imediatamente." },
+          { numero: 1, titulo: "Abra a aba", descricao: "No menu, abra 'Conteúdo da IA' → aba 'Conteúdo em Texto'. A tabela lista tudo cadastrado." },
+          { numero: 2, titulo: "Crie um texto", descricao: "'Novo Texto': preencha título e conteúdo. A Ana Júlia passa a consultar imediatamente." },
           { numero: 3, titulo: "Atualize quando mudar", descricao: "Edite sempre que horário, forma de pagamento ou info da clínica mudar." },
         ]}
       />

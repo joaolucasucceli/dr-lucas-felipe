@@ -94,7 +94,7 @@ export function BaseConhecimentoForm({
     <FormDialog
       aberto={aberto}
       onFechar={() => handleOpenChange(false)}
-      titulo="Conhecimento"
+      titulo="Texto"
       editando={editando}
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit(onSubmit)}

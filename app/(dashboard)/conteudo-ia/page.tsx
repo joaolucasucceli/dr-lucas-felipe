@@ -19,7 +19,7 @@ import {
 type TabId = "base-conhecimento" | "midia-marketing"
 
 const LABEL_NOVO: Record<TabId, string> = {
-  "base-conhecimento": "Novo Conhecimento",
+  "base-conhecimento": "Novo Texto",
   "midia-marketing": "Nova Mídia",
 }
 
@@ -59,8 +59,8 @@ export default function ConteudoIaPage() {
       <div className="mt-6">
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
           <TabsList>
-            <TabsTrigger value="base-conhecimento">Base de Conhecimento</TabsTrigger>
-            <TabsTrigger value="midia-marketing">Mídia Marketing</TabsTrigger>
+            <TabsTrigger value="base-conhecimento">Conteúdo em Texto</TabsTrigger>
+            <TabsTrigger value="midia-marketing">Conteúdo em Mídia</TabsTrigger>
           </TabsList>
           <TabsContent value="base-conhecimento" className="mt-6">
             <BaseConhecimentoSecao ref={baseRef} />

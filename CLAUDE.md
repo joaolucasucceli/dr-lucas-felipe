@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Central Dr. Lucas** — sistema web para gestão de atendimento da clínica do Dr. Lucas Felipe. Sistema **100% autônomo** — a IA faz todo o processo do funil (acolhimento → reunião agendada). Dois módulos integrados em uma única aplicação Next.js:
 
-1. **Painel de Gestão** — kanban (4 etapas), contatos (leads e pacientes), procedimentos, agenda, conteúdo da IA (base de conhecimento + mídia marketing), métricas
+1. **Painel de Gestão** — kanban (4 etapas), contatos (leads e pacientes), procedimentos, agenda, conteúdo da IA (textos + mídias), métricas
 2. **Agente IA WhatsApp ("Ana Júlia" + Analista IA)** — atendimento autônomo de pacientes via API Routes, alimentando o painel em tempo real
 
 ## Stack Tecnológica
@@ -135,7 +135,7 @@ Sistema em **modo manutenção** após auditoria final de entrega (JLAU-609, 202
 
 Refatorações recentes (2026-04-26):
 - **Sidebar consolidada**: 16 → 12 itens (gestor). Eliminado dropdown do header, Meu Perfil, Configurações (hub), Tipos de Procedimento (página), Mídia Marketing como página dedicada, perfis Ana Júlia/Eduarda separados
-- **Novas páginas com Tabs**: `/equipe-ia` (Ana Júlia + Eduarda), `/conteudo-ia` (Base de Conhecimento + Mídia Marketing)
+- **Novas páginas com Tabs**: `/equipe-ia` (Ana Júlia + Eduarda), `/conteudo-ia` (Conteúdo em Texto + Conteúdo em Mídia)
 - **Header limpo**: removidos busca global, notificações, theme toggle. Sobra apenas Ajuda Contextual
 - **Tema dark-only** via `forcedTheme`
 - **Padrão modal consolidado** em 100% das edições (exceto Contato)

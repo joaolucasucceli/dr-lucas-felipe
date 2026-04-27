@@ -9,9 +9,9 @@ export function ModuloMidiaMarketing() {
     <div className="space-y-6">
       <HeroBanner
         icone={<Film />}
-        titulo="Mídia Marketing"
+        titulo="Conteúdo em Mídia"
         subtitulo="Fotos e vídeos que a Ana Júlia envia aos pacientes"
-        gradientClasses="from-amber-600 to-orange-400"
+        gradientClasses="from-amber-700 to-orange-600"
       />
 
       <FeaturesGrid
@@ -19,12 +19,12 @@ export function ModuloMidiaMarketing() {
           {
             icone: <Upload />,
             titulo: "Upload direto",
-            descricao: "Envie fotos e vídeos do computador. Ficam disponíveis pra IA enviar quando fizer sentido.",
+            descricao: "Envie fotos e vídeos do computador. Ficam disponíveis pra Ana Júlia escolher quando fizer sentido.",
           },
           {
             icone: <Image />,
-            titulo: "4 categorias",
-            descricao: "Reels, antes e depois, depoimentos e procedimentos. Associe ao procedimento quando couber.",
+            titulo: "Descrição rica = escolha melhor",
+            descricao: "A Ana Júlia escolhe a mídia certa lendo a descrição. Inclua perfil, resultado destacável e indicação típica.",
           },
           {
             icone: <Send />,
@@ -36,14 +36,14 @@ export function ModuloMidiaMarketing() {
 
       <ComoUsarSection
         passos={[
-          { numero: 1, titulo: "Abra a tela", descricao: "No menu, clique 'Mídia Marketing'. A tabela lista tudo que já foi cadastrado." },
-          { numero: 2, titulo: "Cadastre uma mídia", descricao: "'Nova Mídia': título, categoria, procedimento e upload do arquivo." },
-          { numero: 3, titulo: "A IA usa sozinha", descricao: "A Ana Júlia seleciona a mídia mais relevante quando o paciente pede referência visual." },
+          { numero: 1, titulo: "Abra a aba", descricao: "No menu, abra 'Conteúdo da IA' → aba 'Conteúdo em Mídia'. A tabela lista tudo que já foi cadastrado." },
+          { numero: 2, titulo: "Cadastre uma mídia", descricao: "'Nova Mídia': descrição detalhada e upload do arquivo (foto ou vídeo, até 20MB)." },
+          { numero: 3, titulo: "A Ana Júlia usa sozinha", descricao: "Quando o paciente pede referência visual, ela seleciona a mídia mais relevante pelo contexto." },
         ]}
       />
 
       <DicaImportante
-        texto="Associe cada foto de antes/depois ao procedimento certo. Quanto mais específico, melhor a escolha da Ana Júlia na hora de enviar."
+        texto="Descrição é tudo. A Ana Júlia escolhe mídia lendo o texto, não a foto. Quanto mais rica a descrição (perfil, resultado, indicação), mais assertivo o envio."
         variante="sucesso"
       />
     </div>

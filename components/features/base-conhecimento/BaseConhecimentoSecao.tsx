@@ -158,9 +158,9 @@ export const BaseConhecimentoSecao = forwardRef<BaseConhecimentoSecaoHandle>(
         <SkeletonTabela linhas={5} colunas={3} />
       ) : !carregando && dados.length === 0 && !busca ? (
         <EmptyState
-          titulo="Nenhum conteúdo cadastrado"
+          titulo="Nenhum texto cadastrado"
           descricao="Cadastre informações que a Ana Júlia poderá usar nas conversas."
-          textoBotao="Novo Conhecimento"
+          textoBotao="Novo Texto"
           onAcao={() => {
             setEditando(null)
             setFormAberto(true)
