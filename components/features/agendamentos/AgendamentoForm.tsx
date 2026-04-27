@@ -35,12 +35,20 @@ const ROTULOS_STATUS: Record<StatusAgendamento, string> = {
   remarcado: "Remarcado",
 }
 
+// Input nativo type="datetime-local" tem formato MM/DD/AAAA em navegadores
+// com locale en-US — confunde usuario brasileiro. Usamos 2 inputs:
+// data em texto livre dd/mm/aaaa + hora type="time".
+const REGEX_DATA_BR = /^(\d{2})\/(\d{2})\/(\d{4})$/
+
 // Avaliacao online com Dr. Lucas: tipo e duracao sao FIXOS no painel
 // (consulta_online + 60min). A clinica so agenda esse tipo via /agenda.
 const formSchema = z.object({
   contatoId: z.string().min(1, "Selecione um contato"),
   procedimentoId: z.string().nullable().optional(),
-  dataHora: z.string().min(10, "Data/hora obrigatória"),
+  dataBr: z
+    .string()
+    .regex(REGEX_DATA_BR, "Use o formato dd/mm/aaaa"),
+  hora: z.string().regex(/^\d{2}:\d{2}$/, "Hora obrigatória"),
   observacao: z.string().nullable().optional(),
   status: z.enum(STATUS_AGENDAMENTO),
 })
@@ -54,16 +62,57 @@ interface AgendamentoFormProps {
   onSucesso: () => void
 }
 
-function isoParaInput(iso: string | null | undefined): string {
+function isoParaDataBr(iso: string | null | undefined): string {
   if (!iso) return ""
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ""
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, "0")
   const dd = String(d.getDate()).padStart(2, "0")
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const yyyy = d.getFullYear()
+  return `${dd}/${mm}/${yyyy}`
+}
+
+function isoParaHora(iso: string | null | undefined): string {
+  if (!iso) return ""
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ""
   const hh = String(d.getHours()).padStart(2, "0")
   const mn = String(d.getMinutes()).padStart(2, "0")
-  return `${yyyy}-${mm}-${dd}T${hh}:${mn}`
+  return `${hh}:${mn}`
+}
+
+function dataBrEHoraParaIso(dataBr: string, hora: string): string | null {
+  const m = dataBr.match(REGEX_DATA_BR)
+  if (!m) return null
+  const [, dd, mm, yyyy] = m
+  const hm = hora.match(/^(\d{2}):(\d{2})$/)
+  if (!hm) return null
+  const [, hh, mn] = hm
+  const d = new Date(
+    Number(yyyy),
+    Number(mm) - 1,
+    Number(dd),
+    Number(hh),
+    Number(mn)
+  )
+  if (isNaN(d.getTime())) return null
+  // Sanity check: campos batem (evita 31/02 virando 03/03)
+  if (
+    d.getFullYear() !== Number(yyyy) ||
+    d.getMonth() !== Number(mm) - 1 ||
+    d.getDate() !== Number(dd)
+  ) {
+    return null
+  }
+  return d.toISOString()
+}
+
+/** Mascara dd/mm/aaaa enquanto o usuario digita. */
+function mascararDataBr(valor: string): string {
+  const digitos = valor.replace(/\D/g, "").slice(0, 8)
+  if (digitos.length <= 2) return digitos
+  if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`
+  return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`
 }
 
 export function AgendamentoForm({
@@ -100,7 +149,8 @@ export function AgendamentoForm({
     defaultValues: {
       contatoId: "",
       procedimentoId: null,
-      dataHora: "",
+      dataBr: "",
+      hora: "",
       observacao: "",
       status: "agendado",
     },
@@ -116,7 +166,8 @@ export function AgendamentoForm({
       reset({
         contatoId: agendamento.contatoId,
         procedimentoId: agendamento.procedimentoId,
-        dataHora: isoParaInput(agendamento.dataHora),
+        dataBr: isoParaDataBr(agendamento.dataHora),
+        hora: isoParaHora(agendamento.dataHora),
         observacao: agendamento.observacao,
         status: agendamento.status,
       })
@@ -134,7 +185,8 @@ export function AgendamentoForm({
       reset({
         contatoId: "",
         procedimentoId: null,
-        dataHora: "",
+        dataBr: "",
+        hora: "",
         observacao: "",
         status: "agendado",
       })
@@ -152,13 +204,19 @@ export function AgendamentoForm({
   }
 
   async function onSubmit(values: FormData) {
+    const dataIso = dataBrEHoraParaIso(values.dataBr, values.hora)
+    if (!dataIso) {
+      toast.error("Data ou hora inválida")
+      return
+    }
+
     // Avaliacao online: tipo e duracao sempre fixos (clinica nao agenda
     // outros tipos pelo painel — Ana Julia tambem so agenda esse).
     const payload = {
       contatoId: values.contatoId,
       procedimentoId: values.procedimentoId || null,
       tipo: "consulta_online" as const,
-      dataHora: new Date(values.dataHora).toISOString(),
+      dataHora: dataIso,
       duracao: 60,
       observacao: values.observacao || null,
       status: values.status,
@@ -283,25 +341,42 @@ export function AgendamentoForm({
         )}
       </div>
 
-      {/* Data/hora + Procedimento (informativo) */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/* Data + Hora + Procedimento (informativo) */}
+      <div className="grid gap-4 sm:grid-cols-3">
         <div className="grid gap-2">
-          <Label htmlFor="ag-data">Data e hora</Label>
+          <Label htmlFor="ag-data">Data</Label>
           <Input
             id="ag-data"
-            type="datetime-local"
-            {...register("dataHora")}
+            type="text"
+            inputMode="numeric"
+            placeholder="dd/mm/aaaa"
+            maxLength={10}
+            {...register("dataBr", {
+              onChange: (e) => {
+                e.target.value = mascararDataBr(e.target.value)
+              },
+            })}
           />
-          {errors.dataHora && (
-            <p className="text-xs text-destructive">{errors.dataHora.message}</p>
+          {errors.dataBr && (
+            <p className="text-xs text-destructive">{errors.dataBr.message}</p>
           )}
-          <p className="text-xs text-muted-foreground">
-            Avaliação online com o Dr. Lucas — duração fixa de 1h.
-          </p>
         </div>
 
         <div className="grid gap-2">
-          <Label>Procedimento de interesse <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
+          <Label htmlFor="ag-hora">Hora</Label>
+          <Input
+            id="ag-hora"
+            type="time"
+            step="60"
+            {...register("hora")}
+          />
+          {errors.hora && (
+            <p className="text-xs text-destructive">{errors.hora.message}</p>
+          )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label>Procedimento <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
           <Select
             value={procedimentoIdAtual || "__nenhum__"}
             onValueChange={(v) => setValue("procedimentoId", v === "__nenhum__" ? null : v)}
@@ -320,6 +395,9 @@ export function AgendamentoForm({
           </Select>
         </div>
       </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Avaliação online com o Dr. Lucas — duração fixa de 1h.
+      </p>
 
       {/* Status (só edição) */}
       {editando && (
