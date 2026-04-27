@@ -31,6 +31,11 @@ function ehVideo(url: string): boolean {
   return /\.(mp4|webm|mov|avi|mkv|m4v)(\?|$)/i.test(url)
 }
 
+function truncar(texto: string, max = 120): string {
+  if (texto.length <= max) return texto
+  return texto.slice(0, max).trim() + "…"
+}
+
 export interface MidiaMarketingSecaoHandle {
   abrirNovo: () => void
 }
@@ -124,6 +129,7 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
     {
       chave: "descricao",
       titulo: "Descrição",
+      classesCelula: "max-w-0",
       renderizar: (m) => (
         <button
           type="button"
@@ -131,9 +137,10 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
             e.stopPropagation()
             setPreview(m)
           }}
-          className="block w-full text-left text-sm hover:underline line-clamp-2 break-words pr-4"
+          className="block w-full text-left text-sm text-muted-foreground hover:underline line-clamp-2 break-words pr-4"
+          title={m.descricao}
         >
-          {m.descricao}
+          {truncar(m.descricao, 120)}
         </button>
       ),
     },
