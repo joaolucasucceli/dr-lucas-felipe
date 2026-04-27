@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       duracao,
       status,
       observacao: observacao || null,
+      criadoPor: "manual",
       atualizadoEm: tsAgora,
     } as never)
     .select("*")

@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       dataHora: inicio.toISOString(),
       status: "agendado",
       observacao: observacao || null,
+      criadoPor: "ia",
     })
     .select("*")
     .single()

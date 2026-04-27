@@ -22,6 +22,9 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
   const agoraTs = new Date()
   const em7h = new Date(agoraTs.getTime() + 7 * 60 * 60 * 1000)
 
+  // So agendamentos criados pela IA recebem lembrete: a Ana Julia tem
+  // contexto da conversa pra responder ao "Sim/Nao" do paciente. Manuais
+  // (criados no painel) ficam fora — secretaria liga se quiser confirmar.
   const { data, error } = await supabaseAdmin
     .from("agendamentos")
     .select(`
@@ -33,6 +36,7 @@ export async function buscarAgendamentosParaConfirmacao(): Promise<ConfirmacaoPe
       contato:contatos!agendamentos_contatoId_fkey(id, nome, whatsapp)
     `)
     .in("status", ["agendado", "remarcado"] as never)
+    .eq("criadoPor", "ia")
     .gt("dataHora", agoraTs.toISOString())
     .lt("dataHora", em7h.toISOString())
 

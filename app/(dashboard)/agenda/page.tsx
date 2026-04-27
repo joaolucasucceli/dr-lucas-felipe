@@ -1,17 +1,14 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import {
-  Calendar,
   CalendarClock,
-  Clock,
   ExternalLink,
   MoreHorizontal,
   Pencil,
   Plus,
   Trash2,
-  User,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -30,7 +27,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { PageHeader } from "@/components/features/shared/PageHeader"
-import { MetricCard } from "@/components/features/shared/MetricCard"
 import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
@@ -86,7 +82,7 @@ export default function AgendaPage() {
   const [reagendando, setReagendando] = useState<AgendamentoAgenda | null>(null)
   const [cancelando, setCancelando] = useState<AgendamentoAgenda | null>(null)
   const [processando, setProcessando] = useState(false)
-  const { agendamentos, total, carregando, erro, recarregar } = useAgenda(periodo)
+  const { agendamentos, carregando, erro, recarregar } = useAgenda(periodo)
 
   function abrirNovo() {
     setAgendamentoEditando(null)
@@ -118,14 +114,6 @@ export default function AgendaPage() {
       setCancelando(null)
     }
   }
-
-  const metricas = useMemo(() => {
-    const hojeChaveStr = chaveDia(new Date().toISOString())
-    const hoje = agendamentos.filter((a) => chaveDia(a.dataHora) === hojeChaveStr).length
-    const confirmados = agendamentos.filter((a) => a.status === "confirmado").length
-    const aguardando = agendamentos.filter((a) => a.status === "agendado").length
-    return { hoje, confirmados, aguardando }
-  }, [agendamentos])
 
   const colunas: ColunaConfig<AgendamentoAgenda>[] = [
     {
@@ -256,51 +244,22 @@ export default function AgendaPage() {
           <ErrorState mensagem={erro} onTentar={recarregar} />
         </div>
       ) : (
-        <>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard
-              titulo="Total no período"
-              valor={total}
-              descricao="Agendamentos listados"
-              icone={<Calendar className="h-5 w-5" />}
+        <div className="mt-6">
+          {carregando && agendamentos.length === 0 ? (
+            <SkeletonTabela linhas={5} colunas={5} />
+          ) : (
+            <DataTable
+              colunas={colunas}
+              dados={agendamentos}
+              total={agendamentos.length}
+              pagina={1}
+              porPagina={agendamentos.length || 10}
+              onPaginaChange={() => {}}
+              carregando={carregando}
+              mensagemVazio="Nenhum agendamento no período selecionado."
             />
-            <MetricCard
-              titulo="Hoje"
-              valor={metricas.hoje}
-              descricao="Avaliações do dia"
-              icone={<Clock className="h-5 w-5" />}
-            />
-            <MetricCard
-              titulo="Confirmados"
-              valor={metricas.confirmados}
-              descricao="Paciente confirmou presença"
-              icone={<User className="h-5 w-5" />}
-            />
-            <MetricCard
-              titulo="Aguardando confirmação"
-              valor={metricas.aguardando}
-              descricao="Status 'agendado'"
-              icone={<Clock className="h-5 w-5" />}
-            />
-          </div>
-
-          <div className="mt-6">
-            {carregando && agendamentos.length === 0 ? (
-              <SkeletonTabela linhas={5} colunas={5} />
-            ) : (
-              <DataTable
-                colunas={colunas}
-                dados={agendamentos}
-                total={agendamentos.length}
-                pagina={1}
-                porPagina={agendamentos.length || 10}
-                onPaginaChange={() => {}}
-                carregando={carregando}
-                mensagemVazio="Nenhum agendamento no período selecionado."
-              />
-            )}
-          </div>
-        </>
+          )}
+        </div>
       )}
 
       <AgendamentoForm

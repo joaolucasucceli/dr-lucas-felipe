@@ -21,6 +21,7 @@ export type Database = {
           confirmacoesEnviadas: string[] | null
           contatoId: string
           criadoEm: string
+          criadoPor: Database["public"]["Enums"]["agendamento_origem"]
           dataHora: string
           duracao: number
           googleEventId: string | null
@@ -38,6 +39,7 @@ export type Database = {
           confirmacoesEnviadas?: string[] | null
           contatoId: string
           criadoEm?: string
+          criadoPor?: Database["public"]["Enums"]["agendamento_origem"]
           dataHora: string
           duracao?: number
           googleEventId?: string | null
@@ -55,6 +57,7 @@ export type Database = {
           confirmacoesEnviadas?: string[] | null
           contatoId?: string
           criadoEm?: string
+          criadoPor?: Database["public"]["Enums"]["agendamento_origem"]
           dataHora?: string
           duracao?: number
           googleEventId?: string | null
@@ -1130,6 +1133,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      agendamento_origem: "ia" | "manual"
       EtapaConversa:
         | "acolhimento"
         | "qualificacao"
@@ -1319,6 +1323,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agendamento_origem: ["ia", "manual"],
       EtapaConversa: [
         "acolhimento",
         "qualificacao",
