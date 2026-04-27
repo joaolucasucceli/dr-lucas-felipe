@@ -10,6 +10,7 @@ import {
   type Ocupacao,
 } from "@/lib/agente/slots-agenda"
 import { carregarFeriadosNoIntervalo, ymdSP } from "@/lib/agendamento/feriados"
+import { redis } from "@/lib/redis"
 
 const MAX_SLOTS = 10
 // Avaliacao online com Dr. Lucas e SEMPRE 60min — nao usar duracao do
@@ -30,6 +31,9 @@ export async function POST(request: NextRequest) {
   } catch {
     body = {}
   }
+
+  // Snapshot do body bruto recebido — debug pra diagnostico em /debug-agenda.
+  const bodyRecebido = { ...body }
 
   const agora = new Date()
   const amanha = new Date(agora.getTime() + 24 * 60 * 60 * 1000)
@@ -75,8 +79,10 @@ export async function POST(request: NextRequest) {
   }))
 
   // Log estruturado pra Vercel — diagnostico quando vier vazio.
-  console.log("[consultar-agenda]", JSON.stringify({
-    periodo: { inicio: dataInicio.toISOString(), fim: dataFim.toISOString() },
+  const diagnostico = {
+    timestamp: new Date().toISOString(),
+    bodyRecebido,
+    periodoCalculado: { inicio: dataInicio.toISOString(), fim: dataFim.toISOString() },
     contadores: {
       candidatos: candidatos.length,
       futuros: futuros.length,
@@ -92,7 +98,20 @@ export async function POST(request: NextRequest) {
       inicio: o.inicio.toISOString(),
       fim: o.fim.toISOString(),
     })),
-  }))
+    primeirosSlots: slotsLivres.slice(0, 3),
+  }
+
+  console.log("[consultar-agenda]", JSON.stringify(diagnostico))
+
+  // Persistir as ultimas 5 chamadas em Redis pra debug via /debug-agenda
+  // (sem precisar acessar logs do Vercel).
+  try {
+    await redis.lpush("agente:debug:consultar-agenda", JSON.stringify(diagnostico))
+    await redis.ltrim("agente:debug:consultar-agenda", 0, 4)
+    await redis.expire("agente:debug:consultar-agenda", 3600)
+  } catch (e) {
+    console.warn("[consultar-agenda] redis log falhou:", e)
+  }
 
   return NextResponse.json({
     slots: slotsLivres,

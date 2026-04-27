@@ -9,6 +9,7 @@ import {
 } from "@/lib/agente/slots-agenda"
 import { carregarFeriadosNoIntervalo, ymdSP } from "@/lib/agendamento/feriados"
 import { requireAuth } from "@/lib/auth-helpers"
+import { redis } from "@/lib/redis"
 
 /**
  * Endpoint de diagnostico — retorna o estado completo da agenda da IA:
@@ -77,12 +78,28 @@ export async function GET() {
   const naoFeriados = futuros.filter((s) => !feriados.has(ymdSP(s)))
   const livres = naoFeriados.filter((s) => !slotConflitaCom(s, 60, ocupacoes))
 
+  // 6. Ultimas chamadas reais que a IA fez ao consultar-agenda
+  let ultimasChamadasIA: unknown[] = []
+  try {
+    const raws = await redis.lrange("agente:debug:consultar-agenda", 0, 4)
+    ultimasChamadasIA = raws.map((r) => {
+      try {
+        return typeof r === "string" ? JSON.parse(r) : r
+      } catch {
+        return r
+      }
+    })
+  } catch {
+    ultimasChamadasIA = []
+  }
+
   return NextResponse.json({
     agoraServidor: agora.toISOString(),
     periodoAnalisado: {
       inicio: amanha.toISOString(),
       fim: em14dias.toISOString(),
     },
+    ultimasChamadasIA,
     googleCalendar: {
       ...configResumo,
       erro: erroCalendar,
