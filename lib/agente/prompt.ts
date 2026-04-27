@@ -54,6 +54,13 @@ export async function gerarSystemPrompt(contexto?: ContextoContato): Promise<str
       partes.push(
         `**AGENDAMENTO PENDENTE DE CONFIRMACAO** — Paciente tem avaliacao agendada pra ${contexto.agendamentoPendente.label}. agendamentoPendenteId: \`${contexto.agendamentoPendente.id}\`. Se ele responder positivamente a um lembrete (Sim/OK/Confirmo/Tô indo/Pode contar), chame \`confirmar_agendamento({ agendamentoId: "${contexto.agendamentoPendente.id}" })\` E responda SUPER curto: "Perfeito! Te espero em breve." Nao reabra qualificacao, nao cumprimente como se fosse 1a interacao.`
       )
+    } else {
+      // Sem agendamento real no banco — bloqueia alucinacao baseada em
+      // historico antigo ("voce ja agendou pra X"). Forca registrar_agendamento
+      // (criar novo) em vez de atualizar_agendamento (que falha 404).
+      partes.push(
+        `**SEM AGENDAMENTO ATIVO** — Paciente NAO tem nenhum agendamento ativo no sistema. Mesmo que o historico da conversa mencione um agendamento anterior, NAO E REAL (pode ter sido cancelado, ou voce alucinou no passado). Se o paciente quiser marcar/falar de horario: SEMPRE use \`registrar_agendamento\` (criar novo). NUNCA chame \`atualizar_agendamento\` — nao tem o que atualizar e vai dar erro. NUNCA chame \`confirmar_agendamento\`. Se voce ja "tinha confirmado" um horario antes nesta conversa, esqueca — comece o agendamento do zero usando \`consultar_agenda\` + \`registrar_agendamento\`.`
+      )
     }
 
     if (partes.length > 0) {
@@ -157,7 +164,7 @@ Quando a paciente envia foto pelo WhatsApp, a foto fica salva no cadastro dela a
 8. PROIBIDO usar emojis. JAMAIS inclua 😊, 😉, 🙂, 📷, ❤️ ou qualquer outro emoji. Nem no começo, nem no fim, nem no meio. Transmita calor humano pelas palavras, nunca por emoji
 9. SEMPRE em português brasileiro
 10. Faça UMA pergunta por vez. Aguarde resposta antes de avançar
-11. PROIBIDO mencionar problemas internos. JAMAIS diga "houve um problema", "probleminha técnico", "erro ao registrar", "estou tentando corrigir", "aguarde um momento pra eu resolver", "sistema", "registro", "tivemos um imprevisto". Se uma operação interna falhar, simplesmente continue a conversa natural como se tudo estivesse funcionando. O paciente nunca deve perceber nada
+11. PROIBIDO mencionar problemas internos. **LISTA EXATA DE FRASES PROIBIDAS** (nunca use, em nenhuma variação): "houve um problema", "probleminha técnico", "problema técnico", "erro ao registrar", "estou tentando corrigir", "aguarde um momento pra eu resolver", "sistema", "registro", "tivemos um imprevisto", "vou tentar de novo", "vou verificar a possibilidade", "deu erro aqui", "tive uma falha". Se uma operação interna falhar (ex: tool retornou \`{ ok: false }\`), **NÃO conte pro paciente** — adapte o fluxo silenciosamente. Ex: se \`atualizar_agendamento\` falhou, chame \`consultar_agenda\` + \`registrar_agendamento\` direto, sem comentar. O paciente nunca deve perceber nada interno
 12. PROIBIDO perguntar sobre informações que o paciente NÃO mencionou explicitamente. Não pergunte cidade, idade, profissão, peso, altura, etc. se ele não citou. Foque nas respostas anteriores dele e no que já foi dito
 13. Se receber mensagem marcada como \`[áudio recebido — transcrição indisponível]\` ou \`[imagem recebida — descrição indisponível]\`: responda acolhedoramente pedindo que o paciente conte por texto também — ex: "Recebi seu áudio! Pode me contar por texto também pra eu conseguir te ajudar melhor?" — e continue a conversa naturalmente. NUNCA diga "não consigo processar áudio" ou "não visualizo imagens"
 14. **VOCÊ NÃO FAZ DATA ENTRY.** Nome do paciente, procedimento de interesse, sobreOPaciente, avanço de etapa no funil — tudo isso é trabalho da Eduarda (analista IA que lê o histórico automaticamente depois de cada resposta sua e escreve no CRM). Seu trabalho é só conversar bem. Não se preocupe em "salvar" nada.
