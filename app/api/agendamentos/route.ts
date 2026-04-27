@@ -6,6 +6,7 @@ import { criarAgendamentoSchema, ROTULOS_TIPO_AGENDAMENTO } from "@/lib/validati
 import { criarEvento } from "@/lib/google-calendar"
 import { criarId, agora } from "@/lib/db-utils"
 import { registrarAuditLog } from "@/lib/audit"
+import { validarSlotManual } from "@/lib/agendamento/validar-slot"
 
 export async function POST(request: NextRequest) {
   const auth = await requireAnyRole(["gestor", "atendente"])
@@ -33,6 +34,11 @@ export async function POST(request: NextRequest) {
   const tipo = "consulta_online" as const
   const duracao = 60
   const inicio = new Date(dataHora)
+
+  const validacao = await validarSlotManual(inicio, duracao)
+  if (!validacao.ok) {
+    return NextResponse.json({ error: validacao.motivo }, { status: 400 })
+  }
 
   const tsAgora = agora()
 

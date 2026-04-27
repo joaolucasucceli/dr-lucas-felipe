@@ -682,6 +682,27 @@ export type Database = {
           },
         ]
       }
+      feriados: {
+        Row: {
+          criadoEm: string
+          data: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          criadoEm?: string
+          data: string
+          id: string
+          nome: string
+        }
+        Update: {
+          criadoEm?: string
+          data?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       fotos_contato: {
         Row: {
           categoria: string

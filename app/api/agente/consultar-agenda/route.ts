@@ -9,6 +9,7 @@ import {
   formatarLabelSlot,
   type Ocupacao,
 } from "@/lib/agente/slots-agenda"
+import { carregarFeriadosNoIntervalo, ymdSP } from "@/lib/agendamento/feriados"
 
 const MAX_SLOTS = 10
 // Avaliacao online com Dr. Lucas e SEMPRE 60min — nao usar duracao do
@@ -40,14 +41,17 @@ export async function POST(request: NextRequest) {
 
   const duracaoMin = DURACAO_AVALIACAO_MIN
 
-  const eventosCalendar = await listarEventos(dataInicio, dataFim)
-
-  const { data: agendamentosDb } = await supabaseAdmin
-    .from("agendamentos")
-    .select("dataHora, duracao")
-    .in("status", ["agendado", "confirmado", "remarcado"])
-    .gte("dataHora", dataInicio.toISOString())
-    .lte("dataHora", dataFim.toISOString())
+  const [eventosCalendar, feriados, agendamentosDbRes] = await Promise.all([
+    listarEventos(dataInicio, dataFim),
+    carregarFeriadosNoIntervalo(dataInicio, dataFim),
+    supabaseAdmin
+      .from("agendamentos")
+      .select("dataHora, duracao")
+      .in("status", ["agendado", "confirmado", "remarcado"])
+      .gte("dataHora", dataInicio.toISOString())
+      .lte("dataHora", dataFim.toISOString()),
+  ])
+  const agendamentosDb = agendamentosDbRes.data
 
   const ocupacoes: Ocupacao[] = [
     ...eventosCalendar.map((e) => ({ inicio: e.inicio, fim: e.fim })),
@@ -62,6 +66,7 @@ export async function POST(request: NextRequest) {
 
   const slotsLivres = candidatos
     .filter((slot) => slot.getTime() > agora.getTime())
+    .filter((slot) => !feriados.has(ymdSP(slot)))
     .filter((slot) => !slotConflitaCom(slot, duracaoMin, ocupacoes))
     .slice(0, MAX_SLOTS)
     .map((slot) => ({

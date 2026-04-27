@@ -6,6 +6,7 @@ import { atualizarAgendamentoSchema } from "@/lib/validations/agendamento"
 import { atualizarEvento, cancelarEvento } from "@/lib/google-calendar"
 import { agora } from "@/lib/db-utils"
 import { registrarAuditLog } from "@/lib/audit"
+import { validarSlotManual } from "@/lib/agendamento/validar-slot"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -38,6 +39,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   if (errAtual || !atual) {
     return NextResponse.json({ error: "Agendamento não encontrado" }, { status: 404 })
+  }
+
+  // Se dataHora foi mexida, valida expediente/feriado/conflito (ignorando
+  // o proprio agendamento pra nao conflitar consigo mesmo).
+  if (parsed.data.dataHora) {
+    const novaInicio = new Date(parsed.data.dataHora)
+    const novaDuracao = parsed.data.duracao ?? atual.duracao ?? 60
+    const validacao = await validarSlotManual(novaInicio, novaDuracao, id)
+    if (!validacao.ok) {
+      return NextResponse.json({ error: validacao.motivo }, { status: 400 })
+    }
   }
 
   const dadosUpdate: Record<string, unknown> = {
