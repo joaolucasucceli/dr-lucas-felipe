@@ -31,7 +31,7 @@ export function PainelProntuarioInline({ pacienteId }: PainelProntuarioInlinePro
 
   return (
     <Tabs defaultValue="anamnese">
-      <TabsList className="w-full justify-start overflow-x-auto">
+      <TabsList className="h-auto flex-wrap justify-start gap-1">
         <TabsTrigger value="anamnese" className="gap-2">
           <FileText className="h-4 w-4" />
           Anamnese

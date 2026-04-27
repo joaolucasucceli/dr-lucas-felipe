@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react"
 import { formatarData } from "@/lib/format"
 import { Plus, FileText, Image, Download, Trash2 } from "lucide-react"
 import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
@@ -98,15 +97,14 @@ export function ListaDocumentos({ pacienteId }: ListaDocumentosProps) {
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Documentos</CardTitle>
+      <div className="space-y-4">
+        <div className="flex items-center justify-end">
           <Button size="sm" onClick={() => setUploadAberto(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Novo Documento
+            Novo documento
           </Button>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div>
           {carregando ? (
             <p className="text-center text-muted-foreground py-8">Carregando...</p>
           ) : documentos.length === 0 ? (
@@ -166,8 +164,8 @@ export function ListaDocumentos({ pacienteId }: ListaDocumentosProps) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <UploadDocumento
         aberto={uploadAberto}

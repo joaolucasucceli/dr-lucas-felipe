@@ -6,7 +6,6 @@ import { ptBR } from "date-fns/locale"
 import { formatarData } from "@/lib/format"
 import { Plus, Trash2, Upload, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -168,42 +167,39 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <CardTitle className="text-base">Fotos Clínicas</CardTitle>
-          <div className="flex items-center gap-2">
-            <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-              <SelectTrigger className="w-[160px] h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os tipos</SelectItem>
-                {tiposFoto.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setComparacaoAberta(true)}
-              disabled={
-                !fotos.some((f) => f.tipoFoto === "pre_operatorio") ||
-                !fotos.some((f) => f.tipoFoto === "pos_operatorio")
-              }
-            >
-              <SlidersHorizontal className="mr-2 h-4 w-4" />
-              Comparar
-            </Button>
-            <Button size="sm" onClick={() => setUploadAberto(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Foto
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+            <SelectTrigger className="w-[160px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os tipos</SelectItem>
+              {tiposFoto.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setComparacaoAberta(true)}
+            disabled={
+              !fotos.some((f) => f.tipoFoto === "pre_operatorio") ||
+              !fotos.some((f) => f.tipoFoto === "pos_operatorio")
+            }
+          >
+            <SlidersHorizontal className="mr-2 h-4 w-4" />
+            Comparar
+          </Button>
+          <Button size="sm" onClick={() => setUploadAberto(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova foto
+          </Button>
+        </div>
+        <div>
           {carregando ? (
             <p className="text-center text-muted-foreground py-8">Carregando...</p>
           ) : fotosFiltradas.length === 0 ? (
@@ -264,8 +260,8 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
                 ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Dialog de Upload */}
       <Dialog open={uploadAberto} onOpenChange={(open) => !open && fecharUpload()}>

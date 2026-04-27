@@ -4,7 +4,6 @@ import { useState } from "react"
 import { formatarData } from "@/lib/format"
 import { Plus, ChevronDown, ChevronUp, Pencil, Trash2, Stethoscope } from "lucide-react"
 import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
@@ -58,17 +57,16 @@ export function TimelineEvolucao({ evolucoes, pacienteId, onAtualizar }: Timelin
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Evolução Clínica</CardTitle>
+      <div className="space-y-4">
+        <div className="flex items-center justify-end">
           <Button size="sm" onClick={() => setFormAberto(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Nova Evolução
+            Nova evolução
           </Button>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div>
           {evolucoes.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
+            <p className="text-center text-muted-foreground py-8 text-sm">
               Nenhuma evolução registrada.
             </p>
           ) : (
@@ -188,8 +186,8 @@ export function TimelineEvolucao({ evolucoes, pacienteId, onAtualizar }: Timelin
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <FormEvolucao
         aberto={formAberto}

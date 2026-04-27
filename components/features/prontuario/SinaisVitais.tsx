@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react"
 import { formatarData } from "@/lib/format"
 import { Plus, Trash2, Activity } from "lucide-react"
 import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -113,18 +112,14 @@ export function SinaisVitais({ pacienteId }: SinaisVitaisProps) {
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Sinais Vitais</CardTitle>
-          </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-end">
           <Button size="sm" onClick={() => setFormAberto(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Registrar
           </Button>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div>
           {/* Dashboard de últimos valores */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
             {Object.entries(labelsTipo).map(([tipo, label]) => {
@@ -234,8 +229,8 @@ export function SinaisVitais({ pacienteId }: SinaisVitaisProps) {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <FormSinalVital
         aberto={formAberto}

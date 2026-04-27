@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -155,12 +154,7 @@ export function FormAnamnese({ anamnese, pacienteId, onAtualizar }: FormAnamnese
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Anamnese</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Accordion type="multiple" defaultValue={["queixa", "historico"]} className="space-y-2">
+    <Accordion type="multiple" defaultValue={["queixa", "historico"]} className="space-y-2">
           {/* Seção 1: Queixa Principal */}
           <AccordionItem value="queixa">
             <AccordionTrigger>Queixa Principal</AccordionTrigger>
@@ -411,7 +405,5 @@ export function FormAnamnese({ anamnese, pacienteId, onAtualizar }: FormAnamnese
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </CardContent>
-    </Card>
   )
 }
