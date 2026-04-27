@@ -122,7 +122,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "registrar_agendamento",
       description:
-        "Cria um agendamento de avaliação online (gratuita) para o paciente. Avança automaticamente o funil para 'consulta_agendada'.",
+        "Cria um agendamento de avaliação online (gratuita) para o paciente. Avança automaticamente o funil para 'consulta_agendada'. SEMPRE pergunte o email do paciente ANTES de chamar — sem email o Google Calendar não envia o convite. Se o paciente recusar email, prossiga sem (o agendamento fica criado mesmo assim, só sem convite).",
       parameters: {
         type: "object",
         properties: {
@@ -136,7 +136,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
           procedimentoId: {
             type: "string",
-            description: "ID do procedimento (opcional)",
+            description: "ID do procedimento (opcional). Se omitir, o backend tenta resolver via procedimentoInteresse do contato.",
           },
           dataHora: {
             type: "string",
@@ -145,6 +145,10 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           observacao: {
             type: "string",
             description: "Observações adicionais (opcional)",
+          },
+          email: {
+            type: "string",
+            description: "Email do paciente — usado pra mandar convite Google Calendar. Pergunte ao paciente antes de chamar a tool.",
           },
         },
         required: ["contatoId", "conversaId", "dataHora"],

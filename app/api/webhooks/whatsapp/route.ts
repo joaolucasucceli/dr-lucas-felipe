@@ -9,6 +9,8 @@ import {
 } from "@/lib/agente/processar-midia"
 import { baixarMidia, enviarDigitando } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
+import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
+import { obterOuCriarUsuarioIA } from "@/lib/agente/usuario-ia"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -72,16 +74,24 @@ async function downloadEUploadMidia(
               : "bin"
     const path = `webhook/${messageId}.${ext}`
 
+    // Imagens vao pro bucket dedicado de fotos do contato (mesmo bucket
+    // usado pela aba "Fotos" do contato no painel). Demais tipos ficam
+    // num bucket de midias gerais.
+    const bucket = tipo === "imagem" ? BUCKET_FOTOS_CONTATO : "atendimento-midias"
+
     const { error } = await supabaseAdmin.storage
-      .from("atendimento-midias")
+      .from(bucket)
       .upload(path, buffer, {
         contentType: MIME_MAP[tipo] || "application/octet-stream",
         upsert: true,
       })
 
-    if (error) return null
+    if (error) {
+      console.error(`[webhook-whatsapp] upload em '${bucket}' falhou:`, error.message)
+      return null
+    }
 
-    const { data } = supabaseAdmin.storage.from("atendimento-midias").getPublicUrl(path)
+    const { data } = supabaseAdmin.storage.from(bucket).getPublicUrl(path)
     return data.publicUrl
   } catch (err) {
     console.error("[webhook-whatsapp] download/upload midia falhou:", err)
@@ -325,17 +335,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!contato) {
-      const { data: usuarioIa } = await supabaseAdmin
-        .from("usuarios")
-        .select("id")
-        .eq("tipo", "ia")
-        .eq("ativo", true)
-        .is("deletadoEm", null)
-        .maybeSingle()
-
-      if (!usuarioIa) {
-        console.warn("[Webhook] Nenhum usuário IA ativo encontrado — contato será criado sem responsável")
-      }
+      const usuarioIaId = await obterOuCriarUsuarioIA()
 
       const { data: novoContato, error: createErr } = await supabaseAdmin
         .from("contatos")
@@ -346,7 +346,7 @@ export async function POST(request: NextRequest) {
           nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
           whatsapp: msg.numero,
           origem: "whatsapp",
-          responsavelId: usuarioIa?.id || null,
+          responsavelId: usuarioIaId,
         })
         .select("*")
         .single()
@@ -449,6 +449,7 @@ export async function POST(request: NextRequest) {
           id: criarId(),
           contatoId: contato!.id,
           url: storedMediaUrl,
+          categoria: "recebida_whatsapp",
           tipoAnalise: "geral",
           descricao: captionPaciente,
         })

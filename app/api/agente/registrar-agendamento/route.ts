@@ -12,6 +12,7 @@ const schema = z.object({
   procedimentoId: z.string().min(1).optional(),
   dataHora: z.string().datetime({ offset: true }).or(z.string().min(10)),
   observacao: z.string().optional(),
+  email: z.string().email().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -33,9 +34,42 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { contatoId, conversaId, procedimentoId, dataHora, observacao } = parsed.data
+  const { contatoId, conversaId, procedimentoId, dataHora, observacao, email } = parsed.data
 
   const inicio = new Date(dataHora)
+
+  // Se IA passou email, salva no contato pra reuso (Google Calendar invite,
+  // futura comunicacao). Antes de criar evento, pra garantir que a busca
+  // de email logo abaixo ja pegue o valor atualizado.
+  if (email) {
+    await supabaseAdmin
+      .from("contatos")
+      .update({ email, atualizadoEm: agora() })
+      .eq("id", contatoId)
+  }
+
+  // Fallback de procedimento: se IA nao passou procedimentoId, tenta
+  // resolver pelo procedimentoInteresse ja gravado pela Eduarda.
+  let finalProcedimentoId = procedimentoId
+  if (!finalProcedimentoId) {
+    const { data: contatoProc } = await supabaseAdmin
+      .from("contatos")
+      .select("procedimentoInteresse")
+      .eq("id", contatoId)
+      .maybeSingle()
+    const interesse = contatoProc?.procedimentoInteresse?.trim()
+    if (interesse) {
+      const { data: proc } = await supabaseAdmin
+        .from("procedimentos")
+        .select("id")
+        .ilike("nome", `%${interesse}%`)
+        .eq("ativo", true)
+        .is("deletadoEm", null)
+        .limit(1)
+        .maybeSingle()
+      if (proc?.id) finalProcedimentoId = proc.id
+    }
+  }
 
   const { data: agendamento, error: agendError } = await supabaseAdmin
     .from("agendamentos")
@@ -43,7 +77,7 @@ export async function POST(request: NextRequest) {
       id: criarId(),
       atualizadoEm: agora(),
       contatoId,
-      procedimentoId: procedimentoId || null,
+      procedimentoId: finalProcedimentoId || null,
       dataHora: inicio.toISOString(),
       status: "agendado",
       observacao: observacao || null,
@@ -79,11 +113,11 @@ export async function POST(request: NextRequest) {
       .select("nome, email, whatsapp")
       .eq("id", contatoId)
       .maybeSingle(),
-    procedimentoId
+    finalProcedimentoId
       ? supabaseAdmin
           .from("procedimentos")
           .select("nome")
-          .eq("id", procedimentoId)
+          .eq("id", finalProcedimentoId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
   ])

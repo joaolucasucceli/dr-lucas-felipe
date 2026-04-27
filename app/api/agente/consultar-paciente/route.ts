@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarId, agora } from "@/lib/db-utils"
+import { obterOuCriarUsuarioIA } from "@/lib/agente/usuario-ia"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -30,17 +31,7 @@ export async function POST(request: NextRequest) {
   let contato = contatoExistente
 
   if (!contato) {
-    const { data: usuarioIa } = await supabaseAdmin
-      .from("usuarios")
-      .select("id")
-      .eq("tipo", "ia")
-      .eq("ativo", true)
-      .is("deletadoEm", null)
-      .maybeSingle()
-
-    if (!usuarioIa) {
-      console.warn("[consultar-paciente] Nenhum usuário IA ativo encontrado — contato será criado sem responsável")
-    }
+    const usuarioIaId = await obterOuCriarUsuarioIA()
 
     const { data: novoContato, error: criarError } = await supabaseAdmin
       .from("contatos")
@@ -51,7 +42,7 @@ export async function POST(request: NextRequest) {
         whatsapp,
         origem: "whatsapp",
         statusFunil: "acolhimento",
-        responsavelId: usuarioIa?.id || null,
+        responsavelId: usuarioIaId,
       })
       .select("*")
       .single()
