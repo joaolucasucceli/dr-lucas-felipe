@@ -37,8 +37,9 @@ const ROTULOS_STATUS: Record<StatusAgendamento, string> = {
 
 // Input nativo type="datetime-local" tem formato MM/DD/AAAA em navegadores
 // com locale en-US — confunde usuario brasileiro. Usamos 2 inputs:
-// data em texto livre dd/mm/aaaa + hora type="time".
-const REGEX_DATA_BR = /^(\d{2})\/(\d{2})\/(\d{4})$/
+// data em texto livre dd/mm[/aaaa] + hora type="time". Se o ano nao for
+// fornecido, completamos automatico (ano atual ou +1 se a data ja passou).
+const REGEX_DATA_BR = /^(\d{2})\/(\d{2})(?:\/(\d{4}))?$/
 
 // Avaliacao online com Dr. Lucas: tipo e duracao sao FIXOS no painel
 // (consulta_online + 60min). A clinica so agenda esse tipo via /agenda.
@@ -47,7 +48,7 @@ const formSchema = z.object({
   procedimentoId: z.string().nullable().optional(),
   dataBr: z
     .string()
-    .regex(REGEX_DATA_BR, "Use o formato dd/mm/aaaa"),
+    .regex(REGEX_DATA_BR, "Use dd/mm ou dd/mm/aaaa"),
   hora: z.string().regex(/^\d{2}:\d{2}$/, "Hora obrigatória"),
   observacao: z.string().nullable().optional(),
   status: z.enum(STATUS_AGENDAMENTO),
@@ -84,21 +85,32 @@ function isoParaHora(iso: string | null | undefined): string {
 function dataBrEHoraParaIso(dataBr: string, hora: string): string | null {
   const m = dataBr.match(REGEX_DATA_BR)
   if (!m) return null
-  const [, dd, mm, yyyy] = m
+  const [, dd, mm, yyyyRaw] = m
   const hm = hora.match(/^(\d{2}):(\d{2})$/)
   if (!hm) return null
   const [, hh, mn] = hm
-  const d = new Date(
-    Number(yyyy),
-    Number(mm) - 1,
-    Number(dd),
-    Number(hh),
-    Number(mn)
-  )
+
+  // Se ano nao fornecido, usa ano atual; se a data ja passou, vai pro proximo ano.
+  let ano: number
+  if (yyyyRaw) {
+    ano = Number(yyyyRaw)
+  } else {
+    const hoje = new Date()
+    const candidato = new Date(
+      hoje.getFullYear(),
+      Number(mm) - 1,
+      Number(dd),
+      Number(hh),
+      Number(mn)
+    )
+    ano = candidato.getTime() < hoje.getTime() ? hoje.getFullYear() + 1 : hoje.getFullYear()
+  }
+
+  const d = new Date(ano, Number(mm) - 1, Number(dd), Number(hh), Number(mn))
   if (isNaN(d.getTime())) return null
   // Sanity check: campos batem (evita 31/02 virando 03/03)
   if (
-    d.getFullYear() !== Number(yyyy) ||
+    d.getFullYear() !== ano ||
     d.getMonth() !== Number(mm) - 1 ||
     d.getDate() !== Number(dd)
   ) {
@@ -349,7 +361,7 @@ export function AgendamentoForm({
             id="ag-data"
             type="text"
             inputMode="numeric"
-            placeholder="dd/mm/aaaa"
+            placeholder="dd/mm"
             maxLength={10}
             {...register("dataBr", {
               onChange: (e) => {
@@ -357,6 +369,9 @@ export function AgendamentoForm({
               },
             })}
           />
+          <p className="text-xs text-muted-foreground">
+            Ano vem automático. Use dd/mm/aaaa só pra outro ano.
+          </p>
           {errors.dataBr && (
             <p className="text-xs text-destructive">{errors.dataBr.message}</p>
           )}

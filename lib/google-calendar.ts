@@ -47,6 +47,10 @@ export async function criarEvento(params: {
 
     const res = await calendar.events.insert({
       calendarId,
+      // sendUpdates 'all' faz o Google enviar email de convite pra
+      // attendees (paciente). Sem isso, attendee fica com
+      // responseStatus="needsAction" e nunca recebe notificacao.
+      sendUpdates: "all",
       requestBody: {
         summary: params.titulo,
         description: params.descricao,
@@ -89,6 +93,9 @@ export async function atualizarEvento(
     await calendar.events.update({
       calendarId,
       eventId: googleEventId,
+      // Notificar attendees sobre a atualizacao (remarcacao, mudanca de
+      // titulo etc).
+      sendUpdates: "all",
       requestBody: {
         ...evento,
         summary: params.titulo ?? evento.summary,
@@ -114,7 +121,12 @@ export async function cancelarEvento(googleEventId: string): Promise<boolean> {
     if (!client) return false
 
     const { calendar, calendarId } = client
-    await calendar.events.delete({ calendarId, eventId: googleEventId })
+    // Notificar attendees sobre o cancelamento.
+    await calendar.events.delete({
+      calendarId,
+      eventId: googleEventId,
+      sendUpdates: "all",
+    })
     return true
   } catch {
     return false
