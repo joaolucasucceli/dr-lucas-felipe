@@ -8,6 +8,8 @@ import {
   enviarConfirmacao,
 } from "@/lib/agente/confirmacao"
 
+export const maxDuration = 300
+
 export async function GET(request: NextRequest) {
   const erro = validarCronSecret(request)
   if (erro) return erro

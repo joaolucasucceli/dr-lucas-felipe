@@ -4,6 +4,8 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { validarCronSecret } from "@/lib/cron-auth"
 import { agora } from "@/lib/db-utils"
 
+export const maxDuration = 300
+
 export async function GET(request: NextRequest) {
   const erro = validarCronSecret(request)
   if (erro) return erro

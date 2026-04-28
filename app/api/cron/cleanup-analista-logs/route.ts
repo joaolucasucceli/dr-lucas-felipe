@@ -5,6 +5,8 @@ import { validarCronSecret } from "@/lib/cron-auth"
 
 const DIAS_RETENCAO = 90
 
+export const maxDuration = 300
+
 /**
  * Cron diario — remove analista_logs com mais de 90 dias.
  * A Eduarda grava 1 row por turno da IA (debug + auditoria do que foi

@@ -73,7 +73,18 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
   const [tipoFoto, setTipoFoto] = useState("pre_operatorio")
   const [descricao, setDescricao] = useState("")
   const [enviando, setEnviando] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!arquivo) {
+      setPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(arquivo)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [arquivo])
 
   const buscar = useCallback(async () => {
     setCarregando(true)
@@ -306,10 +317,10 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
 
             <div className="grid gap-2">
               <Label>Foto *</Label>
-              {arquivo ? (
+              {arquivo && previewUrl ? (
                 <div className="relative rounded-lg overflow-hidden border">
                   <img
-                    src={URL.createObjectURL(arquivo)}
+                    src={previewUrl}
                     alt="Preview"
                     className="w-full h-48 object-cover"
                   />

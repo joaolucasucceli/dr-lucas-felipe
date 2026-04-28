@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Image from "next/image"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -170,7 +171,14 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
       {urlAtual && (
         <div className="rounded-md border p-2">
           {tipoInferido === "imagem" ? (
-            <img src={urlAtual} alt="Preview" className="max-h-48 w-full rounded object-contain" />
+            <Image
+              src={urlAtual}
+              alt="Preview"
+              width={400}
+              height={192}
+              className="max-h-48 w-full rounded object-contain"
+              unoptimized
+            />
           ) : (
             <video src={urlAtual} controls className="max-h-48 w-full rounded" />
           )}

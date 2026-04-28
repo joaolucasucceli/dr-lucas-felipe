@@ -18,7 +18,7 @@ export function useContatosAlerta() {
   const { data, error, isLoading, mutate } = useSWR<{ contatos: ContatoAlerta[]; total: number }>(
     "/api/dashboard/contatos-alerta",
     fetcher,
-    { refreshInterval: 300000, revalidateOnFocus: true }
+    { refreshInterval: 300000, revalidateOnFocus: false }
   )
 
   // Realtime: atualizar quando leads mudarem

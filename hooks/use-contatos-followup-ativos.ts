@@ -18,7 +18,7 @@ export function useContatosFollowUpAtivos() {
   const { data, error, isLoading, mutate } = useSWR<{ contatos: ContatoFollowUpAtivo[]; total: number }>(
     "/api/dashboard/follow-ups-ativos",
     fetcher,
-    { refreshInterval: 300000, revalidateOnFocus: true }
+    { refreshInterval: 300000, revalidateOnFocus: false }
   )
 
   // Realtime: atualizar quando leads mudarem
