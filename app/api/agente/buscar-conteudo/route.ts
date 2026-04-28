@@ -55,9 +55,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: erroMidias.message }, { status: 500 })
   }
 
+  // Fallback: filtro nao casou com nenhuma midia. Retorna catalogo inteiro
+  // pra IA avaliar via descricao e decidir se cabe enviar (regra do
+  // prompt.ts:544 "se nao bate com perfil, NAO envie"). Sem isso, paciente
+  // que pergunta "papada" nunca recebe foto se descricao diz "Mini Lipo
+  // abdome". GPT continua livre pra cair no fallback consultivo se nada
+  // fizer sentido — mesmo comportamento de hoje, so com mais opcao.
+  let midiasFinais = midias ?? []
+  let usouFallback = false
+  if (midiasFinais.length === 0 && filtro) {
+    const { data: todas } = await supabaseAdmin
+      .from("midia_marketing")
+      .select("id, descricao, url")
+      .is("deletadoEm", null)
+    midiasFinais = todas ?? []
+    usouFallback = true
+  }
+
   // === jaEnviada: cruzar com mensagens_whatsapp da conversa ===
   let idsEnviadas = new Set<string>()
-  if (conversaId && midias && midias.length > 0) {
+  if (conversaId && midiasFinais.length > 0) {
     const { data: enviadas } = await supabaseAdmin
       .from("mensagens_whatsapp")
       .select("mediaUrl")
@@ -71,12 +88,12 @@ export async function POST(request: NextRequest) {
 
     if (urlsEnviadas.size > 0) {
       idsEnviadas = new Set(
-        midias.filter((m) => urlsEnviadas.has(m.url)).map((m) => m.id)
+        midiasFinais.filter((m) => urlsEnviadas.has(m.url)).map((m) => m.id)
       )
     }
   }
 
-  const midiasEnriquecidas = (midias ?? []).map((m) => ({
+  const midiasEnriquecidas = midiasFinais.map((m) => ({
     id: m.id,
     descricao: m.descricao,
     jaEnviada: idsEnviadas.has(m.id),
@@ -87,5 +104,6 @@ export async function POST(request: NextRequest) {
     midias: midiasEnriquecidas,
     totalTextos: textos?.length ?? 0,
     totalMidias: midiasEnriquecidas.length,
+    fonteMidias: usouFallback ? "fallback_tudo" : "filtro",
   })
 }
