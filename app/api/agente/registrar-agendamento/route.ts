@@ -16,7 +16,10 @@ const schema = z.object({
   // 08:00Z = 05:00 SP, agendando 4h antes do que o paciente escolheu.
   dataHora: z.string().datetime({ offset: true }),
   observacao: z.string().optional(),
-  email: z.string().email().optional(),
+  // Email OBRIGATORIO — sem ele o Google Calendar nao manda convite e o
+  // paciente fica sem confirmacao por email. Decisao de produto: nao
+  // criamos agendamento sem email valido.
+  email: z.string().email(),
 })
 
 export async function POST(request: NextRequest) {
