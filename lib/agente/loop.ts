@@ -266,7 +266,25 @@ export async function processarMensagens(chatId: string): Promise<void> {
       for (const toolCall of toolCalls) {
         if (toolCall.type !== "function") continue
         const fn = toolCall.function
-        const args = JSON.parse(fn.arguments || "{}")
+        let args: Record<string, unknown>
+        try {
+          args = JSON.parse(fn.arguments || "{}")
+        } catch (err) {
+          console.error(
+            `[Agente] GPT enviou JSON invalido em ${fn.name}:`,
+            fn.arguments,
+            err
+          )
+          mensagens.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({
+              ok: false,
+              error: "Argumentos invalidos (JSON malformado)",
+            }),
+          })
+          continue
+        }
 
         // GPT-4o as vezes passa contatoId/conversaId vazios ou errados (foi a
         // causa do "acabei de enviar a foto" sem envio real). Injetamos os

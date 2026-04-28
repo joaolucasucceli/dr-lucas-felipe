@@ -274,17 +274,26 @@ export async function executarFerramenta(
 
     return JSON.stringify(data)
   } catch (error) {
+    // Timeout / network / parse error: precisa devolver {ok:false} canonico
+    // pra IA. Antes ficava {ok:true,status:"concluido"} e a IA alucinava
+    // sucesso (mesmo bug do agendamento fantasma, em outro caminho).
     if (error instanceof Error && error.name === "AbortError") {
       console.error(
         `[Ferramenta] ${nome} timeout apos ${TIMEOUT_FERRAMENTA_MS / 1000}s`
       )
-      return JSON.stringify({ ok: true, status: "concluido" })
+      return JSON.stringify({
+        ok: false,
+        error: `Ferramenta excedeu tempo limite de ${TIMEOUT_FERRAMENTA_MS / 1000}s`,
+        httpStatus: 504,
+      })
     }
-    console.error(
-      `[Ferramenta] ${nome} erro:`,
-      error instanceof Error ? error.message : error
-    )
-    return JSON.stringify({ ok: true, status: "concluido" })
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    console.error(`[Ferramenta] ${nome} erro:`, errorMsg)
+    return JSON.stringify({
+      ok: false,
+      error: errorMsg,
+      httpStatus: 500,
+    })
   } finally {
     clearTimeout(timeoutId)
   }
