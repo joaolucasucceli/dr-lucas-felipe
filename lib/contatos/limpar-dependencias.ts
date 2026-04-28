@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { limparMemoria } from "@/lib/agente/memoria"
 import { limparBuffer, limparDebounce } from "@/lib/agente/buffer"
 import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
+import { cancelarEvento } from "@/lib/google-calendar"
 
 const WHATSAPP_ANONIMIZADO_REGEX = /^[a-f0-9]{64}(_[a-z0-9]+)?$/
 
@@ -48,6 +49,24 @@ export async function limparDependenciasDoContato(params: {
     const paths = arquivosFotos.map((a) => `${contatoId}/${a.name}`)
     const { error } = await supabaseAdmin.storage.from(BUCKET_FOTOS_CONTATO).remove(paths)
     if (error) console.warn(`[limparDependenciasDoContato] storage ${BUCKET_FOTOS_CONTATO}:`, error.message)
+  }
+
+  // Cancelar eventos no Google Calendar antes de apagar agendamentos
+  // (senao o evento fica orfao na agenda do Dr. Lucas).
+  const { data: agendamentosComEvento } = await supabaseAdmin
+    .from("agendamentos")
+    .select("googleEventId")
+    .eq("contatoId", contatoId)
+    .not("googleEventId", "is", null)
+
+  for (const a of agendamentosComEvento ?? []) {
+    if (a.googleEventId) {
+      try {
+        await cancelarEvento(a.googleEventId)
+      } catch (e) {
+        console.warn(`[limparDependenciasDoContato] cancelar evento ${a.googleEventId} falhou:`, e)
+      }
+    }
   }
 
   await supabaseAdmin.from("analista_logs").delete().eq("contatoId", contatoId)

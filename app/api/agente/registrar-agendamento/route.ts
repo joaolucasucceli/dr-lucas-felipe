@@ -11,7 +11,10 @@ const schema = z.object({
   contatoId: z.string().min(1),
   conversaId: z.string().min(1),
   procedimentoId: z.string().min(1).optional(),
-  dataHora: z.string().datetime({ offset: true }).or(z.string().min(10)),
+  // EXIGE timezone explicito (Z ou +/-HH:MM). Senao a IA pode passar
+  // "2026-04-28T08:00:00" sem TZ e o servidor (UTC) interpreta como
+  // 08:00Z = 05:00 SP, agendando 4h antes do que o paciente escolheu.
+  dataHora: z.string().datetime({ offset: true }),
   observacao: z.string().optional(),
   email: z.string().email().optional(),
 })
