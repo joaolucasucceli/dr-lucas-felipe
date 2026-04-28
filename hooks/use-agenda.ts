@@ -38,7 +38,10 @@ export function useAgenda(periodo: string = "semana") {
   const { data, error, isLoading, mutate } = useSWR<RespostaAgenda>(
     `/api/agenda?periodo=${periodo}`,
     fetcher,
-    { refreshInterval: 300000, revalidateOnFocus: true }
+    // Realtime ja revalida quando agendamento/contato muda — focus refetch
+    // era duplicacao desnecessaria. refreshInterval mantido como rede de
+    // seguranca caso realtime caia.
+    { refreshInterval: 300000, revalidateOnFocus: false }
   )
 
   useRealtimeTabela("agendamentos", () => mutate())

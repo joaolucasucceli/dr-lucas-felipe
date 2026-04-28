@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Image from "next/image"
 import { Upload, X, ImageIcon, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -141,11 +142,13 @@ export function GaleriaFotos({ contatoId, fotosIniciais, isGestor }: GaleriaFoto
         className="group relative overflow-hidden rounded-lg border cursor-pointer"
         onClick={() => setFotoAmpliada({ foto, secao })}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={foto.url}
           alt={foto.descricao || "Foto do contato"}
+          width={300}
+          height={300}
           className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
         {foto.tipoAnalise && foto.tipoAnalise !== "geral" && (
           <Badge className={`absolute left-2 top-2 text-[10px] uppercase ${badgeClasses(foto.tipoAnalise)}`}>
@@ -268,11 +271,13 @@ export function GaleriaFotos({ contatoId, fotosIniciais, isGestor }: GaleriaFoto
         <DialogContent className="sm:max-w-3xl p-0 overflow-hidden">
           {fotoAmpliada && (
             <div className="relative bg-black">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={fotoAmpliada.foto.url}
                 alt={fotoAmpliada.foto.descricao || "Foto ampliada"}
+                width={1200}
+                height={1200}
                 className="max-h-[80vh] w-full object-contain"
+                sizes="100vw"
               />
               {fotoAmpliada.secao.findIndex((f) => f.id === fotoAmpliada.foto.id) > 0 && (
                 <button

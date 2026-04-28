@@ -21,14 +21,17 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
 
+  // Campos enxutos por tabela — antes era select * recursivo que podia
+  // gerar payload de 3-10MB com ~200 mensagens. Cada lista pega so os
+  // campos consumidos no front (ver app/(dashboard)/contatos/[id]/page.tsx).
   const { data: contato } = await supabaseAdmin
     .from("contatos")
     .select(`
-      *,
+      ${SELECT_CONTATO_ATUALIZADO},
       responsavel:usuarios!contatos_responsavelId_fkey(id, nome),
-      agendamentos(*, procedimento:procedimentos(id, nome)),
-      conversas(*, mensagens:mensagens_whatsapp(*, replyTo:mensagens_whatsapp!replyToId(id, conteudo, remetente))),
-      fotos:fotos_contato(*),
+      agendamentos(id, dataHora, status, tipo, duracao, observacao, googleEventUrl, criadoEm, procedimento:procedimentos(id, nome)),
+      conversas(id, ciclo, etapa, modoConversa, criadoEm, atualizadoEm, mensagens:mensagens_whatsapp(id, tipo, conteudo, remetente, mediaUrl, mediaType, criadoEm, replyTo:mensagens_whatsapp!replyToId(id, conteudo, remetente))),
+      fotos:fotos_contato(id, url, descricao, categoria, tipoAnalise, criadoEm),
       prontuario:prontuarios(*, anamnese:anamneses(*))
     `)
     .eq("id", id)

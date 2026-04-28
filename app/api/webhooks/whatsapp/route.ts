@@ -269,6 +269,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // Carrega config WhatsApp UMA VEZ pra todo o batch — antes lia 3x por
+  // mensagem (transcrever audio + baixar midia + enviar digitando).
+  // -150-300ms por mensagem, principalmente sob rajada.
+  const { data: configWaBatch } = await supabaseAdmin
+    .from("config_whatsapp")
+    .select("uazapiUrl, instanceToken")
+    .eq("ativo", true)
+    .maybeSingle()
+
   for (const msg of mensagens) {
     if (msg.isGroup) continue
 
@@ -305,16 +314,10 @@ export async function POST(request: NextRequest) {
 
       if (!transcricao) {
         try {
-          const { data: configWa } = await supabaseAdmin
-            .from("config_whatsapp")
-            .select("uazapiUrl, instanceToken")
-            .eq("ativo", true)
-            .maybeSingle()
-
-          if (configWa?.uazapiUrl && configWa?.instanceToken) {
+          if (configWaBatch?.uazapiUrl && configWaBatch?.instanceToken) {
             const baixado = await baixarMidia(
-              configWa.uazapiUrl,
-              configWa.instanceToken,
+              configWaBatch.uazapiUrl,
+              configWaBatch.instanceToken,
               msg.id
             )
             if (baixado) {
@@ -348,19 +351,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (msg.tipo !== "texto") {
-      // Carrega config Uazapi pra fallback /message/download (v2) caso
-      // o payload nao tenha mediaUrl publica.
-      const { data: configWaMidia } = await supabaseAdmin
-        .from("config_whatsapp")
-        .select("uazapiUrl, instanceToken")
-        .eq("ativo", true)
-        .maybeSingle()
-
       storedMediaUrl = await downloadEUploadMidia(
         msg.mediaUrl,
         msg.tipo,
         msg.id,
-        configWaMidia
+        configWaBatch
       )
     }
 
@@ -514,15 +509,10 @@ export async function POST(request: NextRequest) {
       // JLAU-551: mostra "digitando" imediatamente ao receber a mensagem,
       // sem esperar os 20s de debounce. Cada mensagem nova renova o indicador.
       try {
-        const { data: configPresence } = await supabaseAdmin
-          .from("config_whatsapp")
-          .select("uazapiUrl, instanceToken")
-          .eq("ativo", true)
-          .maybeSingle()
-        if (configPresence?.uazapiUrl && configPresence?.instanceToken) {
+        if (configWaBatch?.uazapiUrl && configWaBatch?.instanceToken) {
           await enviarDigitando(
-            configPresence.uazapiUrl,
-            configPresence.instanceToken,
+            configWaBatch.uazapiUrl,
+            configWaBatch.instanceToken,
             msg.chatId,
             true
           )

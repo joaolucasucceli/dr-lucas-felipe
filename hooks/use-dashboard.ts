@@ -39,7 +39,7 @@ export function useDashboard(periodo: string = "mes") {
   const { data, error, isLoading, mutate } = useSWR<DashboardMetricas>(
     `/api/dashboard/metricas?periodo=${periodo}`,
     fetcher,
-    { refreshInterval: 300000, revalidateOnFocus: true }
+    { refreshInterval: 300000, revalidateOnFocus: false }
   )
 
   // Realtime: atualizar métricas quando leads ou agendamentos mudarem

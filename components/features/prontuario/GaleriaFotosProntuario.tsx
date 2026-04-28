@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import Image from "next/image"
 import { format, parse } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { formatarData } from "@/lib/format"
@@ -223,10 +224,13 @@ export function GaleriaFotosProntuario({ pacienteId }: GaleriaFotosProntuarioPro
                           key={foto.id}
                           className="group relative rounded-lg overflow-hidden border"
                         >
-                          <img
+                          <Image
                             src={foto.url}
                             alt={foto.descricao || "Foto clínica"}
+                            width={300}
+                            height={128}
                             className="w-full h-32 object-cover"
+                            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                             <Button

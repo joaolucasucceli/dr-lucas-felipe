@@ -46,7 +46,7 @@ export function useKanban(params: UseKanbanParams = {}) {
 
   const { data, error, isLoading, mutate } = useSWR<KanbanData>(url, fetcher, {
     refreshInterval: 120000,
-    revalidateOnFocus: true,
+    revalidateOnFocus: false,
   })
 
   useRealtimeTabela("contatos", () => mutate())
