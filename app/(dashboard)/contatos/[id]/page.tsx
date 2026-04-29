@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
+import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { PageHeader } from "@/components/features/shared/PageHeader"
@@ -218,6 +219,12 @@ export default function ContatoDetalhePage({ params }: PageProps) {
       <PageHeader titulo={contato.nome} descricao={descricaoHeader}>
         {!ehPaciente && contato.statusFunil && (
           <StatusBadge status={contato.statusFunil} />
+        )}
+        {!ehPaciente && conversaAtiva?.modoConversa === "humano" && (
+          <Badge variant="secondary" className="gap-1 border-amber-500/40 bg-amber-500/10 text-amber-400">
+            <Pause className="h-3 w-3" />
+            IA pausada
+          </Badge>
         )}
         {ehGestor && !ehPaciente && (
           <Button size="sm" onClick={() => setConfirmPromover(true)}>
