@@ -29,11 +29,12 @@ export const ROTULOS_TIPO_AGENDAMENTO: Record<TipoAgendamento, string> = {
   pos_operatorio: "Pós-operatório",
 }
 
-export const criarAgendamentoSchema = z.object({
+// Schema base — usado APENAS como fonte do .partial() do atualizarAgendamentoSchema
+// (POST manual foi descontinuado; criacao agora e exclusiva da IA via
+// /api/agente/registrar-agendamento, que tem seu proprio schema).
+const agendamentoSchema = z.object({
   contatoId: z.string().min(1, "Contato é obrigatório"),
   procedimentoId: z.string().nullable().optional(),
-  // tipo e duracao sao IGNORADOS no POST: o servidor forca consulta_online + 60min
-  // (a clinica so agenda avaliacao online com Dr. Lucas pelo painel).
   tipo: z.enum(TIPOS_AGENDAMENTO).optional(),
   dataHora: z.string().datetime({ offset: true }).or(z.string().min(10)),
   duracao: z.number().int().positive().optional(),
@@ -41,7 +42,6 @@ export const criarAgendamentoSchema = z.object({
   status: z.enum(STATUS_AGENDAMENTO).default("agendado"),
 })
 
-export const atualizarAgendamentoSchema = criarAgendamentoSchema.partial()
+export const atualizarAgendamentoSchema = agendamentoSchema.partial()
 
-export type CriarAgendamentoInput = z.infer<typeof criarAgendamentoSchema>
 export type AtualizarAgendamentoInput = z.infer<typeof atualizarAgendamentoSchema>

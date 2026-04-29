@@ -237,7 +237,7 @@ export default function AgendaPage() {
     <div>
       <PageHeader
         titulo="Agenda"
-        descricao="Agendamentos sao criados exclusivamente pela Ana Julia via WhatsApp"
+        descricao="Agendamentos são criados exclusivamente pela Ana Júlia via WhatsApp"
       >
         <Select value={periodo} onValueChange={setPeriodo}>
           <SelectTrigger className="w-[180px]">
