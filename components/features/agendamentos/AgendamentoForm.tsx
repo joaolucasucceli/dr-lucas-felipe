@@ -55,7 +55,7 @@ export function AgendamentoForm({
   onFechar,
   onSucesso,
 }: AgendamentoFormProps) {
-  const { dados: procedimentos } = useProcedimentos({ ativo: "true" })
+  const { dados: procedimentos } = useProcedimentos({})
 
   const {
     handleSubmit,

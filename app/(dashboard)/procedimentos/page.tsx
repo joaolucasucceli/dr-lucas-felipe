@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Plus, MoreHorizontal, Pencil, UserX, UserCheck, Tags, Ban, CheckCircle2, Trash2 } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, Tags, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,7 +48,7 @@ export default function ProcedimentosPage() {
   const [formAberto, setFormAberto] = useState(false)
   const [procedimentoEditando, setProcedimentoEditando] =
     useState<Procedimento | null>(null)
-  const [confirmToggle, setConfirmToggle] = useState<Procedimento | null>(null)
+  const [confirmExcluir, setConfirmExcluir] = useState<Procedimento | null>(null)
   const [tiposAberto, setTiposAberto] = useState(false)
 
   const autorizado = session?.user?.perfil === "gestor"
@@ -66,17 +66,16 @@ export default function ProcedimentosPage() {
 
   const isGestor = autorizado
 
-  async function executarBatch(acao: "ativar" | "desativar" | "excluir", ids: string[]) {
+  async function executarBatchExcluir(ids: string[]) {
     try {
       const res = await fetch("/api/procedimentos/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, acao }),
+        body: JSON.stringify({ ids, acao: "excluir" }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Erro na operação")
-      const verbo = acao === "excluir" ? "excluído(s)" : acao === "ativar" ? "ativado(s)" : "desativado(s)"
-      toast.success(`${data.sucesso} de ${data.total} procedimento(s) ${verbo}`)
+      toast.success(`${data.sucesso} de ${data.total} procedimento(s) excluído(s)`)
       recarregar()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro na operação")
@@ -85,28 +84,14 @@ export default function ProcedimentosPage() {
 
   const acoesEmMassa: AcaoEmMassa[] = [
     {
-      label: "Ativar",
-      icone: <CheckCircle2 className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("ativar", ids),
-    },
-    {
-      label: "Desativar",
-      icone: <Ban className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("desativar", ids),
-      confirmacao: {
-        titulo: "Desativar procedimentos?",
-        descricao: (qtd) => `${qtd} procedimento(s) não aparecerão mais para novos leads.`,
-        textoBotao: "Desativar",
-      },
-    },
-    {
       label: "Excluir",
       icone: <Trash2 className="h-4 w-4" />,
       variante: "destrutivo",
-      onClick: (ids) => executarBatch("excluir", ids),
+      onClick: executarBatchExcluir,
       confirmacao: {
         titulo: "Excluir procedimentos?",
-        descricao: (qtd) => `${qtd} procedimento(s) serão removidos permanentemente (soft-delete).`,
+        descricao: (qtd) =>
+          `${qtd} procedimento(s) serão removidos. Agendamentos antigos que apontavam pra eles continuam preservados, mas o procedimento não aparece mais em nenhuma busca.`,
         textoBotao: "Excluir",
       },
     },
@@ -117,33 +102,25 @@ export default function ProcedimentosPage() {
     setFormAberto(true)
   }
 
-  function handleToggleAtivo(procedimento: Procedimento) {
-    setConfirmToggle(procedimento)
-  }
-
-  async function confirmarToggle() {
-    if (!confirmToggle) return
+  async function confirmarExcluir() {
+    if (!confirmExcluir) return
     try {
-      const res = await fetch(`/api/procedimentos/${confirmToggle.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ativo: !confirmToggle.ativo }),
+      const res = await fetch(`/api/procedimentos/${confirmExcluir.id}`, {
+        method: "DELETE",
       })
 
       if (!res.ok) {
         const erro = await res.json()
-        toast.error(erro.error || "Erro ao atualizar procedimento")
+        toast.error(erro.error || "Erro ao excluir procedimento")
         return
       }
 
-      toast.success(
-        confirmToggle.ativo ? "Procedimento desativado" : "Procedimento ativado"
-      )
+      toast.success("Procedimento excluído")
       recarregar()
     } catch {
-      toast.error("Erro ao atualizar procedimento")
+      toast.error("Erro ao excluir procedimento")
     } finally {
-      setConfirmToggle(null)
+      setConfirmExcluir(null)
     }
   }
 
@@ -175,15 +152,6 @@ export default function ProcedimentosPage() {
       classesCelula: "hidden md:table-cell",
       renderizar: (p) => `${p.duracaoMin}min`,
     },
-    {
-      chave: "ativo",
-      titulo: "Status",
-      renderizar: (p) => (
-        <Badge variant={p.ativo ? "default" : "destructive"}>
-          {p.ativo ? "Ativo" : "Inativo"}
-        </Badge>
-      ),
-    },
     ...(isGestor
       ? [
           {
@@ -201,18 +169,12 @@ export default function ProcedimentosPage() {
                     <Pencil className="mr-2 h-4 w-4" />
                     Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleToggleAtivo(p)}>
-                    {p.ativo ? (
-                      <>
-                        <UserX className="mr-2 h-4 w-4" />
-                        Desativar
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck className="mr-2 h-4 w-4" />
-                        Ativar
-                      </>
-                    )}
+                  <DropdownMenuItem
+                    onClick={() => setConfirmExcluir(p)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -263,7 +225,7 @@ export default function ProcedimentosPage() {
 
       <div className="mt-6">
         {carregando && dados.length === 0 ? (
-          <SkeletonTabela linhas={5} colunas={4} />
+          <SkeletonTabela linhas={5} colunas={3} />
         ) : !carregando && dados.length === 0 && !busca ? (
           <EmptyState
             titulo="Nenhum procedimento"
@@ -321,17 +283,17 @@ export default function ProcedimentosPage() {
       />
 
       <ConfirmDialog
-        titulo={confirmToggle?.ativo ? "Desativar procedimento" : "Ativar procedimento"}
+        titulo="Excluir procedimento"
         descricao={
-          confirmToggle?.ativo
-            ? `Desativar "${confirmToggle?.nome}"? Ele não aparecerá mais para novos agendamentos.`
-            : `Reativar "${confirmToggle?.nome}"?`
+          confirmExcluir
+            ? `Excluir "${confirmExcluir.nome}"? Agendamentos antigos que apontavam pra ele continuam preservados, mas o procedimento não aparece mais em nenhuma busca.`
+            : ""
         }
-        aberto={!!confirmToggle}
-        onFechar={() => setConfirmToggle(null)}
-        onConfirmar={confirmarToggle}
-        variante={confirmToggle?.ativo ? "destrutivo" : "padrao"}
-        textoBotao={confirmToggle?.ativo ? "Desativar" : "Ativar"}
+        aberto={!!confirmExcluir}
+        onFechar={() => setConfirmExcluir(null)}
+        onConfirmar={confirmarExcluir}
+        variante="destrutivo"
+        textoBotao="Excluir"
       />
     </div>
   )
