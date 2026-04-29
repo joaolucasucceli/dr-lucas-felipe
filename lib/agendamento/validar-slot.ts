@@ -13,9 +13,11 @@ export interface ResultadoValidacao {
 }
 
 /**
- * Valida se um agendamento manual pode ser criado/movido pra dataHora dada.
- * Bloqueia: fora de expediente (seg-sex 8-18, sab 8-12), feriado nacional,
- * conflito com Google Calendar, conflito com agendamento existente.
+ * Valida se um agendamento pode ser criado/movido pra dataHora dada.
+ * Usado pela Ana Julia (registrar-agendamento) e pela edicao via painel
+ * (PATCH /api/agendamentos/[id], reagendar). Bloqueia: fora de expediente
+ * (seg-sex 8-18, sab 8-12), feriado nacional, conflito com Google
+ * Calendar, conflito com agendamento existente.
  *
  * Para evitar falso conflito ao remarcar um agendamento existente, passe
  * `ignorarAgendamentoId` — esse id nao entra na lista de ocupacoes.
