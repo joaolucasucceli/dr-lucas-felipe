@@ -1,4 +1,4 @@
-import { Stethoscope, Package, ToggleLeft, Clock } from "lucide-react"
+import { Stethoscope, Package, Trash2, Clock } from "lucide-react"
 import { HeroBanner } from "../HeroBanner"
 import { FeaturesGrid } from "../FeaturesGrid"
 import { ComoUsarSection } from "../ComoUsarSection"
@@ -27,23 +27,23 @@ export function ModuloProcedimentos() {
             descricao: "Cada procedimento tem instruções pós-operatórias próprias, usadas no atendimento.",
           },
           {
-            icone: <ToggleLeft />,
-            titulo: "Ativar e desativar",
-            descricao: "Desativados somem pra seleção, mas mantém histórico dos leads antigos.",
+            icone: <Trash2 />,
+            titulo: "Excluir",
+            descricao: "Não há ativar/desativar — ou existe ou não existe. Excluir preserva agendamentos antigos no histórico.",
           },
         ]}
       />
 
       <ComoUsarSection
         passos={[
-          { numero: 1, titulo: "Veja o catálogo", descricao: "Tabela lista todos com tipo, duração e status." },
+          { numero: 1, titulo: "Veja o catálogo", descricao: "Tabela lista todos os procedimentos com tipo e duração." },
           { numero: 2, titulo: "Cadastre", descricao: "'Novo Procedimento': nome, tipo, duração e orientações pós-operatórias." },
-          { numero: 3, titulo: "Gerencie", descricao: "Menu de ações (três pontos) pra editar ou ativar/desativar." },
+          { numero: 3, titulo: "Gerencie", descricao: "Menu de ações (três pontos) pra editar ou excluir." },
         ]}
       />
 
       <DicaImportante
-        texto="O preço não fica no sistema — é definido caso a caso pelo Dr. Lucas na avaliação presencial. Desative em vez de excluir pra preservar histórico."
+        texto="O preço não fica no sistema — é definido caso a caso pelo Dr. Lucas na avaliação online. Excluir um procedimento o tira de toda busca, mas agendamentos antigos que apontavam pra ele continuam preservados no histórico."
         variante="sucesso"
       />
     </div>
