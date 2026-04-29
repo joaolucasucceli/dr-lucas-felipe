@@ -8,7 +8,6 @@ import {
   ExternalLink,
   MoreHorizontal,
   Pencil,
-  Plus,
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -78,21 +77,14 @@ function formatarHora(dataIso: string): string {
 export default function AgendaPage() {
   const router = useRouter()
   const [periodo, setPeriodo] = useState("semana")
-  const [formAberto, setFormAberto] = useState(false)
   const [agendamentoEditando, setAgendamentoEditando] = useState<AgendamentoAgenda | null>(null)
   const [reagendando, setReagendando] = useState<AgendamentoAgenda | null>(null)
   const [cancelando, setCancelando] = useState<AgendamentoAgenda | null>(null)
   const [processando, setProcessando] = useState(false)
   const { agendamentos, carregando, erro, recarregar } = useAgenda(periodo)
 
-  function abrirNovo() {
-    setAgendamentoEditando(null)
-    setFormAberto(true)
-  }
-
   function abrirEdicao(ag: AgendamentoAgenda) {
     setAgendamentoEditando(ag)
-    setFormAberto(true)
   }
 
   async function confirmarCancelamento() {
@@ -245,7 +237,7 @@ export default function AgendaPage() {
     <div>
       <PageHeader
         titulo="Agenda"
-        descricao="Agendamentos da clínica (Ana Júlia + manuais)"
+        descricao="Agendamentos sao criados exclusivamente pela Ana Julia via WhatsApp"
       >
         <Select value={periodo} onValueChange={setPeriodo}>
           <SelectTrigger className="w-[180px]">
@@ -258,10 +250,6 @@ export default function AgendaPage() {
             <SelectItem value="passado">Últimos 30 dias</SelectItem>
           </SelectContent>
         </Select>
-        <Button onClick={abrirNovo}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo agendamento
-        </Button>
       </PageHeader>
 
       {erro ? (
@@ -289,8 +277,8 @@ export default function AgendaPage() {
 
       <AgendamentoForm
         agendamento={agendamentoEditando}
-        aberto={formAberto}
-        onFechar={() => setFormAberto(false)}
+        aberto={!!agendamentoEditando}
+        onFechar={() => setAgendamentoEditando(null)}
         onSucesso={recarregar}
       />
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Visão Geral do Projeto
 
-**Central Dr. Lucas** — sistema web para gestão de atendimento da clínica do Dr. Lucas Felipe. Sistema **100% autônomo** — a IA faz todo o processo do funil (acolhimento → reunião agendada). Dois módulos integrados em uma única aplicação Next.js:
+**Central Dr. Lucas** — sistema web para gestão de atendimento da clínica do Dr. Lucas Felipe. Sistema **100% autônomo** — a IA faz todo o processo do funil (acolhimento → reunião agendada). **Agendamentos são criados EXCLUSIVAMENTE pela Ana Júlia via WhatsApp** — o painel não tem botão de criar agendamento manual (decisão arquitetural: força todo lead pelo funil da IA). Edição/remarcação/cancelamento manual continuam disponíveis pro gestor após o agendamento existir. Dois módulos integrados em uma única aplicação Next.js:
 
 1. **Painel de Gestão** — kanban (4 etapas), contatos (leads e pacientes), procedimentos, agenda, conteúdo da IA (textos + mídias), métricas
 2. **Agente IA WhatsApp ("Ana Júlia" + Analista IA)** — atendimento autônomo de pacientes via API Routes, alimentando o painel em tempo real

@@ -1,15 +1,12 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Search, X } from "lucide-react"
 import { toast } from "sonner"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -19,19 +16,12 @@ import {
 } from "@/components/ui/select"
 import { FormDialog } from "@/components/features/shared/FormDialog"
 import { useProcedimentos } from "@/hooks/use-procedimentos"
-import { useContatos } from "@/hooks/use-contatos"
 import {
   STATUS_AGENDAMENTO,
   type StatusAgendamento,
 } from "@/lib/validations/agendamento"
 import { formatarWhatsapp } from "@/lib/format"
-import {
-  REGEX_DATA_BR,
-  dataBrEHoraParaIso,
-  isoParaDataBr,
-  isoParaHora,
-  mascararDataBr,
-} from "@/lib/agendamento/data-br"
+import { isoParaDataBr, isoParaHora } from "@/lib/agendamento/data-br"
 import type { AgendamentoAgenda } from "@/hooks/use-agenda"
 
 const ROTULOS_STATUS: Record<StatusAgendamento, string> = {
@@ -42,15 +32,10 @@ const ROTULOS_STATUS: Record<StatusAgendamento, string> = {
   remarcado: "Remarcado",
 }
 
-// Avaliacao online com Dr. Lucas: tipo e duracao sao FIXOS no painel
-// (consulta_online + 60min). A clinica so agenda esse tipo via /agenda.
+// Edicao apenas — agendamentos sao criados exclusivamente pela Ana Julia
+// via WhatsApp. Para mudar data/hora use "Reagendar" no menu da agenda.
 const formSchema = z.object({
-  contatoId: z.string().min(1, "Selecione um contato"),
   procedimentoId: z.string().nullable().optional(),
-  dataBr: z
-    .string()
-    .regex(REGEX_DATA_BR, "Use dd/mm ou dd/mm/aaaa"),
-  hora: z.string().regex(/^\d{2}:\d{2}$/, "Hora obrigatória"),
   observacao: z.string().nullable().optional(),
   status: z.enum(STATUS_AGENDAMENTO),
 })
@@ -58,12 +43,11 @@ const formSchema = z.object({
 type FormData = z.input<typeof formSchema>
 
 interface AgendamentoFormProps {
-  agendamento?: AgendamentoAgenda | null
+  agendamento: AgendamentoAgenda | null
   aberto: boolean
   onFechar: () => void
   onSucesso: () => void
 }
-
 
 export function AgendamentoForm({
   agendamento,
@@ -71,114 +55,47 @@ export function AgendamentoForm({
   onFechar,
   onSucesso,
 }: AgendamentoFormProps) {
-  const editando = !!agendamento
-  const [buscaContato, setBuscaContato] = useState("")
-  const [contatoSelecionado, setContatoSelecionado] = useState<{
-    id: string
-    nome: string
-    whatsapp: string | null
-  } | null>(null)
-  const [mostrarBusca, setMostrarBusca] = useState(false)
-
   const { dados: procedimentos } = useProcedimentos({ ativo: "true" })
-  const { dados: contatosResultado } = useContatos({
-    pagina: 1,
-    porPagina: 8,
-    busca: buscaContato || undefined,
-  })
 
   const {
-    register,
     handleSubmit,
     setValue,
     watch,
     reset,
-    formState: { errors, isSubmitting },
+    register,
+    formState: { isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema) as never,
     defaultValues: {
-      contatoId: "",
       procedimentoId: null,
-      dataBr: "",
-      hora: "",
       observacao: "",
       status: "agendado",
     },
   })
 
   const procedimentoIdAtual = watch("procedimentoId")
-  const contatoIdAtual = watch("contatoId")
 
-  // Reset do form quando abre / quando agendamento muda
   useEffect(() => {
-    if (!aberto) return
-    if (agendamento) {
-      reset({
-        contatoId: agendamento.contatoId,
-        procedimentoId: agendamento.procedimentoId,
-        dataBr: isoParaDataBr(agendamento.dataHora),
-        hora: isoParaHora(agendamento.dataHora),
-        observacao: agendamento.observacao,
-        status: agendamento.status,
-      })
-      setContatoSelecionado(
-        agendamento.contato
-          ? {
-              id: agendamento.contato.id,
-              nome: agendamento.contato.nome,
-              whatsapp: agendamento.contato.whatsapp,
-            }
-          : null
-      )
-      setMostrarBusca(false)
-    } else {
-      reset({
-        contatoId: "",
-        procedimentoId: null,
-        dataBr: "",
-        hora: "",
-        observacao: "",
-        status: "agendado",
-      })
-      setContatoSelecionado(null)
-      setBuscaContato("")
-      setMostrarBusca(true)
-    }
+    if (!aberto || !agendamento) return
+    reset({
+      procedimentoId: agendamento.procedimentoId,
+      observacao: agendamento.observacao,
+      status: agendamento.status,
+    })
   }, [agendamento, aberto, reset])
 
-  function selecionarContato(c: { id: string; nome: string; whatsapp: string | null }) {
-    setContatoSelecionado(c)
-    setValue("contatoId", c.id, { shouldValidate: true })
-    setBuscaContato("")
-    setMostrarBusca(false)
-  }
-
   async function onSubmit(values: FormData) {
-    const dataIso = dataBrEHoraParaIso(values.dataBr, values.hora)
-    if (!dataIso) {
-      toast.error("Data ou hora inválida")
-      return
-    }
-
-    // Avaliacao online: tipo e duracao sempre fixos (clinica nao agenda
-    // outros tipos pelo painel — Ana Julia tambem so agenda esse).
-    const payload = {
-      contatoId: values.contatoId,
-      procedimentoId: values.procedimentoId || null,
-      tipo: "consulta_online" as const,
-      dataHora: dataIso,
-      duracao: 60,
-      observacao: values.observacao || null,
-      status: values.status,
-    }
+    if (!agendamento) return
 
     try {
-      const url = editando ? `/api/agendamentos/${agendamento!.id}` : "/api/agendamentos"
-      const method = editando ? "PATCH" : "POST"
-      const res = await fetch(url, {
-        method,
+      const res = await fetch(`/api/agendamentos/${agendamento.id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          procedimentoId: values.procedimentoId || null,
+          observacao: values.observacao || null,
+          status: values.status,
+        }),
       })
 
       if (!res.ok) {
@@ -187,15 +104,7 @@ export function AgendamentoForm({
         return
       }
 
-      const data = await res.json()
-      const sincronizado = data?.sincronizado
-      toast.success(
-        editando
-          ? "Agendamento atualizado"
-          : sincronizado === false
-            ? "Agendamento criado (sem sincronia Google)"
-            : "Agendamento criado e sincronizado com Google Agenda"
-      )
+      toast.success("Agendamento atualizado")
       onSucesso()
       onFechar()
     } catch {
@@ -203,155 +112,39 @@ export function AgendamentoForm({
     }
   }
 
-  const opcoesContatoVisiveis = useMemo(
-    () => contatosResultado.slice(0, 8),
-    [contatosResultado]
-  )
+  if (!agendamento) return null
 
   return (
     <FormDialog
       aberto={aberto}
       onFechar={onFechar}
-      titulo="Agendamento"
-      editando={editando}
+      titulo="Editar agendamento"
+      editando
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit(onSubmit)}
       largura="lg"
     >
-      {/* Contato */}
-      <div className="grid gap-2">
-        <Label>Contato</Label>
-        {contatoSelecionado && !mostrarBusca ? (
-          <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
-            <div className="text-sm">
-              <span className="font-medium">{contatoSelecionado.nome}</span>
-              {contatoSelecionado.whatsapp && (
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {formatarWhatsapp(contatoSelecionado.whatsapp)}
-                </span>
-              )}
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setMostrarBusca(true)
-                setContatoSelecionado(null)
-                setValue("contatoId", "")
-              }}
-            >
-              <X className="h-3.5 w-3.5" />
-              Trocar
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={buscaContato}
-                onChange={(e) => setBuscaContato(e.target.value)}
-                placeholder="Buscar por nome ou WhatsApp..."
-                className="pl-8"
-              />
-            </div>
-            {buscaContato && opcoesContatoVisiveis.length > 0 && (
-              <div className="max-h-48 overflow-y-auto rounded-md border bg-popover">
-                {opcoesContatoVisiveis.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() =>
-                      selecionarContato({
-                        id: c.id,
-                        nome: c.nome,
-                        whatsapp: c.whatsapp,
-                      })
-                    }
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent"
-                  >
-                    <span className="font-medium">{c.nome}</span>
-                    {c.whatsapp && (
-                      <span className="text-xs text-muted-foreground">
-                        {formatarWhatsapp(c.whatsapp)}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-            {buscaContato && opcoesContatoVisiveis.length === 0 && (
-              <p className="text-xs text-muted-foreground">Nenhum contato encontrado</p>
-            )}
-          </div>
-        )}
-        {errors.contatoId && !contatoIdAtual && (
-          <p className="text-xs text-destructive">{errors.contatoId.message}</p>
+      <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+        <span className="font-medium">{agendamento.contato?.nome ?? "Paciente"}</span>
+        {agendamento.contato?.whatsapp && (
+          <span className="ml-2 text-xs text-muted-foreground">
+            {formatarWhatsapp(agendamento.contato.whatsapp)}
+          </span>
         )}
       </div>
 
-      {/* Data + Hora — escondidos na edicao (use \"Reagendar\" pra mudar data/hora) */}
-      {editando && agendamento && (
-        <div className="rounded-md border bg-muted/30 p-3 text-sm">
-          <p className="text-xs font-medium text-muted-foreground mb-1">
-            Agendado para
-          </p>
-          <p>
-            {isoParaDataBr(agendamento.dataHora)} às{" "}
-            {isoParaHora(agendamento.dataHora)}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Pra mudar data/hora, use a opção <strong>Reagendar</strong> no menu da agenda.
-          </p>
-        </div>
-      )}
+      <div className="rounded-md border bg-muted/30 p-3 text-sm">
+        <p className="text-xs font-medium text-muted-foreground mb-1">
+          Agendado para
+        </p>
+        <p>
+          {isoParaDataBr(agendamento.dataHora)} às {isoParaHora(agendamento.dataHora)}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Pra mudar data/hora, use a opção <strong>Reagendar</strong> no menu da agenda.
+        </p>
+      </div>
 
-      {!editando && (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="ag-data">Data</Label>
-              <Input
-                id="ag-data"
-                type="text"
-                inputMode="numeric"
-                placeholder="dd/mm"
-                maxLength={10}
-                {...register("dataBr", {
-                  onChange: (e) => {
-                    e.target.value = mascararDataBr(e.target.value)
-                  },
-                })}
-              />
-              <p className="text-xs text-muted-foreground">
-                Ano vem automático. Use dd/mm/aaaa só pra outro ano.
-              </p>
-              {errors.dataBr && (
-                <p className="text-xs text-destructive">{errors.dataBr.message}</p>
-              )}
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="ag-hora">Hora</Label>
-              <Input
-                id="ag-hora"
-                type="time"
-                step="60"
-                {...register("hora")}
-              />
-              {errors.hora && (
-                <p className="text-xs text-destructive">{errors.hora.message}</p>
-              )}
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground -mt-2">
-            Avaliação online com o Dr. Lucas — duração fixa de 1h.
-          </p>
-        </>
-      )}
-
-      {/* Procedimento — sempre visivel */}
       <div className="grid gap-2">
         <Label>Procedimento de interesse <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
         <Select
@@ -372,29 +165,25 @@ export function AgendamentoForm({
         </Select>
       </div>
 
-      {/* Status (só edição) */}
-      {editando && (
-        <div className="grid gap-2">
-          <Label>Status</Label>
-          <Select
-            value={watch("status")}
-            onValueChange={(v) => setValue("status", v as StatusAgendamento)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_AGENDAMENTO.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {ROTULOS_STATUS[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      <div className="grid gap-2">
+        <Label>Status</Label>
+        <Select
+          value={watch("status")}
+          onValueChange={(v) => setValue("status", v as StatusAgendamento)}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_AGENDAMENTO.map((s) => (
+              <SelectItem key={s} value={s}>
+                {ROTULOS_STATUS[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      {/* Observação */}
       <div className="grid gap-2">
         <Label htmlFor="ag-obs">Observação</Label>
         <Textarea
