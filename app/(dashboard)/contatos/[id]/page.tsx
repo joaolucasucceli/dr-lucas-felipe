@@ -8,6 +8,8 @@ import {
   ArchiveRestore,
   ArrowLeft,
   MessageCircle,
+  Pause,
+  Play,
   Star,
   Trash2,
   UserCog,
@@ -151,6 +153,29 @@ export default function ContatoDetalhePage({ params }: PageProps) {
     }
   }
 
+  async function handleToggleIa(conversaId: string, modoAtual: "ia" | "humano") {
+    const rota = modoAtual === "ia" ? "pausar-ia" : "retomar-ia"
+    setProcessando(true)
+    try {
+      const res = await fetch(`/api/atendimento/${rota}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversaId }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || "Erro")
+      toast.success(
+        modoAtual === "ia"
+          ? "IA pausada — você assumiu o atendimento"
+          : "IA retomou o atendimento"
+      )
+      recarregar()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao alternar IA")
+    } finally {
+      setProcessando(false)
+    }
+  }
+
   if (carregando) {
     return (
       <div>
@@ -168,6 +193,10 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   }
 
   const ehPaciente = contato.tipo === "paciente"
+  // Conversa ativa = primeira do array (backend ja retorna ordenado por
+  // ciclo DESC + atualizadoEm DESC). Botao Pausar/Retomar IA so faz
+  // sentido pra leads com conversa em andamento.
+  const conversaAtiva = contato.conversas?.[0] ?? null
   const dataNascimentoInput = contato.dataNascimento
     ? new Date(contato.dataNascimento).toISOString().slice(0, 10)
     : ""
@@ -194,6 +223,26 @@ export default function ContatoDetalhePage({ params }: PageProps) {
           <Button size="sm" onClick={() => setConfirmPromover(true)}>
             <Star className="mr-2 h-4 w-4" />
             Promover a paciente
+          </Button>
+        )}
+        {!ehPaciente && conversaAtiva && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleToggleIa(conversaAtiva.id, conversaAtiva.modoConversa)}
+            disabled={processando}
+          >
+            {conversaAtiva.modoConversa === "ia" ? (
+              <>
+                <Pause className="mr-2 h-4 w-4" />
+                Pausar IA
+              </>
+            ) : (
+              <>
+                <Play className="mr-2 h-4 w-4" />
+                Retomar IA
+              </>
+            )}
           </Button>
         )}
         <Button size="sm" variant="outline" onClick={handleArquivar}>
