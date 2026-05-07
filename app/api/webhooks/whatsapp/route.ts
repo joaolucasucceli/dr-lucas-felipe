@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
+import { env, getBaseUrl, isProd } from "@/lib/env"
 import type { TipoMensagem } from "@/lib/types/enums"
 import { adicionarAoBuffer, deveProcessar } from "@/lib/agente/buffer"
+import {
+  checkRateLimitWhatsappWebhook,
+  registrarTentativaWhatsappWebhook,
+} from "@/lib/rate-limit"
 import {
   transcreverAudio,
   transcreverAudioBase64,
@@ -228,14 +233,22 @@ function normalizarBaileys(payload: any): MensagemNormalizada[] {
 }
 
 export async function POST(request: NextRequest) {
-  const webhookSecret = process.env.WEBHOOK_SECRET
-  if (webhookSecret) {
+  // Em PRODUCAO sem WEBHOOK_SECRET, lib/env.ts ja loga warning loud no boot.
+  // Aqui mantemos comportamento atual (so valida se a env existe) pra nao
+  // quebrar producao quando a env ainda nao foi adicionada no Vercel + Uazapi.
+  // TODO: depois que o secret for configurado nos dois lados, virar required.
+  if (env.WEBHOOK_SECRET) {
     const tokenRecebido =
       request.headers.get("x-webhook-token") ??
       request.headers.get("x-api-secret")
-    if (tokenRecebido !== webhookSecret) {
+    if (tokenRecebido !== env.WEBHOOK_SECRET) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
     }
+  } else if (isProd) {
+    console.warn(
+      "[webhook-whatsapp] aceitando payload SEM autenticacao em producao — " +
+        "WEBHOOK_SECRET ausente. Adicionar env no Vercel + header no Uazapi."
+    )
   }
 
   let payload: any
@@ -280,6 +293,22 @@ export async function POST(request: NextRequest) {
 
   for (const msg of mensagens) {
     if (msg.isGroup) continue
+
+    // Rate limit por numero do remetente. Paciente real fica bem abaixo dos
+    // 30/min; quem ultrapassa e bot ou abuso (cada msg vira call OpenAI).
+    // Mensagem ainda salva no banco (barato) mas NAO dispara /processar.
+    let bloqueadoPorRate = false
+    if (!msg.fromMe) {
+      const rl = await checkRateLimitWhatsappWebhook(msg.numero)
+      if (rl.bloqueado) {
+        console.warn(
+          `[webhook-whatsapp] rate-limit estourado pelo numero ${msg.numero} (${rl.tentativas} msgs/60s) — pulando /processar`
+        )
+        bloqueadoPorRate = true
+      } else {
+        await registrarTentativaWhatsappWebhook(msg.numero)
+      }
+    }
 
     // JLAU-584: fromMe = mensagens enviadas pela propria instancia.
     // Pode ser: (a) IA via registrar-mensagem; (b) atendente pelo WhatsApp pessoal da clinica
@@ -476,7 +505,8 @@ export async function POST(request: NextRequest) {
       .eq("id", conversa!.id)
 
     // JLAU-584: mensagens do atendente nao disparam a IA e nao viram foto analisada.
-    if (ehAtendente) continue
+    // Rate limit estourado tambem entra aqui (mensagem fica no historico, mas IA nao roda).
+    if (ehAtendente || bloqueadoPorRate) continue
 
     if (msg.tipo === "imagem" && storedMediaUrl) {
       // JLAU-594: webhook anexa imagem direto, sem IA.
@@ -530,12 +560,12 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
+      const baseUrl = getBaseUrl()
       await fetch(`${baseUrl}/api/agente/processar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-secret": process.env.API_SECRET || "",
+          "x-api-secret": env.API_SECRET,
         },
         body: JSON.stringify({ chatId: msg.chatId }),
       }).catch((err) => {
