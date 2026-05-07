@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod"
 import { validarApiSecret } from "@/lib/api-auth"
 import { processarMensagens } from "@/lib/agente/loop"
+import { analisarConversa } from "@/lib/agente/analista"
 import { agendarProcessamento, deveProcessar } from "@/lib/agente/buffer"
 import { supabaseAdmin } from "@/lib/supabase"
 import { enviarDigitando } from "@/lib/uazapi"
@@ -80,11 +81,25 @@ export async function POST(request: NextRequest) {
   )
 
   // Processa todas as mensagens acumuladas no buffer.
+  let resultado: Awaited<ReturnType<typeof processarMensagens>> = null
   try {
-    await processarMensagens(chatId)
+    resultado = await processarMensagens(chatId)
   } catch (err) {
     console.error("[Agente] Erro ao processar mensagens:", err)
     return NextResponse.json({ error: "Erro no processamento" }, { status: 500 })
+  }
+
+  // Analista IA roda DEPOIS da response (background). Antes estava com await
+  // dentro do loop, atrasando 2-5s a resposta HTTP pro UAZAPI por nada
+  // (UAZAPI nao precisa do resultado da Analista pra confirmar entrega).
+  if (resultado?.contatoId) {
+    after(async () => {
+      try {
+        await analisarConversa(resultado!)
+      } catch (err) {
+        console.error("[Analista] Falha em background:", err)
+      }
+    })
   }
 
   return NextResponse.json({ status: "processado" })

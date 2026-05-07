@@ -7,7 +7,17 @@ export interface MensagemMemoria {
 
 const MEMORIA_SUFFIX = "_mem_dr-lucas"
 const MEMORIA_TTL = 172800 // 48 horas em segundos
-const MAX_MENSAGENS = 20
+
+/**
+ * Tamanho da janela de memoria conversacional. Pode ser sobrescrito via env
+ * AGENTE_MEM_TAMANHO (ex: aumentar pra pacientes muito conversadores). Default 20.
+ * Min 4 (Ana Julia precisa pelo menos da ultima troca + system + user atual).
+ */
+const MAX_MENSAGENS = (() => {
+  const fromEnv = Number(process.env.AGENTE_MEM_TAMANHO)
+  if (Number.isFinite(fromEnv) && fromEnv >= 4 && fromEnv <= 100) return fromEnv
+  return 20
+})()
 
 /** Obtém histórico de memória do chat */
 export async function obterMemoria(chatId: string): Promise<MensagemMemoria[]> {

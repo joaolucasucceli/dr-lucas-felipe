@@ -20,6 +20,14 @@ const CONFIGS: Record<string, RateLimitConfig> = {
   login: { prefixo: "rate_login:", maxTentativas: 5, janelaSegundos: 900 },
   paciente: { prefixo: "rate_paciente:", maxTentativas: 100, janelaSegundos: 900 },
   captarSite: { prefixo: "rate_captar:", maxTentativas: 3, janelaSegundos: 3600 },
+  // Webhook WhatsApp por numero do remetente. Paciente real digita ~5-15
+  // msgs/min em pico de conversa; 30/60s deixa margem confortavel e barra
+  // floods de bot/abuso (cada msg vira call OpenAI = $$).
+  whatsappWebhook: {
+    prefixo: "rate_wa_webhook:",
+    maxTentativas: 30,
+    janelaSegundos: 60,
+  },
 }
 
 function chave(prefixo: string, identificador: string) {
@@ -100,4 +108,18 @@ export async function checkRateLimitCaptar(
 
 export async function registrarTentativaCaptar(ip: string): Promise<void> {
   return registrar(CONFIGS.captarSite, ip)
+}
+
+// ==========================================
+// Webhook WhatsApp — por número do remetente
+// ==========================================
+
+export async function checkRateLimitWhatsappWebhook(
+  numero: string
+): Promise<{ bloqueado: boolean; tentativas: number }> {
+  return verificarLimite(CONFIGS.whatsappWebhook, numero)
+}
+
+export async function registrarTentativaWhatsappWebhook(numero: string): Promise<void> {
+  return registrar(CONFIGS.whatsappWebhook, numero)
 }
