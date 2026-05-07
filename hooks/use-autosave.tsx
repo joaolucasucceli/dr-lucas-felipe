@@ -52,7 +52,7 @@ export function useAutosave<T>({
       return
     }
 
-    setStatus("pendente")
+    setStatus((s) => (s === "pendente" ? s : "pendente"))
 
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)

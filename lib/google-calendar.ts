@@ -28,6 +28,11 @@ async function getCalendarClient() {
   }
 }
 
+/**
+ * Cria evento no Google Calendar com retry exponencial (3 tentativas, 0/500/2000ms).
+ * Loga cada falha — antes engolia silenciosamente, fazia agendamento ficar
+ * com `sincronizado: false` no banco e ninguem percebia (paciente sem convite).
+ */
 export async function criarEvento(params: {
   titulo: string
   descricao?: string
@@ -35,41 +40,59 @@ export async function criarEvento(params: {
   fim: Date
   emailPaciente?: string
 }): Promise<{ googleEventId: string; googleEventUrl: string } | null> {
-  try {
-    const client = await getCalendarClient()
-    if (!client) return null
-
-    const { calendar, calendarId } = client
-
-    const attendees = params.emailPaciente
-      ? [{ email: params.emailPaciente }]
-      : []
-
-    const res = await calendar.events.insert({
-      calendarId,
-      // sendUpdates 'all' faz o Google enviar email de convite pra
-      // attendees (paciente). Sem isso, attendee fica com
-      // responseStatus="needsAction" e nunca recebe notificacao.
-      sendUpdates: "all",
-      requestBody: {
-        summary: params.titulo,
-        description: params.descricao,
-        start: { dateTime: params.inicio.toISOString(), timeZone: "America/Sao_Paulo" },
-        end: { dateTime: params.fim.toISOString(), timeZone: "America/Sao_Paulo" },
-        attendees,
-      },
-    })
-
-    const event = res.data
-    if (!event.id) return null
-
-    return {
-      googleEventId: event.id,
-      googleEventUrl: event.htmlLink || `https://calendar.google.com/calendar/r/eventedit/${event.id}`,
-    }
-  } catch {
+  const client = await getCalendarClient()
+  if (!client) {
+    console.warn("[google-calendar] Sem config OAuth ativa — pulando criacao de evento")
     return null
   }
+
+  const { calendar, calendarId } = client
+  const attendees = params.emailPaciente ? [{ email: params.emailPaciente }] : []
+  const requestBody = {
+    summary: params.titulo,
+    description: params.descricao,
+    start: { dateTime: params.inicio.toISOString(), timeZone: "America/Sao_Paulo" },
+    end: { dateTime: params.fim.toISOString(), timeZone: "America/Sao_Paulo" },
+    attendees,
+  }
+
+  const TENTATIVAS = 3
+  const BACKOFFS_MS = [0, 500, 2000]
+
+  for (let i = 0; i < TENTATIVAS; i++) {
+    if (BACKOFFS_MS[i] > 0) await new Promise((r) => setTimeout(r, BACKOFFS_MS[i]))
+    try {
+      const res = await calendar.events.insert({
+        calendarId,
+        // sendUpdates 'all' faz o Google enviar email de convite pra attendees.
+        sendUpdates: "all",
+        requestBody,
+      })
+      const event = res.data
+      if (!event.id) {
+        console.warn("[google-calendar] insert sem event.id no retorno (tentativa", i + 1, ")")
+        continue
+      }
+      return {
+        googleEventId: event.id,
+        googleEventUrl:
+          event.htmlLink ||
+          `https://calendar.google.com/calendar/r/eventedit/${event.id}`,
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(
+        `[google-calendar] criarEvento tentativa ${i + 1}/${TENTATIVAS} falhou:`,
+        msg
+      )
+    }
+  }
+
+  console.error(
+    "[google-calendar] criarEvento esgotou retries — agendamento ficara com sincronizado=false. Paciente NAO recebera convite no email.",
+    { titulo: params.titulo, inicio: params.inicio.toISOString() }
+  )
+  return null
 }
 
 export async function atualizarEvento(
@@ -83,10 +106,12 @@ export async function atualizarEvento(
 ): Promise<boolean> {
   try {
     const client = await getCalendarClient()
-    if (!client) return false
+    if (!client) {
+      console.warn("[google-calendar] atualizarEvento: sem config OAuth ativa")
+      return false
+    }
 
     const { calendar, calendarId } = client
-
     const existente = await calendar.events.get({ calendarId, eventId: googleEventId })
     const evento = existente.data
 
@@ -110,7 +135,12 @@ export async function atualizarEvento(
     })
 
     return true
-  } catch {
+  } catch (err) {
+    console.error(
+      "[google-calendar] atualizarEvento falhou:",
+      err instanceof Error ? err.message : err,
+      { googleEventId }
+    )
     return false
   }
 }
@@ -118,7 +148,10 @@ export async function atualizarEvento(
 export async function cancelarEvento(googleEventId: string): Promise<boolean> {
   try {
     const client = await getCalendarClient()
-    if (!client) return false
+    if (!client) {
+      console.warn("[google-calendar] cancelarEvento: sem config OAuth ativa")
+      return false
+    }
 
     const { calendar, calendarId } = client
     // Notificar attendees sobre o cancelamento.
@@ -128,7 +161,12 @@ export async function cancelarEvento(googleEventId: string): Promise<boolean> {
       sendUpdates: "all",
     })
     return true
-  } catch {
+  } catch (err) {
+    console.error(
+      "[google-calendar] cancelarEvento falhou:",
+      err instanceof Error ? err.message : err,
+      { googleEventId }
+    )
     return false
   }
 }
@@ -136,7 +174,10 @@ export async function cancelarEvento(googleEventId: string): Promise<boolean> {
 export async function listarEventos(inicio: Date, fim: Date): Promise<CalendarEvent[]> {
   try {
     const client = await getCalendarClient()
-    if (!client) return []
+    if (!client) {
+      console.warn("[google-calendar] listarEventos: sem config OAuth ativa — retornando []")
+      return []
+    }
 
     const { calendar, calendarId } = client
 
@@ -157,7 +198,13 @@ export async function listarEventos(inicio: Date, fim: Date): Promise<CalendarEv
         fim: new Date(e.end!.dateTime!),
         url: e.htmlLink || undefined,
       }))
-  } catch {
+  } catch (err) {
+    // Critico — `consultar_agenda` (tool da IA) usa esta funcao. Falha aqui
+    // = IA propoe horarios sem cruzar com Google Calendar.
+    console.error(
+      "[google-calendar] listarEventos falhou — agente vai propor slots sem cruzar com Google Calendar:",
+      err instanceof Error ? err.message : err
+    )
     return []
   }
 }

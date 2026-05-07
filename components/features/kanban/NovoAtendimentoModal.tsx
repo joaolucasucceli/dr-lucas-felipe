@@ -150,7 +150,7 @@ export function NovoAtendimentoModal({
                 <StatusBadge status={contatoSelecionado.statusFunil} />
               </div>
               <p className="text-xs text-muted-foreground">
-                Um novo ciclo de atendimento será iniciado a partir de "Acolhimento".
+                Um novo ciclo de atendimento será iniciado a partir de &quot;Acolhimento&quot;.
               </p>
             </div>
           )}
