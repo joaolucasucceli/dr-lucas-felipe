@@ -87,9 +87,8 @@ export async function GET(_request: NextRequest) {
   } catch {
     return NextResponse.json({
       configurado: true,
-      ativo: config.ativo,
+      ativo: false,
       status: "error",
-      numeroWhatsapp: config.numeroWhatsapp,
       config: {
         uazapiUrl: config.uazapiUrl,
         adminToken: mascarar(config.adminToken),
