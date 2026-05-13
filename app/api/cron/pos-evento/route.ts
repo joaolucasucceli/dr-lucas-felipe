@@ -49,5 +49,46 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ enviadas, timestamp: new Date().toISOString() })
+  // Diag opcional (?diag=1): contagens por filtro pra debugar enviadas=0.
+  let diag: Record<string, unknown> | undefined
+  if (request.nextUrl.searchParams.get("diag") === "1") {
+    const agoraTs = new Date()
+    const ha1h = new Date(agoraTs.getTime() - 1 * 60 * 60 * 1000).toISOString()
+    const ha12h = new Date(agoraTs.getTime() - 12 * 60 * 60 * 1000).toISOString()
+    const { count: totalIa } = await supabaseAdmin
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("criadoPor", "ia")
+    const { count: comStatusOk } = await supabaseAdmin
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("criadoPor", "ia")
+      .in("status", ["agendado", "confirmado", "remarcado"])
+    const { count: posEventoNull } = await supabaseAdmin
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("criadoPor", "ia")
+      .in("status", ["agendado", "confirmado", "remarcado"])
+      .is("posEventoEnviado", null)
+    const { count: dentroJanela } = await supabaseAdmin
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("criadoPor", "ia")
+      .in("status", ["agendado", "confirmado", "remarcado"])
+      .is("posEventoEnviado", null)
+      .gt("dataHora", ha12h)
+      .lt("dataHora", ha1h)
+    diag = {
+      agoraServer: agoraTs.toISOString(),
+      ha1h,
+      ha12h,
+      totalIa,
+      comStatusOk,
+      posEventoNull,
+      dentroJanela,
+      pendentesRetornados: pendentes.length,
+    }
+  }
+
+  return NextResponse.json({ enviadas, timestamp: new Date().toISOString(), diag })
 }
