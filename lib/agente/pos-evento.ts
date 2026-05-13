@@ -87,19 +87,21 @@ export async function enviarPosEvento(
 ): Promise<void> {
   const mensagem = gerarMensagemPosEvento(agendamento.contato)
 
+  // Idempotencia: marca como enviado ANTES de qualquer chamada externa.
+  // Se Uazapi falhar (whatsapp invalido, instancia desconectada, rede), a
+  // marca persiste e o cron nao tenta de novo amanha. Mensagem perdida e
+  // melhor que mensagem dupla — paciente recebe nada vs paciente recebe 5x.
+  await supabaseAdmin
+    .from("agendamentos")
+    .update({ posEventoEnviado: agora(), atualizadoEm: agora() })
+    .eq("id", agendamento.id)
+
   await enviarMensagem(
     configWa.uazapiUrl,
     configWa.instanceToken!,
     agendamento.contato.whatsapp,
     mensagem
   )
-
-  // Marca como enviado ANTES de tentar registrar a mensagem, pra evitar
-  // re-disparo em caso de erro no registrar-mensagem (idempotencia).
-  await supabaseAdmin
-    .from("agendamentos")
-    .update({ posEventoEnviado: agora(), atualizadoEm: agora() })
-    .eq("id", agendamento.id)
 
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
   try {
