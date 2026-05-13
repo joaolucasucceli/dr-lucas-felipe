@@ -28,6 +28,7 @@ export type Database = {
           googleEventUrl: string | null
           id: string
           observacao: string | null
+          posEventoEnviado: string | null
           procedimentoId: string | null
           sincronizado: boolean
           status: Database["public"]["Enums"]["StatusAgendamento"]
@@ -46,6 +47,7 @@ export type Database = {
           googleEventUrl?: string | null
           id: string
           observacao?: string | null
+          posEventoEnviado?: string | null
           procedimentoId?: string | null
           sincronizado?: boolean
           status?: Database["public"]["Enums"]["StatusAgendamento"]
@@ -64,6 +66,7 @@ export type Database = {
           googleEventUrl?: string | null
           id?: string
           observacao?: string | null
+          posEventoEnviado?: string | null
           procedimentoId?: string | null
           sincronizado?: boolean
           status?: Database["public"]["Enums"]["StatusAgendamento"]
@@ -531,6 +534,7 @@ export type Database = {
           encerradaEm: string | null
           etapa: Database["public"]["Enums"]["EtapaConversa"]
           followUpEnviados: string[] | null
+          iaResponde: boolean
           id: string
           modoConversa: Database["public"]["Enums"]["ModoConversa"]
           ultimaMensagemEm: string | null
@@ -544,6 +548,7 @@ export type Database = {
           encerradaEm?: string | null
           etapa?: Database["public"]["Enums"]["EtapaConversa"]
           followUpEnviados?: string[] | null
+          iaResponde?: boolean
           id: string
           modoConversa?: Database["public"]["Enums"]["ModoConversa"]
           ultimaMensagemEm?: string | null
@@ -557,6 +562,7 @@ export type Database = {
           encerradaEm?: string | null
           etapa?: Database["public"]["Enums"]["EtapaConversa"]
           followUpEnviados?: string[] | null
+          iaResponde?: boolean
           id?: string
           modoConversa?: Database["public"]["Enums"]["ModoConversa"]
           ultimaMensagemEm?: string | null
@@ -1168,6 +1174,7 @@ export type Database = {
         | "cancelado"
         | "realizado"
         | "remarcado"
+        | "nao_compareceu"
       StatusFunil:
         | "acolhimento"
         | "qualificacao"
@@ -1359,6 +1366,7 @@ export const Constants = {
         "cancelado",
         "realizado",
         "remarcado",
+        "nao_compareceu",
       ],
       StatusFunil: [
         "acolhimento",
