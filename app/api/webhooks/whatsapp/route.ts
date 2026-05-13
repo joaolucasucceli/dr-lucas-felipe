@@ -244,9 +244,9 @@ export async function POST(request: NextRequest) {
   // WEBHOOK_SECRET obrigatorio em producao (2026-05-13). Em dev sem secret
   // configurado, mantem a porta aberta pra facilitar testes locais.
   if (env.WEBHOOK_SECRET) {
-    // Diagnostico 2026-05-13: Uazapi NAO usa header de auth — manda o token
-    // configurado no body do payload (ou em query string). Aceitamos em
-    // qualquer um dos lugares possiveis pra cobrir todos os provedores.
+    // Diagnostico 2026-05-13: Uazapi envia o `instanceToken` no body.token
+    // (nao um secret separado). Aceitamos qualquer dos lugares de auth
+    // tradicionais, MAIS o instanceToken da config_whatsapp ativa.
     const url = new URL(request.url)
     const tokenRecebido =
       request.headers.get("x-webhook-token") ??
@@ -260,7 +260,24 @@ export async function POST(request: NextRequest) {
       (typeof payload === "object" && payload !== null
         ? payload.token ?? payload.webhook_token ?? payload.secret
         : null)
-    if (tokenRecebido !== env.WEBHOOK_SECRET) {
+
+    // Caminho A: bate com WEBHOOK_SECRET (curl/testes manuais)
+    let autorizado = tokenRecebido === env.WEBHOOK_SECRET
+
+    // Caminho B: bate com instanceToken ativo na config_whatsapp (caminho
+    // real da Uazapi — ela manda o proprio token da instancia no body)
+    if (!autorizado && tokenRecebido) {
+      const { data: cfg } = await supabaseAdmin
+        .from("config_whatsapp")
+        .select("instanceToken")
+        .eq("ativo", true)
+      const tokensValidos = (cfg ?? [])
+        .map((c) => c.instanceToken)
+        .filter(Boolean)
+      autorizado = tokensValidos.some((t) => t === tokenRecebido)
+    }
+
+    if (!autorizado) {
       // LOG TEMPORARIO 2026-05-13 — pra descobrir onde a Uazapi manda o token.
       const tokenBody =
         typeof payload === "object" && payload !== null
