@@ -123,7 +123,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 export function useRealtimeTabela(topico: Topico, callback: () => void) {
   const ctx = useContext(RealtimeCtx)
   const callbackRef = useRef(callback)
-  callbackRef.current = callback
+  useEffect(() => {
+    callbackRef.current = callback
+  }, [callback])
 
   useEffect(() => {
     if (!ctx) return

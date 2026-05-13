@@ -1,19 +1,15 @@
 import { openai } from "@/lib/openai"
 import { supabaseAdmin } from "@/lib/supabase"
+import { getBaseUrl } from "@/lib/env"
 import { obterELimparBuffer } from "@/lib/agente/buffer"
 import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
 import { detectarGatilhoMidia } from "@/lib/agente/gatilho-midia"
-import { abrirNovoCiclo } from "@/lib/agente/kanban-sync"
-import { analisarConversa } from "@/lib/agente/analista"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
 const MAX_TOOL_ITERATIONS = 10
-
-const STATUSES_SILENCIO: string[] = []
-const STATUSES_RETORNO: string[] = []
 
 export function segmentarResposta(texto: string): string[] {
   if (!texto) return []
@@ -55,17 +51,48 @@ function extrairNumero(chatId: string): string {
 }
 
 async function obterConfigWhatsapp() {
-  const { data } = await supabaseAdmin
+  // Pode haver mais de uma config ativa por bug operacional. Pegamos a mais
+  // recente e logamos warn — comportamento antes era nao-deterministico
+  // (PostgreSQL escolhia uma "qualquer", podia trocar entre requests).
+  const { data, error } = await supabaseAdmin
     .from("config_whatsapp")
     .select("*")
     .eq("ativo", true)
-    .maybeSingle()
-  return data
+    .order("atualizadoEm", { ascending: false })
+    .limit(2)
+
+  if (error) {
+    console.error("[Agente] Erro ao buscar config_whatsapp:", error.message)
+    return null
+  }
+
+  if (!data || data.length === 0) return null
+  if (data.length > 1) {
+    console.warn(
+      `[Agente] Mais de uma config_whatsapp ativa (${data.length}). Usando a mais recente. Recomendado: arquivar as antigas no painel.`
+    )
+  }
+  return data[0]
 }
 
-export async function processarMensagens(chatId: string): Promise<void> {
+/**
+ * Resultado do processamento — usado pelo route handler `/api/agente/processar`
+ * pra disparar a Analista IA via `after()` (depois da response, sem bloquear).
+ *
+ * Antes desta refatoracao, a Analista era chamada DENTRO desta funcao com `await`,
+ * o que adicionava 2-5s de latencia na resposta HTTP pro UAZAPI (que nao precisa
+ * do resultado). Agora o handler decide quando rodar a Analista.
+ */
+export interface ResultadoProcessamento {
+  contatoId: string
+  conversaId: string | null
+}
+
+export async function processarMensagens(
+  chatId: string
+): Promise<ResultadoProcessamento | null> {
   const buffer = await obterELimparBuffer(chatId)
-  if (buffer.length === 0) return
+  if (buffer.length === 0) return null
 
   const textoBuffer = buffer.map((m) => m.conteudo).join("\n")
   const whatsapp = extrairNumero(chatId)
@@ -73,10 +100,10 @@ export async function processarMensagens(chatId: string): Promise<void> {
   const configWa = await obterConfigWhatsapp()
   if (!configWa?.instanceToken || !configWa?.uazapiUrl) {
     console.warn("[Agente] ConfigWhatsapp não encontrada ou incompleta — não será possível responder")
-    return
+    return null
   }
 
-  const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").trim()
+  const baseUrl = getBaseUrl()
 
   let contextoContato: ContextoContato = {}
   let contatoId: string | null = null
@@ -87,60 +114,26 @@ export async function processarMensagens(chatId: string): Promise<void> {
       await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
     )
     if (resultadoPaciente.contato) {
-      const statusAtual: string = resultadoPaciente.contato.statusFunil
-
-      if (STATUSES_SILENCIO.includes(statusAtual)) {
-        return
+      // Antes existia logica de STATUSES_SILENCIO/STATUSES_RETORNO aqui, mas
+      // ambos arrays estavam vazios desde a refatoracao do funil pra 4 etapas
+      // (JLAU-...). Removido o codigo morto. Se quiser reativar "novo ciclo
+      // pra paciente de retorno", `abrirNovoCiclo` continua disponivel em
+      // `lib/agente/kanban-sync.ts` — basta plugar aqui novamente.
+      const nomeConfirmado = resultadoPaciente.sobreOPaciente
+        ? resultadoPaciente.contato.nome
+        : undefined
+      contextoContato = {
+        nome: nomeConfirmado,
+        procedimento: resultadoPaciente.contato.procedimentoInteresse,
+        etapa: resultadoPaciente.contato.statusFunil,
+        sobreOPaciente: resultadoPaciente.sobreOPaciente,
+        ehRetorno: resultadoPaciente.contato.ehRetorno,
+        cicloAtual: resultadoPaciente.contato.cicloAtual,
+        ciclosCompletos: resultadoPaciente.contato.ciclosCompletos,
+        ultimoProcedimento: resultadoPaciente.ultimoProcedimento,
       }
-
-      if (STATUSES_RETORNO.includes(statusAtual)) {
-        try {
-          const novoCiclo = await abrirNovoCiclo(resultadoPaciente.contato.id)
-          conversaId = novoCiclo.conversaId
-          const contatoAtualizado = JSON.parse(
-            await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
-          )
-          if (contatoAtualizado.contato) {
-            contextoContato = {
-              nome: contatoAtualizado.contato.nome,
-              procedimento: contatoAtualizado.contato.procedimentoInteresse,
-              etapa: contatoAtualizado.contato.statusFunil,
-              sobreOPaciente: contatoAtualizado.sobreOPaciente,
-              ehRetorno: true,
-              cicloAtual: contatoAtualizado.contato.cicloAtual,
-              ciclosCompletos: contatoAtualizado.contato.ciclosCompletos,
-              ultimoProcedimento: contatoAtualizado.ultimoProcedimento,
-            }
-            contatoId = contatoAtualizado.contato.id
-          }
-        } catch (err) {
-          console.error("[Agente] Erro ao abrir novo ciclo:", err)
-          contextoContato = {
-            nome: resultadoPaciente.contato.nome,
-            procedimento: resultadoPaciente.contato.procedimentoInteresse,
-            etapa: resultadoPaciente.contato.statusFunil,
-            sobreOPaciente: resultadoPaciente.sobreOPaciente,
-          }
-          contatoId = resultadoPaciente.contato.id
-          conversaId = resultadoPaciente.conversa?.id || null
-        }
-      } else {
-        const nomeConfirmado = resultadoPaciente.sobreOPaciente
-          ? resultadoPaciente.contato.nome
-          : undefined
-        contextoContato = {
-          nome: nomeConfirmado,
-          procedimento: resultadoPaciente.contato.procedimentoInteresse,
-          etapa: resultadoPaciente.contato.statusFunil,
-          sobreOPaciente: resultadoPaciente.sobreOPaciente,
-          ehRetorno: resultadoPaciente.contato.ehRetorno,
-          cicloAtual: resultadoPaciente.contato.cicloAtual,
-          ciclosCompletos: resultadoPaciente.contato.ciclosCompletos,
-          ultimoProcedimento: resultadoPaciente.ultimoProcedimento,
-        }
-        contatoId = resultadoPaciente.contato.id
-        conversaId = resultadoPaciente.conversa?.id || null
-      }
+      contatoId = resultadoPaciente.contato.id
+      conversaId = resultadoPaciente.conversa?.id || null
     }
   } catch (error) {
     console.error("[Agente] Erro ao consultar paciente:", error)
@@ -164,7 +157,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
       if (contatoAtual?.responsavelId && contatoAtual.responsavelId !== usuarioIa.id) {
         console.log(`[Agente] IA não é responsável pelo contato ${contatoId } — não responde`)
-        return
+        return null
       }
     }
   }
@@ -178,7 +171,7 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
     if (conversa?.modoConversa === "humano") {
       console.error(`[Agente] Conversa ${conversaId} em modo humano — IA não responde`)
-      return
+      return null
     }
   }
 
@@ -336,10 +329,33 @@ export async function processarMensagens(chatId: string): Promise<void> {
       iteracoes++
     }
 
-    const textoResposta = resposta.choices[0]?.message?.content || ""
+    let textoResposta = resposta.choices[0]?.message?.content || ""
+
+    // Se atingiu MAX_TOOL_ITERATIONS sem texto final, forca uma chamada SEM
+    // tools pra obrigar GPT-4o a fechar com prosa. Antes desse fallback, o
+    // paciente recebia silencio (return sem enviar nada) — pior UX possivel.
+    const aindaPedindoTool = !!resposta.choices[0]?.message?.tool_calls?.length
+    if ((!textoResposta || aindaPedindoTool) && iteracoes >= MAX_TOOL_ITERATIONS) {
+      console.warn(
+        `[Agente] Atingiu MAX_TOOL_ITERATIONS (${iteracoes}) sem fechar resposta — forcando fallback sem tools`
+      )
+      try {
+        const fallback = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: mensagens,
+          tool_choice: "none",
+        })
+        textoResposta = fallback.choices[0]?.message?.content || ""
+      } catch (err) {
+        console.error("[Agente] Fallback sem tools tambem falhou:", err)
+      }
+    }
+
     if (!textoResposta) {
-      console.warn("[Agente] GPT-4o retornou resposta vazia")
-      return
+      // Ultimo recurso — frase neutra que pede o paciente reformular sem
+      // expor erro tecnico (regra absoluta #11 do system prompt).
+      textoResposta = "Deu uma travadinha aqui, pode mandar de novo?"
+      console.warn("[Agente] Resposta vazia mesmo apos fallback — enviando frase neutra")
     }
 
     const segmentos = segmentarResposta(textoResposta)
@@ -388,18 +404,6 @@ export async function processarMensagens(chatId: string): Promise<void> {
 
     await adicionarAMemoria(chatId, { role: "user", content: textoBuffer })
     await adicionarAMemoria(chatId, { role: "assistant", content: textoResposta })
-
-    // JLAU-571 Fase 1 — Analista IA em shadow mode.
-    // Aguardar para garantir execucao em serverless (fire-and-forget seria morto
-    // ao retornar da rota). A mensagem ao paciente ja foi enviada via UAZAPI;
-    // este await so atrasa a resposta HTTP para o UAZAPI, que nao e sensivel a latencia.
-    if (contatoId) {
-      try {
-        await analisarConversa({ contatoId, conversaId })
-      } catch (err) {
-        console.error("[Analista] Falha:", err)
-      }
-    }
   } catch (error) {
     console.error("[Agente] Erro no loop de resposta:", error)
   } finally {
@@ -409,4 +413,10 @@ export async function processarMensagens(chatId: string): Promise<void> {
       console.warn("[Agente] Erro ao parar indicador de digitacao")
     }
   }
+
+  // Retorna IDs pro route handler `/api/agente/processar` disparar a Analista
+  // via `after()` apos a response — antes a Analista era await aqui, atrasando
+  // 2-5s desnecessariamente o HTTP response pro UAZAPI.
+  if (!contatoId) return null
+  return { contatoId, conversaId }
 }

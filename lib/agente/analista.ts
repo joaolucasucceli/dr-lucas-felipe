@@ -14,7 +14,15 @@ import type {
 } from "@/lib/agente/analista-types"
 import type { Json } from "@/lib/types/database"
 
-const MAX_MENSAGENS_HISTORICO = 30
+/**
+ * Tamanho da janela de historico que a Analista IA le pra inferir estado.
+ * Configuravel via env ANALISTA_HIST_TAMANHO. Default 30.
+ */
+const MAX_MENSAGENS_HISTORICO = (() => {
+  const fromEnv = Number(process.env.ANALISTA_HIST_TAMANHO)
+  if (Number.isFinite(fromEnv) && fromEnv >= 5 && fromEnv <= 200) return fromEnv
+  return 30
+})()
 
 function calcularDivergencias(
   atual: EstadoAtualContato,

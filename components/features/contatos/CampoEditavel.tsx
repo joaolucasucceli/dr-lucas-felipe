@@ -65,7 +65,9 @@ export function CampoEditavel({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ultimoSalvoRef = useRef(valor ?? "")
   const estadoRef = useRef<Estado>("idle")
-  estadoRef.current = estado
+  useEffect(() => {
+    estadoRef.current = estado
+  }, [estado])
 
   // Sincronizar com prop externa (realtime) sem atrapalhar edição
   useEffect(() => {

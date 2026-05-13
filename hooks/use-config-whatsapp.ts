@@ -28,8 +28,8 @@ export function useConfigWhatsapp(): UseConfigWhatsappReturn {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
 
-  const buscar = useCallback(async () => {
-    setCarregando(true)
+  const buscar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCarregando(true)
     setErro(null)
 
     try {
@@ -46,14 +46,16 @@ export function useConfigWhatsapp(): UseConfigWhatsappReturn {
       setNumeroWhatsapp(json.numeroWhatsapp || null)
       setConfig(json.config || null)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      if (!silencioso) setErro(e instanceof Error ? e.message : "Erro desconhecido")
     } finally {
-      setCarregando(false)
+      if (!silencioso) setCarregando(false)
     }
   }, [])
 
   useEffect(() => {
     buscar()
+    const iv = setInterval(() => buscar(true), 60_000)
+    return () => clearInterval(iv)
   }, [buscar])
 
   return {

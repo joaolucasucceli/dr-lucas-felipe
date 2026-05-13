@@ -11,11 +11,11 @@ export function useQrCountdown(qrcode: string) {
   useEffect(() => {
     if (!qrcode) {
       qrExpiraRef.current = null
-      setQrSegs(0)
+      setQrSegs((s) => (s === 0 ? s : 0))
       return
     }
     qrExpiraRef.current = Date.now() + 120_000
-    setQrSegs(120)
+    setQrSegs((s) => (s === 120 ? s : 120))
     const iv = setInterval(() => {
       const restante = Math.max(
         0,
