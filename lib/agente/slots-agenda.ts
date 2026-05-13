@@ -98,22 +98,45 @@ export function slotConflitaCom(
   )
 }
 
-/** Formata slot para exibição ao paciente: "quarta, 22 de abril, 09:00" */
-export function formatarLabelSlot(data: Date): string {
-  const fmt = new Intl.DateTimeFormat("pt-BR", {
+const ABREV_DIA: Record<number, string> = {
+  0: "dom",
+  1: "seg",
+  2: "ter",
+  3: "qua",
+  4: "qui",
+  5: "sex",
+  6: "sáb",
+}
+
+/**
+ * Formata slot pra falar como amiga vendedora no WhatsApp (não call center):
+ * - hoje à tarde: "hoje 16h" / "hoje 16h30"
+ * - amanhã: "amanhã 9h" / "amanhã 16h30"
+ * - depois de amanhã / mesma semana: "qua 14/05 9h"
+ * - mais distante: "seg 19/05 14h"
+ *
+ * Regra: sempre minúsculas, sem "às", sem "00:00". 9h em vez de 09:00.
+ */
+export function formatarLabelSlot(data: Date, agora: Date = new Date()): string {
+  const slot = partesDataSP(data)
+  const hoje = partesDataSP(agora)
+  const amanha = partesDataSP(new Date(agora.getTime() + 24 * 60 * 60 * 1000))
+
+  // Hora compacta: 9h, 9h30, 16h, 16h30 — sempre em SP.
+  const hm = new Intl.DateTimeFormat("pt-BR", {
     timeZone: TIMEZONE,
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
     hour12: false,
-  })
-  const parts = fmt.formatToParts(data)
-  const diaSemana = parts.find((p) => p.type === "weekday")?.value ?? ""
-  const dia = parts.find((p) => p.type === "day")?.value ?? ""
-  const mes = parts.find((p) => p.type === "month")?.value ?? ""
-  const hora = parts.find((p) => p.type === "hour")?.value ?? ""
-  const minuto = parts.find((p) => p.type === "minute")?.value ?? ""
-  return `${diaSemana}, ${dia} de ${mes}, ${hora}:${minuto}`
+  }).formatToParts(data)
+  const h = Number(hm.find((p) => p.type === "hour")?.value ?? "0")
+  const mm = hm.find((p) => p.type === "minute")?.value ?? "00"
+  const horaCompacta = mm === "00" ? `${h}h` : `${h}h${mm}`
+
+  if (slot.ymd === hoje.ymd) return `hoje ${horaCompacta}`
+  if (slot.ymd === amanha.ymd) return `amanhã ${horaCompacta}`
+
+  // Dia da semana abreviado + data dd/mm
+  const [, mes, dia] = slot.ymd.split("-")
+  return `${ABREV_DIA[slot.diaSemana]} ${dia}/${mes} ${horaCompacta}`
 }
