@@ -262,15 +262,20 @@ export async function POST(request: NextRequest) {
         : null)
     if (tokenRecebido !== env.WEBHOOK_SECRET) {
       // LOG TEMPORARIO 2026-05-13 — pra descobrir onde a Uazapi manda o token.
+      const tokenBody =
+        typeof payload === "object" && payload !== null
+          ? payload.token ?? payload.webhook_token ?? payload.secret
+          : null
       console.error(
-        "[webhook-auth] 401 — url:",
-        request.url,
-        "| top-level body keys:",
+        "[webhook-auth] 401 —",
+        "esperado:",
+        env.WEBHOOK_SECRET?.slice(0, 8) + "...(+" + (env.WEBHOOK_SECRET?.length ?? 0) + ")",
+        "| body.token:",
+        tokenBody ? String(tokenBody).slice(0, 8) + "...(+" + String(tokenBody).length + ")" : "null",
+        "| keys:",
         typeof payload === "object" && payload !== null
           ? Object.keys(payload).join(",")
           : typeof payload,
-        "| body preview:",
-        JSON.stringify(payload).slice(0, 600),
       )
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
     }
