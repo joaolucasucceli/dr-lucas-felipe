@@ -236,10 +236,21 @@ export async function POST(request: NextRequest) {
   // WEBHOOK_SECRET obrigatorio em producao (2026-05-13). Em dev sem secret
   // configurado, mantem a porta aberta pra facilitar testes locais.
   if (env.WEBHOOK_SECRET) {
+    // Aceita o secret em qualquer dos headers comuns que Uazapi/proxies usam.
+    // Defesa em profundidade: se o nome do header mudar, nao precisa hotfix.
     const tokenRecebido =
       request.headers.get("x-webhook-token") ??
-      request.headers.get("x-api-secret")
+      request.headers.get("x-api-secret") ??
+      request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
+      request.headers.get("apikey") ??
+      request.headers.get("token")
     if (tokenRecebido !== env.WEBHOOK_SECRET) {
+      // LOG TEMPORARIO 2026-05-13 — pra descobrir qual header a Uazapi esta
+      // usando quando smoke test bate em 401. REMOVER apos confirmar.
+      console.error(
+        "[webhook-auth] 401 — headers recebidos:",
+        JSON.stringify(Object.fromEntries(request.headers.entries())),
+      )
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
     }
   } else if (isProd) {
