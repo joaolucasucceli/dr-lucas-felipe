@@ -166,12 +166,20 @@ export async function processarMensagens(
   if (conversaId) {
     const { data: conversa } = await supabaseAdmin
       .from("conversas")
-      .select("modoConversa")
+      .select("modoConversa, iaResponde")
       .eq("id", conversaId)
       .maybeSingle()
 
     if (conversa?.modoConversa === "humano") {
       console.error(`[Agente] Conversa ${conversaId} em modo humano — IA não responde`)
+      return null
+    }
+
+    // Conversa marcada como encerrada por confirmacao pos-evento. IA nao
+    // responde mais nesse contato — paciente ja foi atendido pelo Dr. Lucas.
+    // Reabertura precisa ser explicita (abrirNovoCiclo do kanban-sync).
+    if ((conversa as { iaResponde?: boolean })?.iaResponde === false) {
+      console.log(`[Agente] Conversa ${conversaId} com iaResponde=false (paciente ja atendido) — IA nao responde`)
       return null
     }
   }
@@ -214,6 +222,44 @@ export async function processarMensagens(
       }
     } catch (err) {
       console.warn("[Agente] Erro ao buscar agendamento pendente:", err)
+    }
+  }
+
+  // Busca agendamento que ja teve mensagem de pos-evento enviada nas
+  // ultimas 48h e ainda nao foi resolvido (realizado ou nao_compareceu).
+  // IA precisa reconhecer que paciente esta respondendo aquela pergunta.
+  if (contatoId && contextoContato) {
+    try {
+      const ha48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+      const { data: ag } = await supabaseAdmin
+        .from("agendamentos")
+        .select("id, dataHora, status, posEventoEnviado")
+        .eq("contatoId", contatoId)
+        .in("status", ["agendado", "confirmado", "remarcado"] as never)
+        .not("posEventoEnviado", "is", null)
+        .gt("posEventoEnviado", ha48h)
+        .order("posEventoEnviado", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (ag) {
+        const data = new Date(ag.dataHora)
+        const label = new Intl.DateTimeFormat("pt-BR", {
+          timeZone: "America/Sao_Paulo",
+          weekday: "short",
+          day: "2-digit",
+          month: "long",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(data)
+        contextoContato.agendamentoPosEvento = {
+          id: ag.id,
+          dataHoraIso: ag.dataHora,
+          label,
+        }
+      }
+    } catch (err) {
+      console.warn("[Agente] Erro ao buscar agendamento pos-evento:", err)
     }
   }
 
