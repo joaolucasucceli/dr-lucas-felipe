@@ -73,19 +73,27 @@ export async function validarSlotManual(
       .lte("dataHora", fim.toISOString()),
   ])
 
-  const ocupacoes: Ocupacao[] = [
-    ...eventosCalendar.map((e) => ({ inicio: e.inicio, fim: e.fim })),
-    ...((agendamentosDb.data ?? [])
-      .filter((a) => a.id !== ignorarAgendamentoId)
-      .map((a) => {
-        const inicio = new Date(a.dataHora)
-        const dur = a.duracao ?? 60
-        return { inicio, fim: new Date(inicio.getTime() + dur * 60_000) }
-      })),
-  ]
+  const ocupacoesCalendar: Ocupacao[] = eventosCalendar.map((e) => ({
+    inicio: e.inicio,
+    fim: e.fim,
+  }))
+  const ocupacoesDb: Ocupacao[] = (agendamentosDb.data ?? [])
+    .filter((a) => a.id !== ignorarAgendamentoId)
+    .map((a) => {
+      const inicio = new Date(a.dataHora)
+      const dur = a.duracao ?? 60
+      return { inicio, fim: new Date(inicio.getTime() + dur * 60_000) }
+    })
 
-  if (slotConflitaCom(dataHora, duracaoMin, ocupacoes)) {
-    return { ok: false, motivo: "Conflito com outro agendamento ou evento da agenda" }
+  if (slotConflitaCom(dataHora, duracaoMin, ocupacoesDb)) {
+    return { ok: false, motivo: "Conflito com outro agendamento da clínica nesse horário" }
+  }
+
+  if (slotConflitaCom(dataHora, duracaoMin, ocupacoesCalendar)) {
+    return {
+      ok: false,
+      motivo: "Conflito com um evento da agenda do Dr. Lucas nesse horário",
+    }
   }
 
   return { ok: true }

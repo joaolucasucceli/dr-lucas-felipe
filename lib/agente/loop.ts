@@ -6,6 +6,7 @@ import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
 import { detectarGatilhoMidia } from "@/lib/agente/gatilho-midia"
+import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
@@ -357,6 +358,8 @@ export async function processarMensagens(
       textoResposta = "Deu uma travadinha aqui, pode mandar de novo?"
       console.warn("[Agente] Resposta vazia mesmo apos fallback — enviando frase neutra")
     }
+
+    textoResposta = humanizarTexto(textoResposta)
 
     const segmentos = segmentarResposta(textoResposta)
 
