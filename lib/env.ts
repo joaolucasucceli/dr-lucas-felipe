@@ -3,11 +3,10 @@
  *
  * - `getBaseUrl()`: retorna URL canonica pra internal fetch. Fail-fast em
  *   producao se NEXTAUTH_URL ausente — evita o agente bater em localhost
- *   silenciosamente em prod (bug latente: webhook chamava
- *   `process.env.NEXTAUTH_URL || "http://localhost:3000"` e quebrava sem log).
- * - `WEBHOOK_SECRET` opcional por ora pra nao quebrar producao quando a env
- *   ainda nao foi adicionada no Vercel + Uazapi. Quando ausente em prod, loga
- *   warning loud no boot pra ninguem esquecer.
+ *   silenciosamente em prod.
+ * - `WEBHOOK_SECRET` agora OBRIGATORIO em producao (2026-05-13). Sem ele, o
+ *   webhook do Uazapi vira porta aberta — qualquer payload externo dispara
+ *   GPT + WhatsApp pela instancia da clinica. Boot loga ERROR se faltar.
  */
 
 const trim = (v: string | undefined) => (v ?? "").trim()
@@ -51,20 +50,13 @@ if (isProd) {
     "NEXTAUTH_URL",
     "API_SECRET",
     "OPENAI_API_KEY",
+    "WEBHOOK_SECRET",
   ]
   const faltantes = obrigatorias.filter((k) => !env[k])
   if (faltantes.length > 0) {
     console.error(
       `[env] PRODUCAO sem envs obrigatorias:`,
       faltantes.join(", ")
-    )
-  }
-  if (!env.WEBHOOK_SECRET) {
-    console.warn(
-      "[env] WEBHOOK_SECRET nao configurada em PRODUCAO — webhook do Uazapi " +
-        "aceita qualquer payload. Risco de DoS / abuso da API OpenAI. " +
-        "Acao: adicionar env WEBHOOK_SECRET no Vercel + configurar header " +
-        "'x-webhook-token: <secret>' no painel da instancia Uazapi."
     )
   }
 }

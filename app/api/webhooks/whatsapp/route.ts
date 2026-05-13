@@ -233,10 +233,8 @@ function normalizarBaileys(payload: any): MensagemNormalizada[] {
 }
 
 export async function POST(request: NextRequest) {
-  // Em PRODUCAO sem WEBHOOK_SECRET, lib/env.ts ja loga warning loud no boot.
-  // Aqui mantemos comportamento atual (so valida se a env existe) pra nao
-  // quebrar producao quando a env ainda nao foi adicionada no Vercel + Uazapi.
-  // TODO: depois que o secret for configurado nos dois lados, virar required.
+  // WEBHOOK_SECRET obrigatorio em producao (2026-05-13). Em dev sem secret
+  // configurado, mantem a porta aberta pra facilitar testes locais.
   if (env.WEBHOOK_SECRET) {
     const tokenRecebido =
       request.headers.get("x-webhook-token") ??
@@ -245,9 +243,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
     }
   } else if (isProd) {
-    console.warn(
-      "[webhook-whatsapp] aceitando payload SEM autenticacao em producao — " +
-        "WEBHOOK_SECRET ausente. Adicionar env no Vercel + header no Uazapi."
+    // Producao chegou aqui SEM secret = falha grave de config. Bloqueia.
+    console.error(
+      "[webhook-whatsapp] PRODUCAO sem WEBHOOK_SECRET — bloqueando payload " +
+        "por seguranca. Configure a env no Vercel + header no Uazapi."
+    )
+    return NextResponse.json(
+      { error: "Servico mal configurado" },
+      { status: 503 },
     )
   }
 

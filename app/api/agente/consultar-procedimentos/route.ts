@@ -16,7 +16,10 @@ export async function POST(request: NextRequest) {
 
   let query = supabaseAdmin
     .from("procedimentos")
-    .select("id, nome, tipo, descricao, duracaoMin, posOperatorio")
+    .select(
+      "id, nome, tipo, descricao, duracaoMin, posOperatorio, " +
+        "valorEstimadoBrl, valorCheioBrl, parcelamento, escopoOferta",
+    )
     .eq("ativo", true)
     .is("deletadoEm", null)
 
