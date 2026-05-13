@@ -23,6 +23,11 @@ const formSchema = z.object({
   descricao: z.string().optional(),
   duracaoMin: z.string().min(1, "Duração é obrigatória"),
   posOperatorio: z.string().optional(),
+  // Campos comerciais — todos opcionais. Strings no form, convertidos em number no submit.
+  valorEstimadoBrl: z.string().optional(),
+  valorCheioBrl: z.string().optional(),
+  parcelamento: z.string().optional(),
+  escopoOferta: z.string().optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -35,6 +40,10 @@ interface Procedimento {
   duracaoMin: number
   posOperatorio: string | null
   ativo: boolean
+  valorEstimadoBrl: number | null
+  valorCheioBrl: number | null
+  parcelamento: string | null
+  escopoOferta: string | null
 }
 
 interface ProcedimentoFormProps {
@@ -67,6 +76,10 @@ export function ProcedimentoForm({
       descricao: "",
       duracaoMin: "",
       posOperatorio: "",
+      valorEstimadoBrl: "",
+      valorCheioBrl: "",
+      parcelamento: "",
+      escopoOferta: "",
     },
   })
 
@@ -78,6 +91,16 @@ export function ProcedimentoForm({
         descricao: procedimento.descricao || "",
         duracaoMin: procedimento.duracaoMin.toString(),
         posOperatorio: procedimento.posOperatorio || "",
+        valorEstimadoBrl:
+          procedimento.valorEstimadoBrl != null
+            ? procedimento.valorEstimadoBrl.toString()
+            : "",
+        valorCheioBrl:
+          procedimento.valorCheioBrl != null
+            ? procedimento.valorCheioBrl.toString()
+            : "",
+        parcelamento: procedimento.parcelamento || "",
+        escopoOferta: procedimento.escopoOferta || "",
       })
     } else {
       reset({
@@ -86,6 +109,10 @@ export function ProcedimentoForm({
         descricao: "",
         duracaoMin: "",
         posOperatorio: "",
+        valorEstimadoBrl: "",
+        valorCheioBrl: "",
+        parcelamento: "",
+        escopoOferta: "",
       })
     }
   }, [procedimento, reset])
@@ -114,6 +141,19 @@ export function ProcedimentoForm({
 
     if (data.descricao) body.descricao = data.descricao
     if (data.posOperatorio) body.posOperatorio = data.posOperatorio
+
+    // Campos comerciais — converte string vazia em null (pra IA detectar "sem valor fixo").
+    // Numero: aceita "13000", "13.000", "13000,00" — strip nao-digito (excepto virgula/ponto).
+    const parseBrl = (s: string | undefined): number | null => {
+      if (!s || !s.trim()) return null
+      const limpo = s.replace(/[^\d,.]/g, "").replace(/\./g, "").replace(",", ".")
+      const n = Number(limpo)
+      return Number.isFinite(n) ? n : null
+    }
+    body.valorEstimadoBrl = parseBrl(data.valorEstimadoBrl)
+    body.valorCheioBrl = parseBrl(data.valorCheioBrl)
+    body.parcelamento = data.parcelamento?.trim() || null
+    body.escopoOferta = data.escopoOferta?.trim() || null
 
     try {
       const url = editando
@@ -203,6 +243,59 @@ export function ProcedimentoForm({
       <div className="grid gap-2">
         <Label htmlFor="proc-pos">Pós-operatório</Label>
         <Textarea id="proc-pos" {...register("posOperatorio")} />
+      </div>
+
+      <div className="grid gap-2 pt-2 border-t">
+        <Label className="text-sm font-semibold">Informações comerciais</Label>
+        <p className="text-xs text-muted-foreground">
+          A Ana Júlia usa esses dados pra falar o valor quando o paciente perguntar. Deixe o valor estimado em branco se quiser que a IA peça mais info ao paciente (foto + região) antes de citar valor.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-2">
+          <Label htmlFor="proc-valor-estimado">Valor estimado (R$)</Label>
+          <Input
+            id="proc-valor-estimado"
+            type="text"
+            inputMode="decimal"
+            placeholder="ex: 13000"
+            {...register("valorEstimadoBrl")}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="proc-valor-cheio">Valor cheio (R$, opcional)</Label>
+          <Input
+            id="proc-valor-cheio"
+            type="text"
+            inputMode="decimal"
+            placeholder="ex: 20000 (sem desconto)"
+            {...register("valorCheioBrl")}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="proc-parcelamento">Parcelamento (opcional)</Label>
+        <Input
+          id="proc-parcelamento"
+          type="text"
+          placeholder="ex: até 12× no cartão"
+          {...register("parcelamento")}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="proc-escopo">Escopo da oferta (opcional)</Label>
+        <Input
+          id="proc-escopo"
+          type="text"
+          placeholder="ex: Abdome + Flancos + Enxerto Glúteo"
+          {...register("escopoOferta")}
+        />
+        <p className="text-xs text-muted-foreground">
+          Útil pra combos do Programa Paciente Modelo — deixa a IA descrever qual região está incluída na oferta.
+        </p>
       </div>
     </FormDialog>
   )
