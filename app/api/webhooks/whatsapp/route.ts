@@ -230,10 +230,21 @@ function normalizarBaileys(payload: any): MensagemNormalizada[] {
 export async function POST(request: NextRequest) {
   const webhookSecret = process.env.WEBHOOK_SECRET
   if (webhookSecret) {
+    // Aceita o secret em qualquer dos headers comuns que Uazapi/proxies usam.
+    // Mais defensivo: se algum dia o nome do header mudar, nao precisa hotfix.
     const tokenRecebido =
       request.headers.get("x-webhook-token") ??
-      request.headers.get("x-api-secret")
+      request.headers.get("x-api-secret") ??
+      request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
+      request.headers.get("apikey") ??
+      request.headers.get("token")
     if (tokenRecebido !== webhookSecret) {
+      // LOG TEMPORARIO 2026-05-13 — descobrir qual header a Uazapi esta usando.
+      // Remover apos validar que o smoke test passa.
+      console.error(
+        "[webhook-auth] 401 — headers recebidos:",
+        JSON.stringify(Object.fromEntries(request.headers.entries())),
+      )
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
     }
   }
