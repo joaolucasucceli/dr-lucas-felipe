@@ -161,6 +161,20 @@ export async function processarMensagens(
         return null
       }
     }
+
+    // Handoff humano de orcamento ativo: IA pausa ate o Dr. Lucas responder.
+    // Setado por `solicitar_orcamento_humano`, zerado pelo detector de
+    // retomada no webhook quando ele responde fromMe=true.
+    const { data: contatoHandoff } = await supabaseAdmin
+      .from("contatos")
+      .select("aguardandoOrcamentoHumano")
+      .eq("id", contatoId)
+      .maybeSingle()
+
+    if ((contatoHandoff as { aguardandoOrcamentoHumano?: boolean })?.aguardandoOrcamentoHumano) {
+      console.log(`[Agente] Contato ${contatoId} aguardando orcamento manual do Dr. Lucas — IA pausada`)
+      return null
+    }
   }
 
   if (conversaId) {

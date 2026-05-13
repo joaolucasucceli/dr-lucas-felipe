@@ -553,6 +553,39 @@ export async function POST(request: NextRequest) {
       .update({ ultimaMensagemEm: agora(), atualizadoEm: agora() })
       .eq("id", conversa!.id)
 
+    // Handoff humano: Dr. Lucas respondeu via WhatsApp dele (fromMe=true) num
+    // chat com paciente que estava aguardando orcamento manual. Zera o flag
+    // e marca o evento como respondido — proxima mensagem do paciente volta
+    // a acionar a IA normalmente.
+    if (
+      ehAtendente &&
+      (contato as { aguardandoOrcamentoHumano?: boolean })?.aguardandoOrcamentoHumano
+    ) {
+      try {
+        await Promise.all([
+          supabaseAdmin
+            .from("contatos")
+            .update({
+              aguardandoOrcamentoHumano: false,
+              aguardandoOrcamentoDesde: null,
+              atualizadoEm: agora(),
+            })
+            .eq("id", contato!.id),
+          supabaseAdmin
+            .from("eventos_orcamento_pendente")
+            .update({ respondidoEm: agora() })
+            .eq("contatoId", contato!.id)
+            .is("respondidoEm", null)
+            .is("canceladoEm", null),
+        ])
+        console.log(
+          `[Webhook] Dr. Lucas respondeu orcamento manual — handoff fechado pra contato ${contato!.id}`
+        )
+      } catch (err) {
+        console.error("[Webhook] Falha ao fechar handoff manual:", err)
+      }
+    }
+
     // JLAU-584: mensagens do atendente nao disparam a IA e nao viram foto analisada.
     // Rate limit estourado tambem entra aqui (mensagem fica no historico, mas IA nao roda).
     if (ehAtendente || bloqueadoPorRate) continue
