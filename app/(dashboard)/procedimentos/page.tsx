@@ -33,6 +33,19 @@ interface Procedimento {
   posOperatorio: string | null
   ativo: boolean
   criadoEm: string
+  valorEstimadoBrl: number | null
+  valorCheioBrl: number | null
+  parcelamento: string | null
+  escopoOferta: string | null
+}
+
+function formatarBRL(valor: number | null): string {
+  if (valor == null) return "—"
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  }).format(valor)
 }
 
 const tipoLabels: Record<string, string> = {
@@ -151,6 +164,21 @@ export default function ProcedimentosPage() {
       titulo: "Duração da cirurgia",
       classesCelula: "hidden md:table-cell",
       renderizar: (p) => `${p.duracaoMin}min`,
+    },
+    {
+      chave: "valorEstimadoBrl",
+      titulo: "Valor estimado",
+      classesCelula: "hidden lg:table-cell",
+      renderizar: (p) => (
+        <div className="text-sm">
+          <div className="font-medium">{formatarBRL(p.valorEstimadoBrl)}</div>
+          {p.valorCheioBrl != null && (
+            <div className="text-muted-foreground line-through text-xs">
+              {formatarBRL(p.valorCheioBrl)}
+            </div>
+          )}
+        </div>
+      ),
     },
     ...(isGestor
       ? [

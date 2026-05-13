@@ -11,6 +11,10 @@ interface Procedimento {
   posOperatorio: string | null
   ativo: boolean
   criadoEm: string
+  valorEstimadoBrl: number | null
+  valorCheioBrl: number | null
+  parcelamento: string | null
+  escopoOferta: string | null
 }
 
 interface UseProcedimentosParams {

@@ -8,7 +8,8 @@ import { agora } from "@/lib/db-utils"
 type RouteParams = { params: Promise<{ id: string }> }
 
 const SELECT_PROCEDIMENTO =
-  "id, nome, tipo, descricao, duracaoMin, posOperatorio, ativo, criadoEm, atualizadoEm"
+  "id, nome, tipo, descricao, duracaoMin, posOperatorio, ativo, criadoEm, atualizadoEm, " +
+  "valorEstimadoBrl, valorCheioBrl, parcelamento, escopoOferta"
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")
