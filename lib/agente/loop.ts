@@ -6,6 +6,10 @@ import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
 import { detectarGatilhoMidia } from "@/lib/agente/gatilho-midia"
+import {
+  detectarGatilhoHandoff,
+  gerarResumoFallback,
+} from "@/lib/agente/gatilho-handoff"
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
@@ -286,16 +290,29 @@ export async function processarMensagens(
       { role: "user", content: textoBuffer },
     ]
 
-    // Se o paciente pediu prova visual (gatilho), obrigamos o GPT-4o a chamar
-    // `buscar_conteudo` na primeira iteracao. Sem isso, o modelo alucina
-    // "enviei uma imagem" em texto, sem executar a tool.
-    const forcarMidia = detectarGatilhoMidia(textoBuffer)
+    // Heurística determinística: paciente pediu valor + sinal de complexidade
+    // (multi-região fora do combo PM, região fora do PM, "fora do programa",
+    // comparação externa, urgência) → força `solicitar_orcamento_humano` na
+    // primeira iteração. GPT-4o ignora a REGRA 0 do prompt em ~50% dos casos
+    // qualificados; este safety net não substitui o prompt, atua em paralelo.
+    // Precedência: handoff > midia > auto (handoff é pausa total, midia é
+    // fluxo de prova visual).
+    const forcarHandoff = detectarGatilhoHandoff(textoBuffer)
+    const forcarMidia = !forcarHandoff && detectarGatilhoMidia(textoBuffer)
+
+    if (forcarHandoff) {
+      console.log(
+        `[Agente] Gatilho de handoff disparado pra contato ${contatoId} — forcando solicitar_orcamento_humano`
+      )
+    }
 
     let resposta = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: mensagens,
       tools: ferramentasAgente,
-      tool_choice: forcarMidia
+      tool_choice: forcarHandoff
+        ? { type: "function", function: { name: "solicitar_orcamento_humano" } }
+        : forcarMidia
         ? { type: "function", function: { name: "buscar_conteudo" } }
         : "auto",
     })
@@ -348,10 +365,27 @@ export async function processarMensagens(
           "registrar_agendamento",
           "buscar_conteudo",
           "enviar_midia",
+          "solicitar_orcamento_humano",
         ])
         if (toolsComIds.has(fn.name)) {
           if (contatoId) args.contatoId = contatoId
           if (conversaId) args.conversaId = conversaId
+        }
+
+        // Quando o gatilho de handoff força a tool e o GPT-4o passa resumoCaso
+        // curto demais (< 10 chars, viola schema do endpoint), substitui por um
+        // resumo determinístico extraído da mensagem do paciente. Sem isso, o
+        // endpoint devolve 400 → tool error → GPT pode entrar em loop ou
+        // alucinar fallback ruim.
+        if (fn.name === "solicitar_orcamento_humano") {
+          const resumoAtual =
+            typeof args.resumoCaso === "string" ? args.resumoCaso : ""
+          if (resumoAtual.trim().length < 10) {
+            args.resumoCaso = gerarResumoFallback(textoBuffer)
+            console.log(
+              "[Agente] resumoCaso curto/ausente, usando fallback deterministico"
+            )
+          }
         }
 
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
