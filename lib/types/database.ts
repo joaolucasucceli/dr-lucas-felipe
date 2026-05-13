@@ -539,6 +539,9 @@ export type Database = {
           modoConversa: Database["public"]["Enums"]["ModoConversa"]
           ultimaMensagemEm: string | null
         }
+        // contatos.aguardandoOrcamentoHumano + contatos.aguardandoOrcamentoDesde
+        // + tabela eventos_orcamento_pendente foram adicionados em 2026-05-13
+        // mas nao estao tipados aqui — uso de `as never` nos pontos de acesso.
         Insert: {
           atendenteId?: string | null
           atualizadoEm: string
@@ -624,6 +627,53 @@ export type Database = {
             columns: ["prontuarioId"]
             isOneToOne: false
             referencedRelation: "prontuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eventos_orcamento_pendente: {
+        Row: {
+          id: string
+          contatoId: string
+          conversaId: string | null
+          resumoCaso: string
+          prioridade: "normal" | "urgente"
+          criadoEm: string
+          respondidoEm: string | null
+          canceladoEm: string | null
+          observacoes: string | null
+          notificacaoEnviadaEm: string | null
+        }
+        Insert: {
+          id: string
+          contatoId: string
+          conversaId?: string | null
+          resumoCaso: string
+          prioridade?: "normal" | "urgente"
+          criadoEm?: string
+          respondidoEm?: string | null
+          canceladoEm?: string | null
+          observacoes?: string | null
+          notificacaoEnviadaEm?: string | null
+        }
+        Update: {
+          id?: string
+          contatoId?: string
+          conversaId?: string | null
+          resumoCaso?: string
+          prioridade?: "normal" | "urgente"
+          criadoEm?: string
+          respondidoEm?: string | null
+          canceladoEm?: string | null
+          observacoes?: string | null
+          notificacaoEnviadaEm?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_orcamento_pendente_contatoId_fkey"
+            columns: ["contatoId"]
+            isOneToOne: false
+            referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
         ]

@@ -203,6 +203,38 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "solicitar_orcamento_humano",
+      description:
+        "Pausa o atendimento e sinaliza o Dr. Lucas pra responder o orçamento direto, do número pessoal dele. Use SOMENTE quando o paciente: (a) já mandou pelo menos 1 foto + região, e perguntou explicitamente o valor; OU (b) está qualificado mas insistiu em valor 2× depois de você redirecionar pra avaliação. Depois de chamar essa tool, NÃO mande mais mensagem nesse turno — o Dr. Lucas vai falar direto. O paciente fica aguardando até ele responder. Você só volta a atender quando o webhook detectar a mensagem dele.",
+      parameters: {
+        type: "object",
+        properties: {
+          contatoId: {
+            type: "string",
+            description: "ID do contato (vem do contexto após consultar_paciente)",
+          },
+          conversaId: {
+            type: "string",
+            description: "ID da conversa ativa (opcional)",
+          },
+          resumoCaso: {
+            type: "string",
+            description:
+              "Resumo CURTO do caso pro Dr. Lucas: região do corpo, fotos enviadas (sim/quantas), demanda. Máximo 3 linhas. Ex: 'Abdômen + flancos, 2 fotos enviadas. Quer saber valor pra mini lipo paciente modelo.'",
+          },
+          prioridade: {
+            type: "string",
+            enum: ["normal", "urgente"],
+            description: "Default 'normal'. 'urgente' só se o paciente sinalizou objeção clara.",
+          },
+        },
+        required: ["contatoId", "resumoCaso"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "confirmar_presenca",
       description:
         "Marca um agendamento como REALIZADO (paciente compareceu na avaliação) e ENCERRA a conversa — você para de responder definitivamente nesse contato. Use SOMENTE quando o paciente responder positivamente (Sim, Foi, Compareci, Foi tudo certo, Sim fiz, Sim, fez) a uma pergunta SUA de pós-evento ('Conseguiu fazer a avaliação hoje?'). O ID está em agendamentoPosEventoId no contexto. Sem ID válido no contexto, ignore.",
