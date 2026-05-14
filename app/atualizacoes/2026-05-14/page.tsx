@@ -10,10 +10,7 @@ export const metadata: Metadata = {
 
 const whatsappJoao = process.env.NEXT_PUBLIC_JOAO_WHATSAPP ?? "5527981377474"
 const linkAjusteHandoff = `https://wa.me/${whatsappJoao}?text=${encodeURIComponent(
-  "Olá João, vi a página de atualização. Quero pedir um ajuste sobre o handoff de orçamento: "
-)}`
-const linkConfirmarTudo = `https://wa.me/${whatsappJoao}?text=${encodeURIComponent(
-  "Olá João, vi a página de atualização. Tá tudo certo, pode seguir. Sobre as 2 pendências da minha parte: "
+  "João, vi a página de atualização. Tenho um ajuste/correção: "
 )}`
 
 export default function AtualizacaoPage() {
@@ -49,9 +46,9 @@ export default function AtualizacaoPage() {
             </p>
           </Card>
           <Card title="Falta de você">
-            <span className="text-2xl font-semibold text-site-gold">2 coisas</span>
+            <span className="text-2xl font-semibold text-site-gold">1 coisa</span>
             <p className="mt-1 text-sm text-site-light/60">
-              que só fecham com você
+              cadastrar descrição de 4 procedimentos
             </p>
           </Card>
         </section>
@@ -187,7 +184,7 @@ export default function AtualizacaoPage() {
                 <b className="text-site-light">Casos de borda do Cenário 4:</b> se a paciente usar uma forma de pedir valor que a gente não previu, a IA pode entrar no fluxo padrão em vez de te chamar. Plano: na call, a gente refina a lista de palavras-chave.
               </Bullet>
               <Bullet>
-                <b className="text-site-light">Notificação no seu WhatsApp:</b> ainda falta confirmar o seu número e fazer um teste real (não testamos com o seu número ainda, só com paciente fake).
+                <b className="text-site-light">Primeiro teste real do handoff:</b> seu número já tá configurado, mas ainda não rolou nenhum caso de verdade que tenha disparado o ping. O primeiro paciente complexo de verdade vai ser o teste em produção.
               </Bullet>
               <Bullet>
                 <b className="text-site-light">Tela do painel com orçamentos pendentes:</b> hoje o evento fica no banco mas não tem uma tela visual pra você acompanhar a fila. Fase 2.
@@ -200,26 +197,17 @@ export default function AtualizacaoPage() {
         </Section>
 
         {/* Pendências */}
-        <Section number="4" titulo="As 2 coisas que dependem de você">
+        <Section number="4" titulo="A única coisa que depende de você">
           <div className="space-y-4">
-            <Pendencia titulo="1. Confirmar o seu WhatsApp e validar as palavras-chave">
-              <Bullet>
-                <b className="text-site-light">Qual é o seu número pessoal de WhatsApp?</b> O sistema vai te mandar o ping nesse número quando aparecer caso complexo.
-              </Bullet>
-              <Bullet>
-                <b className="text-site-light">Validar a lista de palavras-chave</b> que devem disparar o ping. Hoje cobrimos: combo de regiões fora do padrão, &quot;fora do paciente modelo&quot;, &quot;lipo de braço&quot;, &quot;papada&quot;, &quot;mamas&quot;, &quot;coxas&quot;, &quot;decidir hoje&quot;, &quot;vi outra clínica cobrando&quot;.
-              </Bullet>
-              <Bullet>
-                <b className="text-site-light">1 teste real ponta a ponta</b> com o seu número (paciente fictício manda → você recebe o ping → responde → paciente recebe).
-              </Bullet>
-            </Pendencia>
-
-            <Pendencia titulo="2. Descrição clínica de 4 procedimentos novos">
+            <Pendencia titulo="Cadastrar descrição clínica dos 4 procedimentos novos">
               <p>
-                Hidrolipo, Lipo Fit, Lipo Butt e PMMA-áreas estão na tabela com descrição genérica do tipo &quot;descrição completa pendente&quot;. Pra a IA explicar bem cada um quando o paciente perguntar, precisa do texto seu.
+                Hidrolipo, Lipo Fit, Lipo Butt e PMMA-áreas estão cadastrados na tabela com descrição genérica do tipo &quot;descrição completa pendente&quot;. Pra a Ana Júlia explicar bem cada um quando o paciente perguntar, precisa do texto seu.
               </p>
               <p>
-                <b className="text-site-light">Como fechar:</b> 15-20 minutos de áudio seu por WhatsApp explicando cada um — eu transcrevo e salvo no painel.
+                <b className="text-site-light">Como fechar:</b> você mesmo edita direto no painel em <a className="text-site-gold underline underline-offset-2 hover:opacity-80" href="/procedimentos" target="_blank" rel="noopener noreferrer">/procedimentos</a>. Cada procedimento tem campo de descrição e pós-operatório, inline edit autosave. 5 minutos de digitação cada.
+              </p>
+              <p className="text-sm text-site-light/55">
+                Já configurei seu WhatsApp pessoal no sistema, então o handoff de orçamento já vai te chamar no número que a gente usa pra conversar. Tu fica só com essa pendência.
               </p>
             </Pendencia>
           </div>
@@ -231,17 +219,15 @@ export default function AtualizacaoPage() {
             Próximo passo
           </h3>
           <p className="mt-2 text-site-light/80">
-            Lê isso aí com calma, e quando der me manda um sinal por WhatsApp. Posso resolver os 2 pontos em 15 minutos com você.
+            Lê isso aí com calma. Quando puder, dá uma passada no painel de procedimentos pra preencher os 4 novos. Qualquer ajuste, correção ou ideia, manda um áudio que eu resolvo no mesmo dia.
           </p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={linkConfirmarTudo}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/procedimentos"
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 py-3 font-medium text-emerald-950 transition hover:bg-emerald-400"
             >
-              Tá ok, vamos fechar as pendências
-            </a>
+              Abrir painel de procedimentos
+            </Link>
             <a
               href={linkAjusteHandoff}
               target="_blank"
