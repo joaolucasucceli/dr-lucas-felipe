@@ -27,7 +27,7 @@ export default function AtualizacaoPage() {
             Atualização do sistema · 14 de maio
           </div>
           <h1 className="mt-4 font-heading text-3xl font-bold leading-tight tracking-tight md:text-4xl">
-            Doutor, o sistema avançou bastante. Aqui o resumo, em 5 minutos.
+            Lucas, o sistema avançou bastante. Aqui o resumo, em 5 minutos.
           </h1>
           <p className="mt-4 text-base leading-relaxed text-site-light/70">
             Sem jargão técnico. O que mudou, como a Ana Júlia (sua IA) tá se comportando hoje, o que tá garantido, o que ainda pode dar errado, e as duas coisas que precisam de você pra eu ligar 100%.
@@ -143,7 +143,7 @@ export default function AtualizacaoPage() {
                 Reconhece automaticamente que isso é caso complexo (3 regiões juntas, uma região que não tá no combo padrão, comparação com outra clínica, e urgência).
               </Bullet>
               <Bullet>
-                Pausa a Ana Júlia. Ela manda só: <i>&quot;Maria, deixa eu já alinhar com o Dr. Lucas pra te passar um valor que faça sentido pro seu caso. Te respondo em até algumas horas, pode ser?&quot;</i>
+                Pausa a Ana Júlia. Ela manda só: <i>&quot;Maria, deixa eu já alinhar com o Lucas pra te passar um valor que faça sentido pro seu caso. Te respondo em até algumas horas, pode ser?&quot;</i>
               </Bullet>
               <Bullet>
                 Manda mensagem no <b className="text-site-light">seu WhatsApp pessoal</b> com o resumo do caso (regiões, se tem foto, o pedido exato).
