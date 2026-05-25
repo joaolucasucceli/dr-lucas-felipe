@@ -281,6 +281,30 @@ export async function processarMensagens(
     }
   }
 
+  // JLU-170 v2 (B 25/05): busca config de pre-aprovacao do gestor ativo.
+  // Lucas e o unico gestor humano hoje. Se algum dia houver multiplos, basta
+  // estender a query pra pegar a config "mais restrita" (OR de todos).
+  try {
+    const { data: gestor } = await supabaseAdmin
+      .from("usuarios")
+      .select("exigirAprovacaoAgendamento")
+      .eq("perfil", "gestor")
+      .eq("tipo", "humano")
+      .eq("ativo", true)
+      .is("deletadoEm", null)
+      .order("criadoEm", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    if (gestor) {
+      const g = gestor as { exigirAprovacaoAgendamento?: boolean }
+      contextoContato.config = {
+        exigirAprovacaoAgendamento: Boolean(g.exigirAprovacaoAgendamento),
+      }
+    }
+  } catch (err) {
+    console.warn("[Agente] Falha ao buscar config do gestor (segue sem pre-aprovacao):", err)
+  }
+
   try {
     const memoria = await obterMemoria(chatId)
     const systemPrompt = await gerarSystemPrompt(contextoContato)

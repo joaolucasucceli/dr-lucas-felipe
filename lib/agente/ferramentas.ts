@@ -272,6 +272,26 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "solicitar_aprovacao_horario",
+      description:
+        "JLU-170 v2: Cria solicitacao de pre-aprovacao de horario com o gestor (Dr. Lucas). USE SOMENTE quando o contexto indicar `config.exigirAprovacaoAgendamento === true` (gestor configurou a flag em /configuracoes/comportamento-ia). Em vez de registrar_agendamento direto, voce cria uma SOLICITACAO que vai pro WhatsApp pessoal do gestor. Ele aprova/sugere outro/cancela via painel. So depois voce responde o paciente. Apos chamar essa tool, mande ao paciente: \"[nome], vou so alinhar com o Dr. Lucas pra confirmar esse horario, te respondo em algumas horas pode ser?\" — e FIQUE EM SILENCIO neste contato ate webhook detectar resposta da decisao do gestor. Idempotente: chamadas duplicadas com mesmo contatoId+dataHora retornam jaPendente=true.",
+      parameters: {
+        type: "object",
+        properties: {
+          contatoId: { type: "string", description: "ID do paciente" },
+          conversaId: { type: "string", description: "ID da conversa ativa" },
+          dataHora: { type: "string", description: "Data/hora ISO 8601 com timezone (mesmo formato de registrar_agendamento)" },
+          procedimentoId: { type: "string", description: "ID do procedimento (opcional)" },
+          email: { type: "string", description: "Email do paciente (OBRIGATORIO — mesmo motivo de registrar_agendamento)" },
+          observacao: { type: "string", description: "Observacao curta (opcional)" },
+        },
+        required: ["contatoId", "dataHora", "email"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "enviar_midia",
       description:
         "Envia uma mídia específica para o paciente via WhatsApp. Passe o midiaId escolhido após ler o array `midias` retornado por buscar_conteudo. Prefira midias com jaEnviada: false.",

@@ -8,7 +8,7 @@ import { agora } from "@/lib/db-utils"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
-const SELECT_USUARIO = "id, nome, email, perfil, tipo, ativo, criadoEm, atualizadoEm"
+const SELECT_USUARIO = "id, nome, email, perfil, tipo, ativo, criadoEm, atualizadoEm, exigirAprovacaoAgendamento"
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireAuth()

@@ -20,6 +20,12 @@ export interface ContextoContato {
     dataHoraIso: string
     label: string
   }
+  /** JLU-170 v2 (B 25/05): config do gestor — flag exigirAprovacaoAgendamento
+   *  vinda do perfil do gestor ativo. Se true, IA chama
+   *  solicitar_aprovacao_horario em vez de registrar_agendamento direto. */
+  config?: {
+    exigirAprovacaoAgendamento: boolean
+  }
 }
 
 /** Retorna a saudação apropriada para a hora atual em America/Sao_Paulo + data por extenso.
@@ -109,7 +115,24 @@ A próxima resposta do paciente é sobre PRESENÇA nessa avaliação. Aja confor
       // historico antigo ("voce ja agendou pra X"). Forca registrar_agendamento
       // (criar novo) em vez de atualizar_agendamento (que falha 404).
       partes.push(
-        `**SEM AGENDAMENTO ATIVO** — Paciente NAO tem nenhum agendamento ativo no sistema. Mesmo que o historico da conversa mencione um agendamento anterior, NAO E REAL (pode ter sido cancelado, ou voce alucinou no passado). Se o paciente quiser marcar/falar de horario: SEMPRE use \`registrar_agendamento\` (criar novo). NUNCA chame \`atualizar_agendamento\` — nao tem o que atualizar e vai dar erro. NUNCA chame \`confirmar_agendamento\`. Se voce ja "tinha confirmado" um horario antes nesta conversa, esqueca — comece o agendamento do zero usando \`consultar_agenda\` + \`registrar_agendamento\`.`
+        `**SEM AGENDAMENTO ATIVO** — Paciente NAO tem nenhum agendamento ativo no sistema. Mesmo que o historico da conversa mencione um agendamento anterior, NAO E REAL (pode ter sido cancelado, ou voce alucinou no passado). Se o paciente quiser marcar/falar de horario: SEMPRE use \`registrar_agendamento\` (criar novo) — exceto se a config exigir pre-aprovacao (ver bloco CONFIG abaixo). NUNCA chame \`atualizar_agendamento\` — nao tem o que atualizar e vai dar erro. NUNCA chame \`confirmar_agendamento\`. Se voce ja "tinha confirmado" um horario antes nesta conversa, esqueca — comece o agendamento do zero usando \`consultar_agenda\` + \`registrar_agendamento\` (ou \`solicitar_aprovacao_horario\` se pre-aprovacao ativa).`
+      )
+    }
+
+    // JLU-170 v2: bloco CONFIG — pre-aprovacao opcional
+    if (contexto.config?.exigirAprovacaoAgendamento) {
+      partes.push(
+        `**CONFIG ATIVA — PRE-APROVACAO DE AGENDAMENTO** (JLU-170 v2): o Dr. Lucas ativou em /configuracoes/comportamento-ia a flag de exigir aprovacao previa pra TODO agendamento. Isso muda seu fluxo na ETAPA 3 (AGENDAMENTO):
+
+- **NAO chame \`registrar_agendamento\`** direto quando paciente escolher um slot. Em vez disso, chame \`solicitar_aprovacao_horario({ contatoId, conversaId, dataHora, email, procedimentoId? })\` com o slot escolhido.
+- Apos chamar \`solicitar_aprovacao_horario\`, mande UMA mensagem curta ao paciente:
+  *"[nome], vou so alinhar com o Dr. Lucas pra confirmar esse horario, te respondo em algumas horas pode ser?"*
+- Depois dessa mensagem, **FIQUE EM SILENCIO** neste contato. NAO mande mais nada. NAO chame outras tools nesse turno.
+- O Dr. Lucas vai aprovar/sugerir outro/cancelar pelo painel \`/aprovacoes-pendentes\`. O sistema envia mensagem ao paciente automaticamente quando ele decidir — voce NAO precisa fazer mais nada.
+- Se \`solicitar_aprovacao_horario\` retornar \`jaPendente: true\`, IGNORE (ja tem solicitacao aberta pra esse contato/horario — nao manda duplicada).
+- Atualizar/cancelar/remarcar agendamento JA EXISTENTE continua usando \`atualizar_agendamento\` normalmente (so a CRIACAO precisa de pre-aprovacao).
+
+**Killer-check antes de chamar registrar_agendamento**: *"a config.exigirAprovacaoAgendamento e true?"* Se sim → use solicitar_aprovacao_horario em vez.`
       )
     }
 

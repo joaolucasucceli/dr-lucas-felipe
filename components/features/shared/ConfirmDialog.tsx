@@ -14,7 +14,9 @@ import {
 
 interface ConfirmDialogProps {
   titulo: string
-  descricao: string
+  // JLU-170 v2 (B 25/05): aceita ReactNode pra permitir inputs/JSX inline
+  // (ex: motivo opcional de rejeicao na aprovacao de agendamento).
+  descricao: React.ReactNode
   aberto: boolean
   onFechar: () => void
   onConfirmar: () => void
