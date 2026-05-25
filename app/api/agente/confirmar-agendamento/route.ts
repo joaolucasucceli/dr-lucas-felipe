@@ -4,6 +4,7 @@ import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { agora } from "@/lib/db-utils"
+import { pingConfirmadoDia } from "@/lib/agente/notificar-agendamento"
 
 const schema = z.object({
   agendamentoId: z.string().min(1),
@@ -68,6 +69,10 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // JLU-170 (P3+P4): ping pro Dr. Lucas avisando que paciente confirmou.
+  // Fire-and-forget — falha silenciosa.
+  void pingConfirmadoDia(agendamentoId)
 
   return NextResponse.json({ ok: true, status: "confirmado" })
 }
