@@ -9,7 +9,8 @@ type RouteParams = { params: Promise<{ id: string }> }
 
 const SELECT_PROCEDIMENTO =
   "id, nome, tipo, descricao, duracaoMin, posOperatorio, ativo, criadoEm, atualizadoEm, " +
-  "valorEstimadoBrl, valorCheioBrl, parcelamento, escopoOferta"
+  "valorEstimadoBrl, valorCheioBrl, parcelamento, escopoOferta, " +
+  "valorBaseMinBrl, valorBaseMaxBrl"
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireRole("gestor")

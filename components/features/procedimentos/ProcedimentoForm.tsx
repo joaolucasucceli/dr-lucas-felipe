@@ -24,6 +24,9 @@ const formSchema = z.object({
   duracaoMin: z.string().min(1, "Duração é obrigatória"),
   posOperatorio: z.string().optional(),
   // Campos comerciais — todos opcionais. Strings no form, convertidos em number no submit.
+  // JLU-167 (25/05/2026): faixa virou fonte primaria; estimado/cheio legados.
+  valorBaseMinBrl: z.string().optional(),
+  valorBaseMaxBrl: z.string().optional(),
   valorEstimadoBrl: z.string().optional(),
   valorCheioBrl: z.string().optional(),
   parcelamento: z.string().optional(),
@@ -40,6 +43,8 @@ interface Procedimento {
   duracaoMin: number
   posOperatorio: string | null
   ativo: boolean
+  valorBaseMinBrl: number | null
+  valorBaseMaxBrl: number | null
   valorEstimadoBrl: number | null
   valorCheioBrl: number | null
   parcelamento: string | null
@@ -76,6 +81,8 @@ export function ProcedimentoForm({
       descricao: "",
       duracaoMin: "",
       posOperatorio: "",
+      valorBaseMinBrl: "",
+      valorBaseMaxBrl: "",
       valorEstimadoBrl: "",
       valorCheioBrl: "",
       parcelamento: "",
@@ -91,6 +98,14 @@ export function ProcedimentoForm({
         descricao: procedimento.descricao || "",
         duracaoMin: procedimento.duracaoMin.toString(),
         posOperatorio: procedimento.posOperatorio || "",
+        valorBaseMinBrl:
+          procedimento.valorBaseMinBrl != null
+            ? procedimento.valorBaseMinBrl.toString()
+            : "",
+        valorBaseMaxBrl:
+          procedimento.valorBaseMaxBrl != null
+            ? procedimento.valorBaseMaxBrl.toString()
+            : "",
         valorEstimadoBrl:
           procedimento.valorEstimadoBrl != null
             ? procedimento.valorEstimadoBrl.toString()
@@ -109,6 +124,8 @@ export function ProcedimentoForm({
         descricao: "",
         duracaoMin: "",
         posOperatorio: "",
+        valorBaseMinBrl: "",
+        valorBaseMaxBrl: "",
         valorEstimadoBrl: "",
         valorCheioBrl: "",
         parcelamento: "",
@@ -150,10 +167,25 @@ export function ProcedimentoForm({
       const n = Number(limpo)
       return Number.isFinite(n) ? n : null
     }
+    body.valorBaseMinBrl = parseBrl(data.valorBaseMinBrl)
+    body.valorBaseMaxBrl = parseBrl(data.valorBaseMaxBrl)
     body.valorEstimadoBrl = parseBrl(data.valorEstimadoBrl)
     body.valorCheioBrl = parseBrl(data.valorCheioBrl)
     body.parcelamento = data.parcelamento?.trim() || null
     body.escopoOferta = data.escopoOferta?.trim() || null
+
+    // Valida coerencia da faixa antes de enviar (CHECK do banco rejeitaria
+    // mas mensagem fica feia — pegar aqui pra dar feedback claro).
+    const min = body.valorBaseMinBrl as number | null
+    const max = body.valorBaseMaxBrl as number | null
+    if ((min == null) !== (max == null)) {
+      toast.error("Faixa precisa de min E max — ou preencha os dois ou deixe ambos vazios")
+      return
+    }
+    if (min != null && max != null && max < min) {
+      toast.error("Valor máximo da faixa precisa ser maior ou igual ao mínimo")
+      return
+    }
 
     try {
       const url = editando
@@ -246,15 +278,45 @@ export function ProcedimentoForm({
       </div>
 
       <div className="grid gap-2 pt-2 border-t">
-        <Label className="text-sm font-semibold">Informações comerciais</Label>
+        <Label className="text-sm font-semibold">Faixa de orçamento (Ana Júlia cita ao paciente)</Label>
         <p className="text-xs text-muted-foreground">
-          A Ana Júlia usa esses dados pra falar o valor quando o paciente perguntar. Deixe o valor estimado em branco se quiser que a IA peça mais info ao paciente (foto + região) antes de citar valor.
+          Política do Dr. Lucas (25/05/2026): IA cita FAIXA, valor exato sai depois da consulta. Preencha min e max — IA vai falar &quot;R$ X a R$ Y&quot; pro paciente. Se deixar vazio, IA pede foto + região antes.
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-2">
-          <Label htmlFor="proc-valor-estimado">Valor estimado (R$)</Label>
+          <Label htmlFor="proc-valor-base-min">Faixa mínima (R$)</Label>
+          <Input
+            id="proc-valor-base-min"
+            type="text"
+            inputMode="decimal"
+            placeholder="ex: 10000"
+            {...register("valorBaseMinBrl")}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="proc-valor-base-max">Faixa máxima (R$)</Label>
+          <Input
+            id="proc-valor-base-max"
+            type="text"
+            inputMode="decimal"
+            placeholder="ex: 12000"
+            {...register("valorBaseMaxBrl")}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-2 pt-2 border-t">
+        <Label className="text-sm font-semibold text-muted-foreground">Campos legados (descontinuando)</Label>
+        <p className="text-xs text-muted-foreground">
+          Mantidos por compatibilidade — Ana Júlia usa faixa acima por padrão. Se faixa estiver vazia, IA cai num cálculo automático ±15% sobre o valor estimado.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-2">
+          <Label htmlFor="proc-valor-estimado" className="text-xs text-muted-foreground">Valor estimado legado (R$)</Label>
           <Input
             id="proc-valor-estimado"
             type="text"
@@ -264,7 +326,7 @@ export function ProcedimentoForm({
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="proc-valor-cheio">Valor cheio (R$, opcional)</Label>
+          <Label htmlFor="proc-valor-cheio" className="text-xs text-muted-foreground">Valor cheio legado (R$)</Label>
           <Input
             id="proc-valor-cheio"
             type="text"

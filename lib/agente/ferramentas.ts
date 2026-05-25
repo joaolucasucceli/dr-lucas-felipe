@@ -84,13 +84,14 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "consultar_procedimentos",
       description:
-        "Consulta os procedimentos disponíveis na clínica. NUNCA inclua valores/preços na resposta ao paciente.",
+        "Consulta os procedimentos da clínica. Retorna por procedimento: nome, descricao, duracaoMin, posOperatorio, escopoOferta, parcelamento, faixaFormatada (string PRONTA pro Whats — ex: 'R$ 10k a R$ 12k'), valorBaseMinBrl/Max, temFaixaReal (true = Lucas definiu, false = calculo ±15% sobre legado), valorEstimadoBrl/Cheio (legado, NÃO citar). " +
+        "POLÍTICA JLU-167 (25/05/2026): IA só fala FAIXA pra paciente, NUNCA valor fechado. Use SEMPRE `faixaFormatada` direto na mensagem, copie literal. Sempre completar com: 'O Dr. Lucas confirma o valor exato na avaliação online com base no seu caso.' Se faixaFormatada vier null, peça mais info ao paciente (foto + região) antes de citar qualquer valor.",
       parameters: {
         type: "object",
         properties: {
           filtro: {
             type: "string",
-            description: "Filtro opcional por nome do procedimento",
+            description: "Filtro opcional por nome do procedimento (ilike). Ex: 'paciente modelo', 'abdome', 'lipo'.",
           },
         },
       },

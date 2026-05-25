@@ -33,6 +33,8 @@ interface Procedimento {
   posOperatorio: string | null
   ativo: boolean
   criadoEm: string
+  valorBaseMinBrl: number | null
+  valorBaseMaxBrl: number | null
   valorEstimadoBrl: number | null
   valorCheioBrl: number | null
   parcelamento: string | null
@@ -46,6 +48,12 @@ function formatarBRL(valor: number | null): string {
     currency: "BRL",
     maximumFractionDigits: 0,
   }).format(valor)
+}
+
+// JLU-167 (25/05/2026): faixa virou fonte primaria. Mostra "R$ X – R$ Y".
+function formatarFaixa(min: number | null, max: number | null): string {
+  if (min == null || max == null) return "—"
+  return `${formatarBRL(min)} – ${formatarBRL(max)}`
 }
 
 const tipoLabels: Record<string, string> = {
@@ -166,19 +174,24 @@ export default function ProcedimentosPage() {
       renderizar: (p) => `${p.duracaoMin}min`,
     },
     {
-      chave: "valorEstimadoBrl",
-      titulo: "Valor estimado",
+      chave: "valorBaseMinBrl",
+      titulo: "Faixa de orçamento (IA)",
       classesCelula: "hidden lg:table-cell",
-      renderizar: (p) => (
-        <div className="text-sm">
-          <div className="font-medium">{formatarBRL(p.valorEstimadoBrl)}</div>
-          {p.valorCheioBrl != null && (
-            <div className="text-muted-foreground line-through text-xs">
-              {formatarBRL(p.valorCheioBrl)}
+      renderizar: (p) => {
+        const temFaixa = p.valorBaseMinBrl != null && p.valorBaseMaxBrl != null
+        return (
+          <div className="text-sm">
+            <div className={temFaixa ? "font-medium" : "text-muted-foreground italic"}>
+              {temFaixa ? formatarFaixa(p.valorBaseMinBrl, p.valorBaseMaxBrl) : "—"}
             </div>
-          )}
-        </div>
-      ),
+            {p.valorEstimadoBrl != null && (
+              <div className="text-muted-foreground text-xs">
+                legado: {formatarBRL(p.valorEstimadoBrl)}
+              </div>
+            )}
+          </div>
+        )
+      },
     },
     ...(isGestor
       ? [

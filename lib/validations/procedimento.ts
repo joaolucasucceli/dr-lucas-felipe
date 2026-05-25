@@ -1,8 +1,13 @@
 import { z } from "zod"
 
 // Campos comerciais (valor/escopo/parcelamento) — todos opcionais.
-// Quando valorEstimadoBrl for null, a IA pede mais info pro paciente em vez de citar numero.
+// JLU-167 (25/05/2026): valorBaseMinBrl + valorBaseMaxBrl viraram fonte primaria
+// pra Ana Julia citar FAIXA ("R$ 10k a R$ 12k"). valorEstimadoBrl mantido como
+// fallback legado por 1 semana, depois deprecar.
+// Quando NENHUM dos 3 estiver preenchido, IA pede mais info ao paciente.
 const camposComerciais = {
+  valorBaseMinBrl: z.number().positive().nullable().optional(),
+  valorBaseMaxBrl: z.number().positive().nullable().optional(),
   valorEstimadoBrl: z.number().nonnegative().nullable().optional(),
   valorCheioBrl: z.number().nonnegative().nullable().optional(),
   parcelamento: z.string().nullable().optional(),

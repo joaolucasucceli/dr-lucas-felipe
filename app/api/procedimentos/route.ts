@@ -7,7 +7,8 @@ import { criarId, agora } from "@/lib/db-utils"
 
 const SELECT_PROCEDIMENTO =
   "id, nome, tipo, descricao, duracaoMin, posOperatorio, ativo, criadoEm, " +
-  "valorEstimadoBrl, valorCheioBrl, parcelamento, escopoOferta"
+  "valorEstimadoBrl, valorCheioBrl, parcelamento, escopoOferta, " +
+  "valorBaseMinBrl, valorBaseMaxBrl"
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole("gestor")
