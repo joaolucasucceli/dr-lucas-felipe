@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Pause,
   Play,
+  Sparkles,
   Star,
   Trash2,
   UserCog,
@@ -215,6 +216,31 @@ export default function ContatoDetalhePage({ params }: PageProps) {
         <ArrowLeft className="h-4 w-4" />
         Voltar
       </Button>
+
+      {/* JLU-171 (F 25/05): destaque do botão promover quando lead já passou pela consulta */}
+      {!ehPaciente && ehGestor && contato.statusFunil === "consulta_agendada" && (
+        <div className="flex flex-col gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+            <div>
+              <p className="font-medium text-emerald-700 dark:text-emerald-400">
+                Pronto pra virar paciente
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Esse lead já agendou (ou compareceu) na avaliação. Promova pra abrir prontuário com anamnese, evoluções, sinais vitais e fotos médicas.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            onClick={() => setConfirmPromover(true)}
+          >
+            <Star className="mr-2 h-4 w-4" />
+            Promover a paciente
+          </Button>
+        </div>
+      )}
 
       <PageHeader titulo={contato.nome} descricao={descricaoHeader}>
         {!ehPaciente && contato.statusFunil && (

@@ -25,6 +25,7 @@ import { ErrorState } from "@/components/features/shared/ErrorState"
 import { GraficoFunil } from "@/components/features/dashboard/GraficoFunil"
 import { ContatosAlerta } from "@/components/features/dashboard/ContatosAlerta"
 import { CardResumoAnaJulia } from "@/components/features/dashboard/CardResumoAnaJulia"
+import { EvolucoesRecentesCard } from "@/components/features/dashboard/EvolucoesRecentesCard"
 import { useDashboard } from "@/hooks/use-dashboard"
 import { exportarRelatorio } from "@/hooks/use-relatorio"
 
@@ -177,6 +178,13 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
+
+      {/* JLU-171 (E 25/05): Evolucoes recentes — destaque medico pro Dr. Lucas */}
+      {isGestor && (
+        <div className="mt-4">
+          <EvolucoesRecentesCard />
+        </div>
+      )}
     </div>
   )
 }

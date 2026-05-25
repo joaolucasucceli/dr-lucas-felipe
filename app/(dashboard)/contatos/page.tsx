@@ -26,6 +26,32 @@ import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
 import { ContatoForm } from "@/components/features/contatos/ContatoForm"
 import { useContatos, type Contato } from "@/hooks/use-contatos"
+import { formatarData } from "@/lib/format"
+
+// JLU-171 (D 25/05): calcula Ultima consulta (max dataHora status=realizado)
+// e Proxima consulta (min dataHora futura status=agendado|confirmado|remarcado).
+function calcularConsultas(c: Contato): { ultima: string | null; proxima: string | null } {
+  const ags = c.agendamentos ?? []
+  if (ags.length === 0) return { ultima: null, proxima: null }
+  const agora = Date.now()
+  const realizadas = ags
+    .filter((a) => a.status === "realizado")
+    .map((a) => a.dataHora)
+    .sort()
+    .reverse()
+  const futuras = ags
+    .filter(
+      (a) =>
+        ["agendado", "confirmado", "remarcado"].includes(a.status) &&
+        new Date(a.dataHora).getTime() > agora
+    )
+    .map((a) => a.dataHora)
+    .sort()
+  return {
+    ultima: realizadas[0] ?? null,
+    proxima: futuras[0] ?? null,
+  }
+}
 
 interface Procedimento {
   id: string
@@ -127,8 +153,25 @@ export default function ContatosPage() {
       .catch(() => {})
   }, [])
 
+  const ehViewPacientes = tipo === "paciente"
+
   const colunas: ColunaConfig<Contato>[] = [
-    { chave: "nome", titulo: "Nome", ordenavel: true },
+    {
+      chave: "nome",
+      titulo: "Nome",
+      ordenavel: true,
+      // JLU-171 (H 25/05): bandeira "sem prontuario" se paciente sem prontuario aberto
+      renderizar: (c) => (
+        <div className="flex items-center gap-2">
+          <span>{c.nome}</span>
+          {c.tipo === "paciente" && !c.prontuario && (
+            <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-600 text-[10px]">
+              sem prontuário
+            </Badge>
+          )}
+        </div>
+      ),
+    },
     {
       chave: "tipo",
       titulo: "Tipo",
@@ -176,6 +219,41 @@ export default function ContatosPage() {
       classesCelula: "hidden lg:table-cell",
       renderizar: (c) => new Date(c.criadoEm).toLocaleDateString("pt-BR"),
     },
+    // JLU-171 (D 25/05): so aparece na view de pacientes
+    ...(ehViewPacientes
+      ? [
+          {
+            chave: "agendamentos" as keyof Contato,
+            titulo: "Última consulta",
+            classesCelula: "hidden md:table-cell",
+            renderizar: (c: Contato) => {
+              const { ultima } = calcularConsultas(c)
+              return ultima ? (
+                <span className="text-sm text-muted-foreground">
+                  {formatarData(ultima, "dd/MM/yyyy")}
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground italic">nenhuma</span>
+              )
+            },
+          } satisfies ColunaConfig<Contato>,
+          {
+            chave: "agendamentos" as keyof Contato,
+            titulo: "Próxima consulta",
+            classesCelula: "hidden md:table-cell",
+            renderizar: (c: Contato) => {
+              const { proxima } = calcularConsultas(c)
+              return proxima ? (
+                <span className="text-sm font-medium text-emerald-500">
+                  {formatarData(proxima, "dd/MM/yyyy 'às' HH:mm")}
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground italic">—</span>
+              )
+            },
+          } satisfies ColunaConfig<Contato>,
+        ]
+      : []),
   ]
 
   if (erro) {

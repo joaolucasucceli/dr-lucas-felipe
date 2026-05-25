@@ -17,6 +17,10 @@ export interface Contato {
   criadoEm: string
   promovidoEm: string | null
   responsavel: { id: string; nome: string } | null
+  // JLU-171 (D 25/05): embed agendamentos + prontuario pra colunas
+  // Ultima/Proxima consulta + bandeira "sem prontuario aberto".
+  agendamentos?: { id: string; dataHora: string; status: string }[]
+  prontuario?: { id: string; numero: number } | null
 }
 
 interface UseContatosParams {
