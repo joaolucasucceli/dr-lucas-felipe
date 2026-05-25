@@ -38,7 +38,13 @@ export default function ContatosPage() {
   const { data: session } = useSession()
   const [pagina, setPagina] = useState(1)
   const [busca, setBusca] = useState("")
-  const [tipo, setTipo] = useState<"lead" | "paciente" | "todos">("todos")
+  // JLU-171 (P1 25/05): aceita `?tipo=paciente` (atalho do sidebar "Pacientes").
+  // Lucas chega pela sidebar e ja ve so pacientes — abre prontuario direto.
+  const tipoInicial = (() => {
+    const v = searchParams.get("tipo")
+    return v === "lead" || v === "paciente" ? v : "todos"
+  })()
+  const [tipo, setTipo] = useState<"lead" | "paciente" | "todos">(tipoInicial)
   const [statusFunil, setStatusFunil] = useState("")
   const [mostrarArquivados, setMostrarArquivados] = useState(false)
   const [formAberto, setFormAberto] = useState(false)
@@ -183,9 +189,16 @@ export default function ContatosPage() {
     )
   }
 
+  // JLU-171 (P1): se entrou pelo atalho "Pacientes" do sidebar, ajusta titulo.
+  const tituloPage = tipo === "paciente" ? "Pacientes" : "Contatos"
+  const descricaoPage =
+    tipo === "paciente"
+      ? "Pacientes (lead promovidos). Clique pra abrir o prontuário."
+      : "Leads e pacientes da clínica"
+
   return (
     <div>
-      <PageHeader titulo="Contatos" descricao="Leads e pacientes da clínica">
+      <PageHeader titulo={tituloPage} descricao={descricaoPage}>
         <Button
           variant="outline"
           size="sm"

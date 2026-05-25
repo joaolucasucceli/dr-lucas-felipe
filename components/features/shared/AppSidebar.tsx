@@ -15,6 +15,7 @@ import {
   MessageCircle,
   Users,
   BookOpen,
+  ClipboardList,
   LogOut,
   Menu,
 } from "lucide-react"
@@ -64,6 +65,11 @@ const navGroups: NavGroup[] = [
         titulo: "Contatos",
         href: "/contatos",
         icone: <UserSearch className="h-4 w-4" />,
+      },
+      {
+        titulo: "Pacientes",
+        href: "/contatos?tipo=paciente",
+        icone: <ClipboardList className="h-4 w-4" />,
       },
     ],
   },
