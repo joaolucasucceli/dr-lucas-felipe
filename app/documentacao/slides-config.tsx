@@ -2,6 +2,7 @@ import {
   Bot,
   Brain,
   Calendar,
+  CalendarCheck2,
   Cog,
   Database,
   FileText,
@@ -127,6 +128,7 @@ export const slides: Slide[] = [
       "Um sistema único que cuida de duas pontas conectadas: o atendimento autônomo dos seus pacientes no WhatsApp e o painel de gestão que você usa pra acompanhar tudo em tempo real.",
     destaques: [
       "100% autônomo — a IA conduz todo o funil até a reunião agendada",
+      "Entrada única pelo WhatsApp: o site é vitrine institucional, não tem formulário de captura",
       "Agendamentos criados exclusivamente pela Ana Júlia (não tem botão manual)",
       "Pacientes entram pelo WhatsApp e aparecem no kanban automaticamente",
       "Você só intervém quando o sistema pede aprovação (handoff)",
@@ -140,7 +142,10 @@ export const slides: Slide[] = [
       {
         nome: "Canais de entrada",
         cor: "emerald",
-        itens: ["Paciente no WhatsApp", "Site público (CTA → WhatsApp)"],
+        itens: [
+          "Paciente no WhatsApp (canal único de captura)",
+          "Site público — vitrine institucional, sem formulário (CTA leva pro WhatsApp)",
+        ],
       },
       {
         nome: "Gateway de mensageria",
@@ -153,7 +158,8 @@ export const slides: Slide[] = [
         itens: [
           "API Routes do agente (15 endpoints)",
           "Buffer + memória em Redis",
-          "Painel de gestão (14 páginas)",
+          "Painel de gestão (13 páginas)",
+          "Human-in-the-loop (aprovações + handoff)",
           "Realtime via Supabase WebSocket",
         ],
       },
@@ -162,8 +168,9 @@ export const slides: Slide[] = [
         cor: "amber",
         itens: [
           "GPT-4o (Ana Júlia — SDR)",
-          "GPT-4o-mini (Analista — funil)",
+          "GPT-4o-mini (Eduarda — Analista de CRM)",
           "Whisper (transcrição de áudio)",
+          "GPT-4o-mini visão (descrição de imagens)",
         ],
       },
       {
@@ -180,7 +187,7 @@ export const slides: Slide[] = [
   {
     tipo: "modulos",
     bloco: "Bloco A · Visão geral",
-    titulo: "Módulos do painel — 9 áreas, uma central",
+    titulo: "Módulos do painel — 10 áreas, uma central",
     modulos: [
       {
         icone: Sparkles,
@@ -207,6 +214,12 @@ export const slides: Slide[] = [
         descricao: "Visão da agenda + Google Calendar",
       },
       {
+        icone: CalendarCheck2,
+        nome: "Consultas Realizadas",
+        rota: "/consultas-realizadas",
+        descricao: "Histórico cronológico de consultas que aconteceram",
+      },
+      {
         icone: Users,
         nome: "Contatos",
         rota: "/contatos",
@@ -228,7 +241,7 @@ export const slides: Slide[] = [
         icone: Bot,
         nome: "Equipe IA",
         rota: "/equipe-ia",
-        descricao: "Configura Ana Júlia + Analista",
+        descricao: "Configura Ana Júlia + Eduarda",
       },
       {
         icone: ShieldCheck,
@@ -265,7 +278,7 @@ export const slides: Slide[] = [
         nome: "Inteligência",
         itens: [
           { nome: "OpenAI GPT-4o", uso: "Ana Júlia (SDR conversacional)" },
-          { nome: "GPT-4o-mini", uso: "Analista (avança funil + visão)" },
+          { nome: "GPT-4o-mini", uso: "Eduarda (Analista de CRM) + descrição de imagens" },
           { nome: "Whisper", uso: "Transcrição de áudios do paciente" },
         ],
       },
@@ -288,7 +301,7 @@ export const slides: Slide[] = [
     descricao:
       "A partir daqui vamos percorrer cada uma das páginas do seu painel. Pra cada uma você vê: o papel dela, o que faz, e a decisão por trás da forma como está implementada.",
     destaques: [
-      "10 páginas no total",
+      "11 páginas no total",
       "Cada slide: papel + funcionalidades + decisão arquitetural",
       "Você pode pausar em qualquer uma e perguntar o porquê",
     ],
@@ -378,6 +391,22 @@ export const slides: Slide[] = [
   {
     tipo: "pagina",
     bloco: "Bloco B · Tour pelo painel",
+    titulo: "Consultas Realizadas",
+    rota: "/consultas-realizadas",
+    icone: CalendarCheck2,
+    papel: "Histórico de consultas que já aconteceram — atalho rápido pro prontuário do paciente sem passar pelo funil.",
+    funcionalidades: [
+      "Lista cronológica reversa de agendamentos com status 'realizado'",
+      "Mostra paciente, procedimento, data/hora e observações do atendimento",
+      "Click em qualquer linha abre a ficha do contato (onde mora o prontuário)",
+      "Acesso restrito ao gestor (Dr. Lucas)",
+    ],
+    decisao:
+      "Pedido direto do Dr. Lucas (JLU-171). O funil serve pra acompanhar quem está chegando; esta página serve pra acompanhar quem já passou. Atalho que evita ter que filtrar agendamentos por status na agenda.",
+  },
+  {
+    tipo: "pagina",
+    bloco: "Bloco B · Tour pelo painel",
     titulo: "Aprovações Pendentes",
     rota: "/aprovacoes-pendentes",
     icone: ShieldCheck,
@@ -430,10 +459,10 @@ export const slides: Slide[] = [
     titulo: "Equipe IA",
     rota: "/equipe-ia",
     icone: Bot,
-    papel: "Configuração das duas IAs — Ana Júlia (SDR) e Analista (avança funil).",
+    papel: "Configuração das duas IAs — Ana Júlia (SDR que conversa) e Eduarda (Analista de CRM que organiza).",
     funcionalidades: [
       "Aba 'Ana Júlia' — persona, tom de voz, instruções específicas, exigir aprovação de agendamento",
-      "Aba 'Analista' — modo de escrita (ativo / shadow), regras de movimentação do funil",
+      "Aba 'Eduarda' — modo de escrita (ativo / shadow), regras de movimentação do funil",
       "Limites e travas operacionais",
       "Histórico de mudanças (auditoria)",
     ],
@@ -465,8 +494,8 @@ export const slides: Slide[] = [
     descricao:
       "Agora vamos abrir a 'caixa preta' da IA. Você vai ver quem é Ana Júlia, o que ela sabe fazer, como ela pensa e quais são os processos que ela executa sem você precisar pedir.",
     destaques: [
-      "Dois cérebros trabalhando em paralelo (Ana Júlia + Analista IA)",
-      "15 ferramentas que ela invoca conforme a conversa pede",
+      "Dois cérebros trabalhando em paralelo (Ana Júlia + Eduarda)",
+      "13 ferramentas que a Ana Júlia invoca conforme a conversa pede",
       "4 processos automatizados de ponta a ponta",
       "Buffer + memória inteligente pra parecer humana",
     ],
@@ -494,24 +523,25 @@ export const slides: Slide[] = [
   {
     tipo: "dupla-ia",
     bloco: "Bloco C · Ana Júlia",
-    titulo: "Dupla IA — Ana Júlia + Analista trabalhando juntas",
+    titulo: "Dupla IA — Ana Júlia + Eduarda trabalhando juntas",
     ana: {
       titulo: "Ana Júlia",
-      modelo: "GPT-4o",
-      papel: "Conversa com o paciente",
+      modelo: "GPT-4o · SDR",
+      papel: "Conversa com o paciente no WhatsApp",
       bullets: [
         "Recebe cada mensagem do paciente",
         "Decide o que responder e quais ferramentas chamar",
         "Envia a resposta segmentada via WhatsApp",
-        "Pode chamar até 15 ferramentas diferentes",
+        "Pode chamar até 13 ferramentas diferentes",
         "Trabalha de forma síncrona dentro do loop de cada mensagem",
       ],
     },
     analista: {
-      titulo: "Analista IA",
-      modelo: "GPT-4o-mini",
-      papel: "Lê o histórico e atualiza o CRM",
+      titulo: "Eduarda",
+      modelo: "GPT-4o-mini · Analista de CRM",
+      papel: "Lê o histórico e mantém o cadastro do lead organizado",
       bullets: [
+        "Não conversa com o paciente — trabalha em silêncio nos bastidores",
         "Disparada em fire-and-forget após cada loop da Ana Júlia",
         "Lê todo o histórico da conversa + estado atual do lead",
         "Atualiza nome, procedimento de interesse, observações no card",
@@ -523,7 +553,7 @@ export const slides: Slide[] = [
   {
     tipo: "ferramentas",
     bloco: "Bloco C · Ana Júlia",
-    titulo: "As 15 ferramentas da Ana Júlia",
+    titulo: "As 13 ferramentas da Ana Júlia",
     ferramentas: [
       { nome: "consultar_agenda", descricao: "Cruza Google Calendar + expediente e devolve horários livres", categoria: "agenda" },
       { nome: "registrar_agendamento", descricao: "Cria evento no Google Calendar + move card pra 'Reunião Agendada'", categoria: "agenda" },
@@ -538,8 +568,6 @@ export const slides: Slide[] = [
       { nome: "solicitar_aprovacao_horario", descricao: "Pede sua aprovação antes de fechar horário sensível", categoria: "humano" },
       { nome: "solicitar_orcamento_humano", descricao: "Escala pro Dr. Lucas casos que pedem avaliação personalizada", categoria: "humano" },
       { nome: "registrar_mensagem", descricao: "Persiste a mensagem no banco (auditoria + realtime)", categoria: "estado" },
-      { nome: "limpar_memoria", descricao: "Zera a memória de curto prazo quando paciente pede 'reiniciar'", categoria: "estado" },
-      { nome: "processar", descricao: "Ponto de entrada que orquestra todo o loop de resposta", categoria: "estado" },
     ],
   },
   {
@@ -568,7 +596,7 @@ export const slides: Slide[] = [
       { id: "8", texto: "GPT-4o (Ana Júlia) processa", detalhe: "Decide resposta + quais ferramentas chamar", destaque: "ia" },
       { id: "9", texto: "Resposta segmentada em múltiplas mensagens", detalhe: "Parece digitação humana, não muralha de texto", destaque: "ia" },
       { id: "10", texto: "Uazapi envia com delay aleatório 3-5s entre msgs", destaque: "infra" },
-      { id: "11", texto: "Analista IA dispara em background", detalhe: "Atualiza CRM + move card no funil se for o caso", destaque: "ia" },
+      { id: "11", texto: "Eduarda dispara em background", detalhe: "Lê o histórico, atualiza CRM + move card no funil se for o caso", destaque: "ia" },
     ],
   },
   {
