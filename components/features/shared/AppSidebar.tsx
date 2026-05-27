@@ -18,6 +18,7 @@ import {
   Users,
   BookOpen,
   ClipboardList,
+  Presentation,
   LogOut,
   Menu,
 } from "lucide-react"
@@ -47,6 +48,11 @@ const navGroups: NavGroup[] = [
         titulo: "Dashboard",
         href: "/dashboard",
         icone: <LayoutDashboard className="h-4 w-4" />,
+      },
+      {
+        titulo: "Documentação",
+        href: "/documentacao",
+        icone: <Presentation className="h-4 w-4" />,
       },
     ],
   },
