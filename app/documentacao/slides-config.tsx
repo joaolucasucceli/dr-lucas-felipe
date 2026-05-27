@@ -301,8 +301,9 @@ export const slides: Slide[] = [
     descricao:
       "A partir daqui vamos percorrer cada uma das páginas do seu painel. Pra cada uma você vê: o papel dela, o que faz, e a decisão por trás da forma como está implementada.",
     destaques: [
-      "11 páginas no total",
+      "11 páginas no total + um slide de rotina diária",
       "Cada slide: papel + funcionalidades + decisão arquitetural",
+      "Ao final: como tudo se conecta na sua rotina (manhã, tarde, fim do dia)",
       "Você pode pausar em qualquer uma e perguntar o porquê",
     ],
   },
@@ -485,6 +486,71 @@ export const slides: Slide[] = [
     decisao:
       "Cada integração tem sua tela própria. Você troca o número de WhatsApp ou a conta do Google sem precisar de devolutiva técnica — está sempre acessível.",
   },
+  {
+    tipo: "fluxograma",
+    bloco: "Bloco B · Tour pelo painel",
+    titulo: "Sua rotina no painel — como aproveitar o sistema no dia a dia",
+    subtitulo: "Não precisa ficar com o painel aberto o dia todo. Esses são os momentos em que vale entrar.",
+    passos: [
+      {
+        id: "1",
+        texto: "Início do dia — abre /dashboard",
+        detalhe: "Bate olho em: leads novos da noite, agendamentos do dia, pendências (aprovações esperando sua resposta)",
+        destaque: "humano",
+      },
+      {
+        id: "2",
+        texto: "Se tiver pendência — vai pra /aprovacoes-pendentes",
+        detalhe: "Aprova ou rejeita os horários que a Ana Júlia segurou. Quanto mais rápido você responder, melhor pro lead",
+        destaque: "humano",
+      },
+      {
+        id: "3",
+        texto: "Durante o dia — quando quiser dar uma olhada nas conversas",
+        detalhe: "/atendimentos mostra tudo em tempo real. Você lê pra entender, não pra responder",
+        destaque: "humano",
+      },
+      {
+        id: "4",
+        texto: "Após cada consulta — abre /consultas-realizadas",
+        detalhe: "Click no paciente → ficha completa → registra o prontuário no campo 'Sobre o paciente'",
+        destaque: "humano",
+      },
+      {
+        id: "5",
+        texto: "Manutenção pontual — quando precisar ajustar algo",
+        ramo: [
+          {
+            rotulo: "Novo procedimento",
+            passos: [
+              { id: "5a-1", texto: "/procedimentos → cadastra com nome, duração, faixa de preço", destaque: "humano" },
+              { id: "5a-2", texto: "Ana Júlia passa a oferecer automaticamente em segundos", destaque: "ia" },
+            ],
+          },
+          {
+            rotulo: "Resposta da IA esquisita",
+            passos: [
+              { id: "5b-1", texto: "/conteudo-ia → ajusta texto/mídia que ela está usando", destaque: "humano" },
+              { id: "5b-2", texto: "Ou /equipe-ia → ajusta tom da Ana Júlia / regras da Eduarda", destaque: "humano" },
+            ],
+          },
+          {
+            rotulo: "Promover lead → paciente",
+            passos: [
+              { id: "5c-1", texto: "/contatos → clica no card → botão 'Promover a paciente'", destaque: "humano" },
+              { id: "5c-2", texto: "Sistema preserva ID e histórico — só muda o tipo", destaque: "infra" },
+            ],
+          },
+        ],
+      },
+      {
+        id: "6",
+        texto: "Final do dia — confere se sobrou algo em /aprovacoes-pendentes",
+        detalhe: "Se um lead pediu horário e você não respondeu, ele tá esperando. Não deixa virar madrugada",
+        destaque: "humano",
+      },
+    ],
+  },
 
   // ============ BLOCO C · O AGENTE ANA JÚLIA ============
   {
@@ -496,7 +562,7 @@ export const slides: Slide[] = [
     destaques: [
       "Dois cérebros trabalhando em paralelo (Ana Júlia + Eduarda)",
       "13 ferramentas que a Ana Júlia invoca conforme a conversa pede",
-      "4 processos automatizados de ponta a ponta",
+      "4 processos técnicos de ponta a ponta + cenários reais (Bloco D)",
       "Buffer + memória inteligente pra parecer humana",
     ],
   },
@@ -702,6 +768,172 @@ export const slides: Slide[] = [
       { id: "6", texto: "GPT-4o processa tudo junto", detalhe: "Responde como se tivesse lido tudo de uma vez", destaque: "ia" },
       { id: "7", texto: "Resposta sai segmentada com delay 3-5s entre msgs", detalhe: "Parece digitação humana, não dump de texto", destaque: "ia" },
       { id: "8", texto: "Resposta entra na memória pra próxima rodada", destaque: "infra" },
+    ],
+  },
+
+  // ============ BLOCO D · CENÁRIOS DE ATENDIMENTO ============
+  {
+    tipo: "abertura-bloco",
+    bloco: "Bloco D · Cenários reais",
+    titulo: "Como a Ana Júlia age em cada situação",
+    descricao:
+      "Até aqui você viu como o sistema funciona por dentro. Agora vamos ver como ele se comporta na prática — em cada fase do funil, pra cada tipo de paciente, e nos protocolos especiais (confirmação, no-show, handoff).",
+    destaques: [
+      "As 4 fases do funil pela ótica da Ana Júlia",
+      "Os 5 tipos de paciente e o protocolo de cada um",
+      "Protocolos especiais que rodam sozinhos (confirmação D-1, no-show, handoff)",
+      "Quando o sistema sabe que não pode decidir sozinho — e te chama",
+    ],
+  },
+  {
+    tipo: "fluxograma",
+    bloco: "Bloco D · Cenários reais",
+    titulo: "O funil em ação — o que a Ana Júlia faz em cada fase",
+    subtitulo: "Acolhimento → Qualificação → Agendamento → Reunião Agendada. A Eduarda decide quando o card avança.",
+    passos: [
+      {
+        id: "1",
+        texto: "Fase 1 — Acolhimento (primeiro contato)",
+        detalhe: "Cumprimenta com naturalidade · Identifica de onde veio (Instagram? site? indicação?) · Abre espaço pro paciente falar o que precisa",
+        destaque: "ia",
+      },
+      {
+        id: "2",
+        texto: "Fase 2 — Qualificação",
+        detalhe: "Pergunta qual procedimento interessa · Sonda expectativa (resultado desejado) · Mede urgência (pra quando?) · Se necessário, envia conteúdo da biblioteca",
+        destaque: "ia",
+      },
+      {
+        id: "3",
+        texto: "Fase 3 — Agendamento",
+        detalhe: "Chama consultar_agenda → apresenta 2-3 horários · Confirma o escolhido · Se exigir aprovação, segura e te chama · Se não, fecha direto",
+        destaque: "ia",
+      },
+      {
+        id: "4",
+        texto: "Fase 4 — Reunião Agendada",
+        detalhe: "Manda detalhes (endereço, instruções pré-consulta) · D-1 dispara confirmar_agendamento automático · No dia: confirmar_presenca · Se faltar: marcar_nao_compareceu",
+        destaque: "ia",
+      },
+      {
+        id: "5",
+        texto: "Em paralelo (silencioso) — Eduarda",
+        detalhe: "Após cada resposta da Ana Júlia, lê a conversa e decide se o card avança de fase. Você só vê o resultado no kanban se movendo sozinho",
+        destaque: "ia",
+      },
+    ],
+  },
+  {
+    tipo: "fluxograma",
+    bloco: "Bloco D · Cenários reais",
+    titulo: "Tipos de paciente — protocolo diferente pra cada perfil",
+    subtitulo: "A Ana Júlia identifica o perfil pelo conteúdo da mensagem e ajusta a condução.",
+    passos: [
+      {
+        id: "1",
+        texto: "Paciente chega no WhatsApp — Ana Júlia identifica o perfil",
+        ramo: [
+          {
+            rotulo: "Curioso de preço",
+            passos: [
+              { id: "1a-1", texto: "Sinal: 'só queria saber quanto custa'", destaque: "externo" },
+              { id: "1a-2", texto: "Ela apresenta valor + agrega contexto (resultado, segurança, diferencial)", destaque: "ia" },
+              { id: "1a-3", texto: "Tenta puxar pra qualificação — não larga só com o preço", destaque: "ia" },
+            ],
+          },
+          {
+            rotulo: "Interessado real",
+            passos: [
+              { id: "1b-1", texto: "Sinal: faz perguntas sobre o procedimento, expectativa, recuperação", destaque: "externo" },
+              { id: "1b-2", texto: "Conduz pela qualificação completa (procedimento, urgência, expectativa)", destaque: "ia" },
+              { id: "1b-3", texto: "Quando sente que está pronto, oferece horários", destaque: "ia" },
+            ],
+          },
+          {
+            rotulo: "Decidido (vai marcar)",
+            passos: [
+              { id: "1c-1", texto: "Sinal: 'quero marcar avaliação' / 'qual horário tem?'", destaque: "externo" },
+              { id: "1c-2", texto: "Pula qualificação longa — vai direto pro agendamento", destaque: "ia" },
+              { id: "1c-3", texto: "consultar_agenda + registrar_agendamento na mesma conversa", destaque: "ia" },
+            ],
+          },
+          {
+            rotulo: "Paciente recorrente",
+            passos: [
+              { id: "1d-1", texto: "Sinal: número já existe no banco (consultar_paciente bate)", destaque: "infra" },
+              { id: "1d-2", texto: "Retoma com histórico — não trata como lead novo", destaque: "ia" },
+              { id: "1d-3", texto: "Atalho direto pra reagendamento ou novo procedimento", destaque: "ia" },
+            ],
+          },
+          {
+            rotulo: "Caso complexo",
+            passos: [
+              { id: "1e-1", texto: "Sinal: pergunta médica específica, dúvida fora do escopo", destaque: "externo" },
+              { id: "1e-2", texto: "solicitar_orcamento_humano — escala pro Dr. Lucas", destaque: "ia" },
+              { id: "1e-3", texto: "Avisa o paciente que vai consultar o doutor", destaque: "ia" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    tipo: "fluxograma",
+    bloco: "Bloco D · Cenários reais",
+    titulo: "Protocolos especiais — o que roda sem você pedir",
+    subtitulo: "Comportamentos automáticos da Ana Júlia em situações específicas",
+    passos: [
+      {
+        id: "1",
+        texto: "Protocolos que disparam sozinhos",
+        ramo: [
+          {
+            rotulo: "Confirmação D-1",
+            passos: [
+              { id: "2a-1", texto: "Véspera da consulta às 18h (configurável)", destaque: "infra" },
+              { id: "2a-2", texto: "Ana Júlia chama confirmar_agendamento", destaque: "ia" },
+              { id: "2a-3", texto: "Manda mensagem perguntando se vai comparecer", destaque: "ia" },
+              { id: "2a-4", texto: "Se responder 'não' → tool atualizar_agendamento e oferece remarcar", destaque: "ia" },
+            ],
+          },
+          {
+            rotulo: "No-show",
+            passos: [
+              { id: "2b-1", texto: "Paciente não compareceu no horário marcado", destaque: "externo" },
+              { id: "2b-2", texto: "Você marca em /agenda ou /consultas-realizadas", destaque: "humano" },
+              { id: "2b-3", texto: "Tool marcar_nao_compareceu registra + devolve pro funil", destaque: "ia" },
+              { id: "2b-4", texto: "Ana Júlia retoma conversa pra entender e tentar reengajar", destaque: "ia" },
+            ],
+          },
+          {
+            rotulo: "Reagendamento",
+            passos: [
+              { id: "2c-1", texto: "Paciente pede pra trocar horário", destaque: "externo" },
+              { id: "2c-2", texto: "Ana Júlia chama consultar_agenda novamente", destaque: "ia" },
+              { id: "2c-3", texto: "atualizar_agendamento move evento no Google Calendar", destaque: "ia" },
+              { id: "2c-4", texto: "Card permanece em 'Reunião Agendada' — só muda data/hora", destaque: "infra" },
+            ],
+          },
+          {
+            rotulo: "Aprovação humana",
+            passos: [
+              { id: "2d-1", texto: "Configuração 'exigir aprovação' está ligada", destaque: "humano" },
+              { id: "2d-2", texto: "solicitar_aprovacao_horario antes de fechar", destaque: "ia" },
+              { id: "2d-3", texto: "Aparece em /aprovacoes-pendentes esperando você", destaque: "humano" },
+              { id: "2d-4", texto: "Aprovou → Ana fecha · Rejeitou → Ana oferece outro horário", destaque: "ia" },
+            ],
+          },
+          {
+            rotulo: "Handoff (passa pro humano)",
+            passos: [
+              { id: "2e-1", texto: "Gatilho detectado: caso médico, reclamação, fora do escopo", destaque: "infra" },
+              { id: "2e-2", texto: "notificar_handoff alerta o gestor", destaque: "ia" },
+              { id: "2e-3", texto: "Ana Júlia pausa a resposta automática naquele chat", destaque: "ia" },
+              { id: "2e-4", texto: "Você assume manualmente até decidir devolver pra IA", destaque: "humano" },
+            ],
+          },
+        ],
+      },
     ],
   },
 
