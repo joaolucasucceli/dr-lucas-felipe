@@ -22,11 +22,6 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: "/documentacao",
-        destination: "/dashboard",
-        permanent: true,
-      },
-      {
         source: "/leads",
         destination: "/contatos",
         permanent: true,
