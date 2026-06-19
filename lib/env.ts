@@ -17,7 +17,6 @@ export const env = {
   API_SECRET: trim(process.env.API_SECRET),
   WEBHOOK_SECRET: trim(process.env.WEBHOOK_SECRET),
   OPENAI_API_KEY: trim(process.env.OPENAI_API_KEY),
-  ANALISTA_WRITE_MODE: trim(process.env.ANALISTA_WRITE_MODE) === "true",
 } as const
 
 export const isProd = env.NODE_ENV === "production"

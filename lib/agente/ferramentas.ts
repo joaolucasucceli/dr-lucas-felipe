@@ -1,8 +1,8 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions"
 
 /** Definição das ferramentas do agente no formato OpenAI function calling.
- *  Data entry estruturada (nome, procedimento, sobreOPaciente, avanço de etapa)
- *  é feita pela Analista IA (JLAU-571), não pela Ana Júlia. */
+ *  A Ana Júlia faz todo o data entry estruturado (nome, procedimento,
+ *  sobreOPaciente, avanço de etapa) pela tool `atualizar_lead`. */
 export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
@@ -19,6 +19,45 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
         },
         required: ["whatsapp"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "atualizar_lead",
+      description:
+        "Atualiza o cadastro do paciente e o funil. Chame SEMPRE que descobrir: o NOME do paciente (quando ele informa), o PROCEDIMENTO de interesse (quando ele diz o que quer fazer), um FATO relevante sobre ele (motivação, contexto, expectativa, restrição — vai pra sobreOPaciente em modo APPEND, nunca sobrescreve), OU quando a conversa amadurecer pra AVANÇAR a etapa do funil. Avanço de etapa: 'qualificacao' quando o paciente já disse o que quer (saiu do acolhimento); 'agendamento' quando ele está pronto pra marcar a avaliação. Use 'manter' (ou omita etapaCorreta) se nada mudou de etapa. NUNCA tente avançar pra 'consulta_agendada' por aqui — isso é exclusivo da tool registrar_agendamento. Pode chamar várias vezes ao longo da conversa; é idempotente e só grava o que realmente mudou.",
+      parameters: {
+        type: "object",
+        properties: {
+          contatoId: {
+            type: "string",
+            description: "ID do lead/paciente (do contexto)",
+          },
+          conversaId: {
+            type: "string",
+            description: "ID da conversa ativa (opcional)",
+          },
+          nome: {
+            type: "string",
+            description: "Nome do paciente, quando ele informar. Só sobrescreve nome genérico ('WhatsApp 55...').",
+          },
+          procedimentoInteresse: {
+            type: "string",
+            description: "Procedimento que o paciente demonstrou interesse (ex: 'lipo abdome', 'Paciente Modelo abdome + flancos').",
+          },
+          sobreOPacienteAdicionar: {
+            type: "string",
+            description: "Fato relevante sobre o paciente pra registrar no cadastro. É feito APPEND (nunca sobrescreve). Ex: 'Quer fazer antes do casamento em dezembro', 'Já fez lipo há 2 anos e quer retoque'.",
+          },
+          etapaCorreta: {
+            type: "string",
+            enum: ["manter", "qualificacao", "agendamento"],
+            description: "Para onde mover o funil: 'qualificacao' (paciente já disse o que quer), 'agendamento' (pronto pra marcar) ou 'manter' (nada muda). NUNCA 'consulta_agendada'.",
+          },
+        },
+        required: ["contatoId"],
       },
     },
   },
@@ -204,38 +243,6 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "solicitar_orcamento_humano",
-      description:
-        "Pausa o atendimento e sinaliza o Dr. Lucas pra responder o orçamento direto, do número pessoal dele. Use SOMENTE quando o paciente: (a) já mandou pelo menos 1 foto + região, e perguntou explicitamente o valor; OU (b) está qualificado mas insistiu em valor 2× depois de você redirecionar pra avaliação. Depois de chamar essa tool, NÃO mande mais mensagem nesse turno — o Dr. Lucas vai falar direto. O paciente fica aguardando até ele responder. Você só volta a atender quando o webhook detectar a mensagem dele.",
-      parameters: {
-        type: "object",
-        properties: {
-          contatoId: {
-            type: "string",
-            description: "ID do contato (vem do contexto após consultar_paciente)",
-          },
-          conversaId: {
-            type: "string",
-            description: "ID da conversa ativa (opcional)",
-          },
-          resumoCaso: {
-            type: "string",
-            description:
-              "Resumo CURTO do caso pro Dr. Lucas: região do corpo, fotos enviadas (sim/quantas), demanda. Máximo 3 linhas. Ex: 'Abdômen + flancos, 2 fotos enviadas. Quer saber valor pra mini lipo paciente modelo.'",
-          },
-          prioridade: {
-            type: "string",
-            enum: ["normal", "urgente"],
-            description: "Default 'normal'. 'urgente' só se o paciente sinalizou objeção clara.",
-          },
-        },
-        required: ["contatoId", "resumoCaso"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "confirmar_presenca",
       description:
         "Marca um agendamento como REALIZADO (paciente compareceu na avaliação) e ENCERRA a conversa — você para de responder definitivamente nesse contato. Use SOMENTE quando o paciente responder positivamente (Sim, Foi, Compareci, Foi tudo certo, Sim fiz, Sim, fez) a uma pergunta SUA de pós-evento ('Conseguiu fazer a avaliação hoje?'). O ID está em agendamentoPosEventoId no contexto. Sem ID válido no contexto, ignore.",
@@ -266,26 +273,6 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
         },
         required: ["agendamentoId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "solicitar_aprovacao_horario",
-      description:
-        "JLU-170 v2: Cria solicitacao de pre-aprovacao de horario com o gestor (Dr. Lucas). USE SOMENTE quando o contexto indicar `config.exigirAprovacaoAgendamento === true` (gestor configurou a flag em /configuracoes/comportamento-ia). Em vez de registrar_agendamento direto, voce cria uma SOLICITACAO que vai pro WhatsApp pessoal do gestor. Ele aprova/sugere outro/cancela via painel. So depois voce responde o paciente. Apos chamar essa tool, mande ao paciente: \"[nome], vou so alinhar com o Dr. Lucas pra confirmar esse horario, te respondo em algumas horas pode ser?\" — e FIQUE EM SILENCIO neste contato ate webhook detectar resposta da decisao do gestor. Idempotente: chamadas duplicadas com mesmo contatoId+dataHora retornam jaPendente=true.",
-      parameters: {
-        type: "object",
-        properties: {
-          contatoId: { type: "string", description: "ID do paciente" },
-          conversaId: { type: "string", description: "ID da conversa ativa" },
-          dataHora: { type: "string", description: "Data/hora ISO 8601 com timezone (mesmo formato de registrar_agendamento)" },
-          procedimentoId: { type: "string", description: "ID do procedimento (opcional)" },
-          email: { type: "string", description: "Email do paciente (OBRIGATORIO — mesmo motivo de registrar_agendamento)" },
-          observacao: { type: "string", description: "Observacao curta (opcional)" },
-        },
-        required: ["contatoId", "dataHora", "email"],
       },
     },
   },

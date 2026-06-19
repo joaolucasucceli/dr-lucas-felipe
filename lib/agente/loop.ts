@@ -6,10 +6,6 @@ import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
 import { detectarGatilhoMidia } from "@/lib/agente/gatilho-midia"
-import {
-  detectarGatilhoHandoff,
-  gerarResumoFallback,
-} from "@/lib/agente/gatilho-handoff"
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
@@ -81,12 +77,10 @@ async function obterConfigWhatsapp() {
 }
 
 /**
- * Resultado do processamento — usado pelo route handler `/api/agente/processar`
- * pra disparar a Analista IA via `after()` (depois da response, sem bloquear).
- *
- * Antes desta refatoracao, a Analista era chamada DENTRO desta funcao com `await`,
- * o que adicionava 2-5s de latencia na resposta HTTP pro UAZAPI (que nao precisa
- * do resultado). Agora o handler decide quando rodar a Analista.
+ * Resultado do processamento (contatoId + conversaId). A Ana Júlia já mantém
+ * cadastro e funil sozinha via a tool `atualizar_lead` durante o loop, então
+ * não há mais pós-processamento em background. Mantido por compatibilidade do
+ * route handler `/api/agente/processar`.
  */
 export interface ResultadoProcessamento {
   contatoId: string
@@ -166,9 +160,9 @@ export async function processarMensagens(
       }
     }
 
-    // Handoff humano de orcamento ativo: IA pausa ate o Dr. Lucas responder.
-    // Setado por `solicitar_orcamento_humano`, zerado pelo detector de
-    // retomada no webhook quando ele responde fromMe=true.
+    // Handoff humano ativo: IA pausa ate o Dr. Lucas assumir o chat.
+    // O flag `aguardandoOrcamentoHumano` no contato sinaliza o transbordo;
+    // o detector de retomada no webhook zera quando ele responde fromMe=true.
     const { data: contatoHandoff } = await supabaseAdmin
       .from("contatos")
       .select("aguardandoOrcamentoHumano")
@@ -281,30 +275,6 @@ export async function processarMensagens(
     }
   }
 
-  // JLU-170 v2 (B 25/05): busca config de pre-aprovacao do gestor ativo.
-  // Lucas e o unico gestor humano hoje. Se algum dia houver multiplos, basta
-  // estender a query pra pegar a config "mais restrita" (OR de todos).
-  try {
-    const { data: gestor } = await supabaseAdmin
-      .from("usuarios")
-      .select("exigirAprovacaoAgendamento")
-      .eq("perfil", "gestor")
-      .eq("tipo", "humano")
-      .eq("ativo", true)
-      .is("deletadoEm", null)
-      .order("criadoEm", { ascending: true })
-      .limit(1)
-      .maybeSingle()
-    if (gestor) {
-      const g = gestor as { exigirAprovacaoAgendamento?: boolean }
-      contextoContato.config = {
-        exigirAprovacaoAgendamento: Boolean(g.exigirAprovacaoAgendamento),
-      }
-    }
-  } catch (err) {
-    console.warn("[Agente] Falha ao buscar config do gestor (segue sem pre-aprovacao):", err)
-  }
-
   try {
     const memoria = await obterMemoria(chatId)
     const systemPrompt = await gerarSystemPrompt(contextoContato)
@@ -314,29 +284,16 @@ export async function processarMensagens(
       { role: "user", content: textoBuffer },
     ]
 
-    // Heurística determinística: paciente pediu valor + sinal de complexidade
-    // (multi-região fora do combo PM, região fora do PM, "fora do programa",
-    // comparação externa, urgência) → força `solicitar_orcamento_humano` na
-    // primeira iteração. GPT-4o ignora a REGRA 0 do prompt em ~50% dos casos
-    // qualificados; este safety net não substitui o prompt, atua em paralelo.
-    // Precedência: handoff > midia > auto (handoff é pausa total, midia é
-    // fluxo de prova visual).
-    const forcarHandoff = detectarGatilhoHandoff(textoBuffer)
-    const forcarMidia = !forcarHandoff && detectarGatilhoMidia(textoBuffer)
-
-    if (forcarHandoff) {
-      console.log(
-        `[Agente] Gatilho de handoff disparado pra contato ${contatoId} — forcando solicitar_orcamento_humano`
-      )
-    }
+    // Heurística determinística: paciente pediu prova visual → força
+    // `buscar_conteudo` na primeira iteração pra carregar as mídias antes de
+    // responder. Safety net que atua em paralelo ao prompt.
+    const forcarMidia = detectarGatilhoMidia(textoBuffer)
 
     let resposta = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: mensagens,
       tools: ferramentasAgente,
-      tool_choice: forcarHandoff
-        ? { type: "function", function: { name: "solicitar_orcamento_humano" } }
-        : forcarMidia
+      tool_choice: forcarMidia
         ? { type: "function", function: { name: "buscar_conteudo" } }
         : "auto",
     })
@@ -387,29 +344,13 @@ export async function processarMensagens(
         const toolsComIds = new Set([
           "registrar_mensagem",
           "registrar_agendamento",
+          "atualizar_lead",
           "buscar_conteudo",
           "enviar_midia",
-          "solicitar_orcamento_humano",
         ])
         if (toolsComIds.has(fn.name)) {
           if (contatoId) args.contatoId = contatoId
           if (conversaId) args.conversaId = conversaId
-        }
-
-        // Quando o gatilho de handoff força a tool e o GPT-4o passa resumoCaso
-        // curto demais (< 10 chars, viola schema do endpoint), substitui por um
-        // resumo determinístico extraído da mensagem do paciente. Sem isso, o
-        // endpoint devolve 400 → tool error → GPT pode entrar em loop ou
-        // alucinar fallback ruim.
-        if (fn.name === "solicitar_orcamento_humano") {
-          const resumoAtual =
-            typeof args.resumoCaso === "string" ? args.resumoCaso : ""
-          if (resumoAtual.trim().length < 10) {
-            args.resumoCaso = gerarResumoFallback(textoBuffer)
-            console.log(
-              "[Agente] resumoCaso curto/ausente, usando fallback deterministico"
-            )
-          }
         }
 
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
@@ -535,9 +476,7 @@ export async function processarMensagens(
     }
   }
 
-  // Retorna IDs pro route handler `/api/agente/processar` disparar a Analista
-  // via `after()` apos a response — antes a Analista era await aqui, atrasando
-  // 2-5s desnecessariamente o HTTP response pro UAZAPI.
+  // Retorna IDs pro route handler `/api/agente/processar`.
   if (!contatoId) return null
   return { contatoId, conversaId }
 }

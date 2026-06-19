@@ -69,7 +69,6 @@ export async function limparDependenciasDoContato(params: {
     }
   }
 
-  await supabaseAdmin.from("analista_logs").delete().eq("contatoId", contatoId)
   await supabaseAdmin.from("mensagens_whatsapp").delete().eq("contatoId", contatoId)
   await supabaseAdmin.from("fotos_contato").delete().eq("contatoId", contatoId)
   await supabaseAdmin.from("conversas").delete().eq("contatoId", contatoId)

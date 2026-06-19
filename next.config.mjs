@@ -17,11 +17,6 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: "/analista-logs",
-        destination: "/eduarda",
-        permanent: true,
-      },
-      {
         source: "/leads",
         destination: "/contatos",
         permanent: true,

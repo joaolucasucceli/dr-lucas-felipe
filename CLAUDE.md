@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Central Dr. Lucas** — sistema web para gestão de atendimento da clínica do Dr. Lucas Felipe. Sistema **100% autônomo** — a IA faz todo o processo do funil (acolhimento → reunião agendada). **Agendamentos são criados EXCLUSIVAMENTE pela Ana Júlia via WhatsApp** — o painel não tem botão de criar agendamento manual (decisão arquitetural: força todo lead pelo funil da IA). Edição/remarcação/cancelamento manual continuam disponíveis pro gestor após o agendamento existir. Dois módulos integrados em uma única aplicação Next.js:
 
 1. **Painel de Gestão** — kanban (4 etapas), contatos (leads e pacientes), procedimentos, agenda, conteúdo da IA (textos + mídias), métricas
-2. **Agente IA WhatsApp ("Ana Júlia" + Analista IA)** — atendimento autônomo de pacientes via API Routes, alimentando o painel em tempo real
+2. **Agente IA WhatsApp ("Ana Júlia")** — agente ÚNICO e 100% autônomo, atende os pacientes via API Routes e alimenta o painel em tempo real (conversa + data entry + avanço de funil, tudo ela)
 
 ## Stack Tecnológica
 
@@ -54,16 +54,15 @@ Dois perfis: **Gestor** (acesso total), **Atendente** (operacional). O agente IA
 
 ### Funil Kanban (4 colunas)
 
-Funil simplificado: **Acolhimento → Qualificação → Agendamento → Reunião Agendada**. Todas as colunas são movidas automaticamente pela dupla Ana Júlia (SDR) + Analista IA. Depois de "Reunião Agendada", o funil para — a IA continua respondendo mas não avança mais. Promoção de lead → paciente é manual (botão no detalhe do contato, só gestor).
+Funil simplificado: **Acolhimento → Qualificação → Agendamento → Reunião Agendada**. Todas as colunas são movidas automaticamente pela **própria Ana Júlia** (via a tool `atualizar_lead` durante o loop: acolhimento→qualificação→agendamento; a etapa final `consulta_agendada`/Reunião Agendada só via `registrar_agendamento`). Depois de "Reunião Agendada", o funil para — a IA continua respondendo mas não avança mais. Promoção de lead → paciente é manual (botão no detalhe do contato, só gestor).
 
-### Arquitetura do Agente IA (dual: SDR + Analista)
+### Arquitetura do Agente IA (agente único — Ana Júlia)
 
-Dois agentes IA trabalham em paralelo:
+**Um agente só.** A Ana Júlia (GPT-4o) faz tudo: conversa, data entry e avanço de funil. Fluxo do webhook: `POST /api/webhooks/whatsapp` → detectar tipo de conteúdo → processar mídia → buffer Redis (debounce 20s, `{chat_id}_buf_dr-lucas`) → concatenar → GPT-4o com system prompt + memória Redis (20 msgs, `{chat_id}_mem_dr-lucas`) → segmentar resposta → Uazapi com delay aleatório 3-5s entre mensagens.
 
-- **Ana Júlia** (GPT-4o) — SDR que conversa com o paciente no WhatsApp. Fluxo do webhook: `POST /api/webhooks/whatsapp` → detectar tipo de conteúdo → processar mídia → buffer Redis (debounce 20s, `{chat_id}_buf_dr-lucas`) → concatenar → GPT-4o com system prompt + memória Redis (20 msgs, `{chat_id}_mem_dr-lucas`) → segmentar resposta → Uazapi com delay aleatório 3-5s entre mensagens.
-- **Analista** (GPT-4o-mini, JLAU-571) — disparada em fire-and-forget ao final do loop da Ana Júlia. Lê histórico + estado do lead e escreve direto no CRM (nome, procedimento, sobreOPaciente, statusFunil). Controlada pela env `ANALISTA_WRITE_MODE=true` (padrão em produção); sem a flag, roda em shadow mode (só loga em `analista_logs`).
+O **data entry estruturado** (nome, procedimentoInteresse, sobreOPaciente em APPEND, avanço de etapa até `agendamento`) é feito pela própria Ana via a tool **`atualizar_lead`** (`/api/agente/atualizar-lead` → `lib/agente/atualizar-lead.ts`, que respeita as transições válidas). **Não há mais Analista/Eduarda** (segundo agente removido em 19/06/2026, junto com `ANALISTA_WRITE_MODE` e o pipeline de background). A etapa final (`consulta_agendada`) só é atingida pela tool `registrar_agendamento`.
 
-A Ana Júlia conduz a conversa até o horário fechar (usando as 9 ferramentas em `/api/agente/*` — incluindo `consultar_base_conhecimento` para dúvidas da clínica, `consultar_agenda` que cruza Google Calendar + expediente, e `registrar_agendamento`); a Analista IA avança o funil de Acolhimento → Qualificação → Agendamento. A etapa final (`consulta_agendada`) só é atingida pela tool `registrar_agendamento` da Ana Júlia.
+**Sem gate de aprovação:** a Ana registra o agendamento direto (a pré-aprovação de horário / Aprovações Pendentes foi removida em 19/06/2026).
 
 ### Segurança da API
 
@@ -92,7 +91,7 @@ A Ana Júlia conduz a conversa até o horário fechar (usando as 9 ferramentas e
 
 - `app/(dashboard)/` — páginas do painel agrupadas sob layout do dashboard com sidebar + verificação de perfil
 - `app/api/agente/` — ferramentas do agente IA (9 endpoints) + endpoints auxiliares (processar, cron-manual, limpar-memoria)
-- `lib/agente/` — internos do agente: buffer, memória, processamento de mídia, prompt, ferramentas, sincronização do kanban, analista (JLAU-571), tipos compartilhados (`types.ts`)
+- `lib/agente/` — internos do agente: buffer, memória, processamento de mídia, prompt, ferramentas, sincronização do kanban, `atualizar-lead.ts` (data entry + avanço de funil pela Ana), tipos compartilhados (`types.ts`)
 - `lib/format.ts` — helpers `formatarData()` (timezone SP) e `formatarWhatsapp()` (+55 (DD) 9XXXX-XXXX)
 - `supabase/migrations/` — migrations SQL aplicadas manualmente no Supabase (sem Prisma)
 - `lib/supabase.ts` — clients Supabase (`supabaseAdmin` para server-side com service role e `supabaseAnon` para client-side)
@@ -130,12 +129,12 @@ _Nenhuma issue técnica conhecida no momento. Issues abertas no Linear são entr
 Sistema em **modo manutenção** após auditoria final de entrega (JLAU-609, 2026-04-21) + ondas de simplificação de UI (JLAU-989 → JLAU-995, 2026-04-26). Todos os módulos core entregues:
 - Site público institucional (8 seções)
 - Painel de gestão (12 páginas dashboard)
-- Agente IA WhatsApp (arquitetura dual Ana Júlia + Analista)
+- Agente IA WhatsApp (agente único Ana Júlia — 100% autônomo)
 - Pacientes + Protocolos (bônus)
 
 Refatorações recentes (2026-04-26):
 - **Sidebar consolidada**: 16 → 12 itens (gestor). Eliminado dropdown do header, Meu Perfil, Configurações (hub), Tipos de Procedimento (página), Mídia Marketing como página dedicada, perfis Ana Júlia/Eduarda separados
-- **Novas páginas com Tabs**: `/equipe-ia` (Ana Júlia + Eduarda), `/conteudo-ia` (Conteúdo em Texto + Conteúdo em Mídia)
+- **Novas páginas com Tabs**: `/conteudo-ia` (Conteúdo em Texto + Conteúdo em Mídia). `/equipe-ia` agora é só a Ana Júlia (Eduarda removida 19/06/2026)
 - **Header limpo**: removidos busca global, notificações, theme toggle. Sobra apenas Ajuda Contextual
 - **Tema dark-only** via `forcedTheme`
 - **Padrão modal consolidado** em 100% das edições (exceto Contato)

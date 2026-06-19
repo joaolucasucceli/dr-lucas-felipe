@@ -102,7 +102,7 @@ export function PerfilAnaJulia() {
             "Sempre consulta alguma ferramenta antes de afirmar — nada de inventar resposta.",
             "Escreve sem emojis. Transmite acolhimento pelas palavras, não por ícone.",
             "Quebra a resposta em mensagens curtas, com um pequeno intervalo entre elas, imitando o ritmo humano de digitação.",
-            "Quem atualiza o cadastro do paciente não é ela — é a Eduarda, que trabalha em paralelo lendo cada conversa.",
+            "Mantém o cadastro do paciente e o funil sempre em dia conforme a conversa avança, sem você precisar digitar nada.",
           ]}
         />
       </SecaoPerfil>

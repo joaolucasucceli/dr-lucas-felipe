@@ -1,9 +1,8 @@
-import { NextResponse, after } from "next/server"
+import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod"
 import { validarApiSecret } from "@/lib/api-auth"
 import { processarMensagens } from "@/lib/agente/loop"
-import { analisarConversa } from "@/lib/agente/analista"
 import { agendarProcessamento, deveProcessar } from "@/lib/agente/buffer"
 import { supabaseAdmin } from "@/lib/supabase"
 import { enviarDigitando } from "@/lib/uazapi"
@@ -80,26 +79,14 @@ export async function POST(request: NextRequest) {
     setTimeout(resolve, DEBOUNCE_MS - REFRESH_DIGITANDO_MS)
   )
 
-  // Processa todas as mensagens acumuladas no buffer.
-  let resultado: Awaited<ReturnType<typeof processarMensagens>> = null
+  // Processa todas as mensagens acumuladas no buffer. A Ana Júlia agora
+  // mantém cadastro + funil sozinha via a tool `atualizar_lead` dentro do
+  // loop — não há mais pipeline de Analista em background.
   try {
-    resultado = await processarMensagens(chatId)
+    await processarMensagens(chatId)
   } catch (err) {
     console.error("[Agente] Erro ao processar mensagens:", err)
     return NextResponse.json({ error: "Erro no processamento" }, { status: 500 })
-  }
-
-  // Analista IA roda DEPOIS da response (background). Antes estava com await
-  // dentro do loop, atrasando 2-5s a resposta HTTP pro UAZAPI por nada
-  // (UAZAPI nao precisa do resultado da Analista pra confirmar entrega).
-  if (resultado?.contatoId) {
-    after(async () => {
-      try {
-        await analisarConversa(resultado!)
-      } catch (err) {
-        console.error("[Analista] Falha em background:", err)
-      }
-    })
   }
 
   return NextResponse.json({ status: "processado" })

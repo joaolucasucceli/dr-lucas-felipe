@@ -1,14 +1,11 @@
 /**
  * Detecta se a mensagem do paciente combina **pergunta explícita de valor** com
- * **pelo menos um sinal de complexidade** (REGRA 0 do system prompt). Quando
- * positivo, o loop do agente força `tool_choice` em `solicitar_orcamento_humano`
- * — GPT-4o não pode optar por chamar `consultar_procedimentos` antes nem
- * responder texto com valor inventado.
+ * **pelo menos um sinal de complexidade** (caso fora do combo padrão Paciente
+ * Modelo). Heurística determinística de transbordo (handoff) — sinaliza casos
+ * que a Ana Júlia deve levar pra avaliação online em vez de chutar valor.
  *
- * Por que a heurística existe: testes E2E mostraram que GPT-4o ignora a REGRA 0
- * do prompt em ~50% dos casos qualificados (regra 1 "SEMPRE consultar_procedimentos"
- * tem peso maior na escolha do modelo). A heurística é safety net determinístico,
- * não substitui o prompt — atua em paralelo.
+ * Mantida como utilitário/safety net mesmo após a simplificação do produto.
+ * (Antes alimentava a antiga tool de orçamento humano, hoje removida.)
  *
  * Critério (ambos têm que bater):
  *  A) pergunta explícita de valor (regex em PERGUNTA_VALOR)

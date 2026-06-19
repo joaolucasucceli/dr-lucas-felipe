@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Fallback de procedimento: se IA nao passou procedimentoId, tenta
-  // resolver pelo procedimentoInteresse ja gravado pela Eduarda.
+  // resolver pelo procedimentoInteresse ja gravado pela Ana Julia (atualizar_lead).
   let finalProcedimentoId = procedimentoId
   if (!finalProcedimentoId) {
     const { data: contatoProc } = await supabaseAdmin
