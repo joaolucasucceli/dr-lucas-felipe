@@ -118,7 +118,7 @@ export const slides: Slide[] = [
     bloco: "Abertura",
     titulo: "Central Dr. Lucas",
     subtitulo: "Documentação completa do sistema",
-    data: "27 de maio de 2026",
+    data: "Revisado em junho de 2026",
   },
   {
     tipo: "abertura-bloco",
@@ -127,11 +127,11 @@ export const slides: Slide[] = [
     descricao:
       "Um sistema único que cuida de duas pontas conectadas: o atendimento autônomo dos seus pacientes no WhatsApp e o painel de gestão que você usa pra acompanhar tudo em tempo real.",
     destaques: [
-      "100% autônomo — a IA conduz todo o funil até a reunião agendada",
-      "Entrada única pelo WhatsApp: o site é vitrine institucional, não tem formulário de captura",
+      "100% autônomo — a Ana Júlia conduz todo o funil até a reunião agendada",
+      "Entrada pelo WhatsApp: o tráfego pago e o site institucional levam o paciente pro WhatsApp",
       "Agendamentos criados exclusivamente pela Ana Júlia (não tem botão manual)",
       "Pacientes entram pelo WhatsApp e aparecem no kanban automaticamente",
-      "Você só intervém quando o sistema pede aprovação (handoff)",
+      "Um agente só: a Ana Júlia faz tudo, do primeiro 'oi' ao agendamento",
     ],
   },
   {
@@ -143,8 +143,9 @@ export const slides: Slide[] = [
         nome: "Canais de entrada",
         cor: "emerald",
         itens: [
-          "Paciente no WhatsApp (canal único de captura)",
-          "Site público — vitrine institucional, sem formulário (CTA leva pro WhatsApp)",
+          "Tráfego pago (anúncios) — leva o paciente direto pro WhatsApp",
+          "Site institucional — vitrine, sem formulário (o botão leva pro WhatsApp)",
+          "WhatsApp — canal único de entrada e captura",
         ],
       },
       {
@@ -158,8 +159,8 @@ export const slides: Slide[] = [
         itens: [
           "API Routes do agente (15 endpoints)",
           "Buffer + memória em Redis",
-          "Painel de gestão (13 páginas)",
-          "Human-in-the-loop (aprovações + handoff)",
+          "Painel de gestão (12 páginas)",
+          "Handoff pro gestor quando o caso foge do escopo",
           "Realtime via Supabase WebSocket",
         ],
       },
@@ -167,10 +168,9 @@ export const slides: Slide[] = [
         nome: "Inteligência artificial",
         cor: "amber",
         itens: [
-          "GPT-4o (Ana Júlia — SDR)",
-          "GPT-4o-mini (Eduarda — Analista de CRM)",
+          "GPT-4o (Ana Júlia — o agente único)",
           "Whisper (transcrição de áudio)",
-          "GPT-4o-mini visão (descrição de imagens)",
+          "GPT-4o-mini (descrição de imagens)",
         ],
       },
       {
@@ -187,7 +187,7 @@ export const slides: Slide[] = [
   {
     tipo: "modulos",
     bloco: "Bloco A · Visão geral",
-    titulo: "Módulos do painel — 10 áreas, uma central",
+    titulo: "Módulos do painel — 9 áreas, uma central",
     modulos: [
       {
         icone: Sparkles,
@@ -205,7 +205,7 @@ export const slides: Slide[] = [
         icone: KanbanSquare,
         nome: "Funil",
         rota: "/contatos",
-        descricao: "Kanban de 4 etapas movido pela IA",
+        descricao: "Kanban de 4 etapas movido pela Ana Júlia",
       },
       {
         icone: Calendar,
@@ -241,13 +241,7 @@ export const slides: Slide[] = [
         icone: Bot,
         nome: "Equipe IA",
         rota: "/equipe-ia",
-        descricao: "Configura Ana Júlia + Eduarda",
-      },
-      {
-        icone: ShieldCheck,
-        nome: "Aprovações",
-        rota: "/aprovacoes-pendentes",
-        descricao: "Você aprova horários sensíveis",
+        descricao: "Configura a Ana Júlia",
       },
     ],
   },
@@ -277,8 +271,8 @@ export const slides: Slide[] = [
       {
         nome: "Inteligência",
         itens: [
-          { nome: "OpenAI GPT-4o", uso: "Ana Júlia (SDR conversacional)" },
-          { nome: "GPT-4o-mini", uso: "Eduarda (Analista de CRM) + descrição de imagens" },
+          { nome: "OpenAI GPT-4o", uso: "Ana Júlia (o agente que conversa e organiza)" },
+          { nome: "GPT-4o-mini", uso: "Descrição de imagens enviadas pelo paciente" },
           { nome: "Whisper", uso: "Transcrição de áudios do paciente" },
         ],
       },
@@ -301,7 +295,7 @@ export const slides: Slide[] = [
     descricao:
       "A partir daqui vamos percorrer cada uma das páginas do seu painel. Pra cada uma você vê: o papel dela, o que faz, e a decisão por trás da forma como está implementada.",
     destaques: [
-      "11 páginas no total + um slide de rotina diária",
+      "10 páginas no total + um slide de rotina diária",
       "Cada slide: papel + funcionalidades + decisão arquitetural",
       "Ao final: como tudo se conecta na sua rotina (manhã, tarde, fim do dia)",
       "Você pode pausar em qualquer uma e perguntar o porquê",
@@ -337,7 +331,7 @@ export const slides: Slide[] = [
       "Realtime via Supabase WebSocket — não precisa atualizar",
     ],
     decisao:
-      "Você é leitor, não escritor por padrão. A Ana Júlia conduz a conversa. Você acompanha pra entender, e só intervém quando o sistema pede (via aprovações ou handoff).",
+      "Você é leitor, não escritor por padrão. A Ana Júlia conduz a conversa. Você acompanha pra entender, e só intervém quando o sistema te chama (handoff).",
   },
   {
     tipo: "pagina",
@@ -347,13 +341,13 @@ export const slides: Slide[] = [
     icone: KanbanSquare,
     papel: "Visualizar o funil completo em 4 colunas — Acolhimento → Qualificação → Agendamento → Reunião Agendada.",
     funcionalidades: [
-      "4 colunas movidas automaticamente pela dupla Ana Júlia + Analista",
+      "4 colunas movidas automaticamente pela Ana Júlia",
       "Card com nome, procedimento de interesse e última mensagem",
       "Filtros por procedimento, etapa, período",
       "Click no card abre detalhe completo do contato (/contatos/[id])",
     ],
     decisao:
-      "Funil simplificado pra 4 etapas (não 7 ou 10). Cada etapa tem um critério objetivo: a Analista IA é quem decide quando mover. Você não arrasta card — observa o movimento.",
+      "Funil simplificado pra 4 etapas (não 7 ou 10). Cada etapa tem um critério objetivo: a própria Ana Júlia é quem decide quando mover. Você não arrasta card — observa o movimento.",
   },
   {
     tipo: "pagina",
@@ -408,23 +402,6 @@ export const slides: Slide[] = [
   {
     tipo: "pagina",
     bloco: "Bloco B · Tour pelo painel",
-    titulo: "Aprovações Pendentes",
-    rota: "/aprovacoes-pendentes",
-    icone: ShieldCheck,
-    papel: "Human-in-the-loop — a Ana Júlia pede aprovação sua antes de fechar horários sensíveis.",
-    funcionalidades: [
-      "Lista de pedidos da Ana Júlia esperando seu OK",
-      "Cada item mostra: paciente, horário pedido, contexto da conversa",
-      "Botão 'Aprovar' (Ana Júlia confirma com o paciente)",
-      "Botão 'Rejeitar' (Ana Júlia oferece outro horário)",
-      "Tempo de resposta visível (pra você não esquecer)",
-    ],
-    decisao:
-      "Configurável: você decide via 'Equipe IA' se a aprovação é obrigatória ou se a IA pode agendar direto. Quando ligada, é o único momento em que o sistema espera você.",
-  },
-  {
-    tipo: "pagina",
-    bloco: "Bloco B · Tour pelo painel",
     titulo: "Procedimentos",
     rota: "/procedimentos",
     icone: Stethoscope,
@@ -460,15 +437,15 @@ export const slides: Slide[] = [
     titulo: "Equipe IA",
     rota: "/equipe-ia",
     icone: Bot,
-    papel: "Configuração das duas IAs — Ana Júlia (SDR que conversa) e Eduarda (Analista de CRM que organiza).",
+    papel: "Configuração da Ana Júlia — a IA que conversa com o paciente e mantém o funil organizado.",
     funcionalidades: [
-      "Aba 'Ana Júlia' — persona, tom de voz, instruções específicas, exigir aprovação de agendamento",
-      "Aba 'Eduarda' — modo de escrita (ativo / shadow), regras de movimentação do funil",
+      "Persona, tom de voz e instruções específicas da Ana Júlia",
+      "Regras de como ela conduz a conversa e move o funil",
       "Limites e travas operacionais",
       "Histórico de mudanças (auditoria)",
     ],
     decisao:
-      "Você ajusta o comportamento da IA SEM mexer em código. Mudança aqui = imediata. Por isso a flag 'exigir aprovação' é tão importante: você decide se a Ana fecha sozinha ou se pede seu OK.",
+      "Você ajusta o comportamento da Ana Júlia SEM mexer em código. Mudança aqui = imediata. É aqui que você afina o tom e as regras dela.",
   },
   {
     tipo: "pagina",
@@ -495,59 +472,47 @@ export const slides: Slide[] = [
       {
         id: "1",
         texto: "Início do dia — abre /dashboard",
-        detalhe: "Bate olho em: leads novos da noite, agendamentos do dia, pendências (aprovações esperando sua resposta)",
+        detalhe: "Bate o olho em: leads novos da noite e os agendamentos do dia",
         destaque: "humano",
       },
       {
         id: "2",
-        texto: "Se tiver pendência — vai pra /aprovacoes-pendentes",
-        detalhe: "Aprova ou rejeita os horários que a Ana Júlia segurou. Quanto mais rápido você responder, melhor pro lead",
-        destaque: "humano",
-      },
-      {
-        id: "3",
         texto: "Durante o dia — quando quiser dar uma olhada nas conversas",
         detalhe: "/atendimentos mostra tudo em tempo real. Você lê pra entender, não pra responder",
         destaque: "humano",
       },
       {
-        id: "4",
+        id: "3",
         texto: "Após cada consulta — abre /consultas-realizadas",
         detalhe: "Click no paciente → ficha completa → registra o prontuário no campo 'Sobre o paciente'",
         destaque: "humano",
       },
       {
-        id: "5",
+        id: "4",
         texto: "Manutenção pontual — quando precisar ajustar algo",
         ramo: [
           {
             rotulo: "Novo procedimento",
             passos: [
-              { id: "5a-1", texto: "/procedimentos → cadastra com nome, duração, faixa de preço", destaque: "humano" },
-              { id: "5a-2", texto: "Ana Júlia passa a oferecer automaticamente em segundos", destaque: "ia" },
+              { id: "4a-1", texto: "/procedimentos → cadastra com nome, duração, faixa de preço", destaque: "humano" },
+              { id: "4a-2", texto: "Ana Júlia passa a oferecer automaticamente em segundos", destaque: "ia" },
             ],
           },
           {
             rotulo: "Resposta da IA esquisita",
             passos: [
-              { id: "5b-1", texto: "/conteudo-ia → ajusta texto/mídia que ela está usando", destaque: "humano" },
-              { id: "5b-2", texto: "Ou /equipe-ia → ajusta tom da Ana Júlia / regras da Eduarda", destaque: "humano" },
+              { id: "4b-1", texto: "/conteudo-ia → ajusta texto/mídia que ela está usando", destaque: "humano" },
+              { id: "4b-2", texto: "Ou /equipe-ia → ajusta o tom e as regras da Ana Júlia", destaque: "humano" },
             ],
           },
           {
             rotulo: "Promover lead → paciente",
             passos: [
-              { id: "5c-1", texto: "/contatos → clica no card → botão 'Promover a paciente'", destaque: "humano" },
-              { id: "5c-2", texto: "Sistema preserva ID e histórico — só muda o tipo", destaque: "infra" },
+              { id: "4c-1", texto: "/contatos → clica no card → botão 'Promover a paciente'", destaque: "humano" },
+              { id: "4c-2", texto: "Sistema preserva ID e histórico — só muda o tipo", destaque: "infra" },
             ],
           },
         ],
-      },
-      {
-        id: "6",
-        texto: "Final do dia — confere se sobrou algo em /aprovacoes-pendentes",
-        detalhe: "Se um lead pediu horário e você não respondeu, ele tá esperando. Não deixa virar madrugada",
-        destaque: "humano",
       },
     ],
   },
@@ -560,8 +525,8 @@ export const slides: Slide[] = [
     descricao:
       "Agora vamos abrir a 'caixa preta' da IA. Você vai ver quem é Ana Júlia, o que ela sabe fazer, como ela pensa e quais são os processos que ela executa sem você precisar pedir.",
     destaques: [
-      "Dois cérebros trabalhando em paralelo (Ana Júlia + Eduarda)",
-      "13 ferramentas que a Ana Júlia invoca conforme a conversa pede",
+      "Um agente só: a Ana Júlia conduz tudo de ponta a ponta",
+      "11 ferramentas que a Ana Júlia invoca conforme a conversa pede",
       "4 processos técnicos de ponta a ponta + cenários reais (Bloco D)",
       "Buffer + memória inteligente pra parecer humana",
     ],
@@ -583,43 +548,14 @@ export const slides: Slide[] = [
       "Qualifica o interesse (qual procedimento, expectativa, urgência)",
       "Apresenta o tratamento certo com base no catálogo de Procedimentos",
       "Conduz até o agendamento — sem deixar o lead esfriar",
-      "Reconhece os limites: chama você quando precisa de aprovação humana",
+      "Mantém o cadastro e o funil organizados sozinha, ao longo da conversa",
+      "Reconhece os limites: te chama (handoff) quando o caso foge totalmente do escopo",
     ],
-  },
-  {
-    tipo: "dupla-ia",
-    bloco: "Bloco C · Ana Júlia",
-    titulo: "Dupla IA — Ana Júlia + Eduarda trabalhando juntas",
-    ana: {
-      titulo: "Ana Júlia",
-      modelo: "GPT-4o · SDR",
-      papel: "Conversa com o paciente no WhatsApp",
-      bullets: [
-        "Recebe cada mensagem do paciente",
-        "Decide o que responder e quais ferramentas chamar",
-        "Envia a resposta segmentada via WhatsApp",
-        "Pode chamar até 13 ferramentas diferentes",
-        "Trabalha de forma síncrona dentro do loop de cada mensagem",
-      ],
-    },
-    analista: {
-      titulo: "Eduarda",
-      modelo: "GPT-4o-mini · Analista de CRM",
-      papel: "Lê o histórico e mantém o cadastro do lead organizado",
-      bullets: [
-        "Não conversa com o paciente — trabalha em silêncio nos bastidores",
-        "Disparada em fire-and-forget após cada loop da Ana Júlia",
-        "Lê todo o histórico da conversa + estado atual do lead",
-        "Atualiza nome, procedimento de interesse, observações no card",
-        "Decide quando mover o card para a próxima coluna do funil",
-        "Tem modo 'shadow' (loga sem aplicar) pra testar mudanças com segurança",
-      ],
-    },
   },
   {
     tipo: "ferramentas",
     bloco: "Bloco C · Ana Júlia",
-    titulo: "As 13 ferramentas da Ana Júlia",
+    titulo: "As 11 ferramentas da Ana Júlia",
     ferramentas: [
       { nome: "consultar_agenda", descricao: "Cruza Google Calendar + expediente e devolve horários livres", categoria: "agenda" },
       { nome: "registrar_agendamento", descricao: "Cria evento no Google Calendar + move card pra 'Reunião Agendada'", categoria: "agenda" },
@@ -631,8 +567,6 @@ export const slides: Slide[] = [
       { nome: "consultar_procedimentos", descricao: "Lista catálogo de procedimentos da clínica", categoria: "paciente" },
       { nome: "buscar_conteudo", descricao: "Procura na biblioteca de Conteúdo IA o texto/mídia certo pro contexto", categoria: "conteudo" },
       { nome: "enviar_midia", descricao: "Envia foto/vídeo da biblioteca pelo WhatsApp", categoria: "conteudo" },
-      { nome: "solicitar_aprovacao_horario", descricao: "Pede sua aprovação antes de fechar horário sensível", categoria: "humano" },
-      { nome: "solicitar_orcamento_humano", descricao: "Escala pro Dr. Lucas casos que pedem avaliação personalizada", categoria: "humano" },
       { nome: "registrar_mensagem", descricao: "Persiste a mensagem no banco (auditoria + realtime)", categoria: "estado" },
     ],
   },
@@ -662,7 +596,7 @@ export const slides: Slide[] = [
       { id: "8", texto: "GPT-4o (Ana Júlia) processa", detalhe: "Decide resposta + quais ferramentas chamar", destaque: "ia" },
       { id: "9", texto: "Resposta segmentada em múltiplas mensagens", detalhe: "Parece digitação humana, não muralha de texto", destaque: "ia" },
       { id: "10", texto: "Uazapi envia com delay aleatório 3-5s entre msgs", destaque: "infra" },
-      { id: "11", texto: "Eduarda dispara em background", detalhe: "Lê o histórico, atualiza CRM + move card no funil se for o caso", destaque: "ia" },
+      { id: "11", texto: "A própria Ana Júlia atualiza o cadastro e move o card no funil", detalhe: "Tudo no mesmo fluxo — um agente só, sem segundo robô nos bastidores", destaque: "ia" },
     ],
   },
   {
@@ -675,26 +609,7 @@ export const slides: Slide[] = [
       { id: "2", texto: "Ana Júlia chama consultar_agenda", detalhe: "Cruza Google Calendar + expediente + bloqueios", destaque: "ia" },
       { id: "3", texto: "Apresenta 2-3 horários livres", destaque: "ia" },
       { id: "4", texto: "Paciente escolhe um horário", destaque: "externo" },
-      {
-        id: "5",
-        texto: "Configuração exige aprovação?",
-        ramo: [
-          {
-            rotulo: "SIM",
-            passos: [
-              { id: "5a-1", texto: "Ana chama solicitar_aprovacao_horario", destaque: "ia" },
-              { id: "5a-2", texto: "Dr. Lucas vê em /aprovacoes-pendentes", destaque: "humano" },
-              { id: "5a-3", texto: "Aprovado → Ana confirma · Rejeitado → Ana oferece outro horário", destaque: "ia" },
-            ],
-          },
-          {
-            rotulo: "NÃO",
-            passos: [
-              { id: "5b-1", texto: "Ana chama registrar_agendamento direto", destaque: "ia" },
-            ],
-          },
-        ],
-      },
+      { id: "5", texto: "Ana Júlia chama registrar_agendamento direto", detalhe: "Sem pedir aprovação — ela fecha sozinha", destaque: "ia" },
       { id: "6", texto: "Evento criado no Google Calendar", destaque: "infra" },
       { id: "7", texto: "Card move para 'Reunião Agendada' no Kanban", destaque: "infra" },
       { id: "8", texto: "Ana Júlia confirma com o paciente + envia detalhes", destaque: "ia" },
@@ -704,39 +619,19 @@ export const slides: Slide[] = [
   {
     tipo: "fluxograma",
     bloco: "Bloco C · Ana Júlia",
-    titulo: "Processo 3 — Human-in-the-loop (quando ela chama você)",
-    subtitulo: "Os três momentos em que o sistema sabe que não pode decidir sozinho",
+    titulo: "Processo 3 — Handoff (o único momento em que ela chama você)",
+    subtitulo: "99% a Ana Júlia resolve sozinha. Quando a conversa foge do escopo, ela te passa o bastão.",
     passos: [
       {
         id: "1",
-        texto: "Ana Júlia detecta situação fora do escopo automatizável",
-        ramo: [
-          {
-            rotulo: "Horário sensível",
-            passos: [
-              { id: "1a-1", texto: "Aprovação configurada como obrigatória", destaque: "humano" },
-              { id: "1a-2", texto: "Tool: solicitar_aprovacao_horario", destaque: "ia" },
-            ],
-          },
-          {
-            rotulo: "Orçamento personalizado",
-            passos: [
-              { id: "1b-1", texto: "Caso médico exige análise do Dr. Lucas", destaque: "humano" },
-              { id: "1b-2", texto: "Tool: solicitar_orcamento_humano", destaque: "ia" },
-            ],
-          },
-          {
-            rotulo: "Conversa fora do padrão",
-            passos: [
-              { id: "1c-1", texto: "Gatilho de handoff detectado", destaque: "humano" },
-              { id: "1c-2", texto: "Sistema notifica gestor (notificar_handoff)", destaque: "infra" },
-            ],
-          },
-        ],
+        texto: "Ana Júlia detecta uma conversa fora do escopo",
+        detalhe: "Reclamação séria, questão médica específica, algo que pede o Dr. Lucas",
+        destaque: "ia",
       },
-      { id: "2", texto: "Aparece em /aprovacoes-pendentes ou no painel", destaque: "infra" },
-      { id: "3", texto: "Dr. Lucas decide", destaque: "humano" },
-      { id: "4", texto: "Ana Júlia retoma com resposta autorizada", destaque: "ia" },
+      { id: "2", texto: "notificar_handoff alerta você", destaque: "infra" },
+      { id: "3", texto: "Ana Júlia pausa a resposta automática naquele chat", destaque: "ia" },
+      { id: "4", texto: "Você assume manualmente e decide", destaque: "humano" },
+      { id: "5", texto: "Quando quiser, devolve o chat pra Ana Júlia", destaque: "humano" },
     ],
   },
   {
@@ -777,24 +672,24 @@ export const slides: Slide[] = [
     bloco: "Bloco D · Cenários reais",
     titulo: "Como a Ana Júlia age em cada situação",
     descricao:
-      "Até aqui você viu como o sistema funciona por dentro. Agora vamos ver como ele se comporta na prática — em cada fase do funil, pra cada tipo de paciente, e nos protocolos especiais (confirmação, no-show, handoff).",
+      "Até aqui você viu como o sistema funciona por dentro. Agora vamos ver como ele se comporta na prática — em cada fase do funil e nos protocolos especiais (confirmação, no-show, reagendamento, handoff).",
     destaques: [
       "As 4 fases do funil pela ótica da Ana Júlia",
-      "Os 5 tipos de paciente e o protocolo de cada um",
-      "Protocolos especiais que rodam sozinhos (confirmação D-1, no-show, handoff)",
-      "Quando o sistema sabe que não pode decidir sozinho — e te chama",
+      "Como ela conduz a conversa naturalmente, sem caixinhas de 'tipo de paciente'",
+      "Protocolos especiais que rodam sozinhos (confirmação D-1, no-show, reagendamento)",
+      "Handoff: o único momento em que ela te chama",
     ],
   },
   {
     tipo: "fluxograma",
     bloco: "Bloco D · Cenários reais",
     titulo: "O funil em ação — o que a Ana Júlia faz em cada fase",
-    subtitulo: "Acolhimento → Qualificação → Agendamento → Reunião Agendada. A Eduarda decide quando o card avança.",
+    subtitulo: "Acolhimento → Qualificação → Agendamento → Reunião Agendada. A própria Ana Júlia decide quando o card avança.",
     passos: [
       {
         id: "1",
         texto: "Fase 1 — Acolhimento (primeiro contato)",
-        detalhe: "Cumprimenta com naturalidade · Identifica de onde veio (Instagram? site? indicação?) · Abre espaço pro paciente falar o que precisa",
+        detalhe: "Cumprimenta com naturalidade · Identifica de onde veio (anúncio? site? indicação?) · Abre espaço pro paciente falar o que precisa",
         destaque: "ia",
       },
       {
@@ -806,7 +701,7 @@ export const slides: Slide[] = [
       {
         id: "3",
         texto: "Fase 3 — Agendamento",
-        detalhe: "Chama consultar_agenda → apresenta 2-3 horários · Confirma o escolhido · Se exigir aprovação, segura e te chama · Se não, fecha direto",
+        detalhe: "Chama consultar_agenda → apresenta 2-3 horários · Confirma o escolhido · Fecha direto com registrar_agendamento",
         destaque: "ia",
       },
       {
@@ -817,63 +712,9 @@ export const slides: Slide[] = [
       },
       {
         id: "5",
-        texto: "Em paralelo (silencioso) — Eduarda",
-        detalhe: "Após cada resposta da Ana Júlia, lê a conversa e decide se o card avança de fase. Você só vê o resultado no kanban se movendo sozinho",
+        texto: "Ao longo da conversa — cadastro e funil sempre atualizados",
+        detalhe: "A própria Ana Júlia atualiza o cadastro do paciente e move o card de fase. Você só vê o kanban se movendo sozinho",
         destaque: "ia",
-      },
-    ],
-  },
-  {
-    tipo: "fluxograma",
-    bloco: "Bloco D · Cenários reais",
-    titulo: "Tipos de paciente — protocolo diferente pra cada perfil",
-    subtitulo: "A Ana Júlia identifica o perfil pelo conteúdo da mensagem e ajusta a condução.",
-    passos: [
-      {
-        id: "1",
-        texto: "Paciente chega no WhatsApp — Ana Júlia identifica o perfil",
-        ramo: [
-          {
-            rotulo: "Curioso de preço",
-            passos: [
-              { id: "1a-1", texto: "Sinal: 'só queria saber quanto custa'", destaque: "externo" },
-              { id: "1a-2", texto: "Ela apresenta valor + agrega contexto (resultado, segurança, diferencial)", destaque: "ia" },
-              { id: "1a-3", texto: "Tenta puxar pra qualificação — não larga só com o preço", destaque: "ia" },
-            ],
-          },
-          {
-            rotulo: "Interessado real",
-            passos: [
-              { id: "1b-1", texto: "Sinal: faz perguntas sobre o procedimento, expectativa, recuperação", destaque: "externo" },
-              { id: "1b-2", texto: "Conduz pela qualificação completa (procedimento, urgência, expectativa)", destaque: "ia" },
-              { id: "1b-3", texto: "Quando sente que está pronto, oferece horários", destaque: "ia" },
-            ],
-          },
-          {
-            rotulo: "Decidido (vai marcar)",
-            passos: [
-              { id: "1c-1", texto: "Sinal: 'quero marcar avaliação' / 'qual horário tem?'", destaque: "externo" },
-              { id: "1c-2", texto: "Pula qualificação longa — vai direto pro agendamento", destaque: "ia" },
-              { id: "1c-3", texto: "consultar_agenda + registrar_agendamento na mesma conversa", destaque: "ia" },
-            ],
-          },
-          {
-            rotulo: "Paciente recorrente",
-            passos: [
-              { id: "1d-1", texto: "Sinal: número já existe no banco (consultar_paciente bate)", destaque: "infra" },
-              { id: "1d-2", texto: "Retoma com histórico — não trata como lead novo", destaque: "ia" },
-              { id: "1d-3", texto: "Atalho direto pra reagendamento ou novo procedimento", destaque: "ia" },
-            ],
-          },
-          {
-            rotulo: "Caso complexo",
-            passos: [
-              { id: "1e-1", texto: "Sinal: pergunta médica específica, dúvida fora do escopo", destaque: "externo" },
-              { id: "1e-2", texto: "solicitar_orcamento_humano — escala pro Dr. Lucas", destaque: "ia" },
-              { id: "1e-3", texto: "Avisa o paciente que vai consultar o doutor", destaque: "ia" },
-            ],
-          },
-        ],
       },
     ],
   },
@@ -915,15 +756,6 @@ export const slides: Slide[] = [
             ],
           },
           {
-            rotulo: "Aprovação humana",
-            passos: [
-              { id: "2d-1", texto: "Configuração 'exigir aprovação' está ligada", destaque: "humano" },
-              { id: "2d-2", texto: "solicitar_aprovacao_horario antes de fechar", destaque: "ia" },
-              { id: "2d-3", texto: "Aparece em /aprovacoes-pendentes esperando você", destaque: "humano" },
-              { id: "2d-4", texto: "Aprovou → Ana fecha · Rejeitou → Ana oferece outro horário", destaque: "ia" },
-            ],
-          },
-          {
             rotulo: "Handoff (passa pro humano)",
             passos: [
               { id: "2e-1", texto: "Gatilho detectado: caso médico, reclamação, fora do escopo", destaque: "infra" },
@@ -945,7 +777,6 @@ export const slides: Slide[] = [
     subtitulo: "Vamos validar os fluxos juntos e responder qualquer dúvida",
     perguntas: [
       "Algum módulo do painel funciona diferente do que você esperava?",
-      "Alguma decisão arquitetural que você quer rever (ex: aprovação obrigatória)?",
       "Quer ajustar o tom da Ana Júlia ou as regras de movimentação do funil?",
       "Existe algum processo seu que não está coberto pelo sistema?",
       "Próximos passos: o que você gostaria de evoluir nos próximos 30 dias?",
