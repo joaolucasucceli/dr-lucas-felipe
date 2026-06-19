@@ -64,6 +64,39 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "gerar_orcamento",
+      description:
+        "Gera o ORÇAMENTO REAL (com PDF) do paciente — Caminho A. Chame SOMENTE quando TODAS estas condições estiverem satisfeitas: (1) qualificação completa = você sabe o PROCEDIMENTO desejado + a REGIÃO de maior incômodo + o paciente já MANDOU FOTO; (2) você já gerou interesse com os materiais de marketing; (3) você PERGUNTOU 'posso gerar um orçamento pra você?' e o paciente TOPOU. NÃO use pra quem só quer saber o preço aproximado e não quis qualificar — nesse caso use a FAIXA de consultar_procedimentos (Caminho B), sem PDF. Esta tool enfileira o pedido e aciona o Dr. Lucas, que define o valor; o orçamento em PDF chega pro paciente automaticamente depois — você NÃO envia nada agora nem promete prazo. Depois de chamar, responda algo curto e tranquilo tipo 'Show! Já tô preparando seu orçamento, em instantes te mando aqui.' (sem mencionar Dr. Lucas, sistema, fila ou espera longa). É idempotente — não duplica se já houver orçamento em andamento.",
+      parameters: {
+        type: "object",
+        properties: {
+          contatoId: {
+            type: "string",
+            description: "ID do lead/paciente (do contexto)",
+          },
+          conversaId: {
+            type: "string",
+            description: "ID da conversa ativa (do contexto)",
+          },
+          resumoCaso: {
+            type: "string",
+            description:
+              "Resumo do caso pro Dr. Lucas decidir o valor: procedimento desejado + região de maior incômodo + nº de fotos recebidas. Ex: 'Lipo abdome + flancos. Incomoda mais a barriga baixa. 2 fotos enviadas.'",
+          },
+          prioridade: {
+            type: "string",
+            enum: ["normal", "urgente"],
+            description:
+              "Prioridade do orçamento. Use 'urgente' só se o paciente demonstrar pressa real (ex: data marcada, viagem). Default 'normal'.",
+          },
+        },
+        required: ["contatoId", "resumoCaso"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "registrar_mensagem",
       description:
         "Registra uma mensagem na conversa do paciente no banco de dados.",

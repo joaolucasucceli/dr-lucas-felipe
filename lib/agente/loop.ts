@@ -347,6 +347,7 @@ export async function processarMensagens(
           "atualizar_lead",
           "buscar_conteudo",
           "enviar_midia",
+          "gerar_orcamento",
         ])
         if (toolsComIds.has(fn.name)) {
           if (contatoId) args.contatoId = contatoId

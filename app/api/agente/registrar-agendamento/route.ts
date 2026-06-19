@@ -96,6 +96,10 @@ export async function POST(request: NextRequest) {
       procedimentoId: finalProcedimentoId || null,
       dataHora: inicio.toISOString(),
       status: "agendado",
+      // Tipo unico no escopo da IA: a reuniao de avaliacao online = diagnostico
+      // (= reuniao de diagnostico). A IA so agenda esse evento. Os demais tipos
+      // (consulta presencial, procedimento, retorno, pos-op) saem do escopo dela.
+      tipo: "diagnostico",
       observacao: observacao || null,
       criadoPor: "ia",
     })

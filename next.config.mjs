@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // @react-pdf/renderer (geracao do PDF de orcamento) tem deps que nao devem
+  // ser bundladas pelo Next — mantem como dependencia externa no server (Node).
+  serverExternalPackages: ["@react-pdf/renderer"],
   images: {
     remotePatterns: [
       {

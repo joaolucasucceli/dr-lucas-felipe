@@ -16,8 +16,19 @@ import { baixarMidia, enviarDigitando } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
 import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
 import { obterOuCriarUsuarioIA } from "@/lib/agente/usuario-ia"
+import { processarRespostaDrLucas } from "@/lib/orcamento/processar-resposta-dr-lucas"
+
+// @react-pdf/renderer (usado pela ingestao do orcamento do Dr. Lucas) exige
+// runtime Node — nunca edge. App Router ja usa Node por padrao, mas fixamos
+// explicitamente pra blindar contra mudanca futura de config.
+export const runtime = "nodejs"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** So digitos — usado pra comparar numeros de WhatsApp. */
+function apenasDigitos(s: string): string {
+  return (s ?? "").replace(/\D+/g, "")
+}
 
 interface MensagemNormalizada {
   id: string
@@ -340,8 +351,40 @@ export async function POST(request: NextRequest) {
     .eq("ativo", true)
     .maybeSingle()
 
+  // Numero pessoal do Dr. Lucas (so digitos). Quando ele responde o orcamento
+  // (`<numero> - <valor>`) pro numero da clinica, essa mensagem chega como
+  // ENTRANTE (fromMe=false) com msg.numero === DR_LUCAS_WHATSAPP_PESSOAL.
+  const numeroDrLucas = apenasDigitos(process.env.DR_LUCAS_WHATSAPP_PESSOAL ?? "")
+
   for (const msg of mensagens) {
     if (msg.isGroup) continue
+
+    // ── Interceptador da resposta de orcamento do Dr. Lucas ──────────────
+    // RODA ANTES de qualquer lookup/criacao de contato — senao o sistema
+    // criaria um "lead" pro proprio Dr. Lucas. Detecta msg ENTRANTE vinda do
+    // numero pessoal dele e trata como ingestao de orcamento (parse numero +
+    // valor -> gera PDF -> envia pra cliente -> retoma). Defensivo: nunca
+    // lanca; em qualquer caso de msg do Dr. Lucas, faz `continue` (a msg dele
+    // NUNCA roda o loop da IA nem vira paciente).
+    if (
+      numeroDrLucas &&
+      !msg.fromMe &&
+      apenasDigitos(msg.numero) === numeroDrLucas
+    ) {
+      try {
+        await processarRespostaDrLucas({
+          textoMensagem: msg.conteudo ?? "",
+          numeroDrLucas,
+          configWa: configWaBatch,
+        })
+      } catch (err) {
+        console.error(
+          "[webhook-whatsapp] interceptador orcamento Dr. Lucas falhou:",
+          err
+        )
+      }
+      continue
+    }
 
     // Rate limit por numero do remetente. Paciente real fica bem abaixo dos
     // 30/min; quem ultrapassa e bot ou abuso (cada msg vira call OpenAI).
