@@ -132,6 +132,7 @@ export const slides: Slide[] = [
       "Agendamentos criados exclusivamente pela Ana Júlia (não tem botão manual)",
       "Pacientes entram pelo WhatsApp e aparecem no kanban automaticamente",
       "Um agente só: a Ana Júlia faz tudo, do primeiro 'oi' ao agendamento",
+      "Orçamento: a faixa na hora; o orçamento real (PDF) é o único ponto em que o Dr. Lucas entra — só pra passar o valor",
     ],
   },
   {
@@ -160,7 +161,7 @@ export const slides: Slide[] = [
           "API Routes do agente (15 endpoints)",
           "Buffer + memória em Redis",
           "Painel de gestão (12 páginas)",
-          "Handoff pro gestor quando o caso foge do escopo",
+          "Orçamento: Ana coleta → Dr. Lucas passa o valor → PDF pra cliente",
           "Realtime via Supabase WebSocket",
         ],
       },
@@ -331,7 +332,7 @@ export const slides: Slide[] = [
       "Realtime via Supabase WebSocket — não precisa atualizar",
     ],
     decisao:
-      "Você é leitor, não escritor por padrão. A Ana Júlia conduz a conversa. Você acompanha pra entender, e só intervém quando o sistema te chama (handoff).",
+      "Você é leitor, não escritor por padrão. A Ana Júlia conduz a conversa. Você acompanha pra entender — o único momento em que o Dr. Lucas entra é no orçamento (e ele só passa o valor).",
   },
   {
     tipo: "pagina",
@@ -526,7 +527,7 @@ export const slides: Slide[] = [
       "Agora vamos abrir a 'caixa preta' da IA. Você vai ver quem é Ana Júlia, o que ela sabe fazer, como ela pensa e quais são os processos que ela executa sem você precisar pedir.",
     destaques: [
       "Um agente só: a Ana Júlia conduz tudo de ponta a ponta",
-      "11 ferramentas que a Ana Júlia invoca conforme a conversa pede",
+      "13 ferramentas que a Ana Júlia invoca conforme a conversa pede",
       "4 processos técnicos de ponta a ponta + cenários reais (Bloco D)",
       "Buffer + memória inteligente pra parecer humana",
     ],
@@ -549,13 +550,13 @@ export const slides: Slide[] = [
       "Apresenta o tratamento certo com base no catálogo de Procedimentos",
       "Conduz até o agendamento — sem deixar o lead esfriar",
       "Mantém o cadastro e o funil organizados sozinha, ao longo da conversa",
-      "Reconhece os limites: te chama (handoff) quando o caso foge totalmente do escopo",
+      "Na hora do orçamento, aciona o Dr. Lucas — que só precisa responder o valor",
     ],
   },
   {
     tipo: "ferramentas",
     bloco: "Bloco C · Ana Júlia",
-    titulo: "As 11 ferramentas da Ana Júlia",
+    titulo: "As 13 ferramentas da Ana Júlia",
     ferramentas: [
       { nome: "consultar_agenda", descricao: "Cruza Google Calendar + expediente e devolve horários livres", categoria: "agenda" },
       { nome: "registrar_agendamento", descricao: "Cria evento no Google Calendar + move card pra 'Reunião Agendada'", categoria: "agenda" },
@@ -568,6 +569,8 @@ export const slides: Slide[] = [
       { nome: "buscar_conteudo", descricao: "Procura na biblioteca de Conteúdo IA o texto/mídia certo pro contexto", categoria: "conteudo" },
       { nome: "enviar_midia", descricao: "Envia foto/vídeo da biblioteca pelo WhatsApp", categoria: "conteudo" },
       { nome: "registrar_mensagem", descricao: "Persiste a mensagem no banco (auditoria + realtime)", categoria: "estado" },
+      { nome: "atualizar_lead", descricao: "Atualiza o cadastro (nome, procedimento, observações) e avança o funil — a Ana mantém tudo em dia sozinha", categoria: "estado" },
+      { nome: "gerar_orcamento", descricao: "Aciona o Dr. Lucas pra precificar; ele responde o valor e o sistema gera o PDF pra paciente", categoria: "humano" },
     ],
   },
   {
@@ -619,19 +622,17 @@ export const slides: Slide[] = [
   {
     tipo: "fluxograma",
     bloco: "Bloco C · Ana Júlia",
-    titulo: "Processo 3 — Handoff (o único momento em que ela chama você)",
-    subtitulo: "99% a Ana Júlia resolve sozinha. Quando a conversa foge do escopo, ela te passa o bastão.",
+    titulo: "Processo 3 — Orçamento (Ana + Dr. Lucas)",
+    subtitulo: "O único momento em que o Dr. Lucas entra: ele só passa o valor, a Ana cuida de todo o resto.",
     passos: [
-      {
-        id: "1",
-        texto: "Ana Júlia detecta uma conversa fora do escopo",
-        detalhe: "Reclamação séria, questão médica específica, algo que pede o Dr. Lucas",
-        destaque: "ia",
-      },
-      { id: "2", texto: "notificar_handoff alerta você", destaque: "infra" },
-      { id: "3", texto: "Ana Júlia pausa a resposta automática naquele chat", destaque: "ia" },
-      { id: "4", texto: "Você assume manualmente e decide", destaque: "humano" },
-      { id: "5", texto: "Quando quiser, devolve o chat pra Ana Júlia", destaque: "humano" },
+      { id: "1", texto: "Paciente qualificado pede o valor", detalhe: "Já passou por procedimento + região + foto", destaque: "externo" },
+      { id: "2", texto: "Ana pergunta: 'posso gerar um orçamento pra você?'", destaque: "ia" },
+      { id: "3", texto: "Paciente diz sim → Ana chama gerar_orcamento", destaque: "ia" },
+      { id: "4", texto: "Sistema avisa o Dr. Lucas no WhatsApp dele", detalhe: "Manda nome + telefone + resumo do caso", destaque: "infra" },
+      { id: "5", texto: "Dr. Lucas responde só 'número - valor'", detalhe: "Ex.: 5545999998888 - 8500. Não precisa fazer mais nada", destaque: "humano" },
+      { id: "6", texto: "Sistema gera o PDF do orçamento", detalhe: "Identidade + foto do Dr. Lucas, o procedimento, o valor e a validade", destaque: "infra" },
+      { id: "7", texto: "Ana envia o PDF pra paciente e retoma a conversa", destaque: "ia" },
+      { id: "8", texto: "Paciente aprova → Ana agenda a avaliação com o Dr. Lucas", destaque: "ia" },
     ],
   },
   {
@@ -672,12 +673,12 @@ export const slides: Slide[] = [
     bloco: "Bloco D · Cenários reais",
     titulo: "Como a Ana Júlia age em cada situação",
     descricao:
-      "Até aqui você viu como o sistema funciona por dentro. Agora vamos ver como ele se comporta na prática — em cada fase do funil e nos protocolos especiais (confirmação, no-show, reagendamento, handoff).",
+      "Até aqui você viu como o sistema funciona por dentro. Agora vamos ver como ele se comporta na prática — em cada fase do funil e nos protocolos especiais (confirmação, no-show, reagendamento, orçamento aproximado).",
     destaques: [
       "As 4 fases do funil pela ótica da Ana Júlia",
       "Como ela conduz a conversa naturalmente, sem caixinhas de 'tipo de paciente'",
       "Protocolos especiais que rodam sozinhos (confirmação D-1, no-show, reagendamento)",
-      "Handoff: o único momento em que ela te chama",
+      "Orçamento: a faixa aproximada na hora, ou o orçamento real com PDF via Dr. Lucas",
     ],
   },
   {
@@ -756,12 +757,11 @@ export const slides: Slide[] = [
             ],
           },
           {
-            rotulo: "Handoff (passa pro humano)",
+            rotulo: "Só quer preço (orçamento aproximado)",
             passos: [
-              { id: "2e-1", texto: "Gatilho detectado: caso médico, reclamação, fora do escopo", destaque: "infra" },
-              { id: "2e-2", texto: "notificar_handoff alerta o gestor", destaque: "ia" },
-              { id: "2e-3", texto: "Ana Júlia pausa a resposta automática naquele chat", destaque: "ia" },
-              { id: "2e-4", texto: "Você assume manualmente até decidir devolver pra IA", destaque: "humano" },
+              { id: "2e-1", texto: "Paciente chega pedindo valor e não quer qualificar", destaque: "externo" },
+              { id: "2e-2", texto: "Ana manda a FAIXA aproximada do procedimento", detalhe: "Direto do cadastro — sem PDF e sem acionar o Dr. Lucas", destaque: "ia" },
+              { id: "2e-3", texto: "Se a pessoa resolver qualificar → vira orçamento real (Processo 3)", destaque: "ia" },
             ],
           },
         ],

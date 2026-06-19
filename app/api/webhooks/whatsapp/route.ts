@@ -30,6 +30,25 @@ function apenasDigitos(s: string): string {
   return (s ?? "").replace(/\D+/g, "")
 }
 
+/** Normaliza um numero BR pra "DDD + 8 digitos locais" (10 digitos), removendo
+ *  o codigo do pais (55) e o nono digito opcional do celular. Resolve a
+ *  ambiguidade do nono digito: `5545991237219` e `554591237219` viram o mesmo
+ *  `4591237219`. Usado pra reconhecer o Dr. Lucas independente do formato. */
+function normalizarNumeroBR(s: string): string {
+  let d = apenasDigitos(s)
+  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2) // tira o pais
+  // Agora d = DDD(2) + local. Se local tem 9 digitos e comeca com 9, tira o 9.
+  if (d.length === 11 && d[2] === "9") d = d.slice(0, 2) + d.slice(3)
+  return d.slice(-10) // DDD + 8 (estavel)
+}
+
+/** Compara dois numeros BR tolerando o nono digito e o codigo do pais. */
+function mesmoNumeroBR(a: string, b: string): boolean {
+  const na = normalizarNumeroBR(a)
+  const nb = normalizarNumeroBR(b)
+  return na.length >= 10 && na === nb
+}
+
 interface MensagemNormalizada {
   id: string
   chatId: string
@@ -369,7 +388,7 @@ export async function POST(request: NextRequest) {
     if (
       numeroDrLucas &&
       !msg.fromMe &&
-      apenasDigitos(msg.numero) === numeroDrLucas
+      mesmoNumeroBR(msg.numero, numeroDrLucas)
     ) {
       try {
         await processarRespostaDrLucas({
