@@ -204,8 +204,6 @@ function RenderSlide({ slide }: { slide: Slide }) {
       return <SlidePagina slide={slide} />
     case "agente-quem":
       return <SlideAgenteQuem slide={slide} />
-    case "dupla-ia":
-      return <SlideDuplaIA slide={slide} />
     case "ferramentas":
       return <SlideFerramentas slide={slide} />
     case "fluxograma":
@@ -432,44 +430,6 @@ function SlideAgenteQuem({
             </li>
           ))}
         </ul>
-      </div>
-    </div>
-  )
-}
-
-function SlideDuplaIA({ slide }: { slide: Extract<Slide, { tipo: "dupla-ia" }> }) {
-  return (
-    <div>
-      <h2 className="text-4xl font-bold tracking-tight text-zinc-50">{slide.titulo}</h2>
-      <div className="mt-10 grid grid-cols-2 gap-5">
-        {[slide.ana, slide.analista].map((agente, i) => (
-          <div
-            key={agente.titulo}
-            className={cn(
-              "rounded-xl border p-6",
-              i === 0
-                ? "border-emerald-500/40 bg-emerald-500/5"
-                : "border-purple-500/40 bg-purple-500/5"
-            )}
-          >
-            <div className="mb-1 text-2xl font-bold text-zinc-50">{agente.titulo}</div>
-            <div className="font-mono text-xs text-zinc-500">{agente.modelo}</div>
-            <div className="mt-3 text-base font-medium text-zinc-300">{agente.papel}</div>
-            <ul className="mt-5 space-y-2">
-              {agente.bullets.map((b) => (
-                <li key={b} className="flex items-start gap-2 text-sm text-zinc-300">
-                  <span
-                    className={cn(
-                      "mt-1 h-1 w-1 flex-shrink-0 rounded-full",
-                      i === 0 ? "bg-emerald-400" : "bg-purple-400"
-                    )}
-                  />
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
       </div>
     </div>
   )

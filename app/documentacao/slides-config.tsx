@@ -84,13 +84,6 @@ export type Slide =
       pilares: string[]
     }
   | {
-      tipo: "dupla-ia"
-      bloco: string
-      titulo: string
-      ana: { titulo: string; modelo: string; papel: string; bullets: string[] }
-      analista: { titulo: string; modelo: string; papel: string; bullets: string[] }
-    }
-  | {
       tipo: "ferramentas"
       bloco: string
       titulo: string
