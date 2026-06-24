@@ -281,15 +281,13 @@ export const slides: Slide[] = [
     titulo: "Dashboard",
     rota: "/dashboard",
     icone: Sparkles,
-    papel: "Visão da IA — você abre o painel e bate o olho no volume de leads, funil e atividade da Ana Júlia.",
+    papel: "Visão objetiva do funil — você abre o painel e bate o olho no total de leads e na distribuição por etapa.",
     funcionalidades: [
-      "Métricas principais: leads totais, leads novos, agendamentos e conversão",
+      "Métrica principal: total de leads ativos",
       "Gráfico de distribuição dos leads por etapa do funil",
-      "Resumo da atividade da Ana Júlia: mensagens, follow-ups e confirmações",
-      "Filtro de período para ler a operação por hoje, semana, mês ou total",
     ],
     decisao:
-      "Dashboard como leitura objetiva da IA. Ele não exibe alertas manuais, evoluções clínicas ou exportações; a ação continua nas páginas específicas.",
+      "Dashboard como leitura mínima do funil. Ele não exibe período, alertas manuais, evoluções clínicas, exportações ou resumo de atividade; a ação continua nas páginas específicas.",
   },
   {
     tipo: "pagina",
@@ -413,7 +411,7 @@ export const slides: Slide[] = [
       {
         id: "1",
         texto: "Início do dia — abre /dashboard",
-        detalhe: "Bate o olho em: leads novos, distribuição no funil e atividade da Ana Júlia",
+        detalhe: "Bate o olho em: total de leads e distribuição no funil",
         destaque: "humano",
       },
       {

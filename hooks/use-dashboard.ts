@@ -10,40 +10,22 @@ interface EtapaFunil {
   cor: string
 }
 
-interface OrigemContato {
-  origem: string
-  total: number
-}
-
 export interface DashboardMetricas {
   totalLeads: number
-  leadsNovosNoPeriodo: number
-  taxaConversao: number
-  agendamentosNoPeriodo: number
   leadsPorEtapa: EtapaFunil[]
-  leadsPorOrigem: OrigemContato[]
-  mensagensEnviadasPelaIA: number
-  followUpsEnviados: number
-  confirmacaoEnviadas: number
-  leadsHoje: number
-  agendamentosSemana: number
-  periodo: string
-  dataInicio: string | null
-  dataFim: string
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
-export function useDashboard(periodo: string = "mes") {
+export function useDashboard() {
   const { data, error, isLoading, mutate } = useSWR<DashboardMetricas>(
-    `/api/dashboard/metricas?periodo=${periodo}`,
+    "/api/dashboard/metricas",
     fetcher,
     { refreshInterval: 300000, revalidateOnFocus: false }
   )
 
-  // Realtime: atualizar métricas quando leads ou agendamentos mudarem
+  // Realtime: atualizar métricas quando leads mudarem de volume ou etapa.
   useRealtimeTabela("contatos", () => mutate())
-  useRealtimeTabela("agendamentos", () => mutate())
 
   return {
     metricas: data ?? null,
