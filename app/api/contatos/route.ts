@@ -99,19 +99,6 @@ export async function POST(request: NextRequest) {
 
   const tsAgora = agora()
 
-  // Contato criado manual nasce sob responsabilidade da IA quando for lead
-  // (atendimento autonomo). Pra paciente: sem responsavel default.
-  let responsavelIdDefault: string | null = null
-  if (!resto.responsavelId && tipoSolicitado === "lead") {
-    const { data: iaUser } = await supabaseAdmin
-      .from("usuarios")
-      .select("id")
-      .eq("tipo", "ia")
-      .is("deletadoEm", null)
-      .maybeSingle()
-    responsavelIdDefault = iaUser?.id ?? null
-  }
-
   const insertData = {
     id: criarId(),
     tipo: "lead" as const, // sempre cria como lead; promove logo apos se preciso
@@ -120,7 +107,7 @@ export async function POST(request: NextRequest) {
     consentimentoLgpd: consentimentoLgpd ?? false,
     consentimentoLgpdEm: consentimentoLgpd ? tsAgora : null,
     ...resto,
-    responsavelId: resto.responsavelId ?? responsavelIdDefault,
+    responsavelId: resto.responsavelId ?? null,
   } as never
 
   const { data: contato, error } = await supabaseAdmin

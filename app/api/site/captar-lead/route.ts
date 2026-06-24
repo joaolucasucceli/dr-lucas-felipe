@@ -22,18 +22,6 @@ export async function POST(request: Request) {
 
     const { nome, whatsapp, procedimentoInteresse } = resultado.data
 
-    const { data: usuarioIa } = await supabaseAdmin
-      .from("usuarios")
-      .select("id")
-      .eq("tipo", "ia")
-      .eq("ativo", true)
-      .is("deletadoEm", null)
-      .maybeSingle()
-
-    if (!usuarioIa) {
-      console.warn("[captar-lead] Nenhum usuário IA ativo encontrado — contato será criado sem responsável")
-    }
-
     const { data: contatoExistente } = await supabaseAdmin
       .from("contatos")
       .select("id, responsavelId")
@@ -56,10 +44,6 @@ export async function POST(request: Request) {
         atualizadoEm: consentimentoEm,
       }
 
-      if (!contatoExistente.responsavelId && usuarioIa) {
-        dadosUpdate.responsavelId = usuarioIa.id
-      }
-
       await supabaseAdmin
         .from("contatos")
         .update(dadosUpdate)
@@ -78,7 +62,6 @@ export async function POST(request: Request) {
           statusFunil: "acolhimento",
           consentimentoLgpd: true,
           consentimentoLgpdEm: consentimentoEm,
-          responsavelId: usuarioIa?.id || null,
         })
     }
 

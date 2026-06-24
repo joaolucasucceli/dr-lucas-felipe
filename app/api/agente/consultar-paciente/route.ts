@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarId, agora } from "@/lib/db-utils"
-import { obterOuCriarUsuarioIA } from "@/lib/agente/usuario-ia"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -33,8 +32,6 @@ export async function POST(request: NextRequest) {
   let contato = contatoExistente
 
   if (!contato) {
-    const usuarioIaId = await obterOuCriarUsuarioIA()
-
     const { data: novoContato, error: criarError } = await supabaseAdmin
       .from("contatos")
       .insert({
@@ -44,7 +41,6 @@ export async function POST(request: NextRequest) {
         whatsapp,
         origem: "whatsapp",
         statusFunil: "acolhimento",
-        responsavelId: usuarioIaId,
       })
       .select(
         "id, nome, whatsapp, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"

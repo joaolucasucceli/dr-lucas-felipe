@@ -15,7 +15,6 @@ import {
 import { baixarMidia, enviarDigitando } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
 import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
-import { obterOuCriarUsuarioIA } from "@/lib/agente/usuario-ia"
 import { processarRespostaDrLucas } from "@/lib/orcamento/processar-resposta-dr-lucas"
 
 // @react-pdf/renderer (usado pela ingestao do orcamento do Dr. Lucas) exige
@@ -514,8 +513,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (!contato) {
-      const usuarioIaId = await obterOuCriarUsuarioIA()
-
       const { data: novoContato, error: createErr } = await supabaseAdmin
         .from("contatos")
         .insert({
@@ -525,7 +522,6 @@ export async function POST(request: NextRequest) {
           nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
           whatsapp: msg.numero,
           origem: "whatsapp",
-          responsavelId: usuarioIaId,
         })
         .select("*")
         .single()

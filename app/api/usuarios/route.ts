@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { nome, email, senha, perfil, tipo } = parsed.data
+  const { nome, email, senha, perfil } = parsed.data
 
   const { data: existente } = await supabaseAdmin
     .from("usuarios")
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       email,
       senha: senhaHash,
       perfil,
-      tipo,
+      tipo: "humano",
     })
     .select(SELECT_USUARIO)
     .single()

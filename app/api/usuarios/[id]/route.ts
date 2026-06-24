@@ -104,37 +104,13 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
   }
 
-  if (usuario.tipo === "ia") {
-    return NextResponse.json(
-      { error: "Não é possível remover o usuário IA" },
-      { status: 403 }
-    )
-  }
-
-  // Reapontar contatos onde esse usuario era responsavel:
-  // - leads -> IA (atendimento autonomo continua)
-  // - pacientes -> null (cabe ao gestor reatribuir manualmente)
+  // Reapontar contatos onde esse usuario era responsavel para "sem humano".
+  // O atendimento autonomo passa a ser controlado por conversas.modoConversa.
   const tsAgora = agora()
-  const { data: iaUser } = await supabaseAdmin
-    .from("usuarios")
-    .select("id")
-    .eq("tipo", "ia")
-    .is("deletadoEm", null)
-    .maybeSingle()
-
-  if (iaUser) {
-    await supabaseAdmin
-      .from("contatos")
-      .update({ responsavelId: iaUser.id, atualizadoEm: tsAgora })
-      .eq("responsavelId", id)
-      .eq("tipo", "lead")
-  }
-
   await supabaseAdmin
     .from("contatos")
     .update({ responsavelId: null, atualizadoEm: tsAgora })
     .eq("responsavelId", id)
-    .eq("tipo", "paciente")
 
   const { error } = await supabaseAdmin
     .from("usuarios")

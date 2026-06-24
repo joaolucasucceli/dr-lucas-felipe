@@ -32,14 +32,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "IA já está ativa nesta conversa" }, { status: 400 })
   }
 
-  const { data: usuarioIa } = await supabaseAdmin
-    .from("usuarios")
-    .select("id")
-    .eq("tipo", "ia")
-    .eq("ativo", true)
-    .is("deletadoEm", null)
-    .maybeSingle()
-
   const { error: convError } = await supabaseAdmin
     .from("conversas")
     .update({
@@ -55,7 +47,7 @@ export async function POST(req: Request) {
 
   await supabaseAdmin
     .from("contatos")
-    .update({ responsavelId: usuarioIa?.id || null, atualizadoEm: agora() })
+    .update({ responsavelId: null, atualizadoEm: agora() })
     .eq("id", conversa.contatoId)
 
   return NextResponse.json({ sucesso: true, modoConversa: "ia" })

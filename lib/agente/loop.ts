@@ -139,25 +139,15 @@ export async function processarMensagens(
   }
 
   if (contatoId) {
-    const { data: usuarioIa } = await supabaseAdmin
-      .from("usuarios")
-      .select("id")
-      .eq("tipo", "ia")
-      .eq("ativo", true)
-      .is("deletadoEm", null)
+    const { data: contatoResponsavel } = await supabaseAdmin
+      .from("contatos")
+      .select("responsavelId")
+      .eq("id", contatoId)
       .maybeSingle()
 
-    if (usuarioIa) {
-      const { data: contatoAtual } = await supabaseAdmin
-        .from("contatos")
-        .select("responsavelId")
-        .eq("id", contatoId)
-        .maybeSingle()
-
-      if (contatoAtual?.responsavelId && contatoAtual.responsavelId !== usuarioIa.id) {
-        console.log(`[Agente] IA não é responsável pelo contato ${contatoId } — não responde`)
-        return null
-      }
+    if (contatoResponsavel?.responsavelId) {
+      console.log(`[Agente] Atendimento humano ativo no contato ${contatoId} - automacao pausada`)
+      return null
     }
 
     // Handoff humano ativo: IA pausa ate o Dr. Lucas assumir o chat.
