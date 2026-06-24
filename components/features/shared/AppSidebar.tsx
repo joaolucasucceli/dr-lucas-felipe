@@ -38,23 +38,13 @@ interface NavGroup {
 
 const navGroups: NavGroup[] = [
   {
-    label: "Geral",
+    label: "Comercial",
     itens: [
       {
         titulo: "Dashboard",
         href: "/dashboard",
         icone: <LayoutDashboard className="h-4 w-4" />,
       },
-      {
-        titulo: "Documentação",
-        href: "/documentacao",
-        icone: <Presentation className="h-4 w-4" />,
-      },
-    ],
-  },
-  {
-    label: "Comercial",
-    itens: [
       {
         titulo: "Atendimentos",
         href: "/atendimentos",
@@ -110,6 +100,11 @@ const navGroups: NavGroup[] = [
         icone: <Users className="h-4 w-4" />,
         perfis: ["gestor"],
       },
+      {
+        titulo: "Documentação",
+        href: "/documentacao",
+        icone: <Presentation className="h-4 w-4" />,
+      },
     ],
   },
 ]
@@ -155,7 +150,7 @@ function NavContent({ perfil }: { perfil: string }) {
                   {ehAtendimentos && naoLidas > 0 && (
                     <span
                       className="ml-auto h-2 w-2 rounded-full bg-primary"
-                      aria-label="Ha atendimentos nao lidos"
+                      aria-label="Há atendimentos não lidos"
                     />
                   )}
                 </Link>
