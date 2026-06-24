@@ -6,7 +6,6 @@ import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
 import {
-  detectarGatilhoMidia,
   detectarGatilhoProcedimentoMidia,
   detectarGatilhoVisualMidia,
 } from "@/lib/agente/gatilho-midia"
@@ -239,18 +238,21 @@ export async function processarMensagens(
       { role: "user", content: textoBuffer },
     ]
 
-    // Heurística determinística: procedimento ou prova visual explícita força
-    // `buscar_conteudo` na primeira iteração. Envio de mídia só é forçado
-    // quando há mídia nova e o momento não quebra o acolhimento.
+    // Heurística determinística: conteúdo/mídia só é forçado depois que o
+    // acolhimento já tem nome, evitando pular apresentação/pergunta inicial.
     const gatilhoVisual = detectarGatilhoVisualMidia(textoBuffer)
     const gatilhoProcedimento = detectarGatilhoProcedimentoMidia(textoBuffer)
+    const temNomeAcolhido = Boolean(contextoContato.nome)
     const contextoProntoParaMidia = Boolean(
-      contextoContato.nome && contextoContato.procedimento
+      temNomeAcolhido && contextoContato.procedimento
     )
     const forcarBuscaConteudo =
-      detectarGatilhoMidia(textoBuffer) ||
-      (contextoProntoParaMidia && contextoContato.etapa === "qualificacao")
-    const forcarEnvioMidia = gatilhoVisual || (gatilhoProcedimento && contextoProntoParaMidia)
+      temNomeAcolhido &&
+      (gatilhoVisual ||
+        (gatilhoProcedimento && contextoProntoParaMidia) ||
+        (contextoProntoParaMidia && contextoContato.etapa === "qualificacao"))
+    const forcarEnvioMidia =
+      temNomeAcolhido && (gatilhoVisual || (gatilhoProcedimento && contextoProntoParaMidia))
 
     let resposta = await openai.chat.completions.create({
       model: "gpt-4o",
