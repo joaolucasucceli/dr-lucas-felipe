@@ -26,32 +26,6 @@ import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
 import { ContatoForm } from "@/components/features/contatos/ContatoForm"
 import { useContatos, type Contato } from "@/hooks/use-contatos"
-import { formatarData } from "@/lib/format"
-
-// JLU-171 (D 25/05): calcula Ultima consulta (max dataHora status=realizado)
-// e Proxima consulta (min dataHora futura status=agendado|confirmado|remarcado).
-function calcularConsultas(c: Contato): { ultima: string | null; proxima: string | null } {
-  const ags = c.agendamentos ?? []
-  if (ags.length === 0) return { ultima: null, proxima: null }
-  const agora = Date.now()
-  const realizadas = ags
-    .filter((a) => a.status === "realizado")
-    .map((a) => a.dataHora)
-    .sort()
-    .reverse()
-  const futuras = ags
-    .filter(
-      (a) =>
-        ["agendado", "confirmado", "remarcado"].includes(a.status) &&
-        new Date(a.dataHora).getTime() > agora
-    )
-    .map((a) => a.dataHora)
-    .sort()
-  return {
-    ultima: realizadas[0] ?? null,
-    proxima: futuras[0] ?? null,
-  }
-}
 
 interface Procedimento {
   id: string
@@ -64,8 +38,6 @@ export default function ContatosPage() {
   const { data: session } = useSession()
   const [pagina, setPagina] = useState(1)
   const [busca, setBusca] = useState("")
-  // JLU-171 (P1 25/05): aceita `?tipo=paciente` (atalho do sidebar "Pacientes").
-  // Lucas chega pela sidebar e ja ve so pacientes — abre prontuario direto.
   const tipoInicial = (() => {
     const v = searchParams.get("tipo")
     return v === "lead" || v === "paciente" ? v : "todos"
@@ -153,8 +125,6 @@ export default function ContatosPage() {
       .catch(() => {})
   }, [])
 
-  const ehViewPacientes = tipo === "paciente"
-
   const colunas: ColunaConfig<Contato>[] = [
     {
       chave: "nome",
@@ -219,41 +189,6 @@ export default function ContatosPage() {
       classesCelula: "hidden lg:table-cell",
       renderizar: (c) => new Date(c.criadoEm).toLocaleDateString("pt-BR"),
     },
-    // JLU-171 (D 25/05): so aparece na view de pacientes
-    ...(ehViewPacientes
-      ? [
-          {
-            chave: "agendamentos" as keyof Contato,
-            titulo: "Última consulta",
-            classesCelula: "hidden md:table-cell",
-            renderizar: (c: Contato) => {
-              const { ultima } = calcularConsultas(c)
-              return ultima ? (
-                <span className="text-sm text-muted-foreground">
-                  {formatarData(ultima, "dd/MM/yyyy")}
-                </span>
-              ) : (
-                <span className="text-xs text-muted-foreground italic">nenhuma</span>
-              )
-            },
-          } satisfies ColunaConfig<Contato>,
-          {
-            chave: "agendamentos" as keyof Contato,
-            titulo: "Próxima consulta",
-            classesCelula: "hidden md:table-cell",
-            renderizar: (c: Contato) => {
-              const { proxima } = calcularConsultas(c)
-              return proxima ? (
-                <span className="text-sm font-medium text-emerald-500">
-                  {formatarData(proxima, "dd/MM/yyyy 'às' HH:mm")}
-                </span>
-              ) : (
-                <span className="text-xs text-muted-foreground italic">—</span>
-              )
-            },
-          } satisfies ColunaConfig<Contato>,
-        ]
-      : []),
   ]
 
   if (erro) {
@@ -267,16 +202,9 @@ export default function ContatosPage() {
     )
   }
 
-  // JLU-171 (P1): se entrou pelo atalho "Pacientes" do sidebar, ajusta titulo.
-  const tituloPage = tipo === "paciente" ? "Pacientes" : "Contatos"
-  const descricaoPage =
-    tipo === "paciente"
-      ? "Pacientes (lead promovidos). Clique pra abrir o prontuário."
-      : "Leads e pacientes da clínica"
-
   return (
     <div>
-      <PageHeader titulo={tituloPage} descricao={descricaoPage}>
+      <PageHeader titulo="Contatos" descricao="Leads e pacientes da clínica">
         <Button
           variant="outline"
           size="sm"

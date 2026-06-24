@@ -5,13 +5,9 @@ import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
 import { criarContatoSchema, tipoContatoSchema } from "@/lib/validations/contato"
 import { criarId, agora } from "@/lib/db-utils"
 
-// JLU-171 (D 25/05): embed agendamentos pra que /contatos?tipo=paciente
-// possa exibir Ultima consulta + Proxima consulta nas colunas da tabela.
-// Filtro de status feito no client (PostgREST nao filtra embeds inline).
 const SELECT_CONTATO =
   "id, tipo, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, arquivado, cpf, criadoEm, promovidoEm, " +
   "responsavel:usuarios!contatos_responsavelId_fkey(id, nome), " +
-  "agendamentos(id, dataHora, status), " +
   "prontuario:prontuarios(id, numero)"
 
 export async function GET(request: NextRequest) {

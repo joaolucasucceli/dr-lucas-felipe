@@ -173,7 +173,7 @@ export const slides: Slide[] = [
   {
     tipo: "modulos",
     bloco: "Bloco A · Visão geral",
-    titulo: "Módulos do painel — 9 áreas, uma central",
+    titulo: "Módulos do painel — áreas principais da central",
     modulos: [
       {
         icone: Sparkles,
@@ -269,7 +269,7 @@ export const slides: Slide[] = [
     descricao:
       "A partir daqui vamos percorrer cada uma das páginas do seu painel. Pra cada uma você vê: o papel dela, o que faz, e a decisão por trás da forma como está implementada.",
     destaques: [
-      "10 páginas no total + um slide de rotina diária",
+      "Páginas principais do painel + um slide de rotina diária",
       "Cada slide: papel + funcionalidades + decisão arquitetural",
       "Ao final: como tudo se conecta na sua rotina (manhã, tarde, fim do dia)",
       "Você pode pausar em qualquer uma e perguntar o porquê",
