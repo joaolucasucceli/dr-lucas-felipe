@@ -45,12 +45,12 @@ export default function DashboardPage() {
     )
   }
 
-  const etapasAntesDoTotal = metricas.leadsPorEtapa.slice(0, 2)
-  const etapasDepoisDoTotal = metricas.leadsPorEtapa.slice(2)
   const cardsFunil = [
-    ...etapasAntesDoTotal.map((etapa) => ({ tipo: "etapa" as const, etapa })),
     { tipo: "total" as const },
-    ...etapasDepoisDoTotal.map((etapa) => ({ tipo: "etapa" as const, etapa })),
+    ...metricas.leadsPorEtapa.map((etapa) => ({
+      tipo: "etapa" as const,
+      etapa,
+    })),
   ]
 
   return (
