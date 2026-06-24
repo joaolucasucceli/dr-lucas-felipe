@@ -9,10 +9,8 @@ import {
   UserSearch,
   Stethoscope,
   HeartPulse,
-  Bot,
   Calendar,
   CalendarDays,
-  CalendarCheck2,
   MessageCircle,
   Users,
   BookOpen,
@@ -78,12 +76,6 @@ const navGroups: NavGroup[] = [
         href: "/contatos?tipo=paciente",
         icone: <ClipboardList className="h-4 w-4" />,
       },
-      {
-        titulo: "Consultas realizadas",
-        href: "/consultas-realizadas",
-        icone: <CalendarCheck2 className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
     ],
   },
   {
@@ -104,24 +96,8 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Colaboradores",
-    itens: [
-      {
-        titulo: "Equipe IA",
-        href: "/equipe-ia",
-        icone: <Bot className="h-4 w-4" />,
-      },
-    ],
-  },
-  {
     label: "Sistema",
     itens: [
-      {
-        titulo: "Comportamento da IA",
-        href: "/configuracoes/comportamento-ia",
-        icone: <Bot className="h-4 w-4" />,
-        perfis: ["gestor"],
-      },
       {
         titulo: "Google Agenda",
         href: "/configuracoes/google-agenda",

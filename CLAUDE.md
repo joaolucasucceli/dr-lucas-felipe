@@ -85,7 +85,7 @@ O **data entry estruturado** (nome, procedimentoInteresse, sobreOPaciente em APP
 
 - `DashboardShell` envolve sidebar (`AppSidebar`) + header (`AppHeader`) + conteúdo
 - **Header** minimalista: só o ícone de Ajuda Contextual no desktop (mobile ganha o trigger do menu)
-- **Sidebar** com 5 grupos (gestor): Geral, Comercial, Operacional, Colaboradores, Sistema. Footer com botão Sair
+- **Sidebar** com 4 grupos (gestor): Geral, Comercial, Operacional, Sistema. Footer com botão Sair
 
 ### Convenção de Estrutura de Pastas
 
@@ -111,12 +111,12 @@ O **data entry estruturado** (nome, procedimentoInteresse, sobreOPaciente em APP
 
 | Métrica | Quantidade |
 |---------|-----------|
-| Páginas dashboard | 12 (`/dashboard`, `/atendimentos`, `/agenda`, `/contatos` + `/contatos/[id]`, `/procedimentos`, `/conteudo-ia`, `/equipe-ia`, `/configuracoes/{google-agenda,whatsapp,site,usuarios}`) |
-| Páginas totais | 15 (12 dashboard + `/login` + `/lgpd` + raiz) |
+| Páginas dashboard | 10 (`/dashboard`, `/atendimentos`, `/agenda`, `/contatos` + `/contatos/[id]`, `/procedimentos`, `/conteudo-ia`, `/configuracoes/{google-agenda,whatsapp,site,usuarios}`) |
+| Páginas totais | 13 (10 dashboard + `/login` + `/lgpd` + raiz) |
 | Endpoints API | 83 |
 | Tabelas no banco | 24 |
 | Enums | 12 |
-| Componentes | 95 (29 UI + 66 features) |
+| Componentes | 93 (29 UI + 64 features) |
 | Hooks customizados | 19 |
 | Migrations | 9 |
 
@@ -128,13 +128,13 @@ _Nenhuma issue técnica conhecida no momento. Issues abertas no Linear são entr
 
 Sistema em **modo manutenção** após auditoria final de entrega (JLAU-609, 2026-04-21) + ondas de simplificação de UI (JLAU-989 → JLAU-995, 2026-04-26). Todos os módulos core entregues:
 - Site público institucional (8 seções)
-- Painel de gestão (12 páginas dashboard)
+- Painel de gestão (10 páginas dashboard)
 - Agente IA WhatsApp (agente único Ana Júlia — 100% autônomo)
 - Pacientes + Protocolos (bônus)
 
 Refatorações recentes (2026-04-26):
-- **Sidebar consolidada**: 16 → 12 itens (gestor). Eliminado dropdown do header, Meu Perfil, Configurações (hub), Tipos de Procedimento (página), Mídia Marketing como página dedicada, perfis Ana Júlia/Eduarda separados
-- **Novas páginas com Tabs**: `/conteudo-ia` (Conteúdo em Texto + Conteúdo em Mídia). `/equipe-ia` agora é só a Ana Júlia (Eduarda removida 19/06/2026)
+- **Sidebar consolidada**: 16 → 11 itens (gestor). Eliminado dropdown do header, Meu Perfil, Configurações (hub), Tipos de Procedimento (página), Mídia Marketing como página dedicada, histórico de consultas como página dedicada e perfis Ana Júlia/Eduarda separados
+- **Página com Tabs**: `/conteudo-ia` (Conteúdo em Texto + Conteúdo em Mídia)
 - **Header limpo**: removidos busca global, notificações, theme toggle. Sobra apenas Ajuda Contextual
 - **Tema dark-only** via `forcedTheme`
 - **Padrão modal consolidado** em 100% das edições (exceto Contato)

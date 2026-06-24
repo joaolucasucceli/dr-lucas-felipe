@@ -1,20 +1,12 @@
 import {
-  Bot,
-  Brain,
   Calendar,
-  CalendarCheck2,
   Cog,
-  Database,
   FileText,
-  Inbox,
   KanbanSquare,
   MessageSquare,
-  ShieldCheck,
   Sparkles,
   Stethoscope,
   Users,
-  Wand2,
-  Workflow,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -208,12 +200,6 @@ export const slides: Slide[] = [
         descricao: "Visão da agenda + Google Calendar",
       },
       {
-        icone: CalendarCheck2,
-        nome: "Consultas Realizadas",
-        rota: "/consultas-realizadas",
-        descricao: "Histórico cronológico de consultas que aconteceram",
-      },
-      {
         icone: Users,
         nome: "Contatos",
         rota: "/contatos",
@@ -230,12 +216,6 @@ export const slides: Slide[] = [
         nome: "Conteúdo IA",
         rota: "/conteudo-ia",
         descricao: "Textos e mídias que a Ana usa",
-      },
-      {
-        icone: Bot,
-        nome: "Equipe IA",
-        rota: "/equipe-ia",
-        descricao: "Configura a Ana Júlia",
       },
     ],
   },
@@ -380,22 +360,6 @@ export const slides: Slide[] = [
   {
     tipo: "pagina",
     bloco: "Bloco B · Tour pelo painel",
-    titulo: "Consultas Realizadas",
-    rota: "/consultas-realizadas",
-    icone: CalendarCheck2,
-    papel: "Histórico de consultas que já aconteceram — atalho rápido pro prontuário do paciente sem passar pelo funil.",
-    funcionalidades: [
-      "Lista cronológica reversa de agendamentos com status 'realizado'",
-      "Mostra paciente, procedimento, data/hora e observações do atendimento",
-      "Click em qualquer linha abre a ficha do contato (onde mora o prontuário)",
-      "Acesso restrito ao gestor (Dr. Lucas)",
-    ],
-    decisao:
-      "Pedido direto do Dr. Lucas (JLU-171). O funil serve pra acompanhar quem está chegando; esta página serve pra acompanhar quem já passou. Atalho que evita ter que filtrar agendamentos por status na agenda.",
-  },
-  {
-    tipo: "pagina",
-    bloco: "Bloco B · Tour pelo painel",
     titulo: "Procedimentos",
     rota: "/procedimentos",
     icone: Stethoscope,
@@ -428,31 +392,14 @@ export const slides: Slide[] = [
   {
     tipo: "pagina",
     bloco: "Bloco B · Tour pelo painel",
-    titulo: "Equipe IA",
-    rota: "/equipe-ia",
-    icone: Bot,
-    papel: "Configuração da Ana Júlia — a IA que conversa com o paciente e mantém o funil organizado.",
-    funcionalidades: [
-      "Persona, tom de voz e instruções específicas da Ana Júlia",
-      "Regras de como ela conduz a conversa e move o funil",
-      "Limites e travas operacionais",
-      "Histórico de mudanças (auditoria)",
-    ],
-    decisao:
-      "Você ajusta o comportamento da Ana Júlia SEM mexer em código. Mudança aqui = imediata. É aqui que você afina o tom e as regras dela.",
-  },
-  {
-    tipo: "pagina",
-    bloco: "Bloco B · Tour pelo painel",
     titulo: "Configurações",
     rota: "/configuracoes/*",
     icone: Cog,
-    papel: "Integrações externas e administração — Google, WhatsApp, usuários, comportamento da IA.",
+    papel: "Integrações externas e administração — Google, WhatsApp e usuários.",
     funcionalidades: [
       "/configuracoes/google-agenda — conectar conta Google + horários de expediente",
       "/configuracoes/whatsapp — credenciais Uazapi + número conectado",
       "/configuracoes/usuarios — quem acessa o painel (gestor / atendente)",
-      "/configuracoes/comportamento-ia — regras adicionais e travas",
     ],
     decisao:
       "Cada integração tem sua tela própria. Você troca o número de WhatsApp ou a conta do Google sem precisar de devolutiva técnica — está sempre acessível.",
@@ -477,7 +424,7 @@ export const slides: Slide[] = [
       },
       {
         id: "3",
-        texto: "Após cada consulta — abre /consultas-realizadas",
+        texto: "Após cada consulta — abre /agenda",
         detalhe: "Click no paciente → ficha completa → registra o prontuário no campo 'Sobre o paciente'",
         destaque: "humano",
       },
@@ -496,7 +443,7 @@ export const slides: Slide[] = [
             rotulo: "Resposta da IA esquisita",
             passos: [
               { id: "4b-1", texto: "/conteudo-ia → ajusta texto/mídia que ela está usando", destaque: "humano" },
-              { id: "4b-2", texto: "Ou /equipe-ia → ajusta o tom e as regras da Ana Júlia", destaque: "humano" },
+              { id: "4b-2", texto: "Valida a próxima conversa no WhatsApp antes de mexer em procedimento ou agenda", destaque: "humano" },
             ],
           },
           {
@@ -735,7 +682,7 @@ export const slides: Slide[] = [
             rotulo: "No-show",
             passos: [
               { id: "2b-1", texto: "Paciente não compareceu no horário marcado", destaque: "externo" },
-              { id: "2b-2", texto: "Você marca em /agenda ou /consultas-realizadas", destaque: "humano" },
+              { id: "2b-2", texto: "Você marca em /agenda", destaque: "humano" },
               { id: "2b-3", texto: "Tool marcar_nao_compareceu registra + devolve pro funil", destaque: "ia" },
               { id: "2b-4", texto: "Ana Júlia retoma conversa pra entender e tentar reengajar", destaque: "ia" },
             ],
