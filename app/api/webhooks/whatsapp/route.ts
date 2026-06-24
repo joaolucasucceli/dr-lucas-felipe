@@ -522,6 +522,7 @@ export async function POST(request: NextRequest) {
           nome: msg.nomeContato?.trim() || `WhatsApp ${msg.numero}`,
           whatsapp: msg.numero,
           origem: "whatsapp",
+          statusFunil: "acolhimento",
         })
         .select("*")
         .single()

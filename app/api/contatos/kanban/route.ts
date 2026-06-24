@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     nome: string
     whatsapp: string
     procedimentoInteresse: string | null
-    statusFunil: string
+    statusFunil: string | null
     criadoEm: string
     atualizadoEm: string
     ultimaMovimentacaoEm: string | null
@@ -90,12 +90,15 @@ export async function GET(request: NextRequest) {
       .filter((c) => !c.encerradaEm)
       .sort((a, b) => (b.criadoEm ?? "").localeCompare(a.criadoEm ?? ""))[0]
 
-    if (!colunas[contato.statusFunil]) {
-      colunas[contato.statusFunil] = []
+    const statusFunil = contato.statusFunil || "acolhimento"
+
+    if (!colunas[statusFunil]) {
+      colunas[statusFunil] = []
     }
 
-    colunas[contato.statusFunil].push({
+    colunas[statusFunil].push({
       ...resto,
+      statusFunil,
       diasNaEtapa,
       followUpEnviados: conversaAberta?.followUpEnviados ?? [],
       iaPausada: conversaAberta?.modoConversa === "humano",
