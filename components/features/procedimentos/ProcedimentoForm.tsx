@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
+import { useEffect } from "react"
+import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -16,10 +16,17 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { FormDialog } from "@/components/features/shared/FormDialog"
+import { TIPOS_PROCEDIMENTO } from "@/lib/procedimentos/tipos"
 
 const formSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  tipo: z.string().min(2, "Tipo é obrigatório"),
+  tipo: z
+    .string()
+    .min(1, "Tipo é obrigatório")
+    .refine(
+      (valor) => TIPOS_PROCEDIMENTO.some((tipo) => tipo === valor),
+      "Tipo inválido"
+    ),
   descricao: z.string().optional(),
   duracaoMin: z.string().min(1, "Duração é obrigatória"),
   posOperatorio: z.string().optional(),
@@ -65,19 +72,19 @@ export function ProcedimentoForm({
   onSucesso,
 }: ProcedimentoFormProps) {
   const editando = !!procedimento
-  const [tipos, setTipos] = useState<{ id: string; nome: string }[]>([])
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nome: "",
-      tipo: "cirurgico",
+      tipo: "",
       descricao: "",
       duracaoMin: "",
       posOperatorio: "",
@@ -89,6 +96,7 @@ export function ProcedimentoForm({
       escopoOferta: "",
     },
   })
+  const tipoAtual = useWatch({ control, name: "tipo" })
 
   useEffect(() => {
     if (procedimento) {
@@ -133,14 +141,6 @@ export function ProcedimentoForm({
       })
     }
   }, [procedimento, reset])
-
-  useEffect(() => {
-    if (!aberto) return
-    fetch("/api/tipos-procedimento")
-      .then((r) => r.json())
-      .then((j) => setTipos((j.dados || []).filter((t: { ativo: boolean }) => t.ativo)))
-      .catch(() => {})
-  }, [aberto])
 
   function handleOpenChange(open: boolean) {
     if (!open) {
@@ -234,21 +234,23 @@ export function ProcedimentoForm({
       <div className="grid gap-2">
         <Label>Tipo</Label>
         <Select
-          defaultValue={procedimento?.tipo || ""}
+          value={tipoAtual || undefined}
           onValueChange={(v) => setValue("tipo", v)}
-          disabled={tipos.length === 0}
         >
           <SelectTrigger>
-            <SelectValue placeholder={tipos.length === 0 ? "Carregando..." : "Selecione..."} />
+            <SelectValue placeholder="Selecione..." />
           </SelectTrigger>
           <SelectContent>
-            {tipos.map((t) => (
-              <SelectItem key={t.id} value={t.nome}>
-                {t.nome}
+            {TIPOS_PROCEDIMENTO.map((tipo) => (
+              <SelectItem key={tipo} value={tipo}>
+                {tipo}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {errors.tipo && (
+          <p className="text-xs text-destructive">{errors.tipo.message}</p>
+        )}
       </div>
 
       <div className="grid gap-2">

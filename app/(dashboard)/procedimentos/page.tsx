@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Plus, MoreHorizontal, Pencil, Tags, Trash2 } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,6 @@ import { SkeletonTabela } from "@/components/features/shared/SkeletonTabela"
 import { EmptyState } from "@/components/features/shared/EmptyState"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { ProcedimentoForm } from "@/components/features/procedimentos/ProcedimentoForm"
-import { TiposProcedimentoDialog } from "@/components/features/procedimentos/TiposProcedimentoDialog"
 import { useProcedimentos } from "@/hooks/use-procedimentos"
 
 interface Procedimento {
@@ -56,12 +55,6 @@ function formatarFaixa(min: number | null, max: number | null): string {
   return `${formatarBRL(min)} – ${formatarBRL(max)}`
 }
 
-const tipoLabels: Record<string, string> = {
-  cirurgico: "Cirúrgico",
-  estetico: "Estético",
-  "minimamente-invasivo": "Minimamente Invasivo",
-}
-
 export default function ProcedimentosPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -70,7 +63,6 @@ export default function ProcedimentosPage() {
   const [procedimentoEditando, setProcedimentoEditando] =
     useState<Procedimento | null>(null)
   const [confirmExcluir, setConfirmExcluir] = useState<Procedimento | null>(null)
-  const [tiposAberto, setTiposAberto] = useState(false)
 
   const autorizado = session?.user?.perfil === "gestor"
 
@@ -164,7 +156,7 @@ export default function ProcedimentosPage() {
       titulo: "Tipo",
       classesCelula: "hidden sm:table-cell",
       renderizar: (p) => (
-        <Badge variant="secondary">{tipoLabels[p.tipo] || p.tipo}</Badge>
+        <Badge variant="secondary">{p.tipo}</Badge>
       ),
     },
     {
@@ -243,24 +235,15 @@ export default function ProcedimentosPage() {
         descricao="Gerencie os procedimentos da clínica"
       >
         {isGestor && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setTiposAberto(true)}
-            >
-              <Tags className="mr-2 h-4 w-4" />
-              Gerenciar Tipos
-            </Button>
-            <Button
-              onClick={() => {
-                setProcedimentoEditando(null)
-                setFormAberto(true)
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Procedimento
-            </Button>
-          </div>
+          <Button
+            onClick={() => {
+              setProcedimentoEditando(null)
+              setFormAberto(true)
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Procedimento
+          </Button>
         )}
       </PageHeader>
 
@@ -316,11 +299,6 @@ export default function ProcedimentosPage() {
           setProcedimentoEditando(null)
           recarregar()
         }}
-      />
-
-      <TiposProcedimentoDialog
-        aberto={tiposAberto}
-        onFechar={() => setTiposAberto(false)}
       />
 
       <ConfirmDialog

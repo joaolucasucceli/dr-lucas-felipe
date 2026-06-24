@@ -1,59 +1,20 @@
-import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
+import { NextResponse } from "next/server"
 import { requireAuth, requireRole } from "@/lib/auth-helpers"
-import { criarId } from "@/lib/db-utils"
+import { TIPOS_PROCEDIMENTO_API } from "@/lib/procedimentos/tipos"
 
 export async function GET() {
   const auth = await requireAuth()
   if (auth.error) return auth.error
 
-  const { data, error } = await supabaseAdmin
-    .from("tipos_procedimento")
-    .select("id, nome, ativo, criadoEm")
-    .order("nome", { ascending: true })
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ dados: data })
+  return NextResponse.json({ dados: TIPOS_PROCEDIMENTO_API })
 }
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error
 
-  let body: Record<string, unknown>
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
-  }
-
-  const nome = (body.nome as string | undefined)?.trim()
-  if (!nome || nome.length < 2) {
-    return NextResponse.json({ error: "Nome deve ter pelo menos 2 caracteres" }, { status: 400 })
-  }
-
-  const { data: existente } = await supabaseAdmin
-    .from("tipos_procedimento")
-    .select("id")
-    .eq("nome", nome)
-    .maybeSingle()
-
-  if (existente) {
-    return NextResponse.json({ error: "Já existe um tipo com esse nome" }, { status: 409 })
-  }
-
-  const { data: tipo, error } = await supabaseAdmin
-    .from("tipos_procedimento")
-    .insert({ id: criarId(), nome })
-    .select("id, nome, ativo, criadoEm")
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json(tipo, { status: 201 })
+  return NextResponse.json(
+    { error: "Tipos de procedimento são fixos e não podem ser personalizados" },
+    { status: 410 }
+  )
 }
