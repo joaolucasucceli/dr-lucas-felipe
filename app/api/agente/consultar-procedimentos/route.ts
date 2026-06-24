@@ -34,10 +34,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // JLU-167 (P2 25/05/2026): IA sempre cita FAIXA, nunca valor fechado.
-  // Calcula `faixaFormatada` ja pronto pra Ana Julia copiar literal — bloqueia
-  // dela tentar reformatar (e quebrar). Fallback: se nao tem faixa cadastrada
-  // mas tem valorEstimadoBrl (legado), gera faixa +-15% automaticamente.
+  // Faixa aproximada continua disponivel apenas como fallback conversacional
+  // quando o paciente pede uma media e recusa qualificacao/foto. O fluxo
+  // principal de valor exato passa por gerar_orcamento + Dr. Lucas.
   const formatarBrlCompacto = (v: number): string => {
     if (v >= 1000) {
       const milhares = v / 1000
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Cast manual: types do Supabase ainda nao regerados pra incluir
-  // valorBaseMinBrl/Max (JLU-167). Pra regenerar: `npm run db:types` com
+  // valorBaseMinBrl/Max. Pra regenerar: `npm run db:types` com
   // SUPABASE_ACCESS_TOKEN valido. Cast e seguro porque a coluna existe no
   // banco (migration 20260525120000) e o select acima nomeia explicitamente.
   type ProcedimentoLido = {

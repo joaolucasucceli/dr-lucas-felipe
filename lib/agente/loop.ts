@@ -5,7 +5,11 @@ import { obterELimparBuffer } from "@/lib/agente/buffer"
 import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
-import { detectarGatilhoMidia } from "@/lib/agente/gatilho-midia"
+import {
+  detectarGatilhoMidia,
+  detectarGatilhoProcedimentoMidia,
+  detectarGatilhoVisualMidia,
+} from "@/lib/agente/gatilho-midia"
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
@@ -118,9 +122,9 @@ export async function processarMensagens(
       // (JLAU-...). Removido o codigo morto. Se quiser reativar "novo ciclo
       // pra paciente de retorno", `abrirNovoCiclo` continua disponivel em
       // `lib/agente/kanban-sync.ts` — basta plugar aqui novamente.
-      const nomePaciente = resultadoPaciente.sobreOPaciente
-        ? resultadoPaciente.contato.nome
-        : undefined
+      const nomeAtual = resultadoPaciente.contato.nome ?? ""
+      const nomePaciente =
+        nomeAtual && !nomeAtual.startsWith("WhatsApp ") ? nomeAtual : undefined
       contextoContato = {
         nome: nomePaciente,
         procedimento: resultadoPaciente.contato.procedimentoInteresse,
@@ -235,16 +239,24 @@ export async function processarMensagens(
       { role: "user", content: textoBuffer },
     ]
 
-    // Heurística determinística: paciente pediu prova visual → força
-    // `buscar_conteudo` na primeira iteração pra carregar as mídias antes de
-    // responder. Safety net que atua em paralelo ao prompt.
-    const forcarMidia = detectarGatilhoMidia(textoBuffer)
+    // Heurística determinística: procedimento ou prova visual explícita força
+    // `buscar_conteudo` na primeira iteração. Envio de mídia só é forçado
+    // quando há mídia nova e o momento não quebra o acolhimento.
+    const gatilhoVisual = detectarGatilhoVisualMidia(textoBuffer)
+    const gatilhoProcedimento = detectarGatilhoProcedimentoMidia(textoBuffer)
+    const contextoProntoParaMidia = Boolean(
+      contextoContato.nome && contextoContato.procedimento
+    )
+    const forcarBuscaConteudo =
+      detectarGatilhoMidia(textoBuffer) ||
+      (contextoProntoParaMidia && contextoContato.etapa === "qualificacao")
+    const forcarEnvioMidia = gatilhoVisual || (gatilhoProcedimento && contextoProntoParaMidia)
 
     let resposta = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: mensagens,
       tools: ferramentasAgente,
-      tool_choice: forcarMidia
+      tool_choice: forcarBuscaConteudo
         ? { type: "function", function: { name: "buscar_conteudo" } }
         : "auto",
     })
@@ -307,12 +319,19 @@ export async function processarMensagens(
 
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
 
-        // Lógica anti-alucinação: se busca retornou midias E o paciente
-        // pediu prova visual (gatilho), próxima iteração EXIGE enviar_midia.
-        if (fn.name === "buscar_conteudo" && forcarMidia) {
+        // Lógica anti-alucinação: se busca retornou mídia nova e o momento
+        // permite, próxima iteração EXIGE enviar_midia.
+        if (fn.name === "buscar_conteudo" && forcarBuscaConteudo && forcarEnvioMidia) {
           try {
             const parsed = JSON.parse(resultado)
-            if (Array.isArray(parsed?.midias) && parsed.midias.length > 0) {
+            const midias = Array.isArray(parsed?.midias) ? parsed.midias : []
+            const jaEnviouAlguma = midias.some(
+              (midia: { jaEnviada?: boolean }) => midia.jaEnviada
+            )
+            const temMidiaNova = midias.some(
+              (midia: { jaEnviada?: boolean }) => !midia.jaEnviada
+            )
+            if (temMidiaNova && !jaEnviouAlguma) {
               forcarEnviarMidiaNext = true
             }
           } catch {

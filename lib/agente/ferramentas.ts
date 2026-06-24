@@ -27,7 +27,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "atualizar_lead",
       description:
-        "Atualiza o cadastro do paciente e o funil. Chame SEMPRE que descobrir: o NOME do paciente (quando ele informa), o PROCEDIMENTO de interesse (quando ele diz o que quer fazer), um FATO relevante sobre ele (motivação, contexto, expectativa, restrição — vai pra sobreOPaciente em modo APPEND, nunca sobrescreve), OU quando a conversa amadurecer pra AVANÇAR a etapa do funil. Avanço de etapa: 'qualificacao' quando o paciente já disse o que quer (saiu do acolhimento); 'agendamento' quando ele está pronto pra marcar a avaliação. Use 'manter' (ou omita etapaCorreta) se nada mudou de etapa. NUNCA tente avançar pra 'consulta_agendada' por aqui — isso é exclusivo da tool registrar_agendamento. Pode chamar várias vezes ao longo da conversa; é idempotente e só grava o que realmente mudou.",
+        "Atualiza o cadastro do paciente e o funil. Chame SEMPRE que descobrir: o NOME do paciente, o PROCEDIMENTO de interesse, a REGIÃO, FOTO recebida ou um FATO relevante (motivação, objetivo, contexto, expectativa, restrição — vai pra sobreOPaciente em modo APPEND, nunca sobrescreve). Avanço de etapa: 'qualificacao' quando o paciente já disse o que quer; 'agendamento' somente depois que o orçamento voltou e o paciente aprovou seguir para reunião. Use 'manter' (ou omita etapaCorreta) se nada mudou de etapa. NUNCA tente avançar pra 'consulta_agendada' por aqui — isso é exclusivo da tool registrar_agendamento. Pode chamar várias vezes; é idempotente e só grava o que realmente mudou.",
       parameters: {
         type: "object",
         properties: {
@@ -54,7 +54,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           etapaCorreta: {
             type: "string",
             enum: ["manter", "qualificacao", "agendamento"],
-            description: "Para onde mover o funil: 'qualificacao' (paciente já disse o que quer), 'agendamento' (pronto pra marcar) ou 'manter' (nada muda). NUNCA 'consulta_agendada'.",
+            description: "Para onde mover o funil: 'qualificacao' (paciente já disse o que quer), 'agendamento' (orçamento voltou e paciente aprovou reunião) ou 'manter' (nada muda). NUNCA 'consulta_agendada'.",
           },
         },
         required: ["contatoId"],
@@ -66,7 +66,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "gerar_orcamento",
       description:
-        "Gera o ORÇAMENTO REAL (com PDF) do paciente — Caminho A. Chame SOMENTE quando TODAS estas condições estiverem satisfeitas: (1) qualificação completa = você sabe o PROCEDIMENTO desejado + a REGIÃO de maior incômodo + o paciente já MANDOU FOTO; (2) você já gerou interesse com os materiais de marketing; (3) você PERGUNTOU 'posso gerar um orçamento pra você?' e o paciente TOPOU. NÃO use pra quem só quer saber o preço aproximado e não quis qualificar — nesse caso use a FAIXA de consultar_procedimentos (Caminho B), sem PDF. Esta tool enfileira o pedido e aciona o Dr. Lucas, que define o valor; o orçamento em PDF chega pro paciente automaticamente depois — você NÃO envia nada agora nem promete prazo. Depois de chamar, responda algo curto e tranquilo tipo 'Show! Já tô preparando seu orçamento, em instantes te mando aqui.' (sem mencionar Dr. Lucas, sistema, fila ou espera longa). É idempotente — não duplica se já houver orçamento em andamento.",
+        "Gera o ORÇAMENTO EXATO do paciente com Dr. Lucas. Chame quando a qualificação estiver completa: procedimento desejado + região + objetivo/incômodo + foto recebida + paciente aceitou responder perguntas/seguir com orçamento. Não exija uma segunda autorização artificial se o paciente já aceitou a qualificação para orçamento. Esta tool enfileira o pedido, aciona Dr. Lucas e pausa a IA até a resposta dele. Depois de chamar, diga que os dados foram enviados para Dr. Lucas e que você devolve o orçamento exato por ali. NÃO use para quem pediu só média e recusou qualificação/foto; nesse caso, use consultar_procedimentos apenas como faixa aproximada.",
       parameters: {
         type: "object",
         properties: {
@@ -134,7 +134,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "buscar_conteudo",
       description:
-        "Busca unificada de conteúdo da clínica: TEXTOS (políticas, pré/pós-operatório, sobre o Dr. Lucas, forma de pagamento, localização, cirurgiões parceiros) + MÍDIAS (fotos/vídeos antes-e-depois). Retorna { textos: [{titulo, conteudo}], midias: [{id, descricao, jaEnviada}] }. SEMPRE use antes de responder perguntas sobre clínica/Dr. Lucas/pós-op/pagamento OU quando o paciente pedir prova visual. Os textos retornados podem ser parafraseados na resposta. As mídias precisam ser enviadas via enviar_midia (não tente descrever sem enviar). Nunca invente — se retornar vazio em ambos, diga que o Dr. Lucas passa a info na avaliação.",
+        "Busca unificada de conteúdo da clínica: TEXTOS (políticas, pré/pós-operatório, sobre o Dr. Lucas, forma de pagamento, localização, cirurgiões parceiros) + MÍDIAS (fotos/vídeos antes-e-depois). Retorna { textos: [{titulo, conteudo}], midias: [{id, descricao, jaEnviada}] }. Use antes de responder perguntas sobre clínica/Dr. Lucas/pós-op/pagamento, quando o paciente pedir prova visual, ou quando o procedimento já estiver identificado e você precisar ancorar valor com conteúdo/mídia. Os textos podem ser parafraseados. As mídias precisam ser enviadas via enviar_midia. Nunca invente — se retornar vazio, siga sem prometer mídia.",
       parameters: {
         type: "object",
         properties: {
@@ -156,8 +156,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "consultar_procedimentos",
       description:
-        "Consulta os procedimentos da clínica. Retorna por procedimento: nome, descricao, duracaoMin, posOperatorio, escopoOferta, parcelamento, faixaFormatada (string PRONTA pro Whats — ex: 'R$ 10k a R$ 12k'), valorBaseMinBrl/Max, temFaixaReal (true = Lucas definiu, false = calculo ±15% sobre legado), valorEstimadoBrl/Cheio (legado, NÃO citar). " +
-        "POLÍTICA JLU-167 (25/05/2026): IA só fala FAIXA pra paciente, NUNCA valor fechado. Use SEMPRE `faixaFormatada` direto na mensagem, copie literal. Sempre completar com: 'O Dr. Lucas confirma o valor exato na avaliação online com base no seu caso.' Se faixaFormatada vier null, peça mais info ao paciente (foto + região) antes de citar qualquer valor.",
+        "Consulta os procedimentos da clínica. Retorna descrição, duração, pós-operatório, escopoOferta, parcelamento e faixaFormatada. Use para explicar o procedimento e, como fallback, para faixa aproximada quando o paciente pede média e recusa qualificação/foto. NÃO use para responder automaticamente com preço quando o paciente só informou a região. Valor exato só vem pelo fluxo gerar_orcamento + resposta do Dr. Lucas. Campos legados não devem ser citados.",
       parameters: {
         type: "object",
         properties: {

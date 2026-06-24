@@ -230,7 +230,7 @@ export async function processarRespostaDrLucas(args: {
       )
 
       // Mensagem curta no tom da Ana apresentando o orcamento.
-      const apresentacao = `Prontinho, ${nomePaciente}! Segue seu orçamento, com tudo certinho. Qualquer dúvida é só me chamar. Posso já agendar sua avaliação online com o Dr. Lucas?`
+      const apresentacao = `Prontinho, ${nomePaciente}! Segue seu orçamento, com tudo certinho. Se esse orçamento fizer sentido pra você, posso ver os horários da reunião de diagnóstico online com o Dr. Lucas?`
       await enviarMensagem(
         cfg.uazapiUrl,
         cfg.instanceToken,
