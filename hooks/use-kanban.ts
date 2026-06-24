@@ -22,7 +22,6 @@ export interface KanbanContato {
 }
 
 interface UseKanbanParams {
-  responsavelId?: string
   procedimentoInteresse?: string
 }
 
@@ -35,7 +34,6 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 function buildUrl(params: UseKanbanParams) {
   const searchParams = new URLSearchParams()
-  if (params.responsavelId) searchParams.set("responsavelId", params.responsavelId)
   if (params.procedimentoInteresse) searchParams.set("procedimentoInteresse", params.procedimentoInteresse)
   const qs = searchParams.toString()
   return `/api/contatos/kanban${qs ? `?${qs}` : ""}`

@@ -17,16 +17,16 @@ export function KanbanView({ externalRefresh }: KanbanViewProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const [responsavelId, setResponsavelId] = useState(searchParams.get("responsavel") || "")
   const [procedimentoInteresse, setProcedimentoInteresse] = useState(searchParams.get("procedimento") || "")
 
-  function handleResponsavelChange(valor: string) {
-    setResponsavelId(valor)
+  useEffect(() => {
+    if (!searchParams.has("responsavel")) return
+
     const params = new URLSearchParams(searchParams.toString())
-    if (valor) params.set("responsavel", valor)
-    else params.delete("responsavel")
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }
+    params.delete("responsavel")
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [pathname, router, searchParams])
 
   function handleProcedimentoChange(valor: string) {
     setProcedimentoInteresse(valor)
@@ -37,7 +37,6 @@ export function KanbanView({ externalRefresh }: KanbanViewProps) {
   }
 
   const { colunas, total, carregando, erro, recarregar, moverContato } = useKanban({
-    responsavelId: responsavelId || undefined,
     procedimentoInteresse: procedimentoInteresse || undefined,
   })
 
@@ -51,9 +50,7 @@ export function KanbanView({ externalRefresh }: KanbanViewProps) {
   return (
     <div className="mt-4 min-w-0">
       <KanbanFiltros
-        responsavelId={responsavelId}
         procedimentoInteresse={procedimentoInteresse}
-        onResponsavelChange={handleResponsavelChange}
         onProcedimentoChange={handleProcedimentoChange}
       />
 

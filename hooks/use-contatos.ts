@@ -12,7 +12,6 @@ export interface Contato {
   procedimentoInteresse: string | null
   statusFunil: string | null
   origem: string | null
-  arquivado: boolean
   cpf: string | null
   criadoEm: string
   promovidoEm: string | null
@@ -26,7 +25,6 @@ interface UseContatosParams {
   tipo?: "lead" | "paciente" | "todos"
   statusFunil?: string
   busca?: string
-  arquivado?: string
   filtroEspecial?: "followup"
 }
 
@@ -55,7 +53,6 @@ export function useContatos(params: UseContatosParams): UseContatosReturn {
       if (params.tipo && params.tipo !== "todos") searchParams.set("tipo", params.tipo)
       if (params.statusFunil) searchParams.set("statusFunil", params.statusFunil)
       if (params.busca) searchParams.set("busca", params.busca)
-      if (params.arquivado) searchParams.set("arquivado", params.arquivado)
       if (params.filtroEspecial === "followup") searchParams.set("followup", "true")
 
       const res = await fetch(`/api/contatos?${searchParams.toString()}`)
@@ -72,7 +69,7 @@ export function useContatos(params: UseContatosParams): UseContatosReturn {
     } finally {
       setCarregando(false)
     }
-  }, [params.pagina, params.porPagina, params.tipo, params.statusFunil, params.busca, params.arquivado, params.filtroEspecial])
+  }, [params.pagina, params.porPagina, params.tipo, params.statusFunil, params.busca, params.filtroEspecial])
 
   useEffect(() => {
     buscar()

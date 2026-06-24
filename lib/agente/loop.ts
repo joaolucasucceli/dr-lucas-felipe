@@ -135,7 +135,7 @@ async function obterConfigWhatsapp() {
   if (!data || data.length === 0) return null
   if (data.length > 1) {
     console.warn(
-      `[Agente] Mais de uma config_whatsapp ativa (${data.length}). Usando a mais recente. Recomendado: arquivar as antigas no painel.`
+      `[Agente] Mais de uma config_whatsapp ativa (${data.length}). Usando a mais recente. Recomendado: desativar as antigas no painel.`
     )
   }
   return data[0]

@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
   const procedimentoInteresse = searchParams.get("procedimentoInteresse")
   const responsavelId = searchParams.get("responsavelId")
   const origem = searchParams.get("origem")
-  const arquivado = searchParams.get("arquivado")
   const busca = searchParams.get("busca")
 
   const perfil = auth.session.user.perfil
@@ -37,7 +36,7 @@ export async function GET(request: NextRequest) {
     .from("contatos")
     .select(SELECT_CONTATO, { count: "exact" })
     .is("deletadoEm", null)
-    .eq("arquivado", arquivado === "true")
+    .eq("arquivado", false)
 
   if (tipoFiltro) query = query.eq("tipo", tipoFiltro)
   if (statusFunil) query = query.eq("statusFunil", statusFunil as never)

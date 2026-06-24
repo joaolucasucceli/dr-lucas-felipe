@@ -28,8 +28,8 @@ export function ModuloAtendimentos() {
           },
           {
             icone: <Filter />,
-            titulo: "Filtros avançados",
-            descricao: "Filtre por responsável, etapa, procedimento ou busca por nome.",
+            titulo: "Filtro por procedimento",
+            descricao: "Use o filtro de procedimento para segmentar os leads do funil.",
           },
         ]}
       />

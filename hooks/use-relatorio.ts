@@ -53,14 +53,3 @@ export function useRelatorio({
 
   return { dados, carregando, erro, recarregar }
 }
-
-export function exportarRelatorio(
-  tipo: "leads" | "agendamentos" | "conversas",
-  dataInicio?: string,
-  dataFim?: string
-) {
-  const params = new URLSearchParams({ tipo })
-  if (dataInicio) params.set("dataInicio", dataInicio)
-  if (dataFim) params.set("dataFim", dataFim)
-  window.open(`/api/relatorios/exportar?${params.toString()}`, "_blank")
-}

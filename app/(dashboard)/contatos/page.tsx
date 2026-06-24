@@ -3,12 +3,10 @@
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Plus, Download, X, Archive, ArchiveRestore, Trash2 } from "lucide-react"
+import { Plus, X, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
   Select,
@@ -44,7 +42,6 @@ export default function ContatosPage() {
   })()
   const [tipo, setTipo] = useState<"lead" | "paciente" | "todos">(tipoInicial)
   const [statusFunil, setStatusFunil] = useState("")
-  const [mostrarArquivados, setMostrarArquivados] = useState(false)
   const [formAberto, setFormAberto] = useState(false)
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([])
   const [filtroEspecial, setFiltroEspecial] = useState<"followup" | undefined>(
@@ -60,7 +57,6 @@ export default function ContatosPage() {
     tipo,
     statusFunil: statusFunil || undefined,
     busca: busca || undefined,
-    arquivado: mostrarArquivados ? "true" : undefined,
     filtroEspecial,
   })
 
@@ -69,7 +65,7 @@ export default function ContatosPage() {
     session?.user?.perfil === "atendente"
   const ehGestor = session?.user?.perfil === "gestor"
 
-  async function executarBatch(acao: "excluir" | "arquivar" | "desarquivar", ids: string[]) {
+  async function executarBatch(acao: "excluir", ids: string[]) {
     try {
       const res = await fetch("/api/contatos/batch", {
         method: "POST",
@@ -78,7 +74,7 @@ export default function ContatosPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Erro na operação")
-      toast.success(`${data.sucesso} de ${data.total} contato(s) ${acao === "excluir" ? "excluídos" : acao === "arquivar" ? "arquivados" : "desarquivados"}`)
+      toast.success(`${data.sucesso} de ${data.total} contato(s) excluídos`)
       recarregar()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro na operação")
@@ -86,21 +82,6 @@ export default function ContatosPage() {
   }
 
   const acoesEmMassa: AcaoEmMassa[] = [
-    {
-      label: "Arquivar",
-      icone: <Archive className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("arquivar", ids),
-      confirmacao: {
-        titulo: "Arquivar contatos?",
-        descricao: (qtd) => `${qtd} contato(s) serão arquivados e sumirão do kanban. Podem ser desarquivados depois.`,
-        textoBotao: "Arquivar",
-      },
-    },
-    {
-      label: "Desarquivar",
-      icone: <ArchiveRestore className="h-4 w-4" />,
-      onClick: (ids) => executarBatch("desarquivar", ids),
-    },
     ...(ehGestor
       ? [
           {
@@ -205,19 +186,6 @@ export default function ContatosPage() {
   return (
     <div>
       <PageHeader titulo="Contatos" descricao="Leads e pacientes da clínica">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const params = new URLSearchParams({ tipo: "leads" })
-            if (statusFunil) params.set("statusFunil", statusFunil)
-            window.open(`/api/relatorios/exportar?${params.toString()}`, "_blank")
-            toast.success("Exportação iniciada")
-          }}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Exportar CSV
-        </Button>
         {podecriar && (
           <Button onClick={() => setFormAberto(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -266,7 +234,7 @@ export default function ContatosPage() {
             onPaginaChange={setPagina}
             carregando={carregando}
             onLinhaClick={(contato) => router.push(`/contatos/${contato.id}`)}
-            selecionavel
+            selecionavel={ehGestor}
             acoesEmMassa={acoesEmMassa}
             filtros={
               <div className="flex flex-wrap items-center gap-3">
@@ -313,19 +281,6 @@ export default function ContatosPage() {
                     <SelectItem value="consulta_agendada">Reunião Agendada</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="arquivados"
-                    checked={mostrarArquivados}
-                    onCheckedChange={(v) => {
-                      setMostrarArquivados(!!v)
-                      setPagina(1)
-                    }}
-                  />
-                  <Label htmlFor="arquivados" className="text-sm">
-                    Arquivados
-                  </Label>
-                </div>
               </div>
             }
           />

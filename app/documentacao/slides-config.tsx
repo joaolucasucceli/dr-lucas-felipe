@@ -315,7 +315,7 @@ export const slides: Slide[] = [
     funcionalidades: [
       "4 colunas movidas automaticamente pela Ana Júlia",
       "Card com nome, procedimento de interesse e última mensagem",
-      "Filtros por procedimento, etapa, período",
+      "Filtro por procedimento",
       "Click no card abre detalhe completo do contato (/contatos/[id])",
     ],
     decisao:

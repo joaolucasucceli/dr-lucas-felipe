@@ -12,65 +12,33 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-interface Usuario {
-  id: string
-  nome: string
-}
-
 interface Procedimento {
   id: string
   nome: string
 }
 
 interface KanbanFiltrosProps {
-  responsavelId: string
   procedimentoInteresse: string
-  onResponsavelChange: (valor: string) => void
   onProcedimentoChange: (valor: string) => void
 }
 
 export function KanbanFiltros({
-  responsavelId,
   procedimentoInteresse,
-  onResponsavelChange,
   onProcedimentoChange,
 }: KanbanFiltrosProps) {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([])
 
   useEffect(() => {
-    fetch("/api/usuarios")
-      .then((r) => r.json())
-      .then((data) => setUsuarios(data.dados || []))
-      .catch(() => {})
-
     fetch("/api/procedimentos")
       .then((r) => r.json())
       .then((data) => setProcedimentos(data.dados || []))
       .catch(() => {})
   }, [])
 
-  const temFiltro = responsavelId || procedimentoInteresse
+  const temFiltro = procedimentoInteresse
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
-      <Select
-        value={responsavelId || "todos"}
-        onValueChange={(v) => onResponsavelChange(v === "todos" ? "" : v)}
-      >
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Responsável" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="todos">Todos os responsáveis</SelectItem>
-          {usuarios.map((u) => (
-            <SelectItem key={u.id} value={u.id}>
-              {u.nome}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
       <Select
         value={procedimentoInteresse || "todos"}
         onValueChange={(v) => onProcedimentoChange(v === "todos" ? "" : v)}
@@ -95,7 +63,6 @@ export function KanbanFiltros({
               variant="ghost"
               size="sm"
               onClick={() => {
-                onResponsavelChange("")
                 onProcedimentoChange("")
               }}
             >

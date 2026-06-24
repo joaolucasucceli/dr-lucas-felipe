@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
   if (auth.error) return auth.error
 
   const { searchParams } = new URL(request.url)
-  const responsavelId = searchParams.get("responsavelId")
   const procedimentoInteresse = searchParams.get("procedimentoInteresse")
 
   let query = supabaseAdmin
@@ -37,10 +36,6 @@ export async function GET(request: NextRequest) {
     .is("deletadoEm", null)
     .eq("tipo", "lead")
     .eq("arquivado", false)
-
-  if (responsavelId) {
-    query = query.eq("responsavelId", responsavelId)
-  }
 
   if (procedimentoInteresse) {
     query = query.ilike("procedimentoInteresse", `%${procedimentoInteresse}%`)

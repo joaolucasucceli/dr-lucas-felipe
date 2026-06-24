@@ -4,8 +4,6 @@ import { use, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import {
-  Archive,
-  ArchiveRestore,
   ArrowLeft,
   MessageCircle,
   Pause,
@@ -111,18 +109,6 @@ export default function ContatoDetalhePage({ params }: PageProps) {
     await salvarCampo("sobreOPaciente", nota)
   }
 
-  async function handleArquivar() {
-    if (!contato) return
-    try {
-      const res = await fetch(`/api/contatos/${id}/arquivar`, { method: "PATCH" })
-      if (!res.ok) throw new Error((await res.json()).error || "Erro")
-      toast.success(contato.arquivado ? "Desarquivado" : "Arquivado")
-      recarregar()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao arquivar")
-    }
-  }
-
   async function handleExcluir() {
     setProcessando(true)
     try {
@@ -205,7 +191,6 @@ export default function ContatoDetalhePage({ params }: PageProps) {
 
   const descricaoHeader = [
     ehPaciente ? "Paciente" : "Lead",
-    contato.arquivado ? "Arquivado" : null,
   ]
     .filter(Boolean)
     .join(" • ")
@@ -278,19 +263,6 @@ export default function ContatoDetalhePage({ params }: PageProps) {
             )}
           </Button>
         )}
-        <Button size="sm" variant="outline" onClick={handleArquivar}>
-          {contato.arquivado ? (
-            <>
-              <ArchiveRestore className="mr-2 h-4 w-4" />
-              Desarquivar
-            </>
-          ) : (
-            <>
-              <Archive className="mr-2 h-4 w-4" />
-              Arquivar
-            </>
-          )}
-        </Button>
         {ehGestor && (
           <Button size="sm" variant="destructive" onClick={() => setConfirmExcluir(true)}>
             <Trash2 className="mr-2 h-4 w-4" />
