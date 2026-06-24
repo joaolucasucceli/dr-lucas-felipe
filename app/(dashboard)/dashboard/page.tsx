@@ -1,6 +1,6 @@
 "use client"
 
-import { GitBranch, Users } from "lucide-react"
+import { GitBranch, ListChecks, Users } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -45,6 +45,14 @@ export default function DashboardPage() {
     )
   }
 
+  const etapasAntesDoTotal = metricas.leadsPorEtapa.slice(0, 2)
+  const etapasDepoisDoTotal = metricas.leadsPorEtapa.slice(2)
+  const cardsFunil = [
+    ...etapasAntesDoTotal.map((etapa) => ({ tipo: "etapa" as const, etapa })),
+    { tipo: "total" as const },
+    ...etapasDepoisDoTotal.map((etapa) => ({ tipo: "etapa" as const, etapa })),
+  ]
+
   return (
     <div>
       <PageHeader
@@ -54,35 +62,41 @@ export default function DashboardPage() {
 
       <Card className="mt-6">
         <CardHeader className="gap-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <GitBranch className="h-4 w-4" />
-                <CardTitle>Funil por Etapa</CardTitle>
-              </div>
-              <CardDescription className="mt-1">
-                Distribuição atual dos leads ativos no funil
-              </CardDescription>
+          <div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <GitBranch className="h-4 w-4" />
+              <CardTitle>Funil por Etapa</CardTitle>
             </div>
-
-            <div className="rounded-lg border border-border bg-muted/30 px-5 py-4 lg:min-w-64">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span>Total de Leads</span>
-              </div>
-              <p className="mt-2 text-4xl font-semibold leading-none">
-                {metricas.totalLeads}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Leads ativos no funil
-              </p>
-            </div>
+            <CardDescription className="mt-1">
+              Distribuição atual dos leads ativos no funil
+            </CardDescription>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {metricas.leadsPorEtapa.map((etapa) => {
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {cardsFunil.map((card, index) => {
+              if (card.tipo === "total") {
+                return (
+                  <div
+                    key="total"
+                    className="rounded-lg border border-border bg-muted/30 p-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium">Total de Leads</span>
+                      <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </div>
+                    <div className="mt-4 flex items-end justify-between gap-3">
+                      <p className="text-3xl font-semibold leading-none">
+                        {metricas.totalLeads}
+                      </p>
+                      <ListChecks className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                )
+              }
+
+              const { etapa } = card
               const percentual =
                 metricas.totalLeads > 0
                   ? Math.round((etapa.total / metricas.totalLeads) * 100)
@@ -90,7 +104,7 @@ export default function DashboardPage() {
 
               return (
                 <div
-                  key={etapa.etapa}
+                  key={`${etapa.etapa}-${index}`}
                   className="rounded-lg border border-border bg-background/40 p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
