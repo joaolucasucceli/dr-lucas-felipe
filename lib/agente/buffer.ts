@@ -10,7 +10,7 @@ export interface BufferMensagem {
 const BUFFER_SUFFIX = "_buf_dr-lucas"
 const DEBOUNCE_SUFFIX = "_deb_dr-lucas"
 const BUFFER_TTL = 300 // segundos — janela maior pra absorver pico de carga / lentidao no /processar
-const DEBOUNCE_TTL = 20 // segundos
+const DEBOUNCE_TTL = 6 // segundos
 
 /** Adiciona mensagem ao buffer Redis */
 export async function adicionarAoBuffer(

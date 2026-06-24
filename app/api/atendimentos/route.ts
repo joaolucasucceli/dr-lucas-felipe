@@ -1,72 +1,11 @@
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
-import { requireAuth } from "@/lib/auth-helpers"
-import { criarId, agora } from "@/lib/db-utils"
 
-export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return auth.error
-
-  const body = await request.json()
-  const { contatoId } = body
-
-  if (!contatoId) {
-    return NextResponse.json({ error: "contatoId é obrigatório" }, { status: 400 })
-  }
-
-  const { data: lead } = await supabaseAdmin
-    .from("contatos")
-    .select("id, arquivado, cicloAtual, ciclosCompletos")
-    .eq("id", contatoId)
-    .is("deletadoEm", null)
-    .maybeSingle()
-
-  if (!lead) {
-    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
-  }
-
-  if (!lead.arquivado) {
-    return NextResponse.json(
-      { error: "Lead já possui atendimento em andamento" },
-      { status: 409 }
-    )
-  }
-
-  const novoCiclo = lead.cicloAtual + 1
-  const tsAgora = agora()
-
-  const { error: leadError } = await supabaseAdmin
-    .from("contatos")
-    .update({
-      cicloAtual: novoCiclo,
-      ciclosCompletos: lead.ciclosCompletos + 1,
-      ehRetorno: true,
-      statusFunil: "acolhimento",
-      arquivado: false,
-      arquivadoEm: null,
-      ultimaMovimentacaoEm: tsAgora,
-      atualizadoEm: tsAgora,
-    })
-    .eq("id", contatoId)
-
-  if (leadError) {
-    return NextResponse.json({ error: leadError.message }, { status: 500 })
-  }
-
-  const { error: convError } = await supabaseAdmin
-    .from("conversas")
-    .insert({
-      id: criarId(),
-      atualizadoEm: tsAgora,
-      contatoId,
-      ciclo: novoCiclo,
-      etapa: "acolhimento",
-    })
-
-  if (convError) {
-    return NextResponse.json({ error: convError.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ sucesso: true })
+export async function POST() {
+  return NextResponse.json(
+    {
+      error:
+        "Criacao manual de atendimento foi descontinuada. Leads entram pelo WhatsApp/site e pacientes podem ser criados em Contatos.",
+    },
+    { status: 410 }
+  )
 }

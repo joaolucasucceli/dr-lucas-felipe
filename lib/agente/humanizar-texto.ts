@@ -16,7 +16,11 @@ export function removerAsAntesDeHora(texto: string): string {
   return texto.replace(PADRAO_DIA_AS_HORA, "$1 $2")
 }
 
+export function normalizarNegritoWhatsapp(texto: string): string {
+  return texto.replace(/\*\*([^*]+)\*\*/g, "*$1*")
+}
+
 export function humanizarTexto(texto: string): string {
   if (!texto) return texto
-  return removerAsAntesDeHora(texto)
+  return normalizarNegritoWhatsapp(removerAsAntesDeHora(texto))
 }

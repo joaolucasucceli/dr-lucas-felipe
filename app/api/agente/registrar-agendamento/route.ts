@@ -6,7 +6,6 @@ import { validarApiSecret } from "@/lib/api-auth"
 import { criarEvento } from "@/lib/google-calendar"
 import { criarId, agora } from "@/lib/db-utils"
 import { validarSlotManual } from "@/lib/agendamento/validar-slot"
-import { pingAgendado } from "@/lib/agente/notificar-agendamento"
 
 const schema = z.object({
   contatoId: z.string().min(1),
@@ -183,7 +182,5 @@ export async function POST(request: NextRequest) {
 
   // JLU-170 (P3+P4): ping pro Dr. Lucas sobre novo agendamento.
   // Fire-and-forget — nao bloqueia resposta da IA pro paciente. Falha silenciosa.
-  void pingAgendado(agendamento.id)
-
   return NextResponse.json({ agendamento, sincronizado: !!resultadoCalendar })
 }

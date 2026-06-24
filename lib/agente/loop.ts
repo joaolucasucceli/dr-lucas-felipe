@@ -383,7 +383,7 @@ export async function processarMensagens(
         console.warn("[Agente] Erro ao enviar digitando antes do segmento")
       }
 
-      const typingDelay = Math.min(segmento.length * 30, 3000)
+      const typingDelay = Math.min(segmento.length * 12, 1200)
       await new Promise((resolve) => setTimeout(resolve, typingDelay))
 
       await enviarMensagem(
@@ -411,7 +411,7 @@ export async function processarMensagens(
       }
 
       if (i < segmentos.length - 1) {
-        const delay = Math.floor(Math.random() * 2001) + 2000
+        const delay = Math.floor(Math.random() * 601) + 600
         await new Promise((resolve) => setTimeout(resolve, delay))
       }
     }

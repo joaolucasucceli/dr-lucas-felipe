@@ -37,7 +37,7 @@ export function ModuloLeads() {
       <ComoUsarSection
         passos={[
           { numero: 1, titulo: "Filtre a lista", descricao: "Use os filtros de tipo, etapa, status e busca pra segmentar." },
-          { numero: 2, titulo: "Crie um contato", descricao: "'Novo Contato': nome e WhatsApp são obrigatórios, o resto é opcional." },
+          { numero: 2, titulo: "Crie um paciente", descricao: "'Novo Paciente': nome e WhatsApp são obrigatórios, o resto é opcional." },
           { numero: 3, titulo: "Abra o perfil", descricao: "Clique numa linha pra ver histórico, prontuário, fotos e agendamentos." },
         ]}
       />

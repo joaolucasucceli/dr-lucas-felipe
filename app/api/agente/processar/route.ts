@@ -11,9 +11,9 @@ import { enviarDigitando } from "@/lib/uazapi"
 // Vercel serverless padrao (Hobby) = 10s; este endpoint declara 60s explicitamente.
 export const maxDuration = 60
 
-const DEBOUNCE_MS = 20_000
+const DEBOUNCE_MS = 6_000
 // WhatsApp expira o presence "composing" em ~15s — renova a meio-caminho do debounce.
-const REFRESH_DIGITANDO_MS = 10_000
+const REFRESH_DIGITANDO_MS = 3_000
 
 const schema = z.object({
   chatId: z.string().min(1),

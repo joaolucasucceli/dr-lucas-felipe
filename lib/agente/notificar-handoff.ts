@@ -10,22 +10,13 @@ interface NotificacaoArgs {
   prioridade: "normal" | "urgente"
 }
 
-/**
- * Manda mensagem WhatsApp privada pro numero pessoal do Dr. Lucas avisando
- * que tem um orcamento esperando. Usa a propria instancia Uazapi ja
- * configurada da clinica (mesma config_whatsapp ativa).
- *
- * Numero pessoal vem de env `DR_LUCAS_WHATSAPP_PESSOAL` (formato: 5527..., so
- * digitos). Se nao configurado, loga warn e nao envia — UI /painel/
- * orcamentos-pendentes ainda mostra o pendente.
- */
 export async function notificarDrLucasOrcamento(
   args: NotificacaoArgs
 ): Promise<void> {
   const numeroPessoal = (process.env.DR_LUCAS_WHATSAPP_PESSOAL ?? "").trim()
   if (!numeroPessoal) {
     console.warn(
-      "[notificar-handoff] DR_LUCAS_WHATSAPP_PESSOAL nao configurada — pendente fica so na UI"
+      "[notificar-handoff] DR_LUCAS_WHATSAPP_PESSOAL nao configurada - pendente fica so na UI"
     )
     return
   }
@@ -39,30 +30,32 @@ export async function notificarDrLucasOrcamento(
     .maybeSingle()
 
   if (!configWa?.uazapiUrl || !configWa?.instanceToken) {
-    console.error("[notificar-handoff] config_whatsapp ausente — nao posso notificar")
+    console.error("[notificar-handoff] config_whatsapp ausente - nao posso notificar")
     return
   }
 
   const { data: contato } = await supabaseAdmin
     .from("contatos")
-    .select("nome, whatsapp")
+    .select("nome, whatsapp, procedimentoInteresse")
     .eq("id", args.contatoId)
     .maybeSingle()
 
   const nome = contato?.nome?.replace(/^WhatsApp\s+/, "") || "Paciente"
   const tel = contato?.whatsapp || "(sem WhatsApp registrado)"
-
-  const baseUrl = getBaseUrl()
-  const linkConversa = `${baseUrl}/contatos/${args.contatoId}`
-
-  const prefixoPrioridade =
-    args.prioridade === "urgente" ? "🚨 ORÇAMENTO URGENTE" : "📋 Orçamento"
+  const procedimento = contato?.procedimentoInteresse || "Nao informado"
+  const linkConversa = `${getBaseUrl()}/contatos/${args.contatoId}`
+  const titulo = args.prioridade === "urgente" ? "ORCAMENTO URGENTE" : "Orcamento"
 
   const mensagem = [
-    `${prefixoPrioridade} — ${nome}`,
-    `${tel}`,
+    `${titulo} - ${nome}`,
     ``,
-    `${args.resumoCaso}`,
+    `Responda com: ${tel} - R$ <valor>`,
+    ``,
+    `WhatsApp: ${tel}`,
+    `Procedimento: ${procedimento}`,
+    ``,
+    `Resumo do caso:`,
+    args.resumoCaso,
     ``,
     `Abrir conversa: ${linkConversa}`,
   ].join("\n")
@@ -74,7 +67,6 @@ export async function notificarDrLucasOrcamento(
     mensagem
   )
 
-  // Marca timestamp da notificacao no evento (auditoria)
   await supabaseAdmin
     .from("eventos_orcamento_pendente")
     .update({ notificacaoEnviadaEm: agora() })

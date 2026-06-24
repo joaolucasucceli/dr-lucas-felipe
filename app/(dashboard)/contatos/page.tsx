@@ -221,7 +221,7 @@ export default function ContatosPage() {
         {podecriar && (
           <Button onClick={() => setFormAberto(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Novo Contato
+            Novo Paciente
           </Button>
         )}
       </PageHeader>
@@ -252,8 +252,8 @@ export default function ContatosPage() {
         ) : !carregando && dados.length === 0 && !busca && !statusFunil && tipo === "todos" ? (
           <EmptyState
             titulo="Nenhum contato"
-            descricao="Crie o primeiro contato ou aguarde o agente IA."
-            textoBotao={podecriar ? "Novo Contato" : undefined}
+            descricao="Crie o primeiro paciente ou aguarde o agente IA."
+            textoBotao={podecriar ? "Novo Paciente" : undefined}
             onAcao={podecriar ? () => setFormAberto(true) : undefined}
           />
         ) : (

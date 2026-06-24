@@ -25,11 +25,10 @@ import {
 
 const formSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  whatsapp: z.string().regex(/^\d{10,13}$/, "WhatsApp: apenas dígitos (10-13)"),
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  whatsapp: z.string().regex(/^\d{10,13}$/, "WhatsApp: apenas digitos (10-13)"),
+  email: z.string().email("Email invalido").optional().or(z.literal("")),
   procedimentoInteresse: z.string().optional(),
   origem: z.string().optional(),
-  tipo: z.enum(["lead", "paciente"]),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -57,7 +56,6 @@ export function ContatoForm({
     handleSubmit,
     reset,
     setValue,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -67,11 +65,8 @@ export function ContatoForm({
       email: "",
       procedimentoInteresse: "",
       origem: "",
-      tipo: "lead",
     },
   })
-
-  const tipoAtual = watch("tipo")
 
   useEffect(() => {
     if (!aberto) {
@@ -90,7 +85,7 @@ export function ContatoForm({
     const body: Record<string, unknown> = {
       nome: data.nome,
       whatsapp: data.whatsapp,
-      tipo: data.tipo,
+      tipo: "paciente",
     }
 
     if (data.email) body.email = data.email
@@ -106,15 +101,15 @@ export function ContatoForm({
 
       if (!res.ok) {
         const erro = await res.json()
-        toast.error(erro.error || "Erro ao criar contato")
+        toast.error(erro.error || "Erro ao criar paciente")
         return
       }
 
-      toast.success(data.tipo === "paciente" ? "Paciente criado" : "Lead criado")
+      toast.success("Paciente criado")
       reset()
       onSucesso()
     } catch {
-      toast.error("Erro ao criar contato")
+      toast.error("Erro ao criar paciente")
     }
   }
 
@@ -122,30 +117,9 @@ export function ContatoForm({
     <Dialog open={aberto} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Novo Contato</DialogTitle>
+          <DialogTitle>Novo Paciente</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label>Tipo</Label>
-            <Select
-              value={tipoAtual}
-              onValueChange={(v) => setValue("tipo", v as "lead" | "paciente")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lead">Lead</SelectItem>
-                <SelectItem value="paciente">Paciente</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {tipoAtual === "paciente"
-                ? "Paciente já fechou — prontuário será criado automaticamente."
-                : "Lead em qualificação. Vira paciente depois que decide fazer."}
-            </p>
-          </div>
-
           <div className="grid gap-2">
             <Label htmlFor="contato-nome">Nome</Label>
             <Input id="contato-nome" {...register("nome")} />
@@ -155,7 +129,9 @@ export function ContatoForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="contato-whatsapp">WhatsApp <span className="text-muted-foreground font-normal text-xs">(somente dígitos)</span></Label>
+            <Label htmlFor="contato-whatsapp">
+              WhatsApp <span className="text-muted-foreground font-normal text-xs">(somente digitos)</span>
+            </Label>
             <Input
               id="contato-whatsapp"
               placeholder="11999998888"
@@ -167,7 +143,9 @@ export function ContatoForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="contato-email">Email <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
+            <Label htmlFor="contato-email">
+              Email <span className="text-muted-foreground font-normal text-xs">(opcional)</span>
+            </Label>
             <Input id="contato-email" type="email" {...register("email")} />
             {errors.email && (
               <p className="text-xs text-destructive">{errors.email.message}</p>
@@ -175,7 +153,9 @@ export function ContatoForm({
           </div>
 
           <div className="grid gap-2">
-            <Label>Procedimento de Interesse <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
+            <Label>
+              Procedimento de Interesse <span className="text-muted-foreground font-normal text-xs">(opcional)</span>
+            </Label>
             <Select
               onValueChange={(v) => setValue("procedimentoInteresse", v === "nenhum" ? "" : v)}
             >
@@ -194,7 +174,9 @@ export function ContatoForm({
           </div>
 
           <div className="grid gap-2">
-            <Label>Origem <span className="text-muted-foreground font-normal text-xs">(opcional)</span></Label>
+            <Label>
+              Origem <span className="text-muted-foreground font-normal text-xs">(opcional)</span>
+            </Label>
             <Select onValueChange={(v) => setValue("origem", v === "outro" ? "Outro" : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Como nos encontrou?" />
@@ -202,7 +184,7 @@ export function ContatoForm({
               <SelectContent>
                 <SelectItem value="WhatsApp">WhatsApp</SelectItem>
                 <SelectItem value="Instagram">Instagram</SelectItem>
-                <SelectItem value="Indicação">Indicação</SelectItem>
+                <SelectItem value="Indicacao">Indicacao</SelectItem>
                 <SelectItem value="Site">Site</SelectItem>
                 <SelectItem value="outro">Outro</SelectItem>
               </SelectContent>
@@ -224,7 +206,7 @@ export function ContatoForm({
                   Criando...
                 </>
               ) : (
-                "Criar"
+                "Criar paciente"
               )}
             </Button>
           </div>

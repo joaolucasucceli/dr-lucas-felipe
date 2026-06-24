@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
   const arquivado = searchParams.get("arquivado")
   const busca = searchParams.get("busca")
 
-  // Atendente só vê contatos tipo lead; gestor vê tudo
   const perfil = auth.session.user.perfil
   let tipoFiltro: "lead" | "paciente" | null = null
   if (tipoParam) {
@@ -48,6 +47,7 @@ export async function GET(request: NextRequest) {
   if (busca) {
     query = query.or(`nome.ilike.%${busca}%,whatsapp.ilike.%${busca}%`)
   }
+
   const inicio = (pagina - 1) * porPagina
   const fim = inicio + porPagina - 1
 
@@ -76,12 +76,22 @@ export async function POST(request: NextRequest) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Dados inválidos", detalhes: parsed.error.flatten() },
+      { error: "Dados invalidos", detalhes: parsed.error.flatten() },
       { status: 400 }
     )
   }
 
   const { whatsapp, consentimentoLgpd, tipo: tipoSolicitado, ...resto } = parsed.data
+
+  if (tipoSolicitado !== "paciente") {
+    return NextResponse.json(
+      {
+        error:
+          "Criacao manual de lead foi descontinuada. Leads entram pelo WhatsApp/site; no painel, crie apenas pacientes.",
+      },
+      { status: 410 }
+    )
+  }
 
   const { data: existente } = await supabaseAdmin
     .from("contatos")
@@ -92,7 +102,7 @@ export async function POST(request: NextRequest) {
 
   if (existente) {
     return NextResponse.json(
-      { error: "WhatsApp já cadastrado" },
+      { error: "WhatsApp ja cadastrado" },
       { status: 409 }
     )
   }
@@ -101,7 +111,7 @@ export async function POST(request: NextRequest) {
 
   const insertData = {
     id: criarId(),
-    tipo: "lead" as const, // sempre cria como lead; promove logo apos se preciso
+    tipo: "lead" as const,
     whatsapp,
     atualizadoEm: tsAgora,
     consentimentoLgpd: consentimentoLgpd ?? false,
@@ -122,28 +132,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Se foi criado como paciente, promove na sequencia (cria prontuario +
-  // anamnese vazia via promoverContatoPaciente).
-  if (tipoSolicitado === "paciente") {
-    const { promoverContatoPaciente } = await import(
-      "@/lib/contatos/promover-paciente"
-    )
-    try {
-      await promoverContatoPaciente(contato.id, auth.session.user.id)
-      const { data: contatoPaciente } = await supabaseAdmin
-        .from("contatos")
-        .select(
-          "id, tipo, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, criadoEm"
-        )
-        .eq("id", contato.id)
-        .single()
-      return NextResponse.json(contatoPaciente ?? contato, { status: 201 })
-    } catch (err) {
-      console.error("[Contatos] Falha ao promover apos criar:", err)
-      // Contato ja foi criado como lead — devolve assim mesmo, gestor
-      // pode promover manualmente depois.
-    }
-  }
+  const { promoverContatoPaciente } = await import(
+    "@/lib/contatos/promover-paciente"
+  )
 
-  return NextResponse.json(contato, { status: 201 })
+  try {
+    await promoverContatoPaciente(contato.id, auth.session.user.id)
+    const { data: contatoPaciente } = await supabaseAdmin
+      .from("contatos")
+      .select(
+        "id, tipo, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, criadoEm"
+      )
+      .eq("id", contato.id)
+      .single()
+
+    return NextResponse.json(contatoPaciente ?? contato, { status: 201 })
+  } catch (err) {
+    console.error("[Contatos] Falha ao promover apos criar:", err)
+    await supabaseAdmin
+      .from("contatos")
+      .update({ deletadoEm: tsAgora, atualizadoEm: tsAgora })
+      .eq("id", contato.id)
+
+    return NextResponse.json(
+      { error: "Paciente criado parcialmente, mas falhou ao gerar prontuario. Tente novamente." },
+      { status: 500 }
+    )
+  }
 }
