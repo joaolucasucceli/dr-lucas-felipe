@@ -73,7 +73,6 @@ export async function POST(request: NextRequest) {
       .select("procedimento:procedimentos(nome)")
       .eq("contatoId", contato.id)
       .eq("ciclo", contato.cicloAtual - 1)
-      .eq("status", "realizado")
       .not("procedimentoId", "is", null)
       .order("dataHora", { ascending: false })
       .limit(1)

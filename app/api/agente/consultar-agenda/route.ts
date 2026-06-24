@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     supabaseAdmin
       .from("agendamentos")
       .select("dataHora, duracao")
-      .in("status", ["agendado", "confirmado", "remarcado"])
+      .in("status", ["agendado", "remarcado"])
       .gte("dataHora", dataInicio.toISOString())
       .lte("dataHora", dataFim.toISOString()),
   ])

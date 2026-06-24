@@ -19,8 +19,7 @@ export async function POST() {
 }
 
 // JLU-171 (P1 pedido Dr. Lucas 25/05): listagem de agendamentos com filtros.
-// Default lista TODOS; ?status=realizado pra historico de consultas;
-// ?contatoId pra agendamentos de um paciente especifico.
+// Default lista TODOS; ?contatoId pra agendamentos de um paciente especifico.
 export async function GET(request: NextRequest) {
   const auth = await requireRole("gestor")
   if (auth.error) return auth.error

@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   CalendarClock,
-  CheckCircle2,
   ExternalLink,
   MoreHorizontal,
   Pencil,
@@ -108,24 +107,6 @@ export default function AgendaPage() {
     }
   }
 
-  async function marcarRealizada(ag: AgendamentoAgenda) {
-    try {
-      const res = await fetch(`/api/agendamentos/${ag.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "realizado" }),
-      })
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}))
-        throw new Error(e.error || "Erro ao marcar como realizada")
-      }
-      toast.success("Avaliação marcada como realizada")
-      recarregar()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao marcar como realizada")
-    }
-  }
-
   const colunas: ColunaConfig<AgendamentoAgenda>[] = [
     {
       chave: "dataHora",
@@ -212,12 +193,6 @@ export default function AgendaPage() {
                 <CalendarClock className="mr-2 h-4 w-4" />
                 Reagendar
               </DropdownMenuItem>
-              {ag.status !== "realizado" && (
-                <DropdownMenuItem onClick={() => marcarRealizada(ag)}>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Marcar como realizada
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => setCancelando(ag)}

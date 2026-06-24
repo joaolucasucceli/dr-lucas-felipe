@@ -49,7 +49,7 @@ export default function LgpdPage() {
           <section>
             <h2 className="text-xl font-semibold mb-3">4. Base legal</h2>
             <p>
-              O tratamento dos dados é realizado com base no consentimento do titular
+              O tratamento dos dados é feito com base no consentimento do titular
               (art. 7º, I da LGPD) e na execução de contrato ou procedimentos
               preliminares (art. 7º, V da LGPD).
             </p>

@@ -231,24 +231,6 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "confirmar_agendamento",
-      description:
-        "Marca um agendamento como CONFIRMADO. Use quando o paciente responder positivamente (Sim, Confirmo, OK, Pode confirmar, Tô confirmando) a um lembrete de presença que VOCÊ enviou. O ID do agendamento pendente está no contexto do paciente (agendamentoPendenteId). Não use sem ID válido — se não houver agendamento pendente no contexto, ignore.",
-      parameters: {
-        type: "object",
-        properties: {
-          agendamentoId: {
-            type: "string",
-            description: "ID do agendamento pendente (vem de agendamentoPendenteId no contexto)",
-          },
-        },
-        required: ["agendamentoId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "atualizar_agendamento",
       description:
         "Remarca ou cancela um agendamento existente do paciente.",
@@ -270,42 +252,6 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
         },
         required: ["agendamentoId", "acao"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "confirmar_presenca",
-      description:
-        "Marca um agendamento como REALIZADO (paciente compareceu na avaliação) e ENCERRA a conversa — você para de responder definitivamente nesse contato. Use SOMENTE quando o paciente responder positivamente (Sim, Foi, Compareci, Foi tudo certo, Sim fiz, Sim, fez) a uma pergunta SUA de pós-evento ('Conseguiu fazer a avaliação hoje?'). O ID está em agendamentoPosEventoId no contexto. Sem ID válido no contexto, ignore.",
-      parameters: {
-        type: "object",
-        properties: {
-          agendamentoId: {
-            type: "string",
-            description: "ID do agendamento (vem de agendamentoPosEventoId no contexto)",
-          },
-        },
-        required: ["agendamentoId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "marcar_nao_compareceu",
-      description:
-        "Marca um agendamento como NÃO COMPARECIDO (paciente faltou na avaliação). NÃO encerra a conversa — depois de chamar essa tool, ofereça remarcar para uma nova data via consultar_agenda + atualizar_agendamento. Use SOMENTE quando o paciente responder negativamente (Não, Não fui, Não consegui, Não deu, Faltei) a pergunta SUA de pós-evento. O ID está em agendamentoPosEventoId no contexto. Sem ID válido no contexto, ignore.",
-      parameters: {
-        type: "object",
-        properties: {
-          agendamentoId: {
-            type: "string",
-            description: "ID do agendamento (vem de agendamentoPosEventoId no contexto)",
-          },
-        },
-        required: ["agendamentoId"],
       },
     },
   },

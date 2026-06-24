@@ -18,7 +18,6 @@ export type Database = {
         Row: {
           atualizadoEm: string
           ciclo: number
-          confirmacoesEnviadas: string[] | null
           contatoId: string
           criadoEm: string
           criadoPor: Database["public"]["Enums"]["agendamento_origem"]
@@ -28,7 +27,6 @@ export type Database = {
           googleEventUrl: string | null
           id: string
           observacao: string | null
-          posEventoEnviado: string | null
           procedimentoId: string | null
           sincronizado: boolean
           status: Database["public"]["Enums"]["StatusAgendamento"]
@@ -37,7 +35,6 @@ export type Database = {
         Insert: {
           atualizadoEm: string
           ciclo?: number
-          confirmacoesEnviadas?: string[] | null
           contatoId: string
           criadoEm?: string
           criadoPor?: Database["public"]["Enums"]["agendamento_origem"]
@@ -47,7 +44,6 @@ export type Database = {
           googleEventUrl?: string | null
           id: string
           observacao?: string | null
-          posEventoEnviado?: string | null
           procedimentoId?: string | null
           sincronizado?: boolean
           status?: Database["public"]["Enums"]["StatusAgendamento"]
@@ -56,7 +52,6 @@ export type Database = {
         Update: {
           atualizadoEm?: string
           ciclo?: number
-          confirmacoesEnviadas?: string[] | null
           contatoId?: string
           criadoEm?: string
           criadoPor?: Database["public"]["Enums"]["agendamento_origem"]
@@ -66,7 +61,6 @@ export type Database = {
           googleEventUrl?: string | null
           id?: string
           observacao?: string | null
-          posEventoEnviado?: string | null
           procedimentoId?: string | null
           sincronizado?: boolean
           status?: Database["public"]["Enums"]["StatusAgendamento"]
@@ -1220,11 +1214,8 @@ export type Database = {
       Perfil: "gestor" | "atendente"
       StatusAgendamento:
         | "agendado"
-        | "confirmado"
         | "cancelado"
-        | "realizado"
         | "remarcado"
-        | "nao_compareceu"
       StatusFunil:
         | "acolhimento"
         | "qualificacao"
@@ -1412,11 +1403,8 @@ export const Constants = {
       Perfil: ["gestor", "atendente"],
       StatusAgendamento: [
         "agendado",
-        "confirmado",
         "cancelado",
-        "realizado",
         "remarcado",
-        "nao_compareceu",
       ],
       StatusFunil: [
         "acolhimento",

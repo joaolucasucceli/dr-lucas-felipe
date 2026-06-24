@@ -26,9 +26,7 @@ import type { AgendamentoAgenda } from "@/hooks/use-agenda"
 
 const ROTULOS_STATUS: Record<StatusAgendamento, string> = {
   agendado: "Agendado",
-  confirmado: "Confirmado",
   cancelado: "Cancelado",
-  realizado: "Realizado",
   remarcado: "Remarcado",
 }
 

@@ -26,9 +26,6 @@ export async function GET(request: NextRequest) {
     .lte("criadoEm", dataFimIso)
 
   const totalAgendamentos = agendamentosPeriodo?.length ?? 0
-  const realizados = (agendamentosPeriodo ?? []).filter(
-    (a) => a.status === "realizado"
-  ).length
   const cancelados = (agendamentosPeriodo ?? []).filter(
     (a) => a.status === "cancelado"
   ).length
@@ -90,14 +87,9 @@ export async function GET(request: NextRequest) {
     }
   })
 
-  const taxaRealizacao =
-    totalAgendamentos > 0
-      ? Math.round((realizados / totalAgendamentos) * 1000) / 10
-      : 0
-
   return NextResponse.json({
     periodo: { inicio: dataInicio.toISOString(), fim: dataFim.toISOString() },
-    agendamentos: { total: totalAgendamentos, realizados, cancelados, taxaRealizacao },
+    agendamentos: { total: totalAgendamentos, cancelados },
     procedimentos,
     origem,
   })

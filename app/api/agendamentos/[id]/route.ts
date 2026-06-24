@@ -85,16 +85,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     await atualizarEvento(atualizado.googleEventId, { inicio, fim })
   }
 
-  // Ao marcar como realizada, transfere responsabilidade do contato pro
-  // usuario que clicou (geralmente o gestor que conduziu a reuniao). Antes
-  // o contato ficava com a Ana Julia mesmo apos a consulta acontecer.
-  if (parsed.data.status === "realizado" && atual.status !== "realizado") {
-    await supabaseAdmin
-      .from("contatos")
-      .update({ responsavelId: auth.session.user.id, atualizadoEm: agora() })
-      .eq("id", atualizado.contatoId)
-  }
-
   await registrarAuditLog({
     usuarioId: auth.session.user.id,
     acao: "atualizar",

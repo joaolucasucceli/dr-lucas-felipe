@@ -7,15 +7,8 @@ export interface ContextoContato {
   cicloAtual?: number
   ciclosCompletos?: number
   ultimoProcedimento?: string | null
-  /** Agendamento futuro pendente de confirmacao — IA usa em confirmar_agendamento. */
+  /** Agendamento ativo usado apenas para remarcação/cancelamento. */
   agendamentoPendente?: {
-    id: string
-    dataHoraIso: string
-    label: string
-  }
-  /** Agendamento que ja teve mensagem de pos-evento enviada — IA deve usar
-   *  confirmar_presenca ou marcar_nao_compareceu no proximo turno. */
-  agendamentoPosEvento?: {
     id: string
     dataHoraIso: string
     label: string
@@ -57,7 +50,7 @@ export async function gerarSystemPrompt(contexto?: ContextoContato): Promise<str
 
   if (contexto) {
     const partes: string[] = []
-    if (contexto.nome) partes.push(`Nome confirmado do paciente: ${contexto.nome}`)
+    if (contexto.nome) partes.push(`Nome do paciente: ${contexto.nome}`)
     if (contexto.procedimento) partes.push(`Procedimento de interesse: ${contexto.procedimento}`)
     if (contexto.etapa) partes.push(`Etapa atual no funil: ${contexto.etapa}`)
     if (contexto.sobreOPaciente) partes.push(`Informações já coletadas:\n${contexto.sobreOPaciente}`)
@@ -75,8 +68,6 @@ export async function gerarSystemPrompt(contexto?: ContextoContato): Promise<str
 
 **Como agir conforme a intenção do paciente:**
 
-- **Paciente confirma o agendamento** (Sim/OK/Confirmo/Tô indo/Pode contar) → chame \`confirmar_agendamento({ agendamentoId: "${contexto.agendamentoPendente.id}" })\` e responda SUPER curto: *"Perfeito! Te espero em breve."*. Não reabra qualificação.
-
 - **Paciente quer REMARCAR / mudar de horário** (*"tem como remarcar?"*, *"posso trocar pra outro dia?"*, *"surgiu um imprevisto"*) → fluxo OBRIGATÓRIO em 3 passos:
   1. Chame \`consultar_agenda({})\` pra pegar os slots disponíveis (NUNCA invente slot).
   2. Ofereça 2-3 slots usando os \`label\` EXATAMENTE como vieram da tool (formato curto: \`amanhã 9h\`, \`sex 16/05 10h\`). NÃO infle pra "sexta-feira, dia 16, às 10h".
@@ -88,28 +79,12 @@ export async function gerarSystemPrompt(contexto?: ContextoContato): Promise<str
       )
     }
 
-    if (contexto.agendamentoPosEvento) {
-      partes.push(
-        `**FLUXO PÓS-EVENTO ATIVO** — Você JÁ MANDOU uma mensagem perguntando "conseguiu fazer a avaliação com o Dr. Lucas hoje?" pro paciente. O agendamento foi pra ${contexto.agendamentoPosEvento.label}. \`agendamentoPosEventoId: ${contexto.agendamentoPosEvento.id}\`.
-
-A próxima resposta do paciente é sobre PRESENÇA nessa avaliação. Aja conforme:
-
-- **Resposta afirmativa** (*"Sim"*, *"Foi"*, *"Compareci"*, *"Sim, fiz"*, *"Foi tudo certo"*, *"Sim, foi ótimo"*, *"Conseguiu sim"*) → chame \`confirmar_presenca({ agendamentoId: "${contexto.agendamentoPosEvento.id}" })\` e responda SUPER curto e gentil, deixando a porta aberta SEM cobrar nada: *"Que bom! Qualquer coisa, é só me chamar."* OU *"Perfeito! Fico feliz que deu certo."*. **NÃO ofereça nada (procedimento, outra consulta, valor). NÃO tente vender.** Você está encerrando a venda — paciente já foi atendido pelo Dr. Lucas.
-
-- **Resposta negativa** (*"Não"*, *"Não fui"*, *"Não consegui"*, *"Não deu"*, *"Faltei"*, *"Esqueci"*, *"Tive um problema"*) → chame \`marcar_nao_compareceu({ agendamentoId: "${contexto.agendamentoPosEvento.id}" })\` e ofereça remarcar: *"Sem problema, [nome]! Quer que eu te ofereça outro horário?"*. Se ele aceitar, siga o fluxo normal de \`consultar_agenda\` + \`registrar_agendamento\` (NOVO agendamento, esse aqui está fechado).
-
-- **Resposta evasiva** (*"Depois te falo"*, *"Tô ocupado"*) → respeite, não force, peça pra avisar depois. NÃO chame nenhuma das duas tools — espera a confirmação clara.
-
-**REGRA INVIOLÁVEL**: NÃO chame \`confirmar_presenca\` ou \`marcar_nao_compareceu\` sem ter recebido resposta clara do paciente nesta exata interação. NÃO chame antes de mandar a primeira mensagem de pós-evento (essa tool só roda DEPOIS do cron ter disparado, o contexto reflete isso).`
-      )
-    }
-
-    if (!contexto.agendamentoPendente && !contexto.agendamentoPosEvento) {
+    if (!contexto.agendamentoPendente) {
       // Sem agendamento real no banco — bloqueia alucinacao baseada em
       // historico antigo ("voce ja agendou pra X"). Forca registrar_agendamento
       // (criar novo) em vez de atualizar_agendamento (que falha 404).
       partes.push(
-        `**SEM AGENDAMENTO ATIVO** — Paciente NAO tem nenhum agendamento ativo no sistema. Mesmo que o historico da conversa mencione um agendamento anterior, NAO E REAL (pode ter sido cancelado, ou voce alucinou no passado). Se o paciente quiser marcar/falar de horario: SEMPRE use \`registrar_agendamento\` (criar novo). NUNCA chame \`atualizar_agendamento\` — nao tem o que atualizar e vai dar erro. NUNCA chame \`confirmar_agendamento\`. Se voce ja "tinha confirmado" um horario antes nesta conversa, esqueca — comece o agendamento do zero usando \`consultar_agenda\` + \`registrar_agendamento\`.`
+        `**SEM AGENDAMENTO ATIVO** — Paciente NAO tem nenhum agendamento ativo no sistema. Mesmo que o historico da conversa mencione um agendamento anterior, NAO E REAL (pode ter sido cancelado, ou voce alucinou no passado). Se o paciente quiser marcar/falar de horario: SEMPRE use \`registrar_agendamento\` (criar novo). NUNCA chame \`atualizar_agendamento\` — nao tem o que atualizar e vai dar erro. Se voce ja "tinha agendado" um horario antes nesta conversa, esqueca — comece o agendamento do zero usando \`consultar_agenda\` + \`registrar_agendamento\`.`
       )
     }
 
@@ -796,10 +771,7 @@ Quando o contexto indicar paciente de retorno:
 - \`registrar_mensagem\`: Registra mensagens no banco (chamado automaticamente pelo loop)
 - \`consultar_agenda\`: Retorna slots livres do Dr. Lucas no Google Calendar pra avaliação online de 1h (até 10 slots, próximos 14 dias). SEMPRE chame antes de propor horário.
 - \`registrar_agendamento\`: Registra o agendamento com o \`dataIso\` de um slot obtido em \`consultar_agenda\`. Cria o evento no Google Calendar e avança o funil pra \`consulta_agendada\`.
-- \`confirmar_agendamento\`: Marca como CONFIRMADO um agendamento pendente. Use SOMENTE quando o paciente responder positivamente a um lembrete que VOCÊ enviou (mensagens "Lembrete: sua avaliação..." ou "falta 1h..."). O ID vem em \`agendamentoPendenteId\` no contexto — não chame se o contexto não tem esse campo.
 - \`atualizar_agendamento\`: Reagenda ou cancela um agendamento existente. Para reagendar, consulte \`consultar_agenda\` antes.
-- \`confirmar_presenca\`: Marca como REALIZADO um agendamento de pós-evento e ENCERRA a conversa (você para de responder). Use SOMENTE quando contexto tiver \`agendamentoPosEventoId\` e o paciente responder afirmativamente à pergunta "conseguiu fazer a avaliação hoje?".
-- \`marcar_nao_compareceu\`: Marca como NÃO COMPARECEU um agendamento de pós-evento. NÃO encerra a conversa — você deve oferecer remarcar logo depois. Use SOMENTE quando contexto tiver \`agendamentoPosEventoId\` e o paciente responder negativamente.
 - \`atualizar_lead\`: Atualiza o cadastro (nome, procedimentoInteresse, sobreOPaciente em APPEND) e avança o funil (qualificacao/agendamento). Chame sempre que descobrir nome, procedimento de interesse ou um fato relevante do paciente, OU quando a conversa amadurecer pra mudar de etapa. NUNCA use pra 'consulta_agendada' (isso é só do \`registrar_agendamento\`).
 
 **Data entry estruturada** (nome, procedimento, sobreOPaciente, avanço de etapa até \`agendamento\`) é feita por VOCÊ via \`atualizar_lead\`. Mantenha o cadastro e o funil em dia ao longo da conversa, sem anunciar nada pro paciente.
@@ -829,7 +801,6 @@ Quando o paciente pedir ver MAIS do trabalho do Dr. Lucas — exemplos genérico
 
 - \`registrar_agendamento\` falhou (ex: "Conflito com outro agendamento", "Fora do horário de atendimento", "Data é feriado: [nome]"): chame \`consultar_agenda\` de novo (talvez com janela diferente) e proponha outro slot. Para o paciente, fale natural: *"Esse horário acabou de fechar aqui, deixa eu te oferecer outras opções."* — sem citar erro técnico.
 - \`enviar_midia\` retornou \`{ enviado: false }\` ou \`{ ok: false }\`: NÃO diga "enviei a foto". Use o fallback: *"Esse caso o Dr. Lucas mostra na avaliação online — ele tem várias referências do tipo."*
-- \`confirmar_agendamento\` falhou: ignora silenciosamente, segue conversa normal.
 - Outras tools com \`ok: false\`: continue o fluxo sem mencionar a falha; nunca diga "tive um erro" / "tive um problema técnico" pro paciente (regra absoluta #11).
 
 JSON de sucesso varia por tool — não tem campo \`ok\` no nível raiz necessariamente. Se NÃO tem \`ok: false\`, considera sucesso.

@@ -118,11 +118,11 @@ export async function processarMensagens(
       // (JLAU-...). Removido o codigo morto. Se quiser reativar "novo ciclo
       // pra paciente de retorno", `abrirNovoCiclo` continua disponivel em
       // `lib/agente/kanban-sync.ts` — basta plugar aqui novamente.
-      const nomeConfirmado = resultadoPaciente.sobreOPaciente
+      const nomePaciente = resultadoPaciente.sobreOPaciente
         ? resultadoPaciente.contato.nome
         : undefined
       contextoContato = {
-        nome: nomeConfirmado,
+        nome: nomePaciente,
         procedimento: resultadoPaciente.contato.procedimentoInteresse,
         etapa: resultadoPaciente.contato.statusFunil,
         sobreOPaciente: resultadoPaciente.sobreOPaciente,
@@ -177,11 +177,10 @@ export async function processarMensagens(
       return null
     }
 
-    // Conversa marcada como encerrada por confirmacao pos-evento. IA nao
-    // responde mais nesse contato — paciente ja foi atendido pelo Dr. Lucas.
-    // Reabertura precisa ser explicita (abrirNovoCiclo do kanban-sync).
+    // Quando iaResponde=false, a automacao deve permanecer pausada ate
+    // reabertura explicita pelo fluxo operacional.
     if ((conversa as { iaResponde?: boolean })?.iaResponde === false) {
-      console.log(`[Agente] Conversa ${conversaId} com iaResponde=false (paciente ja atendido) — IA nao responde`)
+      console.log(`[Agente] Conversa ${conversaId} com iaResponde=false — IA nao responde`)
       return null
     }
   }
@@ -192,8 +191,8 @@ export async function processarMensagens(
     console.warn("[Agente] Erro ao enviar indicador de digitacao")
   }
 
-  // Busca agendamento futuro pendente de confirmacao pra IA reconhecer
-  // resposta de lembrete e chamar confirmar_agendamento.
+  // Busca agendamento futuro ativo para permitir remarcacao/cancelamento
+  // sem depender de historico antigo da conversa.
   if (contatoId && contextoContato) {
     try {
       const { data: ag } = await supabaseAdmin
@@ -224,44 +223,6 @@ export async function processarMensagens(
       }
     } catch (err) {
       console.warn("[Agente] Erro ao buscar agendamento pendente:", err)
-    }
-  }
-
-  // Busca agendamento que ja teve mensagem de pos-evento enviada nas
-  // ultimas 48h e ainda nao foi resolvido (realizado ou nao_compareceu).
-  // IA precisa reconhecer que paciente esta respondendo aquela pergunta.
-  if (contatoId && contextoContato) {
-    try {
-      const ha48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-      const { data: ag } = await supabaseAdmin
-        .from("agendamentos")
-        .select("id, dataHora, status, posEventoEnviado")
-        .eq("contatoId", contatoId)
-        .in("status", ["agendado", "confirmado", "remarcado"] as never)
-        .not("posEventoEnviado", "is", null)
-        .gt("posEventoEnviado", ha48h)
-        .order("posEventoEnviado", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (ag) {
-        const data = new Date(ag.dataHora)
-        const label = new Intl.DateTimeFormat("pt-BR", {
-          timeZone: "America/Sao_Paulo",
-          weekday: "short",
-          day: "2-digit",
-          month: "long",
-          hour: "2-digit",
-          minute: "2-digit",
-        }).format(data)
-        contextoContato.agendamentoPosEvento = {
-          id: ag.id,
-          dataHoraIso: ag.dataHora,
-          label,
-        }
-      }
-    } catch (err) {
-      console.warn("[Agente] Erro ao buscar agendamento pos-evento:", err)
     }
   }
 

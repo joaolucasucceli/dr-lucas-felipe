@@ -11,9 +11,7 @@ export const TIPOS_AGENDAMENTO = [
 
 export const STATUS_AGENDAMENTO = [
   "agendado",
-  "confirmado",
   "cancelado",
-  "realizado",
   "remarcado",
 ] as const
 

@@ -163,7 +163,7 @@ export function FormRegistroCirurgico({
         <SheetHeader>
           <SheetTitle>{isEdit ? "Editar Registro Cirúrgico" : "Registro Cirúrgico"}</SheetTitle>
           <SheetDescription>
-            Detalhes do procedimento cirúrgico realizado.
+            Detalhes do procedimento cirúrgico.
           </SheetDescription>
         </SheetHeader>
 

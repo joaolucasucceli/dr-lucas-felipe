@@ -68,7 +68,7 @@ export async function validarSlotManual(
     supabaseAdmin
       .from("agendamentos")
       .select("id, dataHora, duracao")
-      .in("status", ["agendado", "confirmado", "remarcado"])
+      .in("status", ["agendado", "remarcado"])
       .gte("dataHora", new Date(dataHora.getTime() - 4 * 60 * 60_000).toISOString())
       .lte("dataHora", fim.toISOString()),
   ])

@@ -4,7 +4,7 @@ import { getBaseUrl } from "@/lib/env"
 
 /**
  * JLU-170 (P3+P4 25/05/2026): notifica Dr. Lucas no WhatsApp pessoal a cada
- * agendamento (ao criar) e a cada confirmacao de presenca (na hora).
+ * agendamento (ao criar).
  *
  * Decisao Joao 25/05: nao-bloqueante. IA segue agendando direto, Lucas recebe
  * info pra cruzar com agenda real dele. Se houver conflito, ele remarca manual.
@@ -112,70 +112,5 @@ export async function pingAgendado(agendamentoId: string): Promise<void> {
     console.log("[notificar-agendamento] pingAgendado OK", { agendamentoId })
   } catch (e) {
     console.error("[notificar-agendamento] pingAgendado falhou (silencioso):", e)
-  }
-}
-
-/**
- * Ping 2 — disparado APOS confirmar_agendamento mudar status pra "confirmado".
- * Avisa Lucas que o paciente confirmou presenca. Inclui quanto tempo falta
- * (em horas) pra ele se planejar.
- *
- * Falha silenciosa.
- */
-export async function pingConfirmadoDia(agendamentoId: string): Promise<void> {
-  try {
-    const cfg = await obterConfigEnvio()
-    if (!cfg) return
-
-    const { data: ag } = await supabaseAdmin
-      .from("agendamentos")
-      .select(
-        "id, dataHora, contatoId, contato:contatos(nome), procedimento:procedimentos(nome, escopoOferta)"
-      )
-      .eq("id", agendamentoId)
-      .maybeSingle()
-
-    if (!ag) {
-      console.warn(
-        "[notificar-agendamento] pingConfirmadoDia: agendamento nao encontrado",
-        agendamentoId
-      )
-      return
-    }
-
-    const contato = ag.contato as { nome: string | null } | null
-    const proc = ag.procedimento as { nome: string | null; escopoOferta: string | null } | null
-    const nomeLimpo = contato?.nome?.replace(/^WhatsApp\s+/, "") || "Paciente"
-    const procTxt = proc?.escopoOferta || proc?.nome || "—"
-
-    const { horaLabel } = formatarDataHoraBR(ag.dataHora)
-    const horasFaltam = Math.max(
-      0,
-      Math.round((new Date(ag.dataHora).getTime() - Date.now()) / 3_600_000)
-    )
-
-    const quandoTxt =
-      horasFaltam === 0
-        ? "começa agora"
-        : horasFaltam === 1
-          ? "em 1h"
-          : horasFaltam < 24
-            ? `em ~${horasFaltam}h`
-            : `daqui a ${Math.round(horasFaltam / 24)} dia(s)`
-
-    const linkConversa = `${getBaseUrl()}/contatos/${ag.contatoId}`
-
-    const mensagem = [
-      `✅ ${nomeLimpo} confirmou presença`,
-      `Avaliação às ${horaLabel} (${quandoTxt})`,
-      `Procedimento: ${procTxt}`,
-      ``,
-      `Conversa: ${linkConversa}`,
-    ].join("\n")
-
-    await enviarMensagem(cfg.uazapiUrl, cfg.token, cfg.numeroPessoal, mensagem)
-    console.log("[notificar-agendamento] pingConfirmadoDia OK", { agendamentoId, horasFaltam })
-  } catch (e) {
-    console.error("[notificar-agendamento] pingConfirmadoDia falhou (silencioso):", e)
   }
 }

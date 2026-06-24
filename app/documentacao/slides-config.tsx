@@ -494,14 +494,11 @@ export const slides: Slide[] = [
   {
     tipo: "ferramentas",
     bloco: "Bloco C · Ana Júlia",
-    titulo: "As 13 ferramentas da Ana Júlia",
+    titulo: "As 10 ferramentas da Ana Júlia",
     ferramentas: [
       { nome: "consultar_agenda", descricao: "Cruza Google Calendar + expediente e devolve horários livres", categoria: "agenda" },
       { nome: "registrar_agendamento", descricao: "Cria evento no Google Calendar + move card pra 'Reunião Agendada'", categoria: "agenda" },
-      { nome: "atualizar_agendamento", descricao: "Reagenda um horário existente", categoria: "agenda" },
-      { nome: "confirmar_agendamento", descricao: "Envia mensagem de confirmação D-1 da reunião", categoria: "agenda" },
-      { nome: "confirmar_presenca", descricao: "Marca presença no dia da reunião", categoria: "agenda" },
-      { nome: "marcar_nao_compareceu", descricao: "Registra no-show e devolve o paciente pro funil", categoria: "agenda" },
+      { nome: "atualizar_agendamento", descricao: "Reagenda ou cancela um horário existente", categoria: "agenda" },
       { nome: "consultar_paciente", descricao: "Busca paciente existente (retorno) por WhatsApp ou nome", categoria: "paciente" },
       { nome: "consultar_procedimentos", descricao: "Lista catálogo de procedimentos da clínica", categoria: "paciente" },
       { nome: "buscar_conteudo", descricao: "Procura na biblioteca de Conteúdo IA o texto/mídia certo pro contexto", categoria: "conteudo" },
@@ -554,7 +551,6 @@ export const slides: Slide[] = [
       { id: "6", texto: "Evento criado no Google Calendar", destaque: "infra" },
       { id: "7", texto: "Card move para 'Reunião Agendada' no Kanban", destaque: "infra" },
       { id: "8", texto: "Ana Júlia confirma com o paciente + envia detalhes", destaque: "ia" },
-      { id: "9", texto: "D-1: Ana Júlia chama confirmar_agendamento automaticamente", detalhe: "Lembrete da véspera sem você fazer nada", destaque: "ia" },
     ],
   },
   {
@@ -611,11 +607,11 @@ export const slides: Slide[] = [
     bloco: "Bloco D · Cenários reais",
     titulo: "Como a Ana Júlia age em cada situação",
     descricao:
-      "Até aqui você viu como o sistema funciona por dentro. Agora vamos ver como ele se comporta na prática — em cada fase do funil e nos protocolos especiais (confirmação, no-show, reagendamento, orçamento aproximado).",
+      "Até aqui você viu como o sistema funciona por dentro. Agora vamos ver como ele se comporta na prática — em cada fase do funil e nos fluxos especiais de reagendamento, cancelamento e orçamento aproximado.",
     destaques: [
       "As 4 fases do funil pela ótica da Ana Júlia",
       "Como ela conduz a conversa naturalmente, sem caixinhas de 'tipo de paciente'",
-      "Protocolos especiais que rodam sozinhos (confirmação D-1, no-show, reagendamento)",
+      "Fluxos especiais quando o paciente pede para reagendar, cancelar ou saber preço",
       "Orçamento: a faixa aproximada na hora, ou o orçamento real com PDF via Dr. Lucas",
     ],
   },
@@ -646,7 +642,7 @@ export const slides: Slide[] = [
       {
         id: "4",
         texto: "Fase 4 — Reunião Agendada",
-        detalhe: "Manda detalhes (endereço, instruções pré-consulta) · D-1 dispara confirmar_agendamento automático · No dia: confirmar_presenca · Se faltar: marcar_nao_compareceu",
+        detalhe: "Manda detalhes do horário e mantém o card em reunião agendada. Se o paciente pedir, pode remarcar ou cancelar pelo Google Calendar",
         destaque: "ia",
       },
       {
@@ -660,31 +656,13 @@ export const slides: Slide[] = [
   {
     tipo: "fluxograma",
     bloco: "Bloco D · Cenários reais",
-    titulo: "Protocolos especiais — o que roda sem você pedir",
-    subtitulo: "Comportamentos automáticos da Ana Júlia em situações específicas",
+    titulo: "Fluxos especiais — o que a Ana Júlia resolve",
+    subtitulo: "Comportamentos da Ana Júlia quando o paciente muda o combinado ou pede preço",
     passos: [
       {
         id: "1",
         texto: "Protocolos que disparam sozinhos",
         ramo: [
-          {
-            rotulo: "Confirmação D-1",
-            passos: [
-              { id: "2a-1", texto: "Véspera da consulta às 18h (configurável)", destaque: "infra" },
-              { id: "2a-2", texto: "Ana Júlia chama confirmar_agendamento", destaque: "ia" },
-              { id: "2a-3", texto: "Manda mensagem perguntando se vai comparecer", destaque: "ia" },
-              { id: "2a-4", texto: "Se responder 'não' → tool atualizar_agendamento e oferece remarcar", destaque: "ia" },
-            ],
-          },
-          {
-            rotulo: "No-show",
-            passos: [
-              { id: "2b-1", texto: "Paciente não compareceu no horário marcado", destaque: "externo" },
-              { id: "2b-2", texto: "Você marca em /agenda", destaque: "humano" },
-              { id: "2b-3", texto: "Tool marcar_nao_compareceu registra + devolve pro funil", destaque: "ia" },
-              { id: "2b-4", texto: "Ana Júlia retoma conversa pra entender e tentar reengajar", destaque: "ia" },
-            ],
-          },
           {
             rotulo: "Reagendamento",
             passos: [
@@ -692,6 +670,15 @@ export const slides: Slide[] = [
               { id: "2c-2", texto: "Ana Júlia chama consultar_agenda novamente", destaque: "ia" },
               { id: "2c-3", texto: "atualizar_agendamento move evento no Google Calendar", destaque: "ia" },
               { id: "2c-4", texto: "Card permanece em 'Reunião Agendada' — só muda data/hora", destaque: "infra" },
+            ],
+          },
+          {
+            rotulo: "Cancelamento",
+            passos: [
+              { id: "2d-1", texto: "Paciente pede para cancelar", destaque: "externo" },
+              { id: "2d-2", texto: "Ana Júlia confirma a intenção uma vez", destaque: "ia" },
+              { id: "2d-3", texto: "atualizar_agendamento cancela o evento", destaque: "ia" },
+              { id: "2d-4", texto: "Card fica registrado como cancelado", destaque: "infra" },
             ],
           },
           {

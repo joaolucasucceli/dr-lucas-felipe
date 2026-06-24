@@ -7,12 +7,12 @@ const funilConfig: Record<string, { label: string; classes: string; descricao: s
   acolhimento: { label: "Acolhimento", classes: "bg-zinc-100 text-zinc-800", descricao: "Etapa 1 — Lead acabou de entrar no funil" },
   qualificacao: { label: "Qualificação", classes: "bg-blue-100 text-blue-800", descricao: "Etapa 2 — Ana Júlia coletando nome, procedimento e qualificação comercial" },
   agendamento: { label: "Agendamento", classes: "bg-indigo-100 text-indigo-800", descricao: "Etapa 3 — Ana Júlia negociando horário com o paciente" },
-  consulta_agendada: { label: "Reunião Agendada", classes: "bg-purple-100 text-purple-800", descricao: "Etapa 4 — Horário confirmado e evento no Google Calendar" },
+  consulta_agendada: { label: "Reunião Agendada", classes: "bg-purple-100 text-purple-800", descricao: "Etapa 4 — Horário reservado e evento no Google Calendar" },
 }
 
 const evolucaoConfig: Record<string, { label: string; classes: string; descricao: string }> = {
   consulta: { label: "Consulta", classes: "bg-blue-100 text-blue-800", descricao: "Registro de consulta médica" },
-  procedimento: { label: "Procedimento", classes: "bg-purple-100 text-purple-800", descricao: "Registro de procedimento realizado" },
+  procedimento: { label: "Procedimento", classes: "bg-purple-100 text-purple-800", descricao: "Registro de procedimento executado" },
   retorno: { label: "Retorno", classes: "bg-green-100 text-green-800", descricao: "Consulta de retorno pós-procedimento" },
   prescricao: { label: "Prescrição", classes: "bg-amber-100 text-amber-800", descricao: "Prescrição médica emitida" },
   intercorrencia: { label: "Intercorrência", classes: "bg-red-100 text-red-800", descricao: "Intercorrência ou complicação registrada" },
@@ -20,10 +20,8 @@ const evolucaoConfig: Record<string, { label: string; classes: string; descricao
 }
 
 const agendamentoConfig: Record<string, { label: string; classes: string; descricao: string }> = {
-  agendado: { label: "Agendado", classes: "bg-blue-100 text-blue-800", descricao: "Agendamento confirmado, aguardando a data" },
-  confirmado: { label: "Confirmado", classes: "bg-green-100 text-green-800", descricao: "Paciente confirmou presença" },
+  agendado: { label: "Agendado", classes: "bg-blue-100 text-blue-800", descricao: "Agendamento criado, aguardando a data" },
   cancelado: { label: "Cancelado", classes: "bg-red-100 text-red-800", descricao: "Agendamento foi cancelado" },
-  realizado: { label: "Realizado", classes: "bg-emerald-100 text-emerald-800", descricao: "Consulta/procedimento foi realizado" },
   remarcado: { label: "Remarcado", classes: "bg-amber-100 text-amber-800", descricao: "Agendamento foi reagendado para nova data" },
 }
 
