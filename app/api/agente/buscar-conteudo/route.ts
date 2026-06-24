@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
+import { filtrarMidiasComArquivo } from "@/lib/agente/midia-marketing-storage"
 
 /** JLAU-1042: busca unificada de conteudo da IA.
  *  Retorna textos da base de conhecimento + midias de marketing relevantes
@@ -71,6 +72,11 @@ export async function POST(request: NextRequest) {
     midiasFinais = todas ?? []
     usouFallback = true
   }
+
+  midiasFinais = await filtrarMidiasComArquivo(
+    midiasFinais,
+    filtro ? `filtro="${filtro}"` : "sem filtro"
+  )
 
   // === jaEnviada: cruzar com mensagens_whatsapp da conversa ===
   let idsEnviadas = new Set<string>()

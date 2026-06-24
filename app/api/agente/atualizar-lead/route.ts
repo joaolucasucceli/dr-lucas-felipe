@@ -7,7 +7,7 @@ import {
   aplicarMudancasLead,
   type EstadoAtualContato,
 } from "@/lib/agente/atualizar-lead"
-import type { StatusFunil } from "@/lib/types/enums"
+import type { StatusFunil, TipoContato } from "@/lib/types/enums"
 
 const schema = z.object({
   contatoId: z.string().min(1),
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   // Le o estado atual do contato (mesmo padrao das demais rotas do agente).
   const { data: contato, error: erroContato } = await supabaseAdmin
     .from("contatos")
-    .select("id, nome, statusFunil, procedimentoInteresse, sobreOPaciente")
+    .select("id, nome, origem, tipo, statusFunil, procedimentoInteresse, sobreOPaciente")
     .eq("id", contatoId)
     .maybeSingle()
 
@@ -71,6 +71,8 @@ export async function POST(request: NextRequest) {
 
   const estadoAtual: EstadoAtualContato = {
     nome: contato.nome ?? "",
+    origem: contato.origem ?? null,
+    tipo: (contato.tipo as TipoContato | null) ?? null,
     statusFunil: (contato.statusFunil as StatusFunil | null) ?? null,
     procedimentoInteresse: contato.procedimentoInteresse ?? null,
     sobreOPaciente: contato.sobreOPaciente ?? null,

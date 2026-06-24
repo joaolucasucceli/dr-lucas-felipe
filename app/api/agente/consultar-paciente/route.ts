@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   const { data: contatoExistente } = await supabaseAdmin
     .from("contatos")
     .select(
-      "id, nome, whatsapp, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
+      "id, nome, whatsapp, tipo, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
     )
     .eq("whatsapp", whatsapp)
     .is("deletadoEm", null)
@@ -37,13 +37,14 @@ export async function POST(request: NextRequest) {
       .insert({
         id: criarId(),
         atualizadoEm: agora(),
+        tipo: "lead",
         nome: `WhatsApp ${whatsapp}`,
         whatsapp,
         origem: "whatsapp",
         statusFunil: "acolhimento",
       })
       .select(
-        "id, nome, whatsapp, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
+        "id, nome, whatsapp, tipo, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
       )
       .single()
 
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
       id: contato.id,
       nome: contato.nome,
       whatsapp: contato.whatsapp,
+      tipo: contato.tipo,
       statusFunil: contato.statusFunil,
       procedimentoInteresse: contato.procedimentoInteresse,
       origem: contato.origem,

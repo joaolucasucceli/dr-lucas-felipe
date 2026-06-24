@@ -41,7 +41,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
           nome: {
             type: "string",
-            description: "Nome do paciente, quando ele informar. Só sobrescreve nome genérico ('WhatsApp 55...').",
+            description: "Nome do paciente, quando ele informar na conversa. Para lead de origem WhatsApp, substitui o nome de perfil cadastrado automaticamente.",
           },
           procedimentoInteresse: {
             type: "string",

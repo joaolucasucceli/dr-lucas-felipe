@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { enviarMidia } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
+import { midiaMarketingExisteNoStorage } from "@/lib/agente/midia-marketing-storage"
 
 function inferirTipoArquivo(url: string): "video" | "imagem" {
   return /\.(mp4|webm|mov|avi|mkv|m4v)(\?|$)/i.test(url) ? "video" : "imagem"
@@ -41,6 +42,19 @@ export async function POST(request: NextRequest) {
       ok: true,
       enviado: false,
       motivo: "Mídia não encontrada ou inativa",
+    })
+  }
+
+  const arquivoExiste = await midiaMarketingExisteNoStorage(midia.url)
+  if (!arquivoExiste) {
+    console.warn("[enviar-midia] Midia cadastrada sem arquivo no Storage:", {
+      midiaId: midia.id,
+      url: midia.url,
+    })
+    return NextResponse.json({
+      ok: true,
+      enviado: false,
+      motivo: "Midia indisponivel no Storage",
     })
   }
 

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { getBaseUrl } from "@/lib/env"
 import { obterELimparBuffer } from "@/lib/agente/buffer"
 import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
+import { temNomeAutodeclarado } from "@/lib/agente/atualizar-lead"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
 import {
@@ -52,6 +53,67 @@ export function segmentarResposta(texto: string): string[] {
 
 function extrairNumero(chatId: string): string {
   return chatId.split("@")[0]
+}
+
+function normalizarTextoBusca(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim()
+}
+
+function ehRespostaAfirmativaCurta(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto).replace(/[.!?]+$/g, "").trim()
+  if (!normalizado || normalizado.length > 80) return false
+
+  const respostasDiretas = new Set([
+    "sim",
+    "pode",
+    "pode sim",
+    "claro",
+    "claro que sim",
+    "vamos",
+    "bora",
+    "ok",
+    "okay",
+    "ta bom",
+    "tudo bem",
+    "beleza",
+    "combinado",
+  ])
+
+  return respostasDiretas.has(normalizado)
+}
+
+function assistentePediuPerguntasQualificacao(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return (
+    normalizado.includes("posso te fazer algumas perguntas") ||
+    (normalizado.includes("perguntas rapidas") &&
+      (normalizado.includes("orcamento") || normalizado.includes("orcamento certinho")))
+  )
+}
+
+function consentiuComQualificacao(
+  textoPaciente: string,
+  memoria: Awaited<ReturnType<typeof obterMemoria>>
+): boolean {
+  if (!ehRespostaAfirmativaCurta(textoPaciente)) return false
+
+  const ultimaMensagemAssistente = [...memoria]
+    .reverse()
+    .find((mensagem) => mensagem.role === "assistant")?.content
+
+  return ultimaMensagemAssistente
+    ? assistentePediuPerguntasQualificacao(ultimaMensagemAssistente)
+    : false
+}
+
+function montarPerguntaQualificacaoFallback(contexto: ContextoContato): string {
+  const primeiroNome = contexto.nome?.trim().split(/\s+/)[0]
+  const vocativo = primeiroNome ? `, ${primeiroNome}` : ""
+  return `Perfeito${vocativo}. Pra eu montar seu orçamento certinho, qual é seu principal incômodo nessa região: gordura localizada, flacidez ou contorno?`
 }
 
 async function obterConfigWhatsapp() {
@@ -122,8 +184,14 @@ export async function processarMensagens(
       // pra paciente de retorno", `abrirNovoCiclo` continua disponivel em
       // `lib/agente/kanban-sync.ts` — basta plugar aqui novamente.
       const nomeAtual = resultadoPaciente.contato.nome ?? ""
+      const nomePerfilWhatsappNaoConfirmado =
+        resultadoPaciente.contato.origem === "whatsapp" &&
+        resultadoPaciente.contato.tipo === "lead" &&
+        !temNomeAutodeclarado(resultadoPaciente.sobreOPaciente, nomeAtual)
       const nomePaciente =
-        nomeAtual && !nomeAtual.startsWith("WhatsApp ") ? nomeAtual : undefined
+        nomeAtual && !nomeAtual.startsWith("WhatsApp ") && !nomePerfilWhatsappNaoConfirmado
+          ? nomeAtual
+          : undefined
       contextoContato = {
         nome: nomePaciente,
         procedimento: resultadoPaciente.contato.procedimentoInteresse,
@@ -232,9 +300,19 @@ export async function processarMensagens(
   try {
     const memoria = await obterMemoria(chatId)
     const systemPrompt = await gerarSystemPrompt(contextoContato)
+    const pacienteAceitouQualificacao = consentiuComQualificacao(textoBuffer, memoria)
     const mensagens: ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
       ...memoria,
+      ...(pacienteAceitouQualificacao
+        ? [
+            {
+              role: "system" as const,
+              content:
+                "O paciente acabou de aceitar responder perguntas de qualificacao para orcamento. Nesta rodada, NAO chame buscar_conteudo nem enviar_midia. Inicie a qualificacao com a proxima pergunta concreta, uma pergunta por vez.",
+            },
+          ]
+        : []),
       { role: "user", content: textoBuffer },
     ]
 
@@ -247,6 +325,7 @@ export async function processarMensagens(
       temNomeAcolhido && contextoContato.procedimento
     )
     const forcarBuscaConteudo =
+      !pacienteAceitouQualificacao &&
       temNomeAcolhido &&
       (gatilhoVisual ||
         (gatilhoProcedimento && contextoProntoParaMidia) ||
@@ -254,10 +333,19 @@ export async function processarMensagens(
     const forcarEnvioMidia =
       temNomeAcolhido && (gatilhoVisual || (gatilhoProcedimento && contextoProntoParaMidia))
 
+    const ferramentasDaRodada = pacienteAceitouQualificacao
+      ? ferramentasAgente.filter(
+          (tool) =>
+            tool.type !== "function" ||
+            tool.function.name !== "buscar_conteudo" &&
+            tool.function.name !== "enviar_midia"
+        )
+      : ferramentasAgente
+
     let resposta = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: mensagens,
-      tools: ferramentasAgente,
+      tools: ferramentasDaRodada,
       tool_choice: forcarBuscaConteudo
         ? { type: "function", function: { name: "buscar_conteudo" } }
         : "auto",
@@ -268,6 +356,7 @@ export async function processarMensagens(
     // resultado nao vazio, a proxima iteracao EXIGE enviar_midia — impede a
     // alucinacao "acabei de enviar uma foto" sem chamar a tool.
     let proximoToolChoice: "auto" | { type: "function"; function: { name: string } } = "auto"
+    let enviouMidiaNestaRodada = false
 
     while (
       resposta.choices[0]?.message?.tool_calls &&
@@ -320,6 +409,7 @@ export async function processarMensagens(
         }
 
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
+        let enviouMidiaAgora = false
 
         // Lógica anti-alucinação: se busca retornou mídia nova e o momento
         // permite, próxima iteração EXIGE enviar_midia.
@@ -341,11 +431,29 @@ export async function processarMensagens(
           }
         }
 
+        if (fn.name === "enviar_midia") {
+          try {
+            const parsed = JSON.parse(resultado)
+            enviouMidiaAgora = parsed?.ok === true && parsed?.enviado === true
+            enviouMidiaNestaRodada = enviouMidiaNestaRodada || enviouMidiaAgora
+          } catch {
+            // resposta invalida - segue fluxo normal
+          }
+        }
+
         mensagens.push({
           role: "tool",
           tool_call_id: toolCall.id,
           content: resultado,
         })
+
+        if (enviouMidiaAgora) {
+          mensagens.push({
+            role: "system",
+            content:
+              "A midia foi enviada com sucesso. Agora responda em texto e avance a conversa: se ainda esta qualificando, faca a proxima pergunta de qualificacao. Nao encerre a rodada apenas com a midia.",
+          })
+        }
       }
 
       proximoToolChoice = forcarEnviarMidiaNext
@@ -355,7 +463,7 @@ export async function processarMensagens(
       resposta = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: mensagens,
-        tools: ferramentasAgente,
+        tools: ferramentasDaRodada,
         tool_choice: proximoToolChoice,
       })
 
@@ -382,6 +490,11 @@ export async function processarMensagens(
       } catch (err) {
         console.error("[Agente] Fallback sem tools tambem falhou:", err)
       }
+    }
+
+    if (!textoResposta && enviouMidiaNestaRodada) {
+      textoResposta = montarPerguntaQualificacaoFallback(contextoContato)
+      console.warn("[Agente] Midia enviada sem texto final - aplicando fallback de qualificacao")
     }
 
     if (!textoResposta) {
