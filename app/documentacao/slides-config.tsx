@@ -179,7 +179,7 @@ export const slides: Slide[] = [
         icone: Sparkles,
         nome: "Dashboard",
         rota: "/dashboard",
-        descricao: "Métricas e visão executiva do funil",
+        descricao: "Operação da Ana Júlia, leads e funil",
       },
       {
         icone: MessageSquare,
@@ -281,15 +281,15 @@ export const slides: Slide[] = [
     titulo: "Dashboard",
     rota: "/dashboard",
     icone: Sparkles,
-    papel: "Visão executiva — você abre o painel e bate o olho em como o funil está hoje.",
+    papel: "Visão da IA — você abre o painel e bate o olho no volume de leads, funil e atividade da Ana Júlia.",
     funcionalidades: [
-      "Métricas principais: leads novos, em atendimento, agendados, reuniões realizadas",
-      "Gráfico de conversão por etapa do funil",
-      "Atendimentos recentes (atalho pra continuar conversa)",
-      "Próximos agendamentos do dia",
+      "Métricas principais: leads totais, leads novos, agendamentos e conversão",
+      "Gráfico de distribuição dos leads por etapa do funil",
+      "Resumo da atividade da Ana Júlia: mensagens, follow-ups e confirmações",
+      "Filtro de período para ler a operação por hoje, semana, mês ou total",
     ],
     decisao:
-      "Dashboard SEM ação direta — todas as métricas linkam pra outras páginas onde a ação acontece. A ideia é separar 'ler' de 'fazer'.",
+      "Dashboard como leitura objetiva da IA. Ele não exibe alertas manuais, evoluções clínicas ou exportações; a ação continua nas páginas específicas.",
   },
   {
     tipo: "pagina",
@@ -413,7 +413,7 @@ export const slides: Slide[] = [
       {
         id: "1",
         texto: "Início do dia — abre /dashboard",
-        detalhe: "Bate o olho em: leads novos da noite e os agendamentos do dia",
+        detalhe: "Bate o olho em: leads novos, distribuição no funil e atividade da Ana Júlia",
         destaque: "humano",
       },
       {

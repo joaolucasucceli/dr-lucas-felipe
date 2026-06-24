@@ -2,9 +2,8 @@
 
 import { useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, UserPlus, Calendar, TrendingUp, GitBranch, Bell, Download } from "lucide-react"
+import { Users, UserPlus, Calendar, TrendingUp, GitBranch } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -12,22 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/features/shared/PageHeader"
 import { MetricCard } from "@/components/features/shared/MetricCard"
 import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { GraficoFunil } from "@/components/features/dashboard/GraficoFunil"
-import { ContatosAlerta } from "@/components/features/dashboard/ContatosAlerta"
 import { CardResumoAnaJulia } from "@/components/features/dashboard/CardResumoAnaJulia"
-import { EvolucoesRecentesCard } from "@/components/features/dashboard/EvolucoesRecentesCard"
 import { useDashboard } from "@/hooks/use-dashboard"
-import { exportarRelatorio } from "@/hooks/use-relatorio"
 
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -41,7 +31,7 @@ export default function DashboardPage() {
       <div>
         <PageHeader
           titulo="Dashboard"
-          descricao="Visão geral do funil e atividade"
+          descricao="Operação da Ana Júlia, leads e funil"
         />
         <div className="mt-6">
           <SkeletonCard quantidade={4} />
@@ -55,7 +45,7 @@ export default function DashboardPage() {
       <div>
         <PageHeader
           titulo="Dashboard"
-          descricao="Visão geral do funil e atividade"
+          descricao="Operação da Ana Júlia, leads e funil"
         />
         <div className="mt-6">
           <ErrorState mensagem={erro || "Erro ao carregar métricas"} onTentar={recarregar} />
@@ -75,7 +65,7 @@ export default function DashboardPage() {
     <div>
       <PageHeader
         titulo="Dashboard"
-        descricao="Visão geral do funil e atividade"
+        descricao="Operação da Ana Júlia, leads e funil"
       >
         <Select value={periodo} onValueChange={setPeriodo}>
           <SelectTrigger>
@@ -88,24 +78,6 @@ export default function DashboardPage() {
             <SelectItem value="total">Total</SelectItem>
           </SelectContent>
         </Select>
-
-        {isGestor && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Download className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => exportarRelatorio("leads")}>
-                Exportar Leads
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportarRelatorio("conversas")}>
-                Exportar Conversas
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
       </PageHeader>
 
       {/* Metric Cards */}
@@ -144,8 +116,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Funil + Ana Júlia / Leads em Alerta */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
         <Card>
           <CardHeader className="flex flex-row items-center gap-2">
             <GitBranch className="h-4 w-4 text-muted-foreground" />
@@ -156,35 +127,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4">
-          {isGestor && (
-            <CardResumoAnaJulia
-              mensagensEnviadas={metricas.mensagensEnviadasPelaIA}
-              followUpsEnviados={metricas.followUpsEnviados}
-              confirmacaoEnviadas={metricas.confirmacaoEnviadas}
-            />
-          )}
-
-          <Card>
-            <CardHeader className="flex flex-row items-center gap-2">
-              <Bell className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-base">
-                Leads em Alerta ({metricas.leadsEmAlerta})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ContatosAlerta />
-            </CardContent>
-          </Card>
-        </div>
+        <CardResumoAnaJulia
+          mensagensEnviadas={metricas.mensagensEnviadasPelaIA}
+          followUpsEnviados={metricas.followUpsEnviados}
+          confirmacaoEnviadas={metricas.confirmacaoEnviadas}
+        />
       </div>
-
-      {/* JLU-171 (E 25/05): Evolucoes recentes — destaque medico pro Dr. Lucas */}
-      {isGestor && (
-        <div className="mt-4">
-          <EvolucoesRecentesCard />
-        </div>
-      )}
     </div>
   )
 }

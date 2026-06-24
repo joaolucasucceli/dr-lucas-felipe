@@ -47,10 +47,10 @@ export default function ContatosPage() {
   const [mostrarArquivados, setMostrarArquivados] = useState(false)
   const [formAberto, setFormAberto] = useState(false)
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([])
-  const [filtroEspecial, setFiltroEspecial] = useState<"alerta" | "followup" | undefined>(
+  const [filtroEspecial, setFiltroEspecial] = useState<"followup" | undefined>(
     () => {
       const v = searchParams.get("filtro")
-      return v === "alerta" || v === "followup" ? v : undefined
+      return v === "followup" ? v : undefined
     }
   )
 
@@ -229,9 +229,7 @@ export default function ContatosPage() {
       {filtroEspecial && (
         <div className="mt-4 flex items-center justify-between rounded-md border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm dark:border-yellow-800 dark:bg-yellow-950">
           <span className="font-medium text-yellow-800 dark:text-yellow-200">
-            {filtroEspecial === "alerta"
-              ? "Contatos em Alerta — sem movimentação há 3+ dias"
-              : "Follow-ups Aguardando Resposta"}
+            Follow-ups Aguardando Resposta
           </span>
           <Button
             variant="ghost"

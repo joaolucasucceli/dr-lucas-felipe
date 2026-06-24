@@ -25,7 +25,6 @@ export interface DashboardMetricas {
   mensagensEnviadasPelaIA: number
   followUpsEnviados: number
   confirmacaoEnviadas: number
-  leadsEmAlerta: number
   leadsHoje: number
   agendamentosSemana: number
   periodo: string

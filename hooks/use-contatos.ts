@@ -27,7 +27,7 @@ interface UseContatosParams {
   statusFunil?: string
   busca?: string
   arquivado?: string
-  filtroEspecial?: "alerta" | "followup"
+  filtroEspecial?: "followup"
 }
 
 interface UseContatosReturn {
@@ -56,7 +56,6 @@ export function useContatos(params: UseContatosParams): UseContatosReturn {
       if (params.statusFunil) searchParams.set("statusFunil", params.statusFunil)
       if (params.busca) searchParams.set("busca", params.busca)
       if (params.arquivado) searchParams.set("arquivado", params.arquivado)
-      if (params.filtroEspecial === "alerta") searchParams.set("alerta", "true")
       if (params.filtroEspecial === "followup") searchParams.set("followup", "true")
 
       const res = await fetch(`/api/contatos?${searchParams.toString()}`)

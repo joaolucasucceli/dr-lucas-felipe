@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ModuloDashboard } from "@/components/features/documentacao/modulos/ModuloDashboard"
 import { ModuloAtendimentos } from "@/components/features/documentacao/modulos/ModuloAtendimentos"
 import { ModuloContatos } from "@/components/features/documentacao/modulos/ModuloContatos"
 import { ModuloProcedimentos } from "@/components/features/documentacao/modulos/ModuloProcedimentos"
@@ -31,7 +30,6 @@ const MAPA_AJUDA: Array<{ prefix: string } & EntradaAjuda> = [
   { prefix: "/procedimentos", titulo: "Procedimentos", Componente: ModuloProcedimentos },
   { prefix: "/conteudo-ia", titulo: "Conteúdo da IA", Componente: ModuloConteudoIA },
   { prefix: "/configuracoes", titulo: "Configurações", Componente: ModuloConfiguracoes },
-  { prefix: "/dashboard", titulo: "Dashboard", Componente: ModuloDashboard },
 ]
 
 function resolverAjuda(pathname: string): EntradaAjuda | null {

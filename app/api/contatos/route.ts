@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
   const origem = searchParams.get("origem")
   const arquivado = searchParams.get("arquivado")
   const busca = searchParams.get("busca")
-  const alerta = searchParams.get("alerta") === "true"
 
   // Atendente só vê contatos tipo lead; gestor vê tudo
   const perfil = auth.session.user.perfil
@@ -49,13 +48,6 @@ export async function GET(request: NextRequest) {
   if (busca) {
     query = query.or(`nome.ilike.%${busca}%,whatsapp.ilike.%${busca}%`)
   }
-  if (alerta) {
-    const ha3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-    query = query
-      .eq("tipo", "lead")
-      .or(`ultimaMovimentacaoEm.lt.${ha3dias},and(ultimaMovimentacaoEm.is.null,atualizadoEm.lt.${ha3dias})`)
-  }
-
   const inicio = (pagina - 1) * porPagina
   const fim = inicio + porPagina - 1
 

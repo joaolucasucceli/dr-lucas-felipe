@@ -49,11 +49,6 @@ function calcularDataInicio(periodo: string): Date | null {
   return new Date(agoraTs.getTime() - 30 * 24 * 60 * 60 * 1000)
 }
 
-async function contar(query: ReturnType<typeof supabaseAdmin.from>) {
-  const { count } = await query.select("id", { count: "exact", head: true })
-  return count ?? 0
-}
-
 export async function GET(request: NextRequest) {
   const { session, error } = await requireAuth()
   if (error) return error
@@ -61,7 +56,6 @@ export async function GET(request: NextRequest) {
   const periodo = request.nextUrl.searchParams.get("periodo") || "mes"
   const dataInicio = calcularDataInicio(periodo)
   const dataFim = new Date()
-  const ha3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
   const dataInicioIso = dataInicio?.toISOString()
 
   const spHoje = new Intl.DateTimeFormat("pt-BR", {
@@ -130,16 +124,6 @@ export async function GET(request: NextRequest) {
     return dataInicioIso ? q.gte("criadoEm", dataInicioIso) : q
   })()
 
-  const leadsAlertaP = baseLeads()
-    .or(`ultimaMovimentacaoEm.lt.${ha3dias},and(ultimaMovimentacaoEm.is.null,atualizadoEm.lt.${ha3dias})`)
-
-  const pacientesRetornoP = supabaseAdmin
-    .from("contatos")
-    .select("id", { count: "exact", head: true })
-    .is("deletadoEm", null)
-    .eq("arquivado", false)
-    .eq("tipo", "paciente")
-    .eq("ehRetorno", true)
   const leadsHojeP = baseLeads().gte("criadoEm", inicioHoje)
   const agendamentosSemanaP = supabaseAdmin
     .from("agendamentos")
@@ -158,8 +142,6 @@ export async function GET(request: NextRequest) {
     mensagensIaRes,
     followUpsRes,
     confirmacoesRes,
-    leadsAlertaRes,
-    pacientesRetornoRes,
     leadsHojeRes,
     agendamentosSemanaRes,
   ] = await Promise.all([
@@ -172,8 +154,6 @@ export async function GET(request: NextRequest) {
     mensagensIaP,
     followUpsP,
     confirmacoesP,
-    leadsAlertaP,
-    pacientesRetornoP,
     leadsHojeP,
     agendamentosSemanaP,
   ])
@@ -183,8 +163,6 @@ export async function GET(request: NextRequest) {
   const leadsConvertidos = leadsConvertidosRes.count ?? 0
   const agendamentosNoPeriodo = agendamentosNoPeriodoRes.count ?? 0
   const mensagensEnviadasPelaIA = mensagensIaRes.count ?? 0
-  const leadsEmAlerta = leadsAlertaRes.count ?? 0
-  const pacientesRetorno = pacientesRetornoRes.count ?? 0
   const leadsHoje = leadsHojeRes.count ?? 0
   const agendamentosSemana = agendamentosSemanaRes.count ?? 0
 
@@ -224,9 +202,6 @@ export async function GET(request: NextRequest) {
     total,
   }))
 
-  const taxaRetorno =
-    totalLeads > 0 ? Math.round((pacientesRetorno / totalLeads) * 1000) / 10 : 0
-
   const isAtendente = session!.user.perfil === "atendente"
 
   return NextResponse.json({
@@ -239,9 +214,6 @@ export async function GET(request: NextRequest) {
     mensagensEnviadasPelaIA: isAtendente ? 0 : mensagensEnviadasPelaIA,
     followUpsEnviados: isAtendente ? 0 : followUpsEnviados,
     confirmacaoEnviadas: isAtendente ? 0 : confirmacaoEnviadas,
-    leadsEmAlerta,
-    pacientesRetorno,
-    taxaRetorno,
     leadsHoje,
     agendamentosSemana,
     periodo,
