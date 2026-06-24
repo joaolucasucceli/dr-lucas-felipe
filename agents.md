@@ -142,6 +142,14 @@ Rotas cron devem validar `CRON_SECRET` conforme padrao existente.
 - `docs/vault` guarda decisoes e aprendizados, nao manuais de usuario.
 - Documentacao funcional exposta ao usuario fica em `components/features/documentacao/modulos/*`.
 
+## Specs, Linear e Producao
+
+- Ao executar uma spec, mova a tarefa correspondente no Linear para `In Progress` antes de alterar codigo.
+- Quando a spec estiver implementada, validada localmente e sem pendencias tecnicas do escopo, faca commit, push e coloque a mudanca em producao.
+- A spec so deve ser considerada pronta depois do deploy de producao estar `Ready` e a validacao em producao ter sido registrada.
+- Registre evidencia na tarefa do Linear: commit SHA, deployment/URL de producao, comandos rodados e resultado da validacao. Quando houver UI afetada, inclua print ou descricao objetiva da checagem visual.
+- So mova a tarefa para `Done` depois de concluir a validacao em producao. Se faltar acesso autenticado, sessao, dominio ou qualquer insumo externo para validar, mantenha a tarefa em `In Progress` e deixe o bloqueio/evidencia parcial registrado.
+
 ## Checklist Antes de Entregar
 
 - A mudanca respeita as regras de auth da rota tocada?
@@ -150,3 +158,4 @@ Rotas cron devem validar `CRON_SECRET` conforme padrao existente.
 - Nao editou `components/ui` sem necessidade?
 - Nao introduziu ingles em dominio brasileiro?
 - Rodou `npm run lint`, `npm run typecheck` e, se houver impacto de build, `npm run build`?
+- Se executou uma spec completa, fez commit, push, deploy em producao, validacao em producao e registrou evidencia no Linear?
