@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   ArrowRight,
   ChevronDown,
@@ -42,6 +43,7 @@ const DESTAQUE_LABEL: Record<NonNullable<PassoFluxo["destaque"]>, string> = {
 }
 
 export function Apresentacao() {
+  const router = useRouter()
   const [atual, setAtual] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
 
@@ -63,9 +65,19 @@ export function Apresentacao() {
     }
   }, [])
 
+  const voltarPainel = useCallback(() => {
+    if (typeof document !== "undefined" && document.fullscreenElement) {
+      void document.exitFullscreen()
+    }
+    router.push("/dashboard")
+  }, [router])
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (
+      if (e.key === "Escape") {
+        e.preventDefault()
+        voltarPainel()
+      } else if (
         e.key === "ArrowRight" ||
         e.key === "PageDown" ||
         e.key === " " ||
@@ -89,7 +101,7 @@ export function Apresentacao() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [proximo, anterior, alternarFullscreen])
+  }, [proximo, anterior, alternarFullscreen, voltarPainel])
 
   useEffect(() => {
     function onFs() {
@@ -172,6 +184,8 @@ export function Apresentacao() {
               <span className="mx-1">·</span>
               <Kbd>Home</Kbd>
               <Kbd>End</Kbd> ir ao início/fim
+              <span className="mx-1">·</span>
+              <Kbd>Esc</Kbd> voltar ao painel
             </span>
           </div>
         </div>
