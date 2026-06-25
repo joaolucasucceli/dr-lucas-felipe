@@ -179,7 +179,7 @@ export async function processarMensagens(
     )
     if (resultadoPaciente.contato) {
       // Antes existia logica de STATUSES_SILENCIO/STATUSES_RETORNO aqui, mas
-      // ambos arrays estavam vazios desde a refatoracao do funil pra 4 etapas
+      // ambos arrays estavam vazios desde a refatoracao do funil comercial
       // (JLAU-...). Removido o codigo morto. Se quiser reativar "novo ciclo
       // pra paciente de retorno", `abrirNovoCiclo` continua disponivel em
       // `lib/agente/kanban-sync.ts` — basta plugar aqui novamente.
@@ -402,6 +402,7 @@ export async function processarMensagens(
           "buscar_conteudo",
           "enviar_midia",
           "gerar_orcamento",
+          "acionar_atendimento_humano",
         ])
         if (toolsComIds.has(fn.name)) {
           if (contatoId) args.contatoId = contatoId

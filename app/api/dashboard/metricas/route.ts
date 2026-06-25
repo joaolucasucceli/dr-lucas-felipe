@@ -1,27 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
-
-const labelsFunil: Record<string, string> = {
-  acolhimento: "Acolhimento",
-  qualificacao: "Qualificação",
-  agendamento: "Agendamento",
-  consulta_agendada: "Reunião Agendada",
-}
-
-const coresFunil: Record<string, string> = {
-  acolhimento: "#a1a1aa",
-  qualificacao: "#93c5fd",
-  agendamento: "#a5b4fc",
-  consulta_agendada: "#c4b5fd",
-}
-
-const ordemFunil = [
-  "acolhimento",
-  "qualificacao",
-  "agendamento",
-  "consulta_agendada",
-]
+import { ETAPAS_FUNIL, FUNIL_CORES, FUNIL_LABELS } from "@/lib/funil"
 
 export async function GET() {
   const { error } = await requireAuth()
@@ -54,11 +34,11 @@ export async function GET() {
     etapaCount[etapa] = (etapaCount[etapa] ?? 0) + 1
   }
 
-  const leadsPorEtapa = ordemFunil.map((etapa) => ({
+  const leadsPorEtapa = ETAPAS_FUNIL.map((etapa) => ({
     etapa,
-    label: labelsFunil[etapa] || etapa,
+    label: FUNIL_LABELS[etapa] || etapa,
     total: etapaCount[etapa] ?? 0,
-    cor: coresFunil[etapa] || "#94a3b8",
+    cor: FUNIL_CORES[etapa] || "#94a3b8",
   }))
 
   return NextResponse.json({

@@ -4,20 +4,7 @@ import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { toast } from "sonner"
 import { KanbanColuna } from "./KanbanColuna"
 import type { KanbanContato } from "@/hooks/use-kanban"
-
-const ETAPA_LABELS: Record<string, string> = {
-  acolhimento: "Acolhimento",
-  qualificacao: "Qualificação",
-  agendamento: "Agendamento",
-  consulta_agendada: "Reunião Agendada",
-}
-
-const ETAPAS_FUNIL = [
-  "acolhimento",
-  "qualificacao",
-  "agendamento",
-  "consulta_agendada",
-]
+import { ETAPAS_FUNIL, FUNIL_LABELS } from "@/lib/funil"
 
 interface KanbanBoardProps {
   colunas: Record<string, KanbanContato[]>
@@ -39,7 +26,9 @@ export function KanbanBoard({ colunas, moverContato }: KanbanBoardProps) {
     const novoStatus = destination.droppableId
 
     moverContato(draggableId, novoStatus).then((ok) => {
-      if (ok) toast.success(`Lead movido para ${ETAPA_LABELS[novoStatus] || novoStatus}`)
+      if (ok) {
+        toast.success(`Lead movido para ${FUNIL_LABELS[novoStatus as keyof typeof FUNIL_LABELS] || novoStatus}`)
+      }
     })
   }
 

@@ -18,13 +18,13 @@ export function ModuloAtendimentos() {
         features={[
           {
             icone: <Columns2 />,
-            titulo: "4 etapas do funil",
-            descricao: "Acolhimento → Qualificação → Agendamento → Reunião Agendada.",
+            titulo: "6 etapas do funil",
+            descricao: "Acolhimento → Qualificação → Orçamento → Agendamento → Reunião Agendada → Atendimento Humano.",
           },
           {
             icone: <Bot />,
             titulo: "Movimentação automática",
-            descricao: "A Ana Júlia avança o lead até reunião agendada. Depois, o gestor converte em paciente manualmente.",
+            descricao: "A Ana Júlia avança o lead até reunião agendada e separa pedidos humanos em Atendimento Humano.",
           },
           {
             icone: <Filter />,
@@ -43,7 +43,7 @@ export function ModuloAtendimentos() {
       />
 
       <DicaImportante
-        texto="A Ana Júlia só conduz até 'Reunião Agendada'. A conversão Lead → Paciente é sempre manual, feita pelo gestor."
+        texto="A Ana Júlia conduz o funil comercial, orçamento e agenda. A conversão Lead → Paciente continua manual, feita pelo gestor."
         variante="info"
       />
     </div>

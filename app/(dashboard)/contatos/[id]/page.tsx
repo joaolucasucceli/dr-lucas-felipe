@@ -29,24 +29,18 @@ import { NotasContato } from "@/components/features/contatos/NotasContato"
 import { PainelProntuarioInline } from "@/components/features/prontuario/PainelProntuarioInline"
 import { useContato } from "@/hooks/use-contato"
 import { useUsuarios } from "@/hooks/use-usuarios"
+import { ETAPAS_FUNIL, FUNIL_LABELS } from "@/lib/funil"
 
 interface PageProps {
   params: Promise<{ id: string }>
 }
 
-const OPCOES_STATUS_FUNIL = [
-  { value: "acolhimento", label: "Acolhimento" },
-  { value: "qualificacao", label: "Qualificação" },
-  { value: "agendamento", label: "Agendamento" },
-  { value: "consulta_agendada", label: "Consulta agendada" },
-]
+const OPCOES_STATUS_FUNIL = ETAPAS_FUNIL.map((etapa) => ({
+  value: etapa,
+  label: FUNIL_LABELS[etapa],
+}))
 
-const ROTULO_ETAPA: Record<string, string> = {
-  acolhimento: "Acolhimento",
-  qualificacao: "Qualificação",
-  agendamento: "Agendamento",
-  consulta_agendada: "Consulta agendada",
-}
+const ROTULO_ETAPA: Record<string, string> = { ...FUNIL_LABELS }
 
 const OPCOES_SEXO = [
   { value: "feminino", label: "Feminino" },

@@ -18,7 +18,7 @@ export interface MudancasLead {
   nome?: string | null
   procedimentoInteresse?: string | null
   sobreOPacienteAdicionar?: string | null
-  etapaCorreta?: "manter" | "qualificacao" | "agendamento"
+  etapaCorreta?: "manter" | "qualificacao" | "orcamento" | "agendamento"
 }
 
 /** Transicoes validas de statusFunil controladas pela Ana Julia.
@@ -26,7 +26,8 @@ export interface MudancasLead {
  *  (esse avanco e responsabilidade exclusiva da tool `registrar_agendamento`). */
 const TRANSICOES_PERMITIDAS: Record<string, string[]> = {
   acolhimento: ["qualificacao"],
-  qualificacao: ["agendamento"],
+  qualificacao: ["orcamento"],
+  orcamento: ["agendamento"],
 }
 
 export const MARCADOR_NOME_AUTODECLARADO = "Nome informado pelo paciente:"

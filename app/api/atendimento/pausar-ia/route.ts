@@ -47,7 +47,12 @@ export async function POST(req: Request) {
 
   await supabaseAdmin
     .from("contatos")
-    .update({ responsavelId: auth.session.user.id, atualizadoEm: agora() })
+    .update({
+      responsavelId: auth.session.user.id,
+      statusFunil: "atendimento_humano" as never,
+      ultimaMovimentacaoEm: agora(),
+      atualizadoEm: agora(),
+    })
     .eq("id", conversa.contatoId)
 
   return NextResponse.json({ sucesso: true, modoConversa: "humano" })

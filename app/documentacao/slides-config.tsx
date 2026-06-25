@@ -117,7 +117,7 @@ export const slides: Slide[] = [
       "Agendamentos criados exclusivamente pela Ana Júlia (não tem botão manual)",
       "Pacientes entram pelo WhatsApp e aparecem no kanban automaticamente",
       "Um agente só: a Ana Júlia faz tudo, do primeiro 'oi' ao agendamento",
-      "Orçamento: a faixa na hora; o orçamento real (PDF) é o único ponto em que o Dr. Lucas entra — só pra passar o valor",
+      "Orçamento: a Ana Júlia qualifica, aciona o Dr. Lucas e devolve o valor exato ao paciente",
     ],
   },
   {
@@ -191,7 +191,7 @@ export const slides: Slide[] = [
         icone: KanbanSquare,
         nome: "Funil",
         rota: "/contatos",
-        descricao: "Kanban de 4 etapas movido pela Ana Júlia",
+        descricao: "Kanban de 6 etapas movido pela Ana Júlia",
       },
       {
         icone: Calendar,
@@ -311,15 +311,15 @@ export const slides: Slide[] = [
     titulo: "Funil Kanban (Contatos)",
     rota: "/contatos",
     icone: KanbanSquare,
-    papel: "Visualizar o funil completo em 4 colunas — Acolhimento → Qualificação → Agendamento → Reunião Agendada.",
+    papel: "Visualizar o funil completo em 6 colunas — Acolhimento → Qualificação → Orçamento → Agendamento → Reunião Agendada → Atendimento Humano.",
     funcionalidades: [
-      "4 colunas movidas automaticamente pela Ana Júlia",
+      "6 colunas movidas automaticamente pela Ana Júlia e pelo handoff humano",
       "Card com nome, procedimento de interesse e última mensagem",
       "Filtro por procedimento",
       "Click no card abre detalhe completo do contato (/contatos/[id])",
     ],
     decisao:
-      "Funil simplificado pra 4 etapas (não 7 ou 10). Cada etapa tem um critério objetivo: a própria Ana Júlia é quem decide quando mover. Você não arrasta card — observa o movimento.",
+      "Funil oficial em 6 etapas. Cada etapa tem um critério objetivo: a Ana Júlia qualifica, gera orçamento, agenda e separa pedidos humanos quando necessário.",
   },
   {
     tipo: "pagina",
@@ -494,7 +494,7 @@ export const slides: Slide[] = [
   {
     tipo: "ferramentas",
     bloco: "Bloco C · Ana Júlia",
-    titulo: "As 10 ferramentas da Ana Júlia",
+    titulo: "As 11 ferramentas da Ana Júlia",
     ferramentas: [
       { nome: "consultar_agenda", descricao: "Cruza Google Calendar + expediente e devolve horários livres", categoria: "agenda" },
       { nome: "registrar_agendamento", descricao: "Cria evento no Google Calendar + move card pra 'Reunião Agendada'", categoria: "agenda" },
@@ -506,6 +506,7 @@ export const slides: Slide[] = [
       { nome: "registrar_mensagem", descricao: "Persiste a mensagem no banco (auditoria + realtime)", categoria: "estado" },
       { nome: "atualizar_lead", descricao: "Atualiza o cadastro (nome, procedimento, observações) e avança o funil — a Ana mantém tudo em dia sozinha", categoria: "estado" },
       { nome: "gerar_orcamento", descricao: "Aciona o Dr. Lucas pra precificar; ele responde o valor e o sistema gera o PDF pra paciente", categoria: "humano" },
+      { nome: "acionar_atendimento_humano", descricao: "Pausa a IA e move o card para Atendimento Humano quando o paciente pede uma pessoa", categoria: "humano" },
     ],
   },
   {
@@ -609,17 +610,17 @@ export const slides: Slide[] = [
     descricao:
       "Até aqui você viu como o sistema funciona por dentro. Agora vamos ver como ele se comporta na prática — em cada fase do funil e nos fluxos especiais de reagendamento, cancelamento e orçamento aproximado.",
     destaques: [
-      "As 4 fases do funil pela ótica da Ana Júlia",
+      "As 6 fases do funil pela ótica da Ana Júlia",
       "Como ela conduz a conversa naturalmente, sem caixinhas de 'tipo de paciente'",
       "Fluxos especiais quando o paciente pede para reagendar, cancelar ou saber preço",
-      "Orçamento: a faixa aproximada na hora, ou o orçamento real com PDF via Dr. Lucas",
+      "Orçamento: etapa própria, com valor exato definido pelo Dr. Lucas",
     ],
   },
   {
     tipo: "fluxograma",
     bloco: "Bloco D · Cenários reais",
     titulo: "O funil em ação — o que a Ana Júlia faz em cada fase",
-    subtitulo: "Acolhimento → Qualificação → Agendamento → Reunião Agendada. A própria Ana Júlia decide quando o card avança.",
+    subtitulo: "Acolhimento → Qualificação → Orçamento → Agendamento → Reunião Agendada → Atendimento Humano. A própria Ana Júlia decide quando o card avança.",
     passos: [
       {
         id: "1",
@@ -635,18 +636,30 @@ export const slides: Slide[] = [
       },
       {
         id: "3",
-        texto: "Fase 3 — Agendamento",
-        detalhe: "Chama consultar_agenda → apresenta 2-3 horários · Confirma o escolhido · Fecha direto com registrar_agendamento",
+        texto: "Fase 3 — Orçamento",
+        detalhe: "Com a qualificação completa, aciona o Dr. Lucas, aguarda o valor exato e devolve o orçamento ao paciente",
         destaque: "ia",
       },
       {
         id: "4",
-        texto: "Fase 4 — Reunião Agendada",
-        detalhe: "Manda detalhes do horário e mantém o card em reunião agendada. Se o paciente pedir, pode remarcar ou cancelar pelo Google Calendar",
+        texto: "Fase 4 — Agendamento",
+        detalhe: "Chama consultar_agenda → apresenta 2-3 horários · Confirma o escolhido · Fecha direto com registrar_agendamento",
         destaque: "ia",
       },
       {
         id: "5",
+        texto: "Fase 5 — Reunião Agendada",
+        detalhe: "Manda detalhes do horário e mantém o card em reunião agendada. Se o paciente pedir, pode remarcar ou cancelar pelo Google Calendar",
+        destaque: "ia",
+      },
+      {
+        id: "6",
+        texto: "Fase 6 — Atendimento Humano",
+        detalhe: "Quando o paciente pede uma pessoa, a IA pausa e move o card para Atendimento Humano sem atribuir responsável automaticamente",
+        destaque: "humano",
+      },
+      {
+        id: "7",
         texto: "Ao longo da conversa — cadastro e funil sempre atualizados",
         detalhe: "A própria Ana Júlia atualiza o cadastro do paciente e move o card de fase. Você só vê o kanban se movendo sozinho",
         destaque: "ia",

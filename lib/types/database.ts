@@ -1208,8 +1208,10 @@ export type Database = {
       EtapaConversa:
         | "acolhimento"
         | "qualificacao"
+        | "orcamento"
         | "agendamento"
         | "consulta_agendada"
+        | "atendimento_humano"
       ModoConversa: "ia" | "humano"
       Perfil: "gestor" | "atendente"
       StatusAgendamento:
@@ -1219,8 +1221,10 @@ export type Database = {
       StatusFunil:
         | "acolhimento"
         | "qualificacao"
+        | "orcamento"
         | "agendamento"
         | "consulta_agendada"
+        | "atendimento_humano"
       StatusSprint: "planejada" | "em_andamento" | "concluida"
       TipoAgendamento:
         | "diagnostico"
@@ -1396,8 +1400,10 @@ export const Constants = {
       EtapaConversa: [
         "acolhimento",
         "qualificacao",
+        "orcamento",
         "agendamento",
         "consulta_agendada",
+        "atendimento_humano",
       ],
       ModoConversa: ["ia", "humano"],
       Perfil: ["gestor", "atendente"],
@@ -1409,8 +1415,10 @@ export const Constants = {
       StatusFunil: [
         "acolhimento",
         "qualificacao",
+        "orcamento",
         "agendamento",
         "consulta_agendada",
+        "atendimento_humano",
       ],
       StatusSprint: ["planejada", "em_andamento", "concluida"],
       TipoAgendamento: [

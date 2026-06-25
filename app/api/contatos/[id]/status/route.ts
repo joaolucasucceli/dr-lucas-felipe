@@ -49,20 +49,63 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   const novoStatus = parsed.data.statusFunil
+  const tsAgora = agora()
+
+  const { data: conversaAberta } = await supabaseAdmin
+    .from("conversas")
+    .select("id, etapa")
+    .eq("contatoId", id)
+    .is("encerradaEm", null)
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const updateContato: Record<string, unknown> = {
+    statusFunil: novoStatus,
+    ultimaMovimentacaoEm: tsAgora,
+    atualizadoEm: tsAgora,
+  }
+
+  let updateConversa: Record<string, unknown> | null = null
+
+  if (novoStatus === "atendimento_humano") {
+    updateContato.responsavelId = auth.session.user.id
+    updateConversa = {
+      modoConversa: "humano",
+      atendenteId: auth.session.user.id,
+      atualizadoEm: tsAgora,
+    }
+  } else if (contato.statusFunil === "atendimento_humano") {
+    updateConversa = {
+      modoConversa: "ia",
+      atendenteId: null,
+      etapa: novoStatus,
+      atualizadoEm: tsAgora,
+    }
+    updateContato.responsavelId = null
+  } else {
+    updateConversa = {
+      etapa: novoStatus,
+      atualizadoEm: tsAgora,
+    }
+  }
 
   const { data: atualizado, error } = await supabaseAdmin
     .from("contatos")
-    .update({
-      statusFunil: novoStatus,
-      ultimaMovimentacaoEm: agora(),
-      atualizadoEm: agora(),
-    })
+    .update(updateContato as never)
     .eq("id", id)
     .select("id, nome, statusFunil")
     .single()
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (conversaAberta && updateConversa) {
+    await supabaseAdmin
+      .from("conversas")
+      .update(updateConversa as never)
+      .eq("id", conversaAberta.id)
   }
 
   return NextResponse.json(atualizado)

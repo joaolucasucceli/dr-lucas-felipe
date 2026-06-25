@@ -74,7 +74,7 @@ export default function DashboardPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
             {cardsFunil.map((card, index) => {
               if (card.tipo === "total") {
                 return (

@@ -2,27 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
-
-const labelsFunil: Record<string, string> = {
-  acolhimento: "Acolhimento",
-  qualificacao: "Qualificação",
-  agendamento: "Agendamento",
-  consulta_agendada: "Reunião Agendada",
-}
-
-const coresFunil: Record<string, string> = {
-  acolhimento: "#a1a1aa",
-  qualificacao: "#93c5fd",
-  agendamento: "#a5b4fc",
-  consulta_agendada: "#c4b5fd",
-}
-
-const ordemFunil = [
-  "acolhimento",
-  "qualificacao",
-  "agendamento",
-  "consulta_agendada",
-]
+import { ETAPAS_FUNIL, FUNIL_CORES, FUNIL_LABELS } from "@/lib/funil"
 
 const etapasConvertidas = ["consulta_agendada"]
 
@@ -73,12 +53,12 @@ export async function GET(request: NextRequest) {
     )
     .slice(0, 100)
 
-  const funil = ordemFunil.map((etapa, idx) => {
+  const funil = ETAPAS_FUNIL.map((etapa, idx) => {
     const total = etapaCount[etapa] ?? 0
     const anterior =
       idx === 0
         ? totalEntradas
-        : (ordemFunil
+        : (ETAPAS_FUNIL
             .slice(0, idx)
             .map((e) => etapaCount[e] ?? 0)
             .find((v) => v > 0) ?? totalEntradas)
@@ -86,10 +66,10 @@ export async function GET(request: NextRequest) {
 
     return {
       etapa,
-      label: labelsFunil[etapa] || etapa,
+      label: FUNIL_LABELS[etapa] || etapa,
       total,
       conversao,
-      cor: coresFunil[etapa] || "#94a3b8",
+      cor: FUNIL_CORES[etapa] || "#94a3b8",
     }
   })
 

@@ -13,6 +13,25 @@ const schema = z.object({
   prioridade: z.enum(["normal", "urgente"]).optional(),
 })
 
+async function moverParaOrcamento(contatoId: string, conversaId?: string | null) {
+  const tsAgora = agora()
+  await supabaseAdmin
+    .from("contatos")
+    .update({
+      statusFunil: "orcamento" as never,
+      ultimaMovimentacaoEm: tsAgora,
+      atualizadoEm: tsAgora,
+    })
+    .eq("id", contatoId)
+
+  if (conversaId) {
+    await supabaseAdmin
+      .from("conversas")
+      .update({ etapa: "orcamento" as never, atualizadoEm: tsAgora })
+      .eq("id", conversaId)
+  }
+}
+
 /**
  * Tool `gerar_orcamento` (Caminho A do fluxo de orcamento).
  *
@@ -62,6 +81,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
 
   if (existente) {
+    await moverParaOrcamento(contatoId, conversaId ?? null)
     return NextResponse.json({
       ok: true,
       jaPendente: true,
@@ -90,11 +110,20 @@ export async function POST(request: NextRequest) {
   await supabaseAdmin
     .from("contatos")
     .update({
+      statusFunil: "orcamento" as never,
+      ultimaMovimentacaoEm: agora(),
       aguardandoOrcamentoHumano: true,
       aguardandoOrcamentoDesde: agora(),
       atualizadoEm: agora(),
     })
     .eq("id", contatoId)
+
+  if (conversaId) {
+    await supabaseAdmin
+      .from("conversas")
+      .update({ etapa: "orcamento" as never, atualizadoEm: agora() })
+      .eq("id", conversaId)
+  }
 
   // Notificacao Uazapi (best-effort — se falhar, evento ja esta no banco e a
   // UI do painel mostra como pendente).

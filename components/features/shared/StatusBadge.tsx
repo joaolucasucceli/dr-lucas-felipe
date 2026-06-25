@@ -2,12 +2,15 @@
 
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { FUNIL_LABELS } from "@/lib/funil"
 
 const funilConfig: Record<string, { label: string; classes: string; descricao: string }> = {
-  acolhimento: { label: "Acolhimento", classes: "bg-zinc-100 text-zinc-800", descricao: "Etapa 1 — Lead acabou de entrar no funil" },
-  qualificacao: { label: "Qualificação", classes: "bg-blue-100 text-blue-800", descricao: "Etapa 2 — Ana Júlia coletando nome, procedimento e qualificação comercial" },
-  agendamento: { label: "Agendamento", classes: "bg-indigo-100 text-indigo-800", descricao: "Etapa 3 — Ana Júlia negociando horário com o paciente" },
-  consulta_agendada: { label: "Reunião Agendada", classes: "bg-purple-100 text-purple-800", descricao: "Etapa 4 — Horário reservado e evento no Google Calendar" },
+  acolhimento: { label: FUNIL_LABELS.acolhimento, classes: "bg-zinc-100 text-zinc-800", descricao: "Etapa 1 — Lead acabou de entrar no funil" },
+  qualificacao: { label: FUNIL_LABELS.qualificacao, classes: "bg-blue-100 text-blue-800", descricao: "Etapa 2 — Ana Júlia coletando dados para orçamento" },
+  orcamento: { label: FUNIL_LABELS.orcamento, classes: "bg-amber-100 text-amber-800", descricao: "Etapa 3 — Orçamento exato aguardando ou retornado pelo Dr. Lucas" },
+  agendamento: { label: FUNIL_LABELS.agendamento, classes: "bg-indigo-100 text-indigo-800", descricao: "Etapa 4 — Ana Júlia negociando horário com o paciente" },
+  consulta_agendada: { label: FUNIL_LABELS.consulta_agendada, classes: "bg-purple-100 text-purple-800", descricao: "Etapa 5 — Horário reservado e evento no Google Calendar" },
+  atendimento_humano: { label: FUNIL_LABELS.atendimento_humano, classes: "bg-rose-100 text-rose-800", descricao: "Etapa 6 — IA pausada e atendimento humano em andamento" },
 }
 
 const evolucaoConfig: Record<string, { label: string; classes: string; descricao: string }> = {

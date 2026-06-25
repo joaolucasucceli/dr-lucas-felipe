@@ -4,19 +4,15 @@ import { Droppable } from "@hello-pangea/dnd"
 import { Users } from "lucide-react"
 import { KanbanCard } from "./KanbanCard"
 import type { KanbanContato } from "@/hooks/use-kanban"
+import { FUNIL_LABELS } from "@/lib/funil"
 
 const coresColuna: Record<string, { bg: string; text: string; border: string }> = {
   acolhimento: { bg: "bg-zinc-100", text: "text-zinc-800", border: "border-zinc-300" },
   qualificacao: { bg: "bg-blue-50", text: "text-blue-800", border: "border-blue-300" },
+  orcamento: { bg: "bg-amber-50", text: "text-amber-800", border: "border-amber-300" },
   agendamento: { bg: "bg-indigo-50", text: "text-indigo-800", border: "border-indigo-300" },
   consulta_agendada: { bg: "bg-purple-50", text: "text-purple-800", border: "border-purple-300" },
-}
-
-const labelsColuna: Record<string, string> = {
-  acolhimento: "Acolhimento",
-  qualificacao: "Qualificação",
-  agendamento: "Agendamento",
-  consulta_agendada: "Reunião Agendada",
+  atendimento_humano: { bg: "bg-rose-50", text: "text-rose-800", border: "border-rose-300" },
 }
 
 interface KanbanColunaProps {
@@ -26,7 +22,7 @@ interface KanbanColunaProps {
 
 export function KanbanColuna({ etapa, leads }: KanbanColunaProps) {
   const cores = coresColuna[etapa] || coresColuna.acolhimento
-  const label = labelsColuna[etapa] || etapa
+  const label = FUNIL_LABELS[etapa as keyof typeof FUNIL_LABELS] || etapa
 
   return (
     <div className="flex w-72 flex-shrink-0 flex-col rounded-lg border bg-muted/30">

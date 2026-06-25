@@ -15,13 +15,14 @@ const schema = z.object({
   nome: z.string().optional(),
   procedimentoInteresse: z.string().optional(),
   sobreOPacienteAdicionar: z.string().optional(),
-  etapaCorreta: z.enum(["manter", "qualificacao", "agendamento"]).optional(),
+  etapaCorreta: z.enum(["manter", "qualificacao", "orcamento", "agendamento"]).optional(),
 })
 
 /**
  * Tool `atualizar_lead` da Ana Julia. Substitui o pipeline da antiga Analista IA:
  * a propria Ana enriquece o cadastro (nome, procedimentoInteresse, sobreOPaciente)
- * e avanca o funil (acolhimento -> qualificacao -> agendamento) ao longo da conversa.
+ * e avanca o funil (acolhimento -> qualificacao -> orcamento -> agendamento)
+ * ao longo da conversa.
  *
  * Reusa `aplicarMudancasLead`, que respeita as transicoes validas e faz APPEND em
  * sobreOPaciente. A etapa final `consulta_agendada` NUNCA passa por aqui — so a

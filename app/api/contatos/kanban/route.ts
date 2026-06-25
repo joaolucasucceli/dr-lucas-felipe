@@ -2,13 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
-
-const ETAPAS_FUNIL: string[] = [
-  "acolhimento",
-  "qualificacao",
-  "agendamento",
-  "consulta_agendada",
-]
+import { ETAPAS_FUNIL } from "@/lib/funil"
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()

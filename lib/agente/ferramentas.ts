@@ -27,7 +27,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "atualizar_lead",
       description:
-        "Atualiza o cadastro do paciente e o funil. Chame SEMPRE que descobrir: o NOME do paciente, o PROCEDIMENTO de interesse, a REGIÃO, FOTO recebida ou um FATO relevante (motivação, objetivo, contexto, expectativa, restrição — vai pra sobreOPaciente em modo APPEND, nunca sobrescreve). Avanço de etapa: 'qualificacao' quando o paciente já disse o que quer; 'agendamento' somente depois que o orçamento voltou e o paciente aprovou seguir para reunião. Use 'manter' (ou omita etapaCorreta) se nada mudou de etapa. NUNCA tente avançar pra 'consulta_agendada' por aqui — isso é exclusivo da tool registrar_agendamento. Pode chamar várias vezes; é idempotente e só grava o que realmente mudou.",
+        "Atualiza o cadastro do paciente e o funil. Chame SEMPRE que descobrir: o NOME do paciente, o PROCEDIMENTO de interesse, a REGIÃO, FOTO recebida ou um FATO relevante (motivação, objetivo, contexto, expectativa, restrição — vai pra sobreOPaciente em modo APPEND, nunca sobrescreve). Avanço de etapa: 'qualificacao' quando o paciente já disse o que quer; 'orcamento' quando a qualificação ficou completa e você vai acionar orçamento; 'agendamento' somente depois que o orçamento voltou e o paciente aprovou seguir para reunião. Use 'manter' (ou omita etapaCorreta) se nada mudou de etapa. NUNCA tente avançar pra 'consulta_agendada' por aqui — isso é exclusivo da tool registrar_agendamento. Pode chamar várias vezes; é idempotente e só grava o que realmente mudou.",
       parameters: {
         type: "object",
         properties: {
@@ -53,8 +53,8 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
           etapaCorreta: {
             type: "string",
-            enum: ["manter", "qualificacao", "agendamento"],
-            description: "Para onde mover o funil: 'qualificacao' (paciente já disse o que quer), 'agendamento' (orçamento voltou e paciente aprovou reunião) ou 'manter' (nada muda). NUNCA 'consulta_agendada'.",
+            enum: ["manter", "qualificacao", "orcamento", "agendamento"],
+            description: "Para onde mover o funil: 'qualificacao' (paciente já disse o que quer), 'orcamento' (qualificação completa e orçamento acionado), 'agendamento' (orçamento voltou e paciente aprovou reunião) ou 'manter' (nada muda). NUNCA 'consulta_agendada'.",
           },
         },
         required: ["contatoId"],
@@ -91,6 +91,32 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
         },
         required: ["contatoId", "resumoCaso"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "acionar_atendimento_humano",
+      description:
+        "Pausa a IA e move o lead para Atendimento Humano quando o paciente pedir explicitamente para falar com uma pessoa, atendente, equipe ou Dr. Lucas. Não use para orçamento exato — orçamento usa gerar_orcamento.",
+      parameters: {
+        type: "object",
+        properties: {
+          contatoId: {
+            type: "string",
+            description: "ID do lead/paciente",
+          },
+          conversaId: {
+            type: "string",
+            description: "ID da conversa ativa",
+          },
+          motivo: {
+            type: "string",
+            description: "Resumo curto do motivo do pedido humano.",
+          },
+        },
+        required: ["contatoId", "conversaId"],
       },
     },
   },

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
 import { agora } from "@/lib/db-utils"
 import { z } from "zod"
+import { etapaRetornoIASegura } from "@/lib/funil"
 
 const schema = z.object({
   conversaId: z.string().min(1),
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
 
   const { data: conversa } = await supabaseAdmin
     .from("conversas")
-    .select("id, contatoId, modoConversa")
+    .select("id, contatoId, modoConversa, etapa")
     .eq("id", parse.data.conversaId)
     .maybeSingle()
 
@@ -32,11 +33,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "IA já está ativa nesta conversa" }, { status: 400 })
   }
 
+  const etapaRetorno = etapaRetornoIASegura(conversa.etapa)
+
   const { error: convError } = await supabaseAdmin
     .from("conversas")
     .update({
       modoConversa: "ia",
       atendenteId: null,
+      etapa: etapaRetorno as never,
       atualizadoEm: agora(),
     })
     .eq("id", conversa.id)
@@ -47,8 +51,13 @@ export async function POST(req: Request) {
 
   await supabaseAdmin
     .from("contatos")
-    .update({ responsavelId: null, atualizadoEm: agora() })
+    .update({
+      responsavelId: null,
+      statusFunil: etapaRetorno as never,
+      ultimaMovimentacaoEm: agora(),
+      atualizadoEm: agora(),
+    })
     .eq("id", conversa.contatoId)
 
-  return NextResponse.json({ sucesso: true, modoConversa: "ia" })
+  return NextResponse.json({ sucesso: true, modoConversa: "ia", etapaRetorno })
 }

@@ -24,6 +24,7 @@ import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { UserAvatar } from "@/components/features/shared/UserAvatar"
 import { ContatoForm } from "@/components/features/contatos/ContatoForm"
 import { useContatos, type Contato } from "@/hooks/use-contatos"
+import { ETAPAS_FUNIL, FUNIL_LABELS } from "@/lib/funil"
 
 interface Procedimento {
   id: string
@@ -275,10 +276,11 @@ export default function ContatosPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todas as etapas</SelectItem>
-                    <SelectItem value="acolhimento">Acolhimento</SelectItem>
-                    <SelectItem value="qualificacao">Qualificação</SelectItem>
-                    <SelectItem value="agendamento">Agendamento</SelectItem>
-                    <SelectItem value="consulta_agendada">Reunião Agendada</SelectItem>
+                    {ETAPAS_FUNIL.map((etapa) => (
+                      <SelectItem key={etapa} value={etapa}>
+                        {FUNIL_LABELS[etapa]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

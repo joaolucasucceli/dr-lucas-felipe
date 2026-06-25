@@ -1,11 +1,7 @@
 import { z } from "zod"
+import { ETAPAS_FUNIL } from "@/lib/funil"
 
-const STATUS_FUNIL_VALUES = [
-  "acolhimento",
-  "qualificacao",
-  "agendamento",
-  "consulta_agendada",
-] as const
+const STATUS_FUNIL_VALUES = ETAPAS_FUNIL
 
 const TIPO_CONTATO = ["lead", "paciente"] as const
 
