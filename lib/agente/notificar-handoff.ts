@@ -15,6 +15,15 @@ interface FotoOrcamento {
   descricao: string | null
 }
 
+export type ResultadoNotificacaoOrcamento =
+  | {
+      ok: true
+      fotosEnviadas: number
+      fotosFalhas: number
+      notificacaoEnviadaEm: string
+    }
+  | { ok: false; error: string }
+
 function limparNome(nome?: string | null): string {
   return nome?.replace(/^WhatsApp\s+/, "").trim() || "Paciente"
 }
@@ -47,13 +56,12 @@ function montarResumo(params: {
 
 export async function notificarDrLucasOrcamento(
   args: NotificacaoArgs
-): Promise<void> {
+): Promise<ResultadoNotificacaoOrcamento> {
   const numeroPessoal = (process.env.DR_LUCAS_WHATSAPP_PESSOAL ?? "").trim()
   if (!numeroPessoal) {
-    console.warn(
-      "[notificar-handoff] DR_LUCAS_WHATSAPP_PESSOAL nao configurada - pendente fica so na UI"
-    )
-    return
+    const error = "DR_LUCAS_WHATSAPP_PESSOAL nao configurada"
+    console.warn(`[notificar-handoff] ${error}`)
+    return { ok: false, error }
   }
 
   const { data: configWa } = await supabaseAdmin
@@ -65,8 +73,9 @@ export async function notificarDrLucasOrcamento(
     .maybeSingle()
 
   if (!configWa?.uazapiUrl || !configWa?.instanceToken) {
-    console.error("[notificar-handoff] config_whatsapp ausente - nao posso notificar")
-    return
+    const error = "config_whatsapp ativa ausente"
+    console.error(`[notificar-handoff] ${error} - nao posso notificar`)
+    return { ok: false, error }
   }
 
   const { data: contato } = await supabaseAdmin
@@ -89,7 +98,8 @@ export async function notificarDrLucasOrcamento(
   const tel = contato?.whatsapp || "(sem WhatsApp registrado)"
   const procedimento = contato?.procedimentoInteresse || "Nao informado"
   const linkConversa = `${getBaseUrl()}/contatos/${args.contatoId}`
-  const titulo = args.prioridade === "urgente" ? "ORCAMENTO URGENTE" : "Orcamento"
+  const titulo =
+    args.prioridade === "urgente" ? "ORCAMENTO URGENTE" : "Orcamento"
   const fotosTexto =
     fotosOrcamento.length > 0
       ? `${fotosOrcamento.length} foto(s) enviada(s) em seguida`
@@ -116,13 +126,26 @@ export async function notificarDrLucasOrcamento(
     `Abrir conversa: ${linkConversa}`,
   ].join("\n")
 
-  await enviarMensagem(
-    configWa.uazapiUrl,
-    configWa.instanceToken,
-    numeroPessoal,
-    mensagem
-  )
+  try {
+    await enviarMensagem(
+      configWa.uazapiUrl,
+      configWa.instanceToken,
+      numeroPessoal,
+      mensagem
+    )
+  } catch (err) {
+    const error =
+      err instanceof Error ? err.message : "Falha ao enviar mensagem principal"
+    console.error("[notificar-handoff] falha ao enviar mensagem principal:", {
+      contatoId: args.contatoId,
+      orcamentoPendenteId: args.orcamentoPendenteId,
+      erro: error,
+    })
+    return { ok: false, error }
+  }
 
+  let fotosEnviadas = 0
+  let fotosFalhas = 0
   for (const [index, foto] of fotosOrcamento.entries()) {
     try {
       const legenda = [
@@ -140,7 +163,9 @@ export async function notificarDrLucasOrcamento(
         "image",
         legenda || undefined
       )
+      fotosEnviadas++
     } catch (err) {
+      fotosFalhas++
       console.error("[notificar-handoff] falha ao enviar foto ao Dr. Lucas:", {
         contatoId: args.contatoId,
         orcamentoPendenteId: args.orcamentoPendenteId,
@@ -150,8 +175,23 @@ export async function notificarDrLucasOrcamento(
     }
   }
 
-  await supabaseAdmin
+  const notificacaoEnviadaEm = agora()
+  const { error: errUpdate } = await supabaseAdmin
     .from("eventos_orcamento_pendente")
-    .update({ notificacaoEnviadaEm: agora() })
+    .update({ notificacaoEnviadaEm })
     .eq("id", args.orcamentoPendenteId)
+
+  if (errUpdate) {
+    console.error(
+      "[notificar-handoff] mensagem enviada mas falhou ao registrar auditoria:",
+      {
+        contatoId: args.contatoId,
+        orcamentoPendenteId: args.orcamentoPendenteId,
+        erro: errUpdate.message,
+      }
+    )
+    return { ok: false, error: errUpdate.message }
+  }
+
+  return { ok: true, fotosEnviadas, fotosFalhas, notificacaoEnviadaEm }
 }

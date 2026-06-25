@@ -15,7 +15,8 @@ export const ferramentasAgente: ChatCompletionTool[] = [
         properties: {
           whatsapp: {
             type: "string",
-            description: "Número de WhatsApp do paciente (apenas números, ex: 5511999998888)",
+            description:
+              "Número de WhatsApp do paciente (apenas números, ex: 5511999998888)",
           },
         },
         required: ["whatsapp"],
@@ -41,20 +42,24 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
           nome: {
             type: "string",
-            description: "Nome do paciente, quando ele informar na conversa. Para lead de origem WhatsApp, substitui o nome de perfil cadastrado automaticamente.",
+            description:
+              "Nome do paciente, quando ele informar na conversa. Para lead de origem WhatsApp, substitui o nome de perfil cadastrado automaticamente.",
           },
           procedimentoInteresse: {
             type: "string",
-            description: "Procedimento que o paciente demonstrou interesse (ex: 'lipo abdome', 'Paciente Modelo abdome + flancos').",
+            description:
+              "Procedimento que o paciente demonstrou interesse (ex: 'lipo abdome', 'Paciente Modelo abdome + flancos').",
           },
           sobreOPacienteAdicionar: {
             type: "string",
-            description: "Fato relevante sobre o paciente pra registrar no cadastro. É feito APPEND (nunca sobrescreve). Ex: 'Quer fazer antes do casamento em dezembro', 'Já fez lipo há 2 anos e quer retoque'.",
+            description:
+              "Fato relevante sobre o paciente pra registrar no cadastro. É feito APPEND (nunca sobrescreve). Ex: 'Quer fazer antes do casamento em dezembro', 'Já fez lipo há 2 anos e quer retoque'.",
           },
           etapaCorreta: {
             type: "string",
             enum: ["manter", "qualificacao", "orcamento", "agendamento"],
-            description: "Para onde mover o funil: 'qualificacao' (paciente já disse o que quer), 'orcamento' (qualificação completa e orçamento acionado), 'agendamento' (orçamento voltou e paciente aprovou reunião) ou 'manter' (nada muda). NUNCA 'consulta_agendada'.",
+            description:
+              "Para onde mover o funil: 'qualificacao' (paciente já disse o que quer), 'orcamento' (qualificação completa e orçamento acionado), 'agendamento' (orçamento voltou e paciente aprovou reunião) ou 'manter' (nada muda). NUNCA 'consulta_agendada'.",
           },
         },
         required: ["contatoId"],
@@ -66,7 +71,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "gerar_orcamento",
       description:
-        "Gera o ORÇAMENTO EXATO do paciente com Dr. Lucas. Chame quando a qualificação estiver completa: procedimento desejado + região + objetivo/incômodo + foto recebida + paciente aceitou responder perguntas/seguir com orçamento. Não exija uma segunda autorização artificial se o paciente já aceitou a qualificação para orçamento. Esta tool enfileira o pedido, aciona Dr. Lucas e pausa a IA até a resposta dele. Depois de chamar, diga que os dados foram enviados para Dr. Lucas e que você devolve o orçamento exato por ali. NÃO use para quem pediu só média e recusou qualificação/foto; nesse caso, use consultar_procedimentos apenas como faixa aproximada.",
+        "Gera o ORÇAMENTO EXATO do paciente com Dr. Lucas. Chame quando a qualificação estiver completa: procedimento desejado + região + objetivo/incômodo + foto recebida + paciente aceitou responder perguntas/seguir com orçamento. Não exija uma segunda autorização artificial se o paciente já aceitou a qualificação para orçamento. Esta tool só retorna ok quando a mensagem principal chegou ao Dr. Lucas; se falhar, não diga que enviou. Depois de ok, responda uma vez: 'Mandei seus dados para o Dr. Lucas e te devolvo por aqui assim que ele responder.' NÃO use para quem pediu só média e recusou qualificação/foto; nesse caso, use consultar_procedimentos apenas como faixa aproximada.",
       parameters: {
         type: "object",
         properties: {
@@ -131,7 +136,8 @@ export const ferramentasAgente: ChatCompletionTool[] = [
         properties: {
           conversaId: {
             type: "string",
-            description: "ID da conversa (opcional — se não fornecido, cria nova conversa)",
+            description:
+              "ID da conversa (opcional — se não fornecido, cria nova conversa)",
           },
           contatoId: {
             type: "string",
@@ -144,7 +150,8 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           direcao: {
             type: "string",
             enum: ["paciente", "agente"],
-            description: "Direção da mensagem: 'paciente' se recebida, 'agente' se enviada",
+            description:
+              "Direção da mensagem: 'paciente' se recebida, 'agente' se enviada",
           },
           messageIdWhatsapp: {
             type: "string",
@@ -166,11 +173,13 @@ export const ferramentasAgente: ChatCompletionTool[] = [
         properties: {
           filtro: {
             type: "string",
-            description: "Palavra-chave do tema. Buscado em titulo+conteudo dos textos e na descricao das mídias (ilike). Ex: 'endereço', 'pagamento', 'glúteo', 'lipo abdome'. Deixe vazio pra retornar tudo.",
+            description:
+              "Palavra-chave do tema. Buscado em titulo+conteudo dos textos e na descricao das mídias (ilike). Ex: 'endereço', 'pagamento', 'glúteo', 'lipo abdome'. Deixe vazio pra retornar tudo.",
           },
           conversaId: {
             type: "string",
-            description: "ID da conversa ativa (para calcular jaEnviada nas mídias).",
+            description:
+              "ID da conversa ativa (para calcular jaEnviada nas mídias).",
           },
         },
         required: ["conversaId"],
@@ -182,13 +191,14 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "consultar_procedimentos",
       description:
-        "Consulta os procedimentos da clínica. Retorna descrição, duração, pós-operatório, escopoOferta, parcelamento e faixaFormatada. Use para explicar o procedimento e, como fallback, para faixa aproximada quando o paciente pede média e recusa qualificação/foto. NÃO use para responder automaticamente com preço quando o paciente só informou a região. Valor exato só vem pelo fluxo gerar_orcamento + resposta do Dr. Lucas. Campos legados não devem ser citados.",
+        "Consulta os procedimentos da clínica. Retorna descrição, duração, pós-operatório, escopoOferta, parcelamento e faixaFormatada. Use para explicar o procedimento e, como fallback, para faixa aproximada quando o paciente pede média e recusa qualificação/foto. NÃO use para responder automaticamente com preço quando o paciente só informou a região. Valor exato só vem pelo fluxo gerar_orcamento + resposta do Dr. Lucas. Se a estimativa for enviada e o paciente disser que está dentro do orçamento/aprovou, pode seguir para consulta de agenda. Campos legados não devem ser citados.",
       parameters: {
         type: "object",
         properties: {
           filtro: {
             type: "string",
-            description: "Filtro opcional por nome do procedimento (ilike). Ex: 'paciente modelo', 'abdome', 'lipo'.",
+            description:
+              "Filtro opcional por nome do procedimento (ilike). Ex: 'paciente modelo', 'abdome', 'lipo'.",
           },
         },
       },
@@ -205,7 +215,8 @@ export const ferramentasAgente: ChatCompletionTool[] = [
         properties: {
           dataInicio: {
             type: "string",
-            description: "Data início ISO 8601 (ex: 2026-04-22). Default: amanhã.",
+            description:
+              "Data início ISO 8601 (ex: 2026-04-22). Default: amanhã.",
           },
           dataFim: {
             type: "string",
@@ -220,7 +231,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "registrar_agendamento",
       description:
-        "Cria um agendamento de avaliação online (gratuita) para o paciente. Avança automaticamente o funil para 'consulta_agendada'. Email do paciente é OBRIGATÓRIO — sem ele o Google Calendar não envia o convite. Pergunte o email ANTES de chamar. Se o paciente recusar de primeira, insista educadamente uma ou duas vezes (\"é necessário pro convite chegar no seu calendário\"). Não chame esta tool sem email válido — o backend rejeita.",
+        "Cria um agendamento de avaliação online (gratuita) para o paciente. Avança automaticamente o funil para 'consulta_agendada'. Use somente depois de consultar a agenda, oferecer slots reais, o paciente escolher um slot e informar e-mail válido. Email do paciente é OBRIGATÓRIO — sem ele o Google Calendar não envia o convite. Se o paciente recusar de primeira, insista educadamente uma ou duas vezes (\"é necessário pro convite chegar no seu calendário\"). Não chame esta tool sem email válido — o backend rejeita.",
       parameters: {
         type: "object",
         properties: {
@@ -234,11 +245,13 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
           procedimentoId: {
             type: "string",
-            description: "ID do procedimento (opcional). Se omitir, o backend tenta resolver via procedimentoInteresse do contato.",
+            description:
+              "ID do procedimento (opcional). Se omitir, o backend tenta resolver via procedimentoInteresse do contato.",
           },
           dataHora: {
             type: "string",
-            description: "Data e hora do agendamento no formato ISO 8601 (ex: 2026-03-20T14:00:00)",
+            description:
+              "Data e hora do agendamento no formato ISO 8601 (ex: 2026-03-20T14:00:00)",
           },
           observacao: {
             type: "string",
@@ -246,7 +259,8 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
           email: {
             type: "string",
-            description: "Email do paciente — OBRIGATORIO. Usado pra mandar convite Google Calendar. Pergunte ao paciente antes de chamar a tool. Se ele recusar, insista educadamente.",
+            description:
+              "Email do paciente — OBRIGATORIO. Usado pra mandar convite Google Calendar. Pergunte ao paciente antes de chamar a tool. Se ele recusar, insista educadamente.",
           },
         },
         required: ["contatoId", "conversaId", "dataHora", "email"],
@@ -257,8 +271,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "atualizar_agendamento",
-      description:
-        "Remarca ou cancela um agendamento existente do paciente.",
+      description: "Remarca ou cancela um agendamento existente do paciente.",
       parameters: {
         type: "object",
         properties: {
@@ -273,7 +286,8 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           },
           novaDataHora: {
             type: "string",
-            description: "Nova data e hora (obrigatório se ação for 'remarcar'), formato ISO 8601",
+            description:
+              "Nova data e hora (obrigatório se ação for 'remarcar'), formato ISO 8601",
           },
         },
         required: ["agendamentoId", "acao"],

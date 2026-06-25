@@ -13,13 +13,18 @@ const schema = z.object({
   prioridade: z.enum(["normal", "urgente"]).optional(),
 })
 
-async function moverParaOrcamento(contatoId: string, conversaId?: string | null) {
+async function moverParaOrcamento(
+  contatoId: string,
+  conversaId?: string | null
+) {
   const tsAgora = agora()
   await supabaseAdmin
     .from("contatos")
     .update({
       statusFunil: "orcamento" as never,
       ultimaMovimentacaoEm: tsAgora,
+      aguardandoOrcamentoHumano: true,
+      aguardandoOrcamentoDesde: tsAgora,
       atualizadoEm: tsAgora,
     })
     .eq("id", contatoId)
@@ -41,7 +46,7 @@ async function moverParaOrcamento(contatoId: string, conversaId?: string | null)
  *  - eventos_orcamento_pendente: insere registro (fila + auditoria)
  *  - contatos: marca aguardandoOrcamentoHumano=true + aguardandoOrcamentoDesde
  *    (PAUSA o atendimento da Ana ate o Dr. Lucas responder o valor)
- *  - dispara notificacao WhatsApp pro Dr. Lucas (best-effort, nao falha a tool)
+ *  - dispara notificacao WhatsApp pro Dr. Lucas (obrigatoria para sucesso)
  *
  * O Dr. Lucas responde no WhatsApp pessoal dele no formato `<numero> - <valor>`
  * pro numero da clinica. O webhook intercepta, gera o PDF, manda pra cliente e
@@ -74,19 +79,43 @@ export async function POST(request: NextRequest) {
   // Idempotencia: ja existe orcamento aberto pro contato?
   const { data: existente } = await supabaseAdmin
     .from("eventos_orcamento_pendente")
-    .select("id, criadoEm")
+    .select("id, criadoEm, notificacaoEnviadaEm, resumoCaso, prioridade")
     .eq("contatoId", contatoId)
     .is("respondidoEm", null)
     .is("canceladoEm", null)
     .maybeSingle()
 
   if (existente) {
+    let notificacaoEnviadaEm = existente.notificacaoEnviadaEm
+    if (!existente.notificacaoEnviadaEm) {
+      const resultadoNotificacao = await notificarDrLucasOrcamento({
+        orcamentoPendenteId: existente.id,
+        contatoId,
+        resumoCaso: existente.resumoCaso || resumoCaso,
+        prioridade:
+          (existente.prioridade as "normal" | "urgente" | null) ?? "normal",
+      })
+
+      if (!resultadoNotificacao.ok) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "Nao consegui notificar o Dr. Lucas agora",
+            detalhe: resultadoNotificacao.error,
+          },
+          { status: 502 }
+        )
+      }
+      notificacaoEnviadaEm = resultadoNotificacao.notificacaoEnviadaEm
+    }
+
     await moverParaOrcamento(contatoId, conversaId ?? null)
     return NextResponse.json({
       ok: true,
       jaPendente: true,
       orcamentoPendenteId: existente.id,
       criadoEm: existente.criadoEm,
+      notificacaoEnviadaEm,
     })
   }
 
@@ -129,41 +158,55 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: errOrc.message }, { status: 500 })
   }
 
+  const resultadoNotificacao = await notificarDrLucasOrcamento({
+    orcamentoPendenteId: id,
+    contatoId,
+    resumoCaso,
+    prioridade: prioridade ?? "normal",
+  })
+
+  if (!resultadoNotificacao.ok) {
+    await supabaseAdmin
+      .from("eventos_orcamento_pendente")
+      .update({
+        canceladoEm: agora(),
+        observacoes: `Falha ao notificar Dr. Lucas: ${resultadoNotificacao.error}`,
+      })
+      .eq("id", id)
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Nao consegui notificar o Dr. Lucas agora",
+        detalhe: resultadoNotificacao.error,
+      },
+      { status: 502 }
+    )
+  }
+
+  const tsAgora = agora()
   await supabaseAdmin
     .from("contatos")
     .update({
       statusFunil: "orcamento" as never,
-      ultimaMovimentacaoEm: agora(),
+      ultimaMovimentacaoEm: tsAgora,
       aguardandoOrcamentoHumano: true,
-      aguardandoOrcamentoDesde: agora(),
-      atualizadoEm: agora(),
+      aguardandoOrcamentoDesde: tsAgora,
+      atualizadoEm: tsAgora,
     })
     .eq("id", contatoId)
 
   if (conversaId) {
     await supabaseAdmin
       .from("conversas")
-      .update({ etapa: "orcamento" as never, atualizadoEm: agora() })
+      .update({ etapa: "orcamento" as never, atualizadoEm: tsAgora })
       .eq("id", conversaId)
   }
-
-  // Notificacao Uazapi (best-effort — se falhar, evento ja esta no banco e a
-  // UI do painel mostra como pendente).
-  notificarDrLucasOrcamento({
-    orcamentoPendenteId: id,
-    contatoId,
-    resumoCaso,
-    prioridade: prioridade ?? "normal",
-  }).catch((err) => {
-    console.error(
-      "[gerar-orcamento] notificacao Dr. Lucas falhou (nao bloqueia):",
-      err
-    )
-  })
 
   return NextResponse.json({
     ok: true,
     aguardando: true,
     orcamentoPendenteId: id,
+    notificacaoEnviadaEm: resultadoNotificacao.notificacaoEnviadaEm,
   })
 }

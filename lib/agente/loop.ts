@@ -2,7 +2,11 @@ import { openai } from "@/lib/openai"
 import { supabaseAdmin } from "@/lib/supabase"
 import { getBaseUrl } from "@/lib/env"
 import { obterELimparBuffer } from "@/lib/agente/buffer"
-import { obterMemoria, adicionarAMemoria, limparMemoria } from "@/lib/agente/memoria"
+import {
+  obterMemoria,
+  adicionarAMemoria,
+  limparMemoria,
+} from "@/lib/agente/memoria"
 import { temNomeAutodeclarado } from "@/lib/agente/atualizar-lead"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
@@ -13,12 +17,14 @@ import {
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
+import { redis } from "@/lib/redis"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
 const MAX_TOOL_ITERATIONS = 4
 const PROCESSAMENTO_DEADLINE_MS = 45_000
 const OPENAI_TIMEOUT_MAX_MS = 18_000
 const DEADLINE_MARGIN_MS = 5_000
+const AGENDAMENTO_ESTADO_TTL = 60 * 60 * 3
 
 export function segmentarResposta(texto: string): string[] {
   if (!texto) return []
@@ -68,7 +74,9 @@ function normalizarTextoBusca(texto: string): string {
 }
 
 function ehRespostaAfirmativaCurta(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto).replace(/[.!?]+$/g, "").trim()
+  const normalizado = normalizarTextoBusca(texto)
+    .replace(/[.!?]+$/g, "")
+    .trim()
   if (!normalizado || normalizado.length > 80) return false
 
   const respostasDiretas = new Set([
@@ -95,7 +103,8 @@ function assistentePediuPerguntasQualificacao(texto: string): boolean {
   return (
     normalizado.includes("posso te fazer algumas perguntas") ||
     (normalizado.includes("perguntas rapidas") &&
-      (normalizado.includes("orcamento") || normalizado.includes("orcamento certinho")))
+      (normalizado.includes("orcamento") ||
+        normalizado.includes("orcamento certinho")))
   )
 }
 
@@ -116,7 +125,9 @@ function consentiuComQualificacao(
 
   const ultimaMensagem = ultimaMensagemAssistente(memoria)
 
-  return ultimaMensagem ? assistentePediuPerguntasQualificacao(ultimaMensagem) : false
+  return ultimaMensagem
+    ? assistentePediuPerguntasQualificacao(ultimaMensagem)
+    : false
 }
 
 function assistentePediuDadoQualificacao(texto: string): boolean {
@@ -155,7 +166,9 @@ function respondeuPerguntaQualificacao(
   if (detectarGatilhoVisualMidia(textoPaciente)) return false
 
   const ultimaMensagem = ultimaMensagemAssistente(memoria)
-  return ultimaMensagem ? assistentePediuDadoQualificacao(ultimaMensagem) : false
+  return ultimaMensagem
+    ? assistentePediuDadoQualificacao(ultimaMensagem)
+    : false
 }
 
 function montarPerguntaQualificacaoFallback(contexto: ContextoContato): string {
@@ -170,7 +183,9 @@ function primeiroNome(contexto: ContextoContato): string | null {
 
 function comVocativo(contexto: ContextoContato, texto: string): string {
   const nome = primeiroNome(contexto)
-  return nome ? texto.replace("{nome}", `, ${nome}`) : texto.replace("{nome}", "")
+  return nome
+    ? texto.replace("{nome}", `, ${nome}`)
+    : texto.replace("{nome}", "")
 }
 
 function pacienteFezPerguntaOuMudouAssunto(texto: string): boolean {
@@ -236,12 +251,12 @@ function qualificacaoTemDadosMinimos(contexto: ContextoContato): boolean {
   const info = normalizarTextoBusca(contexto.sobreOPaciente || "")
   return Boolean(
     contexto.procedimento &&
-      (info.includes("tempo de incomodo") || info.includes("desde sempre")) &&
-      (info.includes("historico") || info.includes("saude")) &&
-      (info.includes("principal incomodo") ||
-        info.includes("gordura localizada") ||
-        info.includes("flacidez") ||
-        info.includes("contorno"))
+    (info.includes("tempo de incomodo") || info.includes("desde sempre")) &&
+    (info.includes("historico") || info.includes("saude")) &&
+    (info.includes("principal incomodo") ||
+      info.includes("gordura localizada") ||
+      info.includes("flacidez") ||
+      info.includes("contorno"))
   )
 }
 
@@ -268,7 +283,10 @@ function montarFastPathQualificacao(params: {
   } = params
 
   if (contexto.etapa !== "qualificacao") return null
-  if (!pacienteAceitouQualificacao && pacienteFezPerguntaOuMudouAssunto(textoPaciente)) {
+  if (
+    !pacienteAceitouQualificacao &&
+    pacienteFezPerguntaOuMudouAssunto(textoPaciente)
+  ) {
     return null
   }
 
@@ -345,7 +363,8 @@ function deadlineAproximando(inicioMs: number): boolean {
 }
 
 function timeoutOpenAI(inicioMs: number): number {
-  const restante = PROCESSAMENTO_DEADLINE_MS - (Date.now() - inicioMs) - DEADLINE_MARGIN_MS
+  const restante =
+    PROCESSAMENTO_DEADLINE_MS - (Date.now() - inicioMs) - DEADLINE_MARGIN_MS
   return Math.max(5_000, Math.min(OPENAI_TIMEOUT_MAX_MS, restante))
 }
 
@@ -389,6 +408,19 @@ interface SlotAgendamentoOferecido {
   label: string
   dataIso: string
   hora: string
+}
+
+interface EstimativaEnviada {
+  procedimento?: string | null
+  faixa: string
+}
+
+interface EstadoAgendamentoTemporario {
+  origem: "orcamento" | "estimativa"
+  slots: SlotAgendamentoOferecido[]
+  slotEscolhido?: SlotAgendamentoOferecido | null
+  estimativa?: EstimativaEnviada | null
+  atualizadoEm: string
 }
 
 function limparTrechoNome(raw: string): string | null {
@@ -466,7 +498,8 @@ function detectarInteresseQualificacao(texto: string): {
   const regiao = regioes.find((r) => normalizado.includes(r.termo))?.label
   if (!indicouIntencao || !regiao) return null
 
-  const procedimentoBase = normalizado.includes("mini lipo") ||
+  const procedimentoBase =
+    normalizado.includes("mini lipo") ||
     normalizado.includes("minilipo") ||
     normalizado.includes("lipo")
       ? "mini lipo"
@@ -483,6 +516,11 @@ function pacienteAprovouOrcamento(texto: string): boolean {
   return [
     "aprovado",
     "faz sentido",
+    "esta dentro",
+    "ta dentro",
+    "dentro do meu orcamento",
+    "cabe no meu orcamento",
+    "cabe pra mim",
     "quero marcar",
     "quero agendar",
     "quero a reuniao",
@@ -511,6 +549,45 @@ function extrairPdfOrcamento(observacoes: string | null): string | null {
   return observacoes?.match(/https?:\/\/\S+/i)?.[0] ?? null
 }
 
+function extrairEstimativaDaConsulta(
+  resultado: string
+): EstimativaEnviada | null {
+  try {
+    const parsed = JSON.parse(resultado) as {
+      procedimentos?: Array<{
+        nome?: string | null
+        faixaFormatada?: string | null
+      }>
+    }
+    const procedimento = parsed.procedimentos?.find(
+      (item) => item.faixaFormatada
+    )
+    if (!procedimento?.faixaFormatada) return null
+    return {
+      procedimento: procedimento.nome ?? null,
+      faixa: procedimento.faixaFormatada,
+    }
+  } catch {
+    return null
+  }
+}
+
+function respostaContemEstimativa(
+  texto: string,
+  estimativa: EstimativaEnviada
+): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  const faixaNormalizada = normalizarTextoBusca(estimativa.faixa)
+  if (normalizado.includes(faixaNormalizada)) return true
+  return (
+    normalizado.includes("r$") &&
+    faixaNormalizada
+      .split(/\s+a\s+|\s+e\s+/)
+      .filter((parte) => parte.includes("r$"))
+      .some((parte) => normalizado.includes(parte.trim()))
+  )
+}
+
 function montarRespostaAgendamentoAposOrcamento(
   contexto: ContextoContato,
   orcamento: OrcamentoRespondidoContexto
@@ -522,10 +599,8 @@ function montarRespostaAgendamentoAposOrcamento(
     ? `Esse orcamento de ${valor} ja foi definido pelo Dr. Lucas`
     : "Esse orcamento ja foi definido pelo Dr. Lucas"
 
-  return `${prefixo}${vocativo}. Se fizer sentido pra voce, me passa seu e-mail e o melhor dia ou turno para eu consultar a agenda da reuniao de diagnostico online?`
+  return `${prefixo}${vocativo}. Se fizer sentido pra voce, eu vejo os horarios mais proximos da reuniao de diagnostico online.`
 }
-
-const MARCADOR_SLOTS_AGENDAMENTO = "Slots de agendamento oferecidos (sistema):"
 
 function extrairEmailDoTexto(texto: string): string | null {
   const match = texto.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
@@ -555,34 +630,84 @@ function extrairHorarioEscolhido(texto: string): string | null {
   return `${hora}h${minuto && minuto !== "00" ? minuto : ""}`
 }
 
-function extrairSlotsOferecidos(sobreOPaciente?: string): SlotAgendamentoOferecido[] {
-  if (!sobreOPaciente) return []
+function chaveEstadoAgendamento(chatId: string): string {
+  return `agente:agendamento:${chatId}`
+}
 
-  const regex = /Slots de agendamento oferecidos \(sistema\): ([^\n]+)/g
-  let match: RegExpExecArray | null
-  let ultimoJson: string | null = null
-  while ((match = regex.exec(sobreOPaciente)) !== null) {
-    ultimoJson = match[1]
+function normalizarSlotPersistido(
+  slot: Partial<SlotAgendamentoOferecido>
+): SlotAgendamentoOferecido | null {
+  if (!slot.label || !slot.dataIso) return null
+  return {
+    label: slot.label,
+    dataIso: slot.dataIso,
+    hora: slot.hora || formatarHoraSlot(slot.dataIso),
   }
-  if (!ultimoJson) return []
+}
 
+function normalizarEstadoAgendamento(
+  raw: unknown
+): EstadoAgendamentoTemporario | null {
+  if (!raw || typeof raw !== "object") return null
+
+  const item = raw as Partial<EstadoAgendamentoTemporario>
+  if (item.origem !== "orcamento" && item.origem !== "estimativa") return null
+
+  const slots = Array.isArray(item.slots)
+    ? item.slots
+        .map((slot) => normalizarSlotPersistido(slot))
+        .filter((slot): slot is SlotAgendamentoOferecido => Boolean(slot))
+    : []
+  const slotEscolhido = item.slotEscolhido
+    ? normalizarSlotPersistido(item.slotEscolhido)
+    : null
+
+  return {
+    origem: item.origem,
+    slots,
+    slotEscolhido,
+    estimativa: item.estimativa ?? null,
+    atualizadoEm: item.atualizadoEm || agora(),
+  }
+}
+
+async function obterEstadoAgendamento(
+  chatId: string
+): Promise<EstadoAgendamentoTemporario | null> {
   try {
-    const parsed = JSON.parse(ultimoJson) as unknown
-    if (!Array.isArray(parsed)) return []
-    return parsed
-      .map((slot) => {
-        const item = slot as Partial<SlotAgendamentoOferecido>
-        if (!item.label || !item.dataIso) return null
-        return {
-          label: item.label,
-          dataIso: item.dataIso,
-          hora: item.hora || formatarHoraSlot(item.dataIso),
-        }
-      })
-      .filter((slot): slot is SlotAgendamentoOferecido => Boolean(slot))
+    const raw = await redis.get<unknown>(chaveEstadoAgendamento(chatId))
+    if (typeof raw === "string") {
+      return normalizarEstadoAgendamento(JSON.parse(raw))
+    }
+    return normalizarEstadoAgendamento(raw)
   } catch (err) {
-    console.warn("[Agente] Falha ao ler slots persistidos:", err)
-    return []
+    console.warn("[Agente] Falha ao ler estado temporario de agendamento:", err)
+    return null
+  }
+}
+
+async function salvarEstadoAgendamento(
+  chatId: string,
+  estado: EstadoAgendamentoTemporario
+): Promise<void> {
+  await redis.set(
+    chaveEstadoAgendamento(chatId),
+    {
+      ...estado,
+      atualizadoEm: agora(),
+    },
+    { ex: AGENDAMENTO_ESTADO_TTL }
+  )
+}
+
+async function limparEstadoAgendamento(chatId: string): Promise<void> {
+  try {
+    await redis.del(chaveEstadoAgendamento(chatId))
+  } catch (err) {
+    console.warn(
+      "[Agente] Falha ao limpar estado temporario de agendamento:",
+      err
+    )
   }
 }
 
@@ -691,23 +816,6 @@ async function salvarEmailContato(
   )
 }
 
-async function salvarSlotsOferecidos(
-  contatoId: string,
-  contexto: ContextoContato,
-  slots: SlotAgendamentoOferecido[]
-): Promise<void> {
-  const payload = slots.map((slot) => ({
-    label: slot.label,
-    dataIso: slot.dataIso,
-    hora: slot.hora,
-  }))
-  await adicionarFatoAoContato(
-    contatoId,
-    contexto,
-    `${MARCADOR_SLOTS_AGENDAMENTO} ${JSON.stringify(payload)}`
-  )
-}
-
 async function avancarParaAgendamento(
   contatoId: string,
   conversaId: string | null,
@@ -734,16 +842,29 @@ async function avancarParaAgendamento(
 }
 
 async function montarOfertaSlotsAgendamento(params: {
+  chatId: string
   contatoId: string
   contexto: ContextoContato
   baseUrl: string
   textoPaciente: string
+  origem: "orcamento" | "estimativa"
+  estimativa?: EstimativaEnviada | null
 }): Promise<string> {
-  const { contatoId, contexto, baseUrl, textoPaciente } = params
+  const {
+    chatId,
+    contatoId,
+    contexto,
+    baseUrl,
+    textoPaciente,
+    origem,
+    estimativa,
+  } = params
   const slots = await consultarSlotsAgendamento(baseUrl)
   const periodo = detectarPreferenciaPeriodo(textoPaciente)
   const slotsPreferidos = filtrarSlotsPorPeriodo(slots, periodo)
-  const slotsOferta = (slotsPreferidos.length > 0 ? slotsPreferidos : slots).slice(0, 3)
+  const slotsOferta = (
+    slotsPreferidos.length > 0 ? slotsPreferidos : slots
+  ).slice(0, 3)
 
   console.log("[Agente] Slots consultados para agendamento", {
     contatoId,
@@ -756,7 +877,13 @@ async function montarOfertaSlotsAgendamento(params: {
     return "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
   }
 
-  await salvarSlotsOferecidos(contatoId, contexto, slotsOferta)
+  await salvarEstadoAgendamento(chatId, {
+    origem,
+    slots: slotsOferta,
+    slotEscolhido: null,
+    estimativa: estimativa ?? null,
+    atualizadoEm: agora(),
+  })
 
   return comVocativo(
     contexto,
@@ -827,6 +954,7 @@ async function registrarAgendamentoDeterministico(params: {
 }
 
 async function montarFastPathAgendamento(params: {
+  chatId: string
   textoPaciente: string
   contexto: ContextoContato
   contatoId: string
@@ -835,6 +963,7 @@ async function montarFastPathAgendamento(params: {
   orcamentoRespondido: OrcamentoRespondidoContexto | null
 }): Promise<string | null> {
   const {
+    chatId,
     textoPaciente,
     contexto,
     contatoId,
@@ -842,22 +971,31 @@ async function montarFastPathAgendamento(params: {
     baseUrl,
     orcamentoRespondido,
   } = params
-  if (!orcamentoRespondido) return null
   if (contexto.etapa === "consulta_agendada" || contexto.agendamentoPendente) {
     return null
   }
 
+  const estadoAtual = await obterEstadoAgendamento(chatId)
+  const origem = orcamentoRespondido
+    ? "orcamento"
+    : estadoAtual?.origem === "estimativa"
+      ? "estimativa"
+      : null
+  if (!origem) return null
+
   const emailInformado = extrairEmailDoTexto(textoPaciente)
-  const slotsOferecidos = extrairSlotsOferecidos(contexto.sobreOPaciente)
+  const slotsOferecidos = estadoAtual?.slots ?? []
   const slotEscolhido = resolverSlotEscolhido(textoPaciente, slotsOferecidos)
   const horarioSolicitado = extrairHorarioEscolhido(textoPaciente)
   const aprovou = pacienteAprovouOrcamento(textoPaciente)
   const preferiuPeriodo = Boolean(detectarPreferenciaPeriodo(textoPaciente))
   const emAgendamento = contexto.etapa === "agendamento"
+  const slotPendente = estadoAtual?.slotEscolhido ?? null
   const deveEntrarNoAgendamento =
     aprovou ||
     emailInformado ||
     slotEscolhido ||
+    slotPendente ||
     horarioSolicitado ||
     preferiuPeriodo ||
     emAgendamento
@@ -871,8 +1009,10 @@ async function montarFastPathAgendamento(params: {
     aprovou,
     emailInformado: Boolean(emailInformado),
     slotEscolhido: slotEscolhido?.label,
+    slotPendente: slotPendente?.label,
     horarioSolicitado,
     preferiuPeriodo,
+    origem,
   })
 
   await avancarParaAgendamento(contatoId, conversaId, contexto, baseUrl)
@@ -882,8 +1022,19 @@ async function montarFastPathAgendamento(params: {
   }
 
   const email = emailInformado || contexto.email || null
+  const slotParaRegistrar = slotEscolhido ?? slotPendente
 
-  if (slotEscolhido) {
+  if (slotParaRegistrar) {
+    if (slotEscolhido) {
+      await salvarEstadoAgendamento(chatId, {
+        origem,
+        slots: slotsOferecidos,
+        slotEscolhido,
+        estimativa: estadoAtual?.estimativa ?? null,
+        atualizadoEm: agora(),
+      })
+    }
+
     if (!email) {
       return comVocativo(
         contexto,
@@ -896,43 +1047,48 @@ async function montarFastPathAgendamento(params: {
       conversaId,
       contexto,
       baseUrl,
-      slot: slotEscolhido,
+      slot: slotParaRegistrar,
       email,
     })
 
-    if (resultadoAgendamento.ok) return resultadoAgendamento.texto
+    if (resultadoAgendamento.ok) {
+      await limparEstadoAgendamento(chatId)
+      return resultadoAgendamento.texto
+    }
 
     const novaOferta = await montarOfertaSlotsAgendamento({
+      chatId,
       contatoId,
       contexto,
       baseUrl,
       textoPaciente,
+      origem,
+      estimativa: estadoAtual?.estimativa ?? null,
     })
     return `${resultadoAgendamento.texto} Consultei de novo e ${novaOferta.charAt(0).toLowerCase()}${novaOferta.slice(1)}`
   }
 
   if (horarioSolicitado) {
     const novaOferta = await montarOfertaSlotsAgendamento({
+      chatId,
       contatoId,
       contexto,
       baseUrl,
       textoPaciente,
+      origem,
+      estimativa: estadoAtual?.estimativa ?? null,
     })
-    return `Esse horário não estava na lista que eu tinha acabado de te oferecer. ${novaOferta}`
-  }
-
-  if (!email) {
-    return comVocativo(
-      contexto,
-      `Perfeito{nome}. Pra eu marcar sua reunião de diagnóstico online, me passa seu e-mail para eu enviar o convite?`
-    )
+    return `Esse horário não estava nas opções que eu tinha acabado de te passar. ${novaOferta}`
   }
 
   return montarOfertaSlotsAgendamento({
+    chatId,
     contatoId,
     contexto,
     baseUrl,
     textoPaciente,
+    origem,
+    estimativa: estadoAtual?.estimativa ?? null,
   })
 }
 
@@ -1020,17 +1176,15 @@ async function registrarMensagemAgenteLocal(params: {
   if (!conversaId) return
 
   const tsAgora = agora()
-  const { error } = await supabaseAdmin
-    .from("mensagens_whatsapp")
-    .insert({
-      id: criarId(),
-      conversaId,
-      contatoId,
-      messageIdWhatsapp: `agente_${criarId()}`,
-      tipo: "texto" as never,
-      conteudo,
-      remetente: "agente" as never,
-    })
+  const { error } = await supabaseAdmin.from("mensagens_whatsapp").insert({
+    id: criarId(),
+    conversaId,
+    contatoId,
+    messageIdWhatsapp: `agente_${criarId()}`,
+    tipo: "texto" as never,
+    conteudo,
+    remetente: "agente" as never,
+  })
 
   if (error) {
     console.error("[Agente] Falha ao registrar mensagem do agente:", {
@@ -1081,7 +1235,12 @@ async function enviarRespostaAgente(params: {
     })
 
     try {
-      await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
+      await enviarDigitando(
+        configWa.uazapiUrl,
+        configWa.instanceToken,
+        chatId,
+        true
+      )
     } catch {
       console.warn("[Agente] Erro ao enviar digitando antes do segmento")
     }
@@ -1097,7 +1256,11 @@ async function enviarRespostaAgente(params: {
     )
 
     if (contatoId) {
-      await registrarMensagemAgenteLocal({ contatoId, conversaId, conteudo: segmento })
+      await registrarMensagemAgenteLocal({
+        contatoId,
+        conversaId,
+        conteudo: segmento,
+      })
     }
 
     if (i < segmentos.length - 1) {
@@ -1164,7 +1327,9 @@ export async function processarMensagens(
 
   const configWa = await obterConfigWhatsapp()
   if (!configWa?.instanceToken || !configWa?.uazapiUrl) {
-    console.warn("[Agente] ConfigWhatsapp não encontrada ou incompleta — não será possível responder")
+    console.warn(
+      "[Agente] ConfigWhatsapp não encontrada ou incompleta — não será possível responder"
+    )
     return null
   }
   const configEnvio = {
@@ -1201,7 +1366,9 @@ export async function processarMensagens(
         resultadoPaciente.contato.tipo === "lead" &&
         !temNomeAutodeclarado(resultadoPaciente.sobreOPaciente, nomeAtual)
       const nomePaciente =
-        nomeAtual && !nomeAtual.startsWith("WhatsApp ") && !nomePerfilWhatsappNaoConfirmado
+        nomeAtual &&
+        !nomeAtual.startsWith("WhatsApp ") &&
+        !nomePerfilWhatsappNaoConfirmado
           ? nomeAtual
           : undefined
       contextoContato = {
@@ -1274,7 +1441,8 @@ export async function processarMensagens(
       )
       const parsed = JSON.parse(resultadoQualificacao)
       if (parsed?.ok === true) {
-        contextoContato.procedimento = interesseQualificacao.procedimentoInteresse
+        contextoContato.procedimento =
+          interesseQualificacao.procedimentoInteresse
         contextoContato.etapa = "qualificacao"
         contextoContato.sobreOPaciente = anexarFatoContexto(
           contextoContato.sobreOPaciente,
@@ -1294,7 +1462,9 @@ export async function processarMensagens(
       .maybeSingle()
 
     if (contatoResponsavel?.responsavelId) {
-      console.log(`[Agente] Atendimento humano ativo no contato ${contatoId} - automacao pausada`)
+      console.log(
+        `[Agente] Atendimento humano ativo no contato ${contatoId} - automacao pausada`
+      )
       return null
     }
 
@@ -1307,8 +1477,29 @@ export async function processarMensagens(
       .eq("id", contatoId)
       .maybeSingle()
 
-    if ((contatoHandoff as { aguardandoOrcamentoHumano?: boolean })?.aguardandoOrcamentoHumano) {
-      console.log(`[Agente] Contato ${contatoId} aguardando orcamento manual do Dr. Lucas — IA pausada`)
+    if (
+      (contatoHandoff as { aguardandoOrcamentoHumano?: boolean })
+        ?.aguardandoOrcamentoHumano
+    ) {
+      console.log(
+        `[Agente] Contato ${contatoId} aguardando orcamento manual do Dr. Lucas — IA pausada`
+      )
+      if (ehRespostaAfirmativaCurta(textoBuffer)) {
+        const textoAguardo = comVocativo(
+          contextoContato,
+          "Show{nome}. Assim que o Dr. Lucas retornar, te aviso por aqui."
+        )
+        await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: textoAguardo,
+        })
+        return { contatoId, conversaId }
+      }
       return null
     }
   }
@@ -1321,14 +1512,18 @@ export async function processarMensagens(
       .maybeSingle()
 
     if (conversa?.modoConversa === "humano") {
-      console.error(`[Agente] Conversa ${conversaId} em modo humano — IA não responde`)
+      console.error(
+        `[Agente] Conversa ${conversaId} em modo humano — IA não responde`
+      )
       return null
     }
 
     // Quando iaResponde=false, a automacao deve permanecer pausada ate
     // reabertura explicita pelo fluxo operacional.
     if ((conversa as { iaResponde?: boolean })?.iaResponde === false) {
-      console.log(`[Agente] Conversa ${conversaId} com iaResponde=false — IA nao responde`)
+      console.log(
+        `[Agente] Conversa ${conversaId} com iaResponde=false — IA nao responde`
+      )
       return null
     }
   }
@@ -1366,7 +1561,12 @@ export async function processarMensagens(
   }
 
   try {
-    await enviarDigitando(configEnvio.uazapiUrl, configEnvio.instanceToken, chatId, true)
+    await enviarDigitando(
+      configEnvio.uazapiUrl,
+      configEnvio.instanceToken,
+      chatId,
+      true
+    )
   } catch {
     console.warn("[Agente] Erro ao enviar indicador de digitacao")
   }
@@ -1410,15 +1610,19 @@ export async function processarMensagens(
 
   try {
     const memoria = await obterMemoria(chatId)
-    const pacienteAceitouQualificacao = consentiuComQualificacao(textoBuffer, memoria)
+    const pacienteAceitouQualificacao = consentiuComQualificacao(
+      textoBuffer,
+      memoria
+    )
     const pacienteRespondeuQualificacao = respondeuPerguntaQualificacao(
       textoBuffer,
       memoria,
       contextoContato.etapa
     )
 
-    if (contatoId && orcamentoRespondidoAtual) {
+    if (contatoId) {
       const fastPathAgendamento = await montarFastPathAgendamento({
+        chatId,
         textoPaciente: textoBuffer,
         contexto: contextoContato,
         contatoId,
@@ -1517,7 +1721,7 @@ export async function processarMensagens(
         ? [
             {
               role: "system" as const,
-              content: `Ja existe orcamento respondido pelo Dr. Lucas para este contato (${contextoContato.orcamentoRespondido?.valor ?? "valor registrado"}). Nao chame gerar_orcamento novamente neste ciclo. Se o paciente aprovar ou pedir para marcar, conduza para agendamento: peca e-mail se faltar e use consultar_agenda antes de oferecer ou confirmar horario.`,
+              content: `Ja existe orcamento respondido pelo Dr. Lucas para este contato (${contextoContato.orcamentoRespondido?.valor ?? "valor registrado"}). Nao chame gerar_orcamento novamente neste ciclo. Se o paciente aprovar ou pedir para marcar, conduza para agendamento: primeiro consulte a agenda e ofereca 2-3 slots reais; peca e-mail somente depois que o paciente escolher um slot.`,
             },
           ]
         : []),
@@ -1563,21 +1767,21 @@ export async function processarMensagens(
       !pacienteAceitouQualificacao &&
       !pacienteRespondeuQualificacao &&
       temNomeAcolhido &&
-      (gatilhoVisual ||
-        (gatilhoProcedimento && contextoProntoParaMidia))
+      (gatilhoVisual || (gatilhoProcedimento && contextoProntoParaMidia))
     const forcarEnvioMidia =
       !pacienteRespondeuQualificacao &&
       temNomeAcolhido &&
       (gatilhoVisual || (gatilhoProcedimento && contextoProntoParaMidia))
 
-    const ferramentasDaRodada = pacienteAceitouQualificacao || pacienteRespondeuQualificacao
-      ? ferramentasAgente.filter(
-          (tool) =>
-            tool.type !== "function" ||
-            tool.function.name !== "buscar_conteudo" &&
-            tool.function.name !== "enviar_midia"
-        )
-      : ferramentasAgente
+    const ferramentasDaRodada =
+      pacienteAceitouQualificacao || pacienteRespondeuQualificacao
+        ? ferramentasAgente.filter(
+            (tool) =>
+              tool.type !== "function" ||
+              (tool.function.name !== "buscar_conteudo" &&
+                tool.function.name !== "enviar_midia")
+          )
+        : ferramentasAgente
 
     if (deadlineAproximando(inicioProcessamento)) {
       console.warn("[Agente] Deadline antes do OpenAI - enviando fallback", {
@@ -1602,16 +1806,19 @@ export async function processarMensagens(
       conversaId,
       etapa: contextoContato.etapa,
     })
-    let resposta = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: mensagens,
-      tools: ferramentasDaRodada,
-      tool_choice: forcarBuscaConteudo
-        ? { type: "function", function: { name: "buscar_conteudo" } }
-        : "auto",
-    }, {
-      timeout: timeoutOpenAI(inicioProcessamento),
-    })
+    let resposta = await openai.chat.completions.create(
+      {
+        model: "gpt-4o",
+        messages: mensagens,
+        tools: ferramentasDaRodada,
+        tool_choice: forcarBuscaConteudo
+          ? { type: "function", function: { name: "buscar_conteudo" } }
+          : "auto",
+      },
+      {
+        timeout: timeoutOpenAI(inicioProcessamento),
+      }
+    )
     console.log("[Agente] OpenAI respondeu", {
       contatoId,
       conversaId,
@@ -1623,9 +1830,12 @@ export async function processarMensagens(
     // Por padrao deixamos o GPT escolher, mas se acabou de listar midias com
     // resultado nao vazio, a proxima iteracao EXIGE enviar_midia — impede a
     // alucinacao "acabei de enviar uma foto" sem chamar a tool.
-    let proximoToolChoice: "auto" | { type: "function"; function: { name: string } } = "auto"
+    let proximoToolChoice:
+      | "auto"
+      | { type: "function"; function: { name: string } } = "auto"
     let enviouMidiaNestaRodada = false
     let gerouOrcamentoNestaRodada = false
+    let estimativaConsultadaNestaRodada: EstimativaEnviada | null = null
     let textoRespostaForcado: string | null = null
 
     while (
@@ -1635,11 +1845,14 @@ export async function processarMensagens(
     ) {
       if (deadlineAproximando(inicioProcessamento)) {
         textoRespostaForcado = montarFallbackDeadline(contextoContato)
-        console.warn("[Agente] Deadline antes de processar tools - usando fallback", {
-          contatoId,
-          conversaId,
-          iteracoes,
-        })
+        console.warn(
+          "[Agente] Deadline antes de processar tools - usando fallback",
+          {
+            contatoId,
+            conversaId,
+            iteracoes,
+          }
+        )
         break
       }
 
@@ -1691,21 +1904,35 @@ export async function processarMensagens(
 
         if (deadlineAproximando(inicioProcessamento)) {
           textoRespostaForcado = montarFallbackDeadline(contextoContato)
-          console.warn("[Agente] Deadline antes de executar tool - usando fallback", {
-            contatoId,
-            conversaId,
-            ferramenta: fn.name,
-            iteracoes,
-          })
+          console.warn(
+            "[Agente] Deadline antes de executar tool - usando fallback",
+            {
+              contatoId,
+              conversaId,
+              ferramenta: fn.name,
+              iteracoes,
+            }
+          )
           break
         }
 
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
         let enviouMidiaAgora = false
 
+        if (fn.name === "consultar_procedimentos") {
+          const estimativa = extrairEstimativaDaConsulta(resultado)
+          if (estimativa) {
+            estimativaConsultadaNestaRodada = estimativa
+          }
+        }
+
         // Lógica anti-alucinação: se busca retornou mídia nova e o momento
         // permite, próxima iteração EXIGE enviar_midia.
-        if (fn.name === "buscar_conteudo" && forcarBuscaConteudo && forcarEnvioMidia) {
+        if (
+          fn.name === "buscar_conteudo" &&
+          forcarBuscaConteudo &&
+          forcarEnvioMidia
+        ) {
           try {
             const parsed = JSON.parse(resultado)
             const midias = Array.isArray(parsed?.midias) ? parsed.midias : []
@@ -1774,11 +2001,14 @@ export async function processarMensagens(
 
       if (deadlineAproximando(inicioProcessamento)) {
         textoRespostaForcado = montarFallbackDeadline(contextoContato)
-        console.warn("[Agente] Deadline antes de nova chamada OpenAI - usando fallback", {
-          contatoId,
-          conversaId,
-          iteracoes,
-        })
+        console.warn(
+          "[Agente] Deadline antes de nova chamada OpenAI - usando fallback",
+          {
+            contatoId,
+            conversaId,
+            iteracoes,
+          }
+        )
         break
       }
 
@@ -1787,14 +2017,17 @@ export async function processarMensagens(
         conversaId,
         iteracoes: iteracoes + 1,
       })
-      resposta = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: mensagens,
-        tools: ferramentasDaRodada,
-        tool_choice: proximoToolChoice,
-      }, {
-        timeout: timeoutOpenAI(inicioProcessamento),
-      })
+      resposta = await openai.chat.completions.create(
+        {
+          model: "gpt-4o",
+          messages: mensagens,
+          tools: ferramentasDaRodada,
+          tool_choice: proximoToolChoice,
+        },
+        {
+          timeout: timeoutOpenAI(inicioProcessamento),
+        }
+      )
       console.log("[Agente] OpenAI pós-tool respondeu", {
         contatoId,
         conversaId,
@@ -1805,24 +2038,31 @@ export async function processarMensagens(
       iteracoes++
     }
 
-    let textoResposta = textoRespostaForcado ?? (resposta.choices[0]?.message?.content || "")
+    let textoResposta =
+      textoRespostaForcado ?? (resposta.choices[0]?.message?.content || "")
 
     // Se atingiu MAX_TOOL_ITERATIONS sem texto final, forca uma chamada SEM
     // tools pra obrigar GPT-4o a fechar com prosa. Antes desse fallback, o
     // paciente recebia silencio (return sem enviar nada) — pior UX possivel.
     const aindaPedindoTool = !!resposta.choices[0]?.message?.tool_calls?.length
-    if ((!textoResposta || aindaPedindoTool) && iteracoes >= MAX_TOOL_ITERATIONS) {
+    if (
+      (!textoResposta || aindaPedindoTool) &&
+      iteracoes >= MAX_TOOL_ITERATIONS
+    ) {
       console.warn(
         `[Agente] Atingiu MAX_TOOL_ITERATIONS (${iteracoes}) sem fechar resposta — forcando fallback sem tools`
       )
       try {
-        const fallback = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: mensagens,
-          tool_choice: "none",
-        }, {
-          timeout: timeoutOpenAI(inicioProcessamento),
-        })
+        const fallback = await openai.chat.completions.create(
+          {
+            model: "gpt-4o",
+            messages: mensagens,
+            tool_choice: "none",
+          },
+          {
+            timeout: timeoutOpenAI(inicioProcessamento),
+          }
+        )
         textoResposta = fallback.choices[0]?.message?.content || ""
       } catch (err) {
         console.error("[Agente] Fallback sem tools tambem falhou:", err)
@@ -1831,7 +2071,9 @@ export async function processarMensagens(
 
     if (!textoResposta && enviouMidiaNestaRodada) {
       textoResposta = montarPerguntaQualificacaoFallback(contextoContato)
-      console.warn("[Agente] Midia enviada sem texto final - aplicando fallback de qualificacao")
+      console.warn(
+        "[Agente] Midia enviada sem texto final - aplicando fallback de qualificacao"
+      )
     }
 
     if (
@@ -1841,7 +2083,9 @@ export async function processarMensagens(
       !assistentePediuDadoQualificacao(textoResposta)
     ) {
       textoResposta = `${textoResposta}\n---\n${montarPerguntaQualificacaoFallback(contextoContato)}`
-      console.warn("[Agente] Midia enviada sem pergunta de qualificacao - anexando continuidade")
+      console.warn(
+        "[Agente] Midia enviada sem pergunta de qualificacao - anexando continuidade"
+      )
     }
 
     if (
@@ -1895,9 +2139,53 @@ export async function processarMensagens(
             "Tive uma instabilidade aqui pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
         }
       } catch (err) {
-        console.error("[Agente] Erro na guarda anti-promessa de orçamento:", err)
+        console.error(
+          "[Agente] Erro na guarda anti-promessa de orçamento:",
+          err
+        )
         textoResposta =
           "Tive uma instabilidade aqui pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
+      }
+    }
+
+    if (
+      textoResposta &&
+      estimativaConsultadaNestaRodada &&
+      contatoId &&
+      respostaContemEstimativa(textoResposta, estimativaConsultadaNestaRodada)
+    ) {
+      await adicionarFatoAoContato(
+        contatoId,
+        contextoContato,
+        `Estimativa enviada ao paciente: ${estimativaConsultadaNestaRodada.faixa}${
+          estimativaConsultadaNestaRodada.procedimento
+            ? ` (${estimativaConsultadaNestaRodada.procedimento})`
+            : ""
+        }.`
+      )
+      await salvarEstadoAgendamento(chatId, {
+        origem: "estimativa",
+        slots: [],
+        slotEscolhido: null,
+        estimativa: estimativaConsultadaNestaRodada,
+        atualizadoEm: agora(),
+      })
+      try {
+        await executarFerramenta(
+          "atualizar_lead",
+          {
+            contatoId,
+            conversaId,
+            etapaCorreta: "orcamento",
+          },
+          baseUrl
+        )
+        contextoContato.etapa = "orcamento"
+      } catch (err) {
+        console.warn(
+          "[Agente] Falha ao mover lead para orcamento apos estimativa:",
+          err
+        )
       }
     }
 
@@ -1905,7 +2193,9 @@ export async function processarMensagens(
       // Ultimo recurso — frase neutra que pede o paciente reformular sem
       // expor erro tecnico (regra absoluta #11 do system prompt).
       textoResposta = "Deu uma travadinha aqui, pode mandar de novo?"
-      console.warn("[Agente] Resposta vazia mesmo apos fallback — enviando frase neutra")
+      console.warn(
+        "[Agente] Resposta vazia mesmo apos fallback — enviando frase neutra"
+      )
     }
 
     enviouResposta = await enviarRespostaAgente({
@@ -1931,12 +2221,20 @@ export async function processarMensagens(
           textoResposta: montarFallbackDeadline(contextoContato),
         })
       } catch (fallbackError) {
-        console.error("[Agente] Falha ao enviar fallback apos erro:", fallbackError)
+        console.error(
+          "[Agente] Falha ao enviar fallback apos erro:",
+          fallbackError
+        )
       }
     }
   } finally {
     try {
-      await enviarDigitando(configEnvio.uazapiUrl, configEnvio.instanceToken, chatId, false)
+      await enviarDigitando(
+        configEnvio.uazapiUrl,
+        configEnvio.instanceToken,
+        chatId,
+        false
+      )
     } catch {
       console.warn("[Agente] Erro ao parar indicador de digitacao")
     }
