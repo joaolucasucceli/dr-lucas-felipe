@@ -147,8 +147,10 @@ function assistentePediuDadoQualificacao(texto: string): boolean {
     "consegue mandar uma foto",
     "foto da regiao",
     "qual regiao",
+    "quais regioes",
     "area especifica",
     "regiao especifica",
+    "regioes do corpo",
     "parte gostaria de tratar",
     "o que te incomoda",
     "objetivo",
@@ -172,9 +174,7 @@ function respondeuPerguntaQualificacao(
 }
 
 function montarPerguntaQualificacaoFallback(contexto: ContextoContato): string {
-  const primeiroNome = contexto.nome?.trim().split(/\s+/)[0]
-  const vocativo = primeiroNome ? `, ${primeiroNome}` : ""
-  return `Perfeito${vocativo}. Pra eu montar seu orçamento certinho, qual é seu principal incômodo nessa região: gordura localizada, flacidez ou contorno?`
+  return montarProximaPerguntaQualificacao(contexto)
 }
 
 function primeiroNome(contexto: ContextoContato): string | null {
@@ -206,13 +206,15 @@ function pacienteFezPerguntaOuMudouAssunto(texto: string): boolean {
   ].some((termo) => normalizado.includes(normalizarTextoBusca(termo)))
 }
 
-function perguntaPediuFoto(texto: string): boolean {
+function perguntaPediuRegiao(texto: string): boolean {
   const normalizado = normalizarTextoBusca(texto)
   return (
-    normalizado.includes("manda uma foto") ||
-    normalizado.includes("consegue mandar uma foto") ||
-    normalizado.includes("foto da regiao") ||
-    normalizado.includes("enviar uma foto")
+    normalizado.includes("qual regiao") ||
+    normalizado.includes("quais regioes") ||
+    normalizado.includes("regioes do corpo") ||
+    normalizado.includes("area especifica") ||
+    normalizado.includes("regiao especifica") ||
+    normalizado.includes("parte gostaria de tratar")
   )
 }
 
@@ -247,17 +249,107 @@ function perguntaPediuIncomodo(texto: string): boolean {
   )
 }
 
-function qualificacaoTemDadosMinimos(contexto: ContextoContato): boolean {
+const FATO_FOTO_QUALIFICACAO = "Foto atual da região recebida pelo WhatsApp."
+
+function estadoQualificacao(contexto: ContextoContato) {
   const info = normalizarTextoBusca(contexto.sobreOPaciente || "")
-  return Boolean(
-    contexto.procedimento &&
-    (info.includes("tempo de incomodo") || info.includes("desde sempre")) &&
-    (info.includes("historico") || info.includes("saude")) &&
-    (info.includes("principal incomodo") ||
+  const procedimento = normalizarTextoBusca(contexto.procedimento || "")
+  const temRegiao =
+    info.includes("regiao de interesse") ||
+    info.includes("regiao do procedimento") ||
+    info.includes("regiao de abdomen") ||
+    info.includes("regiao de abdome") ||
+    procedimento.includes("abdomen") ||
+    procedimento.includes("abdome") ||
+    procedimento.includes("flancos") ||
+    procedimento.includes("papada") ||
+    procedimento.includes("culote") ||
+    procedimento.includes("axila") ||
+    procedimento.includes("costas")
+
+  return {
+    temProcedimento: Boolean(
+      contexto.procedimento ||
+      procedimento ||
+      info.includes("mini lipo") ||
+      temRegiao
+    ),
+    temRegiao,
+    temTempo: info.includes("tempo de incomodo"),
+    temHistorico: info.includes("historico de procedimentos e saude"),
+    temIncomodo:
+      info.includes("principal incomodo") ||
       info.includes("gordura localizada") ||
       info.includes("flacidez") ||
-      info.includes("contorno"))
+      info.includes("contorno"),
+    temFoto: info.includes(normalizarTextoBusca(FATO_FOTO_QUALIFICACAO)),
+  }
+}
+
+function qualificacaoTemDadosMinimos(contexto: ContextoContato): boolean {
+  const estado = estadoQualificacao(contexto)
+  return Boolean(
+    estado.temProcedimento &&
+    estado.temRegiao &&
+    estado.temTempo &&
+    estado.temHistorico &&
+    estado.temIncomodo &&
+    estado.temFoto
   )
+}
+
+function montarProximaPerguntaQualificacao(contexto: ContextoContato): string {
+  const estado = estadoQualificacao(contexto)
+
+  if (!estado.temRegiao) {
+    return comVocativo(
+      contexto,
+      "Perfeito{nome}. Qual região do corpo você quer tratar com a mini lipo?"
+    )
+  }
+
+  if (!estado.temTempo) {
+    return comVocativo(
+      contexto,
+      "Entendi{nome}. Há quanto tempo essa região te incomoda?"
+    )
+  }
+
+  if (!estado.temHistorico) {
+    return comVocativo(
+      contexto,
+      "Certo{nome}. Você já fez algum procedimento estético antes ou tem algum problema de saúde importante?"
+    )
+  }
+
+  if (!estado.temIncomodo) {
+    return comVocativo(
+      contexto,
+      "Perfeito{nome}. E hoje o principal incômodo nessa região é gordura localizada, flacidez ou contorno?"
+    )
+  }
+
+  if (!estado.temFoto) {
+    return comVocativo(
+      contexto,
+      "Perfeito{nome}. Pra eu mandar seus dados pro Dr. Lucas definir um orçamento exato, consegue me enviar uma foto atual da região?"
+    )
+  }
+
+  return comVocativo(
+    contexto,
+    "Perfeito{nome}. Mandei seus dados para o Dr. Lucas e te devolvo por aqui assim que ele responder."
+  )
+}
+
+function contextoComFato(
+  contexto: ContextoContato,
+  fato: string
+): ContextoContato {
+  return {
+    ...contexto,
+    sobreOPaciente: anexarFatoContexto(contexto.sobreOPaciente, fato),
+  }
 }
 
 interface FastPathQualificacao {
@@ -293,10 +385,7 @@ function montarFastPathQualificacao(params: {
   if (pacienteAceitouQualificacao) {
     return {
       tipo: "consentimento_qualificacao",
-      texto: comVocativo(
-        contexto,
-        "Perfeito{nome}. Há quanto tempo essa região te incomoda?"
-      ),
+      texto: montarProximaPerguntaQualificacao(contexto),
     }
   }
 
@@ -305,53 +394,58 @@ function montarFastPathQualificacao(params: {
     return null
   }
 
-  if (perguntaPediuTempo(ultimaMensagem)) {
-    return {
-      tipo: "tempo_incomodo",
-      fato: `Tempo de incômodo informado pelo paciente: ${textoPaciente.trim()}`,
-      texto: comVocativo(
-        contexto,
-        "Entendi{nome}. E você já fez algum procedimento estético antes ou tem algum problema de saúde importante?"
-      ),
-    }
-  }
-
-  if (perguntaPediuHistoricoSaude(ultimaMensagem)) {
-    return {
-      tipo: "historico_saude",
-      fato: `Histórico de procedimentos e saúde informado pelo paciente: ${textoPaciente.trim()}`,
-      texto: montarPerguntaQualificacaoFallback(contexto),
-    }
-  }
-
-  if (perguntaPediuIncomodo(ultimaMensagem)) {
-    return {
-      tipo: "principal_incomodo",
-      fato: `Principal incômodo informado pelo paciente: ${textoPaciente.trim()}`,
-      texto: comVocativo(
-        contexto,
-        "Perfeito{nome}. Pra eu mandar seus dados pro Dr. Lucas definir um orçamento exato, consegue me enviar uma foto atual da região?"
-      ),
-    }
-  }
-
-  if (perguntaPediuFoto(ultimaMensagem) && recebeuImagem) {
-    if (qualificacaoTemDadosMinimos(contexto)) {
+  if (recebeuImagem) {
+    const fato = FATO_FOTO_QUALIFICACAO
+    const proximoContexto = contextoComFato(contexto, fato)
+    if (qualificacaoTemDadosMinimos(proximoContexto)) {
       return {
         tipo: "foto_qualificacao_completa",
-        fato: "Paciente enviou foto da região pelo WhatsApp.",
-        texto: comVocativo(
-          contexto,
-          "Recebi a foto{nome}. Já mandei seus dados para o Dr. Lucas definir o orçamento exato. Assim que ele responder, te devolvo por aqui."
-        ),
+        fato,
+        texto: montarProximaPerguntaQualificacao(proximoContexto),
         acionarOrcamento: true,
       }
     }
 
     return {
       tipo: "foto_qualificacao_incompleta",
-      fato: "Paciente enviou foto da região pelo WhatsApp.",
-      texto: montarPerguntaQualificacaoFallback(contexto),
+      fato,
+      texto: montarProximaPerguntaQualificacao(proximoContexto),
+    }
+  }
+
+  if (perguntaPediuRegiao(ultimaMensagem)) {
+    const fato = `Região de interesse informada pelo paciente para mini lipo: ${textoPaciente.trim()}`
+    return {
+      tipo: "regiao_interesse",
+      fato,
+      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
+    }
+  }
+
+  if (perguntaPediuTempo(ultimaMensagem)) {
+    const fato = `Tempo de incômodo informado pelo paciente: ${textoPaciente.trim()}`
+    return {
+      tipo: "tempo_incomodo",
+      fato,
+      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
+    }
+  }
+
+  if (perguntaPediuHistoricoSaude(ultimaMensagem)) {
+    const fato = `Histórico de procedimentos e saúde informado pelo paciente: ${textoPaciente.trim()}`
+    return {
+      tipo: "historico_saude",
+      fato,
+      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
+    }
+  }
+
+  if (perguntaPediuIncomodo(ultimaMensagem)) {
+    const fato = `Principal incômodo informado pelo paciente: ${textoPaciente.trim()}`
+    return {
+      tipo: "principal_incomodo",
+      fato,
+      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
     }
   }
 
@@ -373,9 +467,40 @@ function montarFallbackDeadline(contexto: ContextoContato): string {
     return montarPerguntaQualificacaoFallback(contexto)
   }
   if (contexto.etapa === "orcamento") {
-    return "Tive uma instabilidade aqui pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
+    return comVocativo(
+      contexto,
+      "Certo{nome}. Me manda um ok que eu sigo com seu orçamento por aqui."
+    )
   }
   return "Deu uma travadinha aqui. Pode me mandar de novo?"
+}
+
+function assistentePediuRetryOrcamento(
+  memoria: Awaited<ReturnType<typeof obterMemoria>>
+): boolean {
+  const ultimaMensagem = ultimaMensagemAssistente(memoria)
+  if (!ultimaMensagem) return false
+
+  const normalizado = normalizarTextoBusca(ultimaMensagem)
+  return (
+    normalizado.includes("me manda um ok") &&
+    (normalizado.includes("orcamento") ||
+      normalizado.includes("sigo com seu orcamento"))
+  )
+}
+
+function assistenteJaAvisouAguardandoOrcamento(
+  memoria: Awaited<ReturnType<typeof obterMemoria>>
+): boolean {
+  const ultimaMensagem = ultimaMensagemAssistente(memoria)
+  if (!ultimaMensagem) return false
+
+  const normalizado = normalizarTextoBusca(ultimaMensagem)
+  return (
+    normalizado.includes("assim que o dr lucas retornar") ||
+    normalizado.includes("assim que ele responder") ||
+    normalizado.includes("assim que ele retornar")
+  )
 }
 
 function textoPrometeEnvioOrcamento(texto: string): boolean {
@@ -915,7 +1040,7 @@ async function registrarAgendamentoDeterministico(params: {
       conversaId,
       dataHora: slot.dataIso,
       email,
-      observacao: `Reunião de diagnóstico online agendada pela Ana Júlia após orçamento aprovado. Slot escolhido: ${slot.label}.`,
+      observacao: `Reunião de diagnóstico online agendada pela Ana Júlia após aprovação comercial. Slot escolhido: ${slot.label}.`,
     },
     baseUrl
   )
@@ -1485,6 +1610,11 @@ export async function processarMensagens(
         `[Agente] Contato ${contatoId} aguardando orcamento manual do Dr. Lucas — IA pausada`
       )
       if (ehRespostaAfirmativaCurta(textoBuffer)) {
+        const memoriaAtual = await obterMemoria(chatId)
+        if (assistenteJaAvisouAguardandoOrcamento(memoriaAtual)) {
+          return null
+        }
+
         const textoAguardo = comVocativo(
           contextoContato,
           "Show{nome}. Assim que o Dr. Lucas retornar, te aviso por aqui."
@@ -1614,11 +1744,87 @@ export async function processarMensagens(
       textoBuffer,
       memoria
     )
+
+    if (
+      contatoId &&
+      pacienteAceitouQualificacao &&
+      contextoContato.etapa !== "qualificacao"
+    ) {
+      try {
+        await executarFerramenta(
+          "atualizar_lead",
+          {
+            contatoId,
+            conversaId,
+            etapaCorreta: "qualificacao",
+          },
+          baseUrl
+        )
+        contextoContato.etapa = "qualificacao"
+      } catch (err) {
+        console.error(
+          "[Agente] Erro ao sincronizar qualificacao apos aceite:",
+          err
+        )
+      }
+    }
+
     const pacienteRespondeuQualificacao = respondeuPerguntaQualificacao(
       textoBuffer,
       memoria,
       contextoContato.etapa
     )
+
+    if (
+      contatoId &&
+      ehRespostaAfirmativaCurta(textoBuffer) &&
+      assistentePediuRetryOrcamento(memoria)
+    ) {
+      console.log(
+        "[Agente] Fast-path retry de orçamento após aceite do paciente",
+        {
+          contatoId,
+          conversaId,
+        }
+      )
+
+      const resultadoOrcamento = await executarFerramenta(
+        "gerar_orcamento",
+        {
+          contatoId,
+          conversaId,
+          resumoCaso: montarResumoOrcamento(contextoContato, textoBuffer),
+          prioridade: "normal",
+        },
+        baseUrl
+      )
+      const parsed = JSON.parse(resultadoOrcamento)
+      const textoRetry =
+        parsed?.ok === true
+          ? comVocativo(
+              contextoContato,
+              "Perfeito{nome}. Mandei seus dados para o Dr. Lucas e te devolvo por aqui assim que ele responder."
+            )
+          : comVocativo(
+              contextoContato,
+              "Certo{nome}. Deixei seu caso separado aqui e sigo com seu orçamento por aqui."
+            )
+
+      if (parsed?.ok === true) {
+        contextoContato.etapa = "orcamento"
+      }
+
+      await enviarRespostaAgente({
+        chatId,
+        whatsapp,
+        contatoId,
+        conversaId,
+        configWa: configEnvio,
+        textoUsuario: textoBuffer,
+        textoResposta: textoRetry,
+      })
+      return { contatoId, conversaId }
+    }
 
     if (contatoId) {
       const fastPathAgendamento = await montarFastPathAgendamento({
@@ -2135,16 +2341,20 @@ export async function processarMensagens(
             "[Agente] Guarda anti-promessa falhou ao gerar orçamento:",
             resultadoOrcamento
           )
-          textoResposta =
-            "Tive uma instabilidade aqui pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
+          textoResposta = comVocativo(
+            contextoContato,
+            "Certo{nome}. Me manda um ok que eu sigo com seu orçamento por aqui."
+          )
         }
       } catch (err) {
         console.error(
           "[Agente] Erro na guarda anti-promessa de orçamento:",
           err
         )
-        textoResposta =
-          "Tive uma instabilidade aqui pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
+        textoResposta = comVocativo(
+          contextoContato,
+          "Certo{nome}. Me manda um ok que eu sigo com seu orçamento por aqui."
+        )
       }
     }
 
