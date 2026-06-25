@@ -213,7 +213,7 @@ export async function processarRespostaDrLucas(args: {
       await avisarDrLucas(
         cfg,
         numeroDrLucas,
-        `${nome} não tem nenhum orçamento em aberto agora. Se quiser, peça pra Ana gerar de novo.`
+        `${nome} nao tem nenhum orcamento em aberto agora. Gere um novo orcamento pela Ana Julia no atendimento atual e responda pela notificacao mais recente.`
       )
       return { tratado: true }
     }

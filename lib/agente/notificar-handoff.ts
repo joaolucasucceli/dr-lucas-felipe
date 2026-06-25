@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase"
-import { enviarMensagem } from "@/lib/uazapi"
+import { enviarMensagem, enviarMidia } from "@/lib/uazapi"
 import { agora } from "@/lib/db-utils"
 import { getBaseUrl } from "@/lib/env"
 
@@ -8,6 +8,41 @@ interface NotificacaoArgs {
   contatoId: string
   resumoCaso: string
   prioridade: "normal" | "urgente"
+}
+
+interface FotoOrcamento {
+  url: string
+  descricao: string | null
+}
+
+function limparNome(nome?: string | null): string {
+  return nome?.replace(/^WhatsApp\s+/, "").trim() || "Paciente"
+}
+
+function compactarTexto(texto: string): string {
+  return texto
+    .split(/\r?\n/)
+    .map((linha) => linha.trim())
+    .filter(Boolean)
+    .join("\n")
+}
+
+function montarResumo(params: {
+  resumoCaso: string
+  procedimento: string
+  sobreOPaciente?: string | null
+}): string {
+  const partes = [
+    params.procedimento !== "Nao informado"
+      ? `Procedimento de interesse: ${params.procedimento}`
+      : null,
+    params.sobreOPaciente
+      ? `Dados do paciente:\n${params.sobreOPaciente}`
+      : null,
+    params.resumoCaso ? `Resumo da qualificacao:\n${params.resumoCaso}` : null,
+  ].filter(Boolean)
+
+  return compactarTexto(partes.join("\n\n")).slice(0, 1800)
 }
 
 export async function notificarDrLucasOrcamento(
@@ -36,35 +71,47 @@ export async function notificarDrLucasOrcamento(
 
   const { data: contato } = await supabaseAdmin
     .from("contatos")
-    .select("nome, whatsapp, procedimentoInteresse")
+    .select("nome, whatsapp, procedimentoInteresse, sobreOPaciente")
     .eq("id", args.contatoId)
     .maybeSingle()
 
-  const { count: fotosRecebidas } = await supabaseAdmin
+  const { data: fotos } = await supabaseAdmin
     .from("fotos_contato")
-    .select("id", { count: "exact", head: true })
+    .select("url, descricao")
     .eq("contatoId", args.contatoId)
+    .order("criadoEm", { ascending: false })
+    .limit(3)
 
-  const nome = contato?.nome?.replace(/^WhatsApp\s+/, "") || "Paciente"
+  const fotosOrcamento = ((fotos ?? []) as FotoOrcamento[]).filter((foto) =>
+    Boolean(foto.url)
+  )
+  const nome = limparNome(contato?.nome)
   const tel = contato?.whatsapp || "(sem WhatsApp registrado)"
   const procedimento = contato?.procedimentoInteresse || "Nao informado"
   const linkConversa = `${getBaseUrl()}/contatos/${args.contatoId}`
   const titulo = args.prioridade === "urgente" ? "ORCAMENTO URGENTE" : "Orcamento"
-  const fotosTexto = fotosRecebidas
-    ? `${fotosRecebidas} foto(s) recebida(s) no cadastro`
-    : "Nenhuma foto recebida no cadastro"
+  const fotosTexto =
+    fotosOrcamento.length > 0
+      ? `${fotosOrcamento.length} foto(s) enviada(s) em seguida`
+      : "Nenhuma foto recebida"
+  const resumo = montarResumo({
+    resumoCaso: args.resumoCaso,
+    procedimento,
+    sobreOPaciente: contato?.sobreOPaciente ?? null,
+  })
 
   const mensagem = [
     `${titulo} - ${nome}`,
     ``,
     `Responda com: ${tel} - R$ <valor>`,
     ``,
+    `Paciente: ${nome}`,
     `WhatsApp: ${tel}`,
     `Procedimento: ${procedimento}`,
     `Fotos: ${fotosTexto}`,
     ``,
     `Resumo do caso:`,
-    args.resumoCaso,
+    resumo,
     ``,
     `Abrir conversa: ${linkConversa}`,
   ].join("\n")
@@ -75,6 +122,33 @@ export async function notificarDrLucasOrcamento(
     numeroPessoal,
     mensagem
   )
+
+  for (const [index, foto] of fotosOrcamento.entries()) {
+    try {
+      const legenda = [
+        `Foto ${index + 1}/${fotosOrcamento.length} - ${nome}`,
+        foto.descricao ? `Descricao: ${foto.descricao}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n")
+
+      await enviarMidia(
+        configWa.uazapiUrl,
+        configWa.instanceToken,
+        numeroPessoal,
+        foto.url,
+        "image",
+        legenda || undefined
+      )
+    } catch (err) {
+      console.error("[notificar-handoff] falha ao enviar foto ao Dr. Lucas:", {
+        contatoId: args.contatoId,
+        orcamentoPendenteId: args.orcamentoPendenteId,
+        fotoUrl: foto.url,
+        erro: err instanceof Error ? err.message : err,
+      })
+    }
+  }
 
   await supabaseAdmin
     .from("eventos_orcamento_pendente")
