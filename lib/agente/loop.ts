@@ -95,19 +95,63 @@ function assistentePediuPerguntasQualificacao(texto: string): boolean {
   )
 }
 
+function ultimaMensagemAssistente(
+  memoria: Awaited<ReturnType<typeof obterMemoria>>
+): string | null {
+  return (
+    [...memoria].reverse().find((mensagem) => mensagem.role === "assistant")
+      ?.content ?? null
+  )
+}
+
 function consentiuComQualificacao(
   textoPaciente: string,
   memoria: Awaited<ReturnType<typeof obterMemoria>>
 ): boolean {
   if (!ehRespostaAfirmativaCurta(textoPaciente)) return false
 
-  const ultimaMensagemAssistente = [...memoria]
-    .reverse()
-    .find((mensagem) => mensagem.role === "assistant")?.content
+  const ultimaMensagem = ultimaMensagemAssistente(memoria)
 
-  return ultimaMensagemAssistente
-    ? assistentePediuPerguntasQualificacao(ultimaMensagemAssistente)
-    : false
+  return ultimaMensagem ? assistentePediuPerguntasQualificacao(ultimaMensagem) : false
+}
+
+function assistentePediuDadoQualificacao(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+
+  return [
+    "voce ja fez algum procedimento estetico antes",
+    "procedimento estetico antes",
+    "principal incomodo",
+    "gordura localizada",
+    "flacidez",
+    "contorno",
+    "como esta sua saude",
+    "problema de saude",
+    "restricao",
+    "manda uma foto",
+    "consegue mandar uma foto",
+    "foto da regiao",
+    "qual regiao",
+    "area especifica",
+    "regiao especifica",
+    "parte gostaria de tratar",
+    "o que te incomoda",
+    "objetivo",
+    "resultado que busca",
+    "referencia do resultado",
+  ].some((termo) => normalizado.includes(termo))
+}
+
+function respondeuPerguntaQualificacao(
+  textoPaciente: string,
+  memoria: Awaited<ReturnType<typeof obterMemoria>>,
+  etapa?: string | null
+): boolean {
+  if (etapa !== "qualificacao") return false
+  if (detectarGatilhoVisualMidia(textoPaciente)) return false
+
+  const ultimaMensagem = ultimaMensagemAssistente(memoria)
+  return ultimaMensagem ? assistentePediuDadoQualificacao(ultimaMensagem) : false
 }
 
 function montarPerguntaQualificacaoFallback(contexto: ContextoContato): string {
@@ -301,6 +345,11 @@ export async function processarMensagens(
     const memoria = await obterMemoria(chatId)
     const systemPrompt = await gerarSystemPrompt(contextoContato)
     const pacienteAceitouQualificacao = consentiuComQualificacao(textoBuffer, memoria)
+    const pacienteRespondeuQualificacao = respondeuPerguntaQualificacao(
+      textoBuffer,
+      memoria,
+      contextoContato.etapa
+    )
     const mensagens: ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
       ...memoria,
@@ -310,6 +359,15 @@ export async function processarMensagens(
               role: "system" as const,
               content:
                 "O paciente acabou de aceitar responder perguntas de qualificacao para orcamento. Nesta rodada, NAO chame buscar_conteudo nem enviar_midia. Inicie a qualificacao com a proxima pergunta concreta, uma pergunta por vez.",
+            },
+          ]
+        : []),
+      ...(pacienteRespondeuQualificacao
+        ? [
+            {
+              role: "system" as const,
+              content:
+                "O paciente acabou de responder uma pergunta de qualificacao. Nesta rodada, trate a mensagem como dado do cadastro: atualize o lead se fizer sentido, NAO chame buscar_conteudo nem enviar_midia, e faca a proxima pergunta concreta de qualificacao. Excecao: se o paciente pedir foto/video explicitamente, a regra visual se aplica.",
             },
           ]
         : []),
@@ -326,14 +384,16 @@ export async function processarMensagens(
     )
     const forcarBuscaConteudo =
       !pacienteAceitouQualificacao &&
+      !pacienteRespondeuQualificacao &&
       temNomeAcolhido &&
       (gatilhoVisual ||
-        (gatilhoProcedimento && contextoProntoParaMidia) ||
-        (contextoProntoParaMidia && contextoContato.etapa === "qualificacao"))
+        (gatilhoProcedimento && contextoProntoParaMidia))
     const forcarEnvioMidia =
-      temNomeAcolhido && (gatilhoVisual || (gatilhoProcedimento && contextoProntoParaMidia))
+      !pacienteRespondeuQualificacao &&
+      temNomeAcolhido &&
+      (gatilhoVisual || (gatilhoProcedimento && contextoProntoParaMidia))
 
-    const ferramentasDaRodada = pacienteAceitouQualificacao
+    const ferramentasDaRodada = pacienteAceitouQualificacao || pacienteRespondeuQualificacao
       ? ferramentasAgente.filter(
           (tool) =>
             tool.type !== "function" ||
@@ -496,6 +556,16 @@ export async function processarMensagens(
     if (!textoResposta && enviouMidiaNestaRodada) {
       textoResposta = montarPerguntaQualificacaoFallback(contextoContato)
       console.warn("[Agente] Midia enviada sem texto final - aplicando fallback de qualificacao")
+    }
+
+    if (
+      textoResposta &&
+      enviouMidiaNestaRodada &&
+      contextoContato.etapa === "qualificacao" &&
+      !assistentePediuDadoQualificacao(textoResposta)
+    ) {
+      textoResposta = `${textoResposta}\n---\n${montarPerguntaQualificacaoFallback(contextoContato)}`
+      console.warn("[Agente] Midia enviada sem pergunta de qualificacao - anexando continuidade")
     }
 
     if (!textoResposta) {
