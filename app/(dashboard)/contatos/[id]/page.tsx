@@ -492,17 +492,18 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                                       "dd/MM/yyyy 'às' HH:mm"
                                     )}
                                   </span>
-                                  <StatusBadge
-                                    status={agendamento.status}
-                                    variante="agendamento"
-                                  />
-                                  {agendamentoRealizado && (
+                                  {agendamentoRealizado ? (
                                     <Badge
                                       variant="secondary"
                                       className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
                                     >
                                       Realizado
                                     </Badge>
+                                  ) : (
+                                    <StatusBadge
+                                      status={agendamento.status}
+                                      variante="agendamento"
+                                    />
                                   )}
                                 </div>
                                 <div className="space-y-1 text-sm text-muted-foreground">
