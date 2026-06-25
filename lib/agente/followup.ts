@@ -14,12 +14,12 @@ interface ConversaComContato {
 
 interface FollowUpPendente {
   conversa: ConversaComContato
-  tipo: "1h" | "6h" | "24h"
+  tipo: "24h" | "48h_encerramento"
 }
 
 export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]> {
   const agoraTs = new Date()
-  const ha1h = new Date(agoraTs.getTime() - 1 * 60 * 60 * 1000).toISOString()
+  const ha24hIso = new Date(agoraTs.getTime() - 24 * 60 * 60 * 1000).toISOString()
 
   const { data: conversas, error } = await supabaseAdmin
     .from("conversas")
@@ -33,7 +33,7 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
     `)
     .is("encerradaEm", null)
     .not("ultimaMensagemEm", "is", null)
-    .lt("ultimaMensagemEm", ha1h)
+    .lt("ultimaMensagemEm", ha24hIso)
     .in("etapa", ["acolhimento", "qualificacao", "orcamento", "agendamento"] as never)
 
   if (error || !conversas) return []
@@ -48,14 +48,23 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
   }
 
   const pendentes: FollowUpPendente[] = []
-  const ha6h = new Date(agoraTs.getTime() - 6 * 60 * 60 * 1000)
   const ha24h = new Date(agoraTs.getTime() - 24 * 60 * 60 * 1000)
-  const ha1hDate = new Date(ha1h)
+  const ha48h = new Date(agoraTs.getTime() - 48 * 60 * 60 * 1000)
 
   for (const conversaRaw of conversas as unknown as ConversaRaw[]) {
     const contatoRaw = Array.isArray(conversaRaw.contato) ? conversaRaw.contato[0] : conversaRaw.contato
     if (!contatoRaw || contatoRaw.arquivado || contatoRaw.deletadoEm) continue
     if (!conversaRaw.ultimaMensagemEm) continue
+
+    const { data: agendamentoAtivo } = await supabaseAdmin
+      .from("agendamentos")
+      .select("id")
+      .eq("contatoId", conversaRaw.contatoId)
+      .in("status", ["agendado", "remarcado"] as never)
+      .limit(1)
+      .maybeSingle()
+
+    if (agendamentoAtivo) continue
 
     const ultimaMsg = new Date(conversaRaw.ultimaMensagemEm)
     const followUps = conversaRaw.followUpEnviados ?? []
@@ -73,12 +82,10 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
       },
     }
 
-    if (ultimaMsg < ha24h && !followUps.includes("24h")) {
+    if (ultimaMsg < ha48h && !followUps.includes("48h_encerramento")) {
+      pendentes.push({ conversa, tipo: "48h_encerramento" })
+    } else if (ultimaMsg < ha24h && !followUps.includes("24h")) {
       pendentes.push({ conversa, tipo: "24h" })
-    } else if (ultimaMsg < ha6h && !followUps.includes("6h")) {
-      pendentes.push({ conversa, tipo: "6h" })
-    } else if (ultimaMsg < ha1hDate && !followUps.includes("1h")) {
-      pendentes.push({ conversa, tipo: "1h" })
     }
   }
 
@@ -87,23 +94,21 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
 
 async function gerarMensagemFollowUp(
   contato: ContatoAgente,
-  tipo: "1h" | "6h" | "24h"
+  tipo: "24h" | "48h_encerramento"
 ): Promise<string> {
   const nome = contato.nome.replace(/^WhatsApp\s+/, "") || "paciente"
   const procedimento = contato.procedimentoInteresse || "procedimentos estéticos"
 
   const templates: Record<string, string> = {
-    "1h": `Oi ${nome}, tudo bem? Ainda tenho algumas informações sobre ${procedimento} pra compartilhar com você. Posso te ajudar?`,
-    "6h": `Oi ${nome}! Só passando pra lembrar que o Dr. Lucas é referência em ${procedimento}. A avaliação online é gratuita e sem compromisso — quer agendar?`,
-    "24h": `Oi ${nome}! Vou deixar o espaço aberto por aqui, mas se quiser conversar sobre ${procedimento} ou agendar uma avaliação, é só chamar! Estarei por aqui.`,
+    "24h": `Oi ${nome}! Passando pra saber se você ainda quer seguir com as informações sobre ${procedimento}. Posso te ajudar por aqui.`,
+    "48h_encerramento": `Oi ${nome}! Vou encerrar seu atendimento por aqui por enquanto. Se quiser retomar sobre ${procedimento}, é só me chamar.`,
   }
 
   try {
     const regraSemEmojis = "PROIBIDO usar emojis (😊, 🙂, ❤️, etc). Transmita acolhimento pelas palavras, nunca por emoji."
     const prompts: Record<string, string> = {
-      "1h": `Escreva uma mensagem curta de follow-up leve e amigável no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas parou de responder há 1 hora. Tom acolhedor, informal, máximo 2 linhas. Não mencione preços. Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira. ${regraSemEmojis}`,
-      "6h": `Escreva uma mensagem de follow-up com valor no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas parou de responder há 6 horas. Mencione brevemente um benefício do procedimento e reforce que a avaliação online é gratuita. Tom acolhedor, máximo 3 linhas. Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira. ${regraSemEmojis}`,
-      "24h": `Escreva uma mensagem de encerramento gentil no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas não responde há 24 horas. Deixe a porta aberta para retorno. Tom empático, máximo 2 linhas. Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira. ${regraSemEmojis}`,
+      "24h": `Escreva uma mensagem curta de follow-up em WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas parou de responder há 24 horas. Tom acolhedor, máximo 2 linhas. Não mencione preços. Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira. ${regraSemEmojis}`,
+      "48h_encerramento": `Escreva uma mensagem curta de encerramento gentil no WhatsApp para ${nome}, que demonstrou interesse em ${procedimento} mas não responde há 48 horas. Deixe a porta aberta para retorno. Tom empático, máximo 2 linhas. Você é Ana Júlia, assistente da clínica do Dr. Lucas Ferreira. ${regraSemEmojis}`,
     }
 
     const resposta = await openai.chat.completions.create({
@@ -121,7 +126,7 @@ async function gerarMensagemFollowUp(
 
 export async function enviarFollowUp(
   conversa: ConversaComContato,
-  tipo: "1h" | "6h" | "24h",
+  tipo: "24h" | "48h_encerramento",
   configWa: ConfigWhatsappAtivo
 ): Promise<void> {
   const mensagem = await gerarMensagemFollowUp(conversa.contato, tipo)
@@ -158,7 +163,7 @@ export async function enviarFollowUp(
     .update({ followUpEnviados: novosFollowUps, atualizadoEm: agora() })
     .eq("id", conversa.id)
 
-  if (tipo === "24h") {
+  if (tipo === "48h_encerramento") {
     await supabaseAdmin
       .from("conversas")
       .update({ encerradaEm: agora(), atualizadoEm: agora() })

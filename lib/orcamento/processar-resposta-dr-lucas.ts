@@ -229,10 +229,13 @@ export async function processarRespostaDrLucas(args: {
     const { url: pdfUrl, nomeArquivo } = await gerarEHospedarOrcamento({
       contatoId: contato.id,
       nomePaciente,
-      procedimento: proc?.nome ?? contato.procedimentoInteresse ?? null,
+      procedimento: contato.procedimentoInteresse ?? proc?.nome ?? null,
       oQueInclui: proc?.escopoOferta || proc?.descricao || null,
       valor,
       parcelamento: proc?.parcelamento ?? null,
+      resumoCaso: pendencia.resumoCaso,
+      sobreOPaciente: contato.sobreOPaciente,
+      procedimentoInteresse: contato.procedimentoInteresse,
     })
 
     // Mensagem curta no tom da Ana apresentando o orcamento.
@@ -376,10 +379,45 @@ async function resolverProcedimento(
 ): Promise<ProcedimentoMin | null> {
   const termo = interesse?.trim()
   if (!termo) return null
+
+  const buscar = async (busca: string) => {
+    const { data } = await supabaseAdmin
+      .from("procedimentos")
+      .select("nome, descricao, escopoOferta, parcelamento")
+      .ilike("nome", `%${busca}%`)
+      .eq("ativo", true)
+      .is("deletadoEm", null)
+      .limit(1)
+      .maybeSingle()
+    return (data as unknown as ProcedimentoMin) ?? null
+  }
+
+  const direto = await buscar(termo)
+  if (direto) return direto
+
+  const normalizado = termo
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+  const fallback =
+    normalizado.includes("mini lipo") || normalizado.includes("minilipo")
+      ? "mini lipo"
+      : normalizado.includes("lipo")
+        ? "lipo"
+        : null
+
+  if (fallback) return buscar(fallback)
+
+  const partesBusca = termo
+    .split(/\s+/)
+    .filter((parte) => parte.length >= 4)
+    .slice(0, 3)
+  if (partesBusca.length === 0) return null
+
   const { data } = await supabaseAdmin
     .from("procedimentos")
     .select("nome, descricao, escopoOferta, parcelamento")
-    .ilike("nome", `%${termo}%`)
+    .or(partesBusca.map((parte) => `nome.ilike.%${parte}%`).join(","))
     .eq("ativo", true)
     .is("deletadoEm", null)
     .limit(1)

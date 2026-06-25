@@ -322,6 +322,28 @@ function perguntaPediuTempo(texto: string): boolean {
   )
 }
 
+function pareceRespostaTemporalQualificacao(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto).trim()
+  if (!normalizado || normalizado.length > 120) return false
+
+  return (
+    normalizado.includes("desde sempre") ||
+    normalizado.includes("faz tempo") ||
+    normalizado.includes("ha muito tempo") ||
+    normalizado.includes("a muito tempo") ||
+    normalizado.includes("desde crianca") ||
+    normalizado.includes("desde a infancia") ||
+    normalizado.includes("desde adolescente") ||
+    normalizado.includes("desde a adolescencia") ||
+    /\b(?:ha|faz|tem)\s+\d+\s+(?:dia|dias|semana|semanas|mes|meses|ano|anos)\b/.test(
+      normalizado
+    ) ||
+    /\b\d+\s+(?:dia|dias|semana|semanas|mes|meses|ano|anos)\b/.test(
+      normalizado
+    )
+  )
+}
+
 function perguntaPediuHistoricoSaude(texto: string): boolean {
   const normalizado = normalizarTextoBusca(texto)
   return (
@@ -484,6 +506,16 @@ function montarFastPathQualificacao(params: {
     }
   }
 
+  const estadoAtual = estadoQualificacao(contexto)
+  if (!estadoAtual.temTempo && pareceRespostaTemporalQualificacao(textoPaciente)) {
+    const fato = `Tempo de incômodo informado pelo paciente: ${textoPaciente.trim()}`
+    return {
+      tipo: "tempo_incomodo_fallback",
+      fato,
+      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
+    }
+  }
+
   const ultimaMensagem = ultimaMensagemAssistente(memoria)
   if (!ultimaMensagem || !assistentePediuDadoQualificacao(ultimaMensagem)) {
     return null
@@ -630,6 +662,13 @@ interface SlotAgendamentoOferecido {
   hora: string
 }
 
+interface JanelaAgendaSolicitada {
+  dataInicio: string
+  dataFim: string
+  labelDia: string
+  horario?: string | null
+}
+
 interface EstimativaEnviada {
   procedimento?: string | null
   faixa: string
@@ -704,7 +743,10 @@ function detectarInteresseQualificacao(texto: string): {
     normalizado.includes("tenho interesse") ||
     normalizado.includes("me incomoda") ||
     normalizado.includes("gostaria de fazer") ||
-    normalizado.includes("penso em fazer")
+    normalizado.includes("penso em fazer") ||
+    normalizado.includes("mini lipo") ||
+    normalizado.includes("minilipo") ||
+    normalizado.includes("lipo")
 
   const regioes = [
     { termo: "abdomen", label: "abdômen" },
@@ -731,6 +773,32 @@ function detectarInteresseQualificacao(texto: string): {
     procedimentoInteresse: `${procedimentoBase} ${regiao}`,
     fato: `Paciente informou interesse em ${procedimentoBase} na região de ${regiao}.`,
   }
+}
+
+function devePersistirProcedimentoInteresse(
+  atual: string | null | undefined,
+  novo: string
+): boolean {
+  const atualNorm = normalizarTextoBusca(atual || "")
+  const novoNorm = normalizarTextoBusca(novo)
+  if (!atualNorm) return true
+  if (atualNorm === novoNorm) return false
+
+  const regioes = [
+    "abdomen",
+    "abdome",
+    "flancos",
+    "papada",
+    "culote",
+    "costas",
+    "axilas",
+    "bracos",
+  ]
+  const atualTemRegiao = regioes.some((regiao) => atualNorm.includes(regiao))
+  const novoTemRegiao = regioes.some((regiao) => novoNorm.includes(regiao))
+  if (!atualTemRegiao && novoTemRegiao) return true
+
+  return novoNorm.includes(atualNorm) && novoNorm.length > atualNorm.length
 }
 
 function pacienteAprovouOrcamento(texto: string): boolean {
@@ -1031,10 +1099,130 @@ function formatarListaSlots(slots: SlotAgendamentoOferecido[]): string {
   return `${slots[0].label}, ${slots[1].label} ou ${slots[2].label}`
 }
 
+function partesDataSP(data: Date): { ymd: string; hora: number } {
+  const partes = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(data)
+    .reduce<Record<string, string>>((acc, parte) => {
+      if (parte.type !== "literal") acc[parte.type] = parte.value
+      return acc
+    }, {})
+
+  return {
+    ymd: `${partes.year}-${partes.month}-${partes.day}`,
+    hora: Number(partes.hour || "0"),
+  }
+}
+
+function dataSP(ymd: string, hora = 0, minuto = 0): Date {
+  return new Date(
+    `${ymd}T${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}:00-03:00`
+  )
+}
+
+function somarDiasSP(ymd: string, dias: number): string {
+  const base = dataSP(ymd, 12)
+  return partesDataSP(new Date(base.getTime() + dias * 24 * 60 * 60 * 1000)).ymd
+}
+
+function inicioFimDiaSP(ymd: string): Pick<
+  JanelaAgendaSolicitada,
+  "dataInicio" | "dataFim"
+> {
+  return {
+    dataInicio: dataSP(ymd, 0, 0).toISOString(),
+    dataFim: dataSP(ymd, 23, 59).toISOString(),
+  }
+}
+
+function labelDiaAgenda(ymd: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  }).format(dataSP(ymd, 12))
+}
+
+function detectarJanelaAgenda(texto: string): JanelaAgendaSolicitada | null {
+  const normalizado = normalizarTextoBusca(texto)
+  const hoje = partesDataSP(new Date())
+  let ymd: string | null = null
+
+  if (normalizado.includes("amanha")) {
+    ymd = somarDiasSP(hoje.ymd, 1)
+  } else if (normalizado.includes("hoje")) {
+    ymd = hoje.ymd
+  }
+
+  const diasSemana: Array<{ termo: string; indice: number }> = [
+    { termo: "domingo", indice: 0 },
+    { termo: "segunda", indice: 1 },
+    { termo: "terca", indice: 2 },
+    { termo: "quarta", indice: 3 },
+    { termo: "quinta", indice: 4 },
+    { termo: "sexta", indice: 5 },
+    { termo: "sabado", indice: 6 },
+  ]
+
+  const diaSemana = diasSemana.find((dia) => normalizado.includes(dia.termo))
+  if (!ymd && diaSemana) {
+    const hojeMeioDia = dataSP(hoje.ymd, 12)
+    const indiceHoje = hojeMeioDia.getUTCDay()
+    let diff = (diaSemana.indice - indiceHoje + 7) % 7
+    const horaPedida = extrairHorarioEscolhido(texto)
+    const horaNumero = horaPedida ? Number(horaPedida.replace("h", "")) : null
+    if (diff === 0 && (!horaNumero || horaNumero <= hoje.hora)) diff = 7
+    ymd = somarDiasSP(hoje.ymd, diff)
+  }
+
+  const diaMes = normalizado.match(/\bdia\s+(\d{1,2})\b/)
+  if (!ymd && diaMes?.[1]) {
+    const dia = Number(diaMes[1])
+    if (dia >= 1 && dia <= 31) {
+      const [anoAtual, mesAtual, diaAtual] = hoje.ymd.split("-").map(Number)
+      let ano = anoAtual
+      let mes = mesAtual
+      if (dia < diaAtual) {
+        mes += 1
+        if (mes > 12) {
+          mes = 1
+          ano += 1
+        }
+      }
+      ymd = `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`
+    }
+  }
+
+  if (!ymd) return null
+
+  return {
+    ...inicioFimDiaSP(ymd),
+    labelDia: labelDiaAgenda(ymd),
+    horario: extrairHorarioEscolhido(texto),
+  }
+}
+
 async function consultarSlotsAgendamento(
-  baseUrl: string
+  baseUrl: string,
+  janela?: JanelaAgendaSolicitada | null
 ): Promise<SlotAgendamentoOferecido[]> {
-  const resultado = await executarFerramenta("consultar_agenda", {}, baseUrl)
+  const resultado = await executarFerramenta(
+    "consultar_agenda",
+    janela
+      ? {
+          dataInicio: janela.dataInicio,
+          dataFim: janela.dataFim,
+        }
+      : {},
+    baseUrl
+  )
   const parsed = JSON.parse(resultado) as {
     ok?: boolean
     error?: string
@@ -1127,35 +1315,55 @@ async function montarOfertaSlotsAgendamento(params: {
     origem,
     estimativa,
   } = params
-  const slots = await consultarSlotsAgendamento(baseUrl)
-  const periodo = detectarPreferenciaPeriodo(textoPaciente)
+  const janela = detectarJanelaAgenda(textoPaciente)
+  const slots = await consultarSlotsAgendamento(baseUrl, janela)
+  const periodo = janela ? null : detectarPreferenciaPeriodo(textoPaciente)
   const slotsPreferidos = filtrarSlotsPorPeriodo(slots, periodo)
-  const slotsOferta = (
+  const baseOferta = (
     slotsPreferidos.length > 0 ? slotsPreferidos : slots
-  ).slice(0, 3)
+  )
+  const slotExato = janela?.horario
+    ? baseOferta.find((slot) => slot.hora === janela.horario) ?? null
+    : null
+  const slotsOferta = (slotExato ? [slotExato] : baseOferta).slice(0, 3)
 
   console.log("[Agente] Slots consultados para agendamento", {
     contatoId,
     quantidade: slots.length,
+    janela: janela?.labelDia,
+    horarioSolicitado: janela?.horario,
     periodo,
     oferecidos: slotsOferta.map((slot) => slot.label),
   })
 
   if (slotsOferta.length === 0) {
-    return "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
+    return janela
+      ? `Consultei a agenda para ${janela.labelDia} e não encontrei horários livres nesse dia. Se você tiver outro dia em mente, me manda que eu consulto pra você.`
+      : "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
   }
 
   await salvarEstadoAgendamento(chatId, {
     origem,
     slots: slotsOferta,
-    slotEscolhido: null,
+    slotEscolhido: slotExato,
     estimativa: estimativa ?? null,
     atualizadoEm: agora(),
   })
 
+  if (slotExato) {
+    return comVocativo(
+      contexto,
+      contexto.email
+        ? `Esse horário está livre{nome}: ${slotExato.label}. Posso confirmar esse horário pra você?`
+        : `Esse horário está livre{nome}: ${slotExato.label}. Pra eu confirmar na agenda e enviar o convite, me passa seu e-mail?`
+    )
+  }
+
   return comVocativo(
     contexto,
-    `Perfeito{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+    janela
+      ? `Perfeito{nome}. Consultei a agenda do Dr. Lucas para ${janela.labelDia} e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+      : `Perfeito{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
   )
 }
 
@@ -1337,7 +1545,7 @@ async function montarFastPathAgendamento(params: {
   }
 
   if (horarioSolicitado) {
-    const novaOferta = await montarOfertaSlotsAgendamento({
+    return montarOfertaSlotsAgendamento({
       chatId,
       contatoId,
       contexto,
@@ -1346,7 +1554,6 @@ async function montarFastPathAgendamento(params: {
       origem,
       estimativa: estadoAtual?.estimativa ?? null,
     })
-    return `Esse horário não estava nas opções que eu tinha acabado de te passar. ${novaOferta}`
   }
 
   return montarOfertaSlotsAgendamento({
@@ -1370,38 +1577,56 @@ async function montarOfertaSlotsRemarcacao(params: {
 }): Promise<string> {
   const { chatId, contatoId, contexto, baseUrl, textoPaciente, agendamentoId } =
     params
-  const slots = await consultarSlotsAgendamento(baseUrl)
-  const periodo = detectarPreferenciaPeriodo(textoPaciente)
+  const janela = detectarJanelaAgenda(textoPaciente)
+  const slots = await consultarSlotsAgendamento(baseUrl, janela)
+  const periodo = janela ? null : detectarPreferenciaPeriodo(textoPaciente)
   const slotsPreferidos = filtrarSlotsPorPeriodo(slots, periodo)
-  const slotsOferta = (
+  const baseOferta = (
     slotsPreferidos.length > 0 ? slotsPreferidos : slots
-  ).slice(0, 3)
+  )
+  const slotExato = janela?.horario
+    ? baseOferta.find((slot) => slot.hora === janela.horario) ?? null
+    : null
+  const slotsOferta = (slotExato ? [slotExato] : baseOferta).slice(0, 3)
 
   console.log("[Agente] Slots consultados para remarcacao", {
     contatoId,
     agendamentoId,
     quantidade: slots.length,
+    janela: janela?.labelDia,
+    horarioSolicitado: janela?.horario,
     periodo,
     oferecidos: slotsOferta.map((slot) => slot.label),
   })
 
   if (slotsOferta.length === 0) {
-    return "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
+    return janela
+      ? `Consultei a agenda para ${janela.labelDia} e não encontrei horários livres nesse dia. Se você tiver outro dia em mente, me manda que eu consulto pra você.`
+      : "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
   }
 
   await salvarEstadoAgendamento(chatId, {
     origem: "remarcacao",
     slots: slotsOferta,
-    slotEscolhido: null,
+    slotEscolhido: slotExato,
     estimativa: null,
     agendamentoId,
     cancelamentoPendente: false,
     atualizadoEm: agora(),
   })
 
+  if (slotExato) {
+    return comVocativo(
+      contexto,
+      `Esse horário está livre{nome}: ${slotExato.label}. Pode confirmar a remarcação nesse horário?`
+    )
+  }
+
   return comVocativo(
     contexto,
-    `Claro{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+    janela
+      ? `Claro{nome}. Consultei a agenda do Dr. Lucas para ${janela.labelDia} e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+      : `Claro{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
   )
 }
 
@@ -1525,8 +1750,22 @@ async function montarFastPathReagendamentoCancelamento(params: {
 
   const slotsOferecidos = estadoDesteAgendamento?.slots ?? []
   const slotEscolhido = resolverSlotEscolhido(textoPaciente, slotsOferecidos)
+  const slotPendente = estadoDesteAgendamento?.slotEscolhido ?? null
   const horarioSolicitado = extrairHorarioEscolhido(textoPaciente)
   const preferiuPeriodo = Boolean(detectarPreferenciaPeriodo(textoPaciente))
+
+  if (slotPendente && ehRespostaAfirmativaCurta(textoPaciente)) {
+    const resultado = await remarcarAgendamentoDeterministico({
+      agendamentoId: agendamento.id,
+      slot: slotPendente,
+      contexto,
+      baseUrl,
+    })
+    if (resultado.ok) {
+      await limparEstadoAgendamento(chatId)
+      return resultado.texto
+    }
+  }
 
   if (slotEscolhido) {
     const resultado = await remarcarAgendamentoDeterministico({
@@ -1911,10 +2150,19 @@ export async function processarMensagens(
   }
 
   const interesseQualificacao = detectarInteresseQualificacao(textoBuffer)
+  const etapaPermiteSincronizarInteresse = [
+    "acolhimento",
+    "qualificacao",
+    "orcamento",
+  ].includes(contextoContato.etapa ?? "")
   if (
     contatoId &&
     interesseQualificacao &&
-    contextoContato.etapa === "acolhimento"
+    etapaPermiteSincronizarInteresse &&
+    devePersistirProcedimentoInteresse(
+      contextoContato.procedimento,
+      interesseQualificacao.procedimentoInteresse
+    )
   ) {
     try {
       const resultadoQualificacao = await executarFerramenta(
@@ -1924,7 +2172,8 @@ export async function processarMensagens(
           conversaId,
           procedimentoInteresse: interesseQualificacao.procedimentoInteresse,
           sobreOPacienteAdicionar: interesseQualificacao.fato,
-          etapaCorreta: "qualificacao",
+          etapaCorreta:
+            contextoContato.etapa === "acolhimento" ? "qualificacao" : "manter",
         },
         baseUrl
       )
@@ -1932,7 +2181,9 @@ export async function processarMensagens(
       if (parsed?.ok === true) {
         contextoContato.procedimento =
           interesseQualificacao.procedimentoInteresse
-        contextoContato.etapa = "qualificacao"
+        if (contextoContato.etapa === "acolhimento") {
+          contextoContato.etapa = "qualificacao"
+        }
         contextoContato.sobreOPaciente = anexarFatoContexto(
           contextoContato.sobreOPaciente,
           interesseQualificacao.fato

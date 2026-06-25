@@ -29,6 +29,12 @@ export interface DadosOrcamento {
   valorFormatado: string
   /** Condicoes de parcelamento, se houver. */
   parcelamento: string | null
+  /** Resumo enviado para o Dr. Lucas no pedido de orçamento. */
+  resumoCaso?: string | null
+  /** Histórico estruturado do atendimento no contato. */
+  sobreOPaciente?: string | null
+  /** Texto comercial original do procedimento/região de interesse. */
+  procedimentoInteresse?: string | null
   /** Validade em dias (default 7). */
   validadeDias: number
   /** URL absoluta da foto do Dr. Lucas (cabecalho). */
@@ -169,6 +175,56 @@ const styles = StyleSheet.create({
   },
 })
 
+function normalizarTexto(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+}
+
+function extrairFato(texto: string, prefixo: string): string | null {
+  const prefixoNorm = normalizarTexto(prefixo)
+  const partes = texto
+    .split(/\n---\n|\n/g)
+    .map((parte) => parte.trim())
+    .filter(Boolean)
+
+  for (const parte of partes) {
+    const normalizado = normalizarTexto(parte)
+    if (normalizado.startsWith(prefixoNorm)) {
+      return parte.slice(parte.indexOf(":") + 1).trim() || null
+    }
+  }
+
+  return null
+}
+
+function montarTextoPreparado(dados: DadosOrcamento): string {
+  const fonte = [dados.sobreOPaciente, dados.resumoCaso].filter(Boolean).join("\n")
+  const procedimento = dados.procedimentoInteresse || dados.procedimento
+  const tempo = extrairFato(fonte, "Tempo de incômodo informado pelo paciente:")
+  const historico = extrairFato(
+    fonte,
+    "Histórico de procedimentos e saúde informado pelo paciente:"
+  )
+  const incomodo = extrairFato(fonte, "Principal incômodo informado pelo paciente:")
+
+  const frases = [
+    `${dados.nomePaciente}, este orçamento foi preparado a partir do que você compartilhou no pré-atendimento com a Ana Júlia.`,
+    procedimento
+      ? `Pelo seu relato, o procedimento indicado para avaliação é ${procedimento}.`
+      : null,
+    tempo ? `Você contou que essa região incomoda ${tempo}.` : null,
+    incomodo ? `O principal ponto que você quer melhorar é: ${incomodo}.` : null,
+    historico ? `Também consideramos seu histórico informado: ${historico}.` : null,
+    procedimento
+      ? `Por isso, a proposta abaixo organiza o valor definido pelo Dr. Lucas e o que está incluso para esse plano de cuidado.`
+      : `A proposta abaixo organiza o valor definido pelo Dr. Lucas e o que está incluso para o seu caso.`,
+  ].filter(Boolean)
+
+  return frases.join(" ")
+}
+
 export function OrcamentoPDF({ dados }: { dados: DadosOrcamento }) {
   const {
     nomePaciente,
@@ -216,12 +272,7 @@ export function OrcamentoPDF({ dados }: { dados: DadosOrcamento }) {
 
         <View style={styles.secao}>
           <Text style={styles.secaoTitulo}>Preparado para você</Text>
-          <Text style={styles.secaoTexto}>
-            {nomePaciente}, este orçamento foi preparado a partir das
-            informações que você compartilhou no pré-atendimento com a Ana
-            Júlia. A ideia é deixar claro o serviço indicado, o que está
-            incluso e o valor definido pelo Dr. Lucas para o seu caso.
-          </Text>
+          <Text style={styles.secaoTexto}>{montarTextoPreparado(dados)}</Text>
         </View>
 
         {/* Procedimento + o que inclui */}

@@ -380,6 +380,29 @@ export async function POST(request: NextRequest) {
   }
 
   let mensagens: MensagemNormalizada[] = []
+  const eventType = typeof payload.EventType === "string" ? payload.EventType : null
+  const eventName = typeof payload.event === "string" ? payload.event : null
+  const eventosStatusIgnorados = new Set([
+    "messages_update",
+    "message_update",
+    "messages.update",
+    "message.update",
+    "message.ack",
+    "messages.ack",
+    "delivered",
+    "read",
+  ])
+
+  if (
+    (eventType && eventosStatusIgnorados.has(eventType)) ||
+    (eventName && eventosStatusIgnorados.has(eventName))
+  ) {
+    console.log("[Webhook] Evento de status ignorado", {
+      EventType: payload.EventType,
+      event: payload.event,
+    })
+    return NextResponse.json({ ok: true })
+  }
 
   if (payload.EventType === "messages" && payload.message) {
     const msg = normalizarUazapiV2(payload)

@@ -43,6 +43,9 @@ export interface ParametrosPdfOrcamento {
   /** Valor em reais (numero). Formatado internamente. */
   valor: number
   parcelamento?: string | null
+  resumoCaso?: string | null
+  sobreOPaciente?: string | null
+  procedimentoInteresse?: string | null
   validadeDias?: number
   contatoClinica?: string | null
 }
@@ -57,6 +60,9 @@ export async function renderizarPdfOrcamento(
     oQueInclui: params.oQueInclui,
     valorFormatado: formatarBrl(params.valor),
     parcelamento: params.parcelamento ?? null,
+    resumoCaso: params.resumoCaso ?? null,
+    sobreOPaciente: params.sobreOPaciente ?? null,
+    procedimentoInteresse: params.procedimentoInteresse ?? null,
     validadeDias: params.validadeDias ?? VALIDADE_PADRAO_DIAS,
     fotoDrLucasUrl: urlFotoDrLucas(),
     dataEmissao: dataEmissaoBR(),
