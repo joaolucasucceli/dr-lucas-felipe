@@ -40,11 +40,19 @@ export async function notificarDrLucasOrcamento(
     .eq("id", args.contatoId)
     .maybeSingle()
 
+  const { count: fotosRecebidas } = await supabaseAdmin
+    .from("fotos_contato")
+    .select("id", { count: "exact", head: true })
+    .eq("contatoId", args.contatoId)
+
   const nome = contato?.nome?.replace(/^WhatsApp\s+/, "") || "Paciente"
   const tel = contato?.whatsapp || "(sem WhatsApp registrado)"
   const procedimento = contato?.procedimentoInteresse || "Nao informado"
   const linkConversa = `${getBaseUrl()}/contatos/${args.contatoId}`
   const titulo = args.prioridade === "urgente" ? "ORCAMENTO URGENTE" : "Orcamento"
+  const fotosTexto = fotosRecebidas
+    ? `${fotosRecebidas} foto(s) recebida(s) no cadastro`
+    : "Nenhuma foto recebida no cadastro"
 
   const mensagem = [
     `${titulo} - ${nome}`,
@@ -53,6 +61,7 @@ export async function notificarDrLucasOrcamento(
     ``,
     `WhatsApp: ${tel}`,
     `Procedimento: ${procedimento}`,
+    `Fotos: ${fotosTexto}`,
     ``,
     `Resumo do caso:`,
     args.resumoCaso,

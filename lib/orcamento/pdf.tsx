@@ -195,7 +195,9 @@ export function OrcamentoPDF({ dados }: { dados: DadosOrcamento }) {
           <Image src={fotoDrLucasUrl} style={styles.foto} />
           <View style={styles.headerTexto}>
             <Text style={styles.nomeMedico}>Dr. Lucas Felipe</Text>
-            <Text style={styles.subtituloMedico}>Cirurgia Plástica</Text>
+            <Text style={styles.subtituloMedico}>
+              Estética avançada e planejamento corporal
+            </Text>
           </View>
           <Text style={styles.tituloDoc}>Orçamento</Text>
         </View>
@@ -210,6 +212,16 @@ export function OrcamentoPDF({ dados }: { dados: DadosOrcamento }) {
             <Text style={styles.metaLabel}>Emitido em</Text>
             <Text style={styles.metaValor}>{dataEmissao}</Text>
           </View>
+        </View>
+
+        <View style={styles.secao}>
+          <Text style={styles.secaoTitulo}>Preparado para você</Text>
+          <Text style={styles.secaoTexto}>
+            {nomePaciente}, este orçamento foi preparado a partir das
+            informações que você compartilhou no pré-atendimento com a Ana
+            Júlia. A ideia é deixar claro o serviço indicado, o que está
+            incluso e o valor definido pelo Dr. Lucas para o seu caso.
+          </Text>
         </View>
 
         {/* Procedimento + o que inclui */}
@@ -254,7 +266,9 @@ export function OrcamentoPDF({ dados }: { dados: DadosOrcamento }) {
 
         {/* Rodape */}
         <View style={styles.rodape} fixed>
-          <Text style={styles.rodapeTexto}>Dr. Lucas Felipe — Cirurgia Plástica</Text>
+          <Text style={styles.rodapeTexto}>
+            Dr. Lucas Felipe — Estética avançada
+          </Text>
           <Text style={styles.rodapeTexto}>
             {contatoClinica ?? "Atendimento via WhatsApp"}
           </Text>

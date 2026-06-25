@@ -12,7 +12,7 @@ import {
   transcreverAudio,
   transcreverAudioBase64,
 } from "@/lib/agente/processar-midia"
-import { baixarMidia, enviarDigitando } from "@/lib/uazapi"
+import { baixarMidia, enviarDigitando, enviarMensagem } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
 import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
 import { processarRespostaDrLucas } from "@/lib/orcamento/processar-resposta-dr-lucas"
@@ -162,6 +162,48 @@ async function downloadEUploadMidia(
     console.error("[webhook-whatsapp] download/upload midia falhou:", err)
     return null
   }
+}
+
+async function transcreverAudioMensagem(
+  msg: MensagemNormalizada,
+  configWa: { uazapiUrl?: string | null; instanceToken?: string | null } | null,
+  contextoLog: string
+): Promise<string | null> {
+  if (msg.tipo !== "audio") return null
+
+  if (msg.mediaUrl) {
+    try {
+      return await transcreverAudio(msg.mediaUrl)
+    } catch (err) {
+      console.error(
+        `[Webhook] Falha via URL direta (audio/${contextoLog}):`,
+        err instanceof Error ? err.message : err
+      )
+    }
+  }
+
+  try {
+    if (configWa?.uazapiUrl && configWa?.instanceToken) {
+      const baixado = await baixarMidia(
+        configWa.uazapiUrl,
+        configWa.instanceToken,
+        msg.id
+      )
+      if (baixado) {
+        return await transcreverAudioBase64(
+          baixado.base64,
+          baixado.mimetype
+        )
+      }
+    }
+  } catch (err) {
+    console.error(
+      `[Webhook] Falha via /message/download (audio/${contextoLog}):`,
+      err instanceof Error ? err.message : err
+    )
+  }
+
+  return null
 }
 
 function normalizarUazapiV2(payload: any): MensagemNormalizada | null {
@@ -390,8 +432,32 @@ export async function POST(request: NextRequest) {
       mesmoNumeroBR(msg.numero, numeroDrLucas)
     ) {
       try {
+        let textoMensagem = msg.conteudo ?? ""
+
+        if (msg.tipo === "audio") {
+          const transcricao = await transcreverAudioMensagem(
+            msg,
+            configWaBatch,
+            "orcamento-dr-lucas"
+          )
+
+          if (!transcricao) {
+            if (configWaBatch?.uazapiUrl && configWaBatch?.instanceToken) {
+              await enviarMensagem(
+                configWaBatch.uazapiUrl,
+                configWaBatch.instanceToken,
+                numeroDrLucas,
+                "Não consegui transcrever esse áudio. Me manda em texto no formato: telefone - R$ valor."
+              )
+            }
+            continue
+          }
+
+          textoMensagem = transcricao
+        }
+
         await processarRespostaDrLucas({
-          textoMensagem: msg.conteudo ?? "",
+          textoMensagem,
           numeroDrLucas,
           configWa: configWaBatch,
         })
@@ -438,41 +504,11 @@ export async function POST(request: NextRequest) {
     let storedMediaUrl: string | null = null
 
     if (msg.tipo === "audio") {
-      let transcricao: string | null = null
-
-      if (msg.mediaUrl) {
-        try {
-          transcricao = await transcreverAudio(msg.mediaUrl)
-        } catch (err) {
-          console.error(
-            `[Webhook] Falha via URL direta (audio):`,
-            err instanceof Error ? err.message : err
-          )
-        }
-      }
-
-      if (!transcricao) {
-        try {
-          if (configWaBatch?.uazapiUrl && configWaBatch?.instanceToken) {
-            const baixado = await baixarMidia(
-              configWaBatch.uazapiUrl,
-              configWaBatch.instanceToken,
-              msg.id
-            )
-            if (baixado) {
-              transcricao = await transcreverAudioBase64(
-                baixado.base64,
-                baixado.mimetype
-              )
-            }
-          }
-        } catch (err) {
-          console.error(
-            `[Webhook] Falha via /message/download (audio):`,
-            err instanceof Error ? err.message : err
-          )
-        }
-      }
+      const transcricao = await transcreverAudioMensagem(
+        msg,
+        configWaBatch,
+        "paciente"
+      )
 
       if (transcricao) {
         conteudo = `[Áudio transcrito]: ${transcricao}`

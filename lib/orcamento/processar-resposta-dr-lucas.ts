@@ -57,7 +57,24 @@ export function parseNumeroValor(
   const m = limpo.match(
     /^(.*?)[\s]*[-–—][\s]*(?:R\$\s*)?([\d.,]+)\s*$/i
   )
-  if (!m) return null
+  if (!m) {
+    const telefoneMatch = limpo.match(
+      /(?:\+?55[\s().-]*)?\(?\d{2}\)?[\s().-]*\d{4,5}[\s().-]*\d{4}/
+    )
+    if (!telefoneMatch) return null
+
+    const numeroFallback = soDigitos(telefoneMatch[0])
+    if (numeroFallback.length < 10 || numeroFallback.length > 13) return null
+
+    const resto = limpo.slice((telefoneMatch.index ?? 0) + telefoneMatch[0].length)
+    const valorMatch = resto.match(/(?:R\$\s*)?(\d[\d.,]*)/i)
+    if (!valorMatch) return null
+
+    const valorFallback = parseValorBrl(valorMatch[1])
+    if (valorFallback == null || valorFallback <= 0) return null
+
+    return { numero: numeroFallback, valor: valorFallback }
+  }
 
   const numero = soDigitos(m[1])
   // Numero de telefone valido: pelo menos 10 digitos (DDD + numero), aceita
@@ -202,6 +219,7 @@ export async function processarRespostaDrLucas(args: {
     }
 
     const nomePaciente = limparNome(contato.nome)
+    const valorFormatado = formatarBrl(valor)
 
     // Dados do procedimento pro PDF (o que inclui + parcelamento).
     const proc = await resolverProcedimento(contato.procedimentoInteresse)
@@ -230,7 +248,7 @@ export async function processarRespostaDrLucas(args: {
       )
 
       // Mensagem curta no tom da Ana apresentando o orcamento.
-      const apresentacao = `Prontinho, ${nomePaciente}! Segue seu orçamento, com tudo certinho. Se esse orçamento fizer sentido pra você, posso ver os horários da reunião de diagnóstico online com o Dr. Lucas?`
+      const apresentacao = `Prontinho, ${nomePaciente}! Falei com o Dr. Lucas e ele definiu seu orçamento em ${valorFormatado}. Segue o PDF com o que está incluso. Se fizer sentido pra você, posso ver os horários da reunião de diagnóstico online com ele?`
       await enviarMensagem(
         cfg.uazapiUrl,
         cfg.instanceToken,
@@ -257,7 +275,7 @@ export async function processarRespostaDrLucas(args: {
         .from("eventos_orcamento_pendente")
         .update({
           respondidoEm: agora(),
-          observacoes: `Valor informado pelo Dr. Lucas: ${formatarBrl(valor)}. PDF: ${pdfUrl}`,
+          observacoes: `Valor informado pelo Dr. Lucas: ${valorFormatado}. PDF: ${pdfUrl}`,
         })
         .eq("id", pendencia.id),
       supabaseAdmin
@@ -274,7 +292,7 @@ export async function processarRespostaDrLucas(args: {
     await avisarDrLucas(
       cfg,
       numeroDrLucas,
-      `Orçamento de ${formatarBrl(valor)} enviado pra ${nomePaciente}.`
+      `Orçamento de ${valorFormatado} enviado pra ${nomePaciente}.`
     )
 
     return { tratado: true }
