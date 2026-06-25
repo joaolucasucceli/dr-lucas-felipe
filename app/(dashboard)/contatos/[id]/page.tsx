@@ -179,6 +179,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   // ciclo DESC + atualizadoEm DESC). Botao Pausar/Retomar IA so faz
   // sentido pra leads com conversa em andamento.
   const conversaAtiva = contato.conversas?.[0] ?? null
+  const atendimentoIA = !contato.responsavelId && conversaAtiva?.modoConversa === "ia"
   const dataNascimentoInput = contato.dataNascimento
     ? new Date(contato.dataNascimento).toISOString().slice(0, 10)
     : ""
@@ -315,7 +316,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                 tipo="select"
                 opcoes={opcoesResponsavel}
                 onSalvar={(v) => salvarCampo("responsavelId", v)}
-                rotuloVazio="Sem responsável"
+                rotuloVazio={atendimentoIA ? "Ana Júlia / IA" : "Sem responsável"}
               />
               {!ehPaciente && (
                 <CampoEditavel

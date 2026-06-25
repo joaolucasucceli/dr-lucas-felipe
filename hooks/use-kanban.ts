@@ -17,6 +17,7 @@ export interface KanbanContato {
   cicloAtual: number
   diasNaEtapa: number
   responsavel: { id: string; nome: string } | null
+  modoConversa: "ia" | "humano" | null
   followUpEnviados: string[]
   iaPausada: boolean
 }

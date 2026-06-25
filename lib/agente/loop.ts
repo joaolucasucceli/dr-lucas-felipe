@@ -184,7 +184,7 @@ interface OrcamentoRespondidoContexto {
 function limparTrechoNome(raw: string): string | null {
   const nome = raw
     .split(/[,.;!?]|\s+(?:e|mas|porque|pra|para)\s+/i)[0]
-    .replace(/\b(o|a)\s+/i, "")
+    .replace(/^(?:o|a)\s+/i, "")
     .trim()
     .replace(/\s+/g, " ")
 
@@ -227,6 +227,45 @@ function extrairNomeAutodeclarado(texto: string): string | null {
   }
 
   return null
+}
+
+function detectarInteresseQualificacao(texto: string): {
+  procedimentoInteresse: string
+  fato: string
+} | null {
+  const normalizado = normalizarTextoBusca(texto)
+  const indicouIntencao =
+    normalizado.includes("quero fazer") ||
+    normalizado.includes("quero tratar") ||
+    normalizado.includes("tenho interesse") ||
+    normalizado.includes("me incomoda") ||
+    normalizado.includes("gostaria de fazer") ||
+    normalizado.includes("penso em fazer")
+
+  const regioes = [
+    { termo: "abdomen", label: "abdômen" },
+    { termo: "barriga", label: "abdômen" },
+    { termo: "flanco", label: "flancos" },
+    { termo: "papada", label: "papada" },
+    { termo: "culote", label: "culote" },
+    { termo: "costas", label: "costas" },
+    { termo: "axila", label: "axilas" },
+    { termo: "braco", label: "bracos" },
+  ]
+
+  const regiao = regioes.find((r) => normalizado.includes(r.termo))?.label
+  if (!indicouIntencao || !regiao) return null
+
+  const procedimentoBase = normalizado.includes("mini lipo") ||
+    normalizado.includes("minilipo") ||
+    normalizado.includes("lipo")
+      ? "mini lipo"
+      : "mini lipo"
+
+  return {
+    procedimentoInteresse: `${procedimentoBase} ${regiao}`,
+    fato: `Paciente informou interesse em ${procedimentoBase} na região de ${regiao}.`,
+  }
 }
 
 function pacienteAprovouOrcamento(texto: string): boolean {
@@ -446,6 +485,38 @@ export async function processarMensagens(
       } catch (err) {
         console.error("[Agente] Erro ao persistir nome autodeclarado:", err)
       }
+    }
+  }
+
+  const interesseQualificacao = detectarInteresseQualificacao(textoBuffer)
+  if (
+    contatoId &&
+    interesseQualificacao &&
+    contextoContato.etapa === "acolhimento"
+  ) {
+    try {
+      const resultadoQualificacao = await executarFerramenta(
+        "atualizar_lead",
+        {
+          contatoId,
+          conversaId,
+          procedimentoInteresse: interesseQualificacao.procedimentoInteresse,
+          sobreOPacienteAdicionar: interesseQualificacao.fato,
+          etapaCorreta: "qualificacao",
+        },
+        baseUrl
+      )
+      const parsed = JSON.parse(resultadoQualificacao)
+      if (parsed?.ok === true) {
+        contextoContato.procedimento = interesseQualificacao.procedimentoInteresse
+        contextoContato.etapa = "qualificacao"
+        contextoContato.sobreOPaciente = anexarFatoContexto(
+          contextoContato.sobreOPaciente,
+          interesseQualificacao.fato
+        )
+      }
+    } catch (err) {
+      console.error("[Agente] Erro ao sincronizar qualificacao:", err)
     }
   }
 

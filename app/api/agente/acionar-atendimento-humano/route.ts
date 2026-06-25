@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
 
   const updateContato: Record<string, unknown> = {
-    responsavelId: null,
+    responsavelId: "usr-lucas",
     statusFunil: "atendimento_humano",
     ultimaMovimentacaoEm: tsAgora,
     atualizadoEm: tsAgora,
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       .from("conversas")
       .update({
         modoConversa: "humano",
-        atendenteId: null,
+        atendenteId: "usr-lucas",
         atualizadoEm: tsAgora,
       })
       .eq("id", conversa.id)

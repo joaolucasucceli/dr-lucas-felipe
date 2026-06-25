@@ -69,10 +69,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   let updateConversa: Record<string, unknown> | null = null
 
   if (novoStatus === "atendimento_humano") {
-    updateContato.responsavelId = auth.session.user.id
+    updateContato.responsavelId = "usr-lucas"
     updateConversa = {
       modoConversa: "humano",
-      atendenteId: auth.session.user.id,
+      atendenteId: "usr-lucas",
+      atualizadoEm: tsAgora,
+    }
+  } else if (novoStatus === "consulta_agendada") {
+    updateContato.responsavelId = "usr-lucas"
+    updateConversa = {
+      etapa: novoStatus,
       atualizadoEm: tsAgora,
     }
   } else if (contato.statusFunil === "atendimento_humano") {

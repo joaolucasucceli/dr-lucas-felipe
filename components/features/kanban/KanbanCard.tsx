@@ -63,6 +63,7 @@ export function KanbanCard({ lead, index }: KanbanCardProps) {
 
   const dataRaw = lead.ultimaMovimentacaoEm || lead.atualizadoEm
   const tempo = formatDistanceToNow(new Date(dataRaw), { locale: ptBR, addSuffix: true })
+  const atendimentoIA = !lead.responsavel && lead.modoConversa === "ia"
   const dataExata = formatarData(dataRaw, "dd/MM/yyyy 'às' HH:mm")
 
   return (
@@ -127,6 +128,13 @@ export function KanbanCard({ lead, index }: KanbanCardProps) {
                   <UserAvatar nome={lead.responsavel.nome} tamanho="sm" />
                   <span className="text-xs text-muted-foreground truncate max-w-[100px]">
                     {lead.responsavel.nome}
+                  </span>
+                </>
+              ) : atendimentoIA ? (
+                <>
+                  <UserAvatar nome="Ana Júlia" tamanho="sm" />
+                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                    Ana Júlia / IA
                   </span>
                 </>
               ) : (

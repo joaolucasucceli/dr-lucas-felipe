@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
   await supabaseAdmin
     .from("contatos")
     .update({
+      responsavelId: "usr-lucas",
       statusFunil: "consulta_agendada",
       ultimaMovimentacaoEm: agora(),
       atualizadoEm: agora(),

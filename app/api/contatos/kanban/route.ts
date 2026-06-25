@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
     ehRetorno: boolean
     cicloAtual: number
     responsavel: { id: string; nome: string } | null
+    modoConversa?: "ia" | "humano" | null
     conversas: ConversaComFollowUp[]
   }
 
@@ -90,6 +91,7 @@ export async function GET(request: NextRequest) {
       statusFunil,
       diasNaEtapa,
       followUpEnviados: conversaAberta?.followUpEnviados ?? [],
+      modoConversa: conversaAberta?.modoConversa ?? null,
       iaPausada: conversaAberta?.modoConversa === "humano",
     })
   }
