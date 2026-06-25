@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
 
   let contato = contatoExistente
+  let criadoAgora = false
 
   if (!contato) {
     const { data: novoContato, error: criarError } = await supabaseAdmin
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     contato = novoContato
+    criadoAgora = true
   }
 
   const { data: conversa } = await supabaseAdmin
@@ -103,5 +105,6 @@ export async function POST(request: NextRequest) {
     conversa: conversa ? { id: conversa.id, etapa: conversa.etapa } : null,
     sobreOPaciente: contato.sobreOPaciente || null,
     ultimoProcedimento,
+    criadoAgora,
   })
 }

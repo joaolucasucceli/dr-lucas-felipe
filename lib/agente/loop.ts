@@ -2,7 +2,7 @@ import { openai } from "@/lib/openai"
 import { supabaseAdmin } from "@/lib/supabase"
 import { getBaseUrl } from "@/lib/env"
 import { obterELimparBuffer } from "@/lib/agente/buffer"
-import { obterMemoria, adicionarAMemoria } from "@/lib/agente/memoria"
+import { obterMemoria, adicionarAMemoria, limparMemoria } from "@/lib/agente/memoria"
 import { temNomeAutodeclarado } from "@/lib/agente/atualizar-lead"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
@@ -222,6 +222,11 @@ export async function processarMensagens(
       await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
     )
     if (resultadoPaciente.contato) {
+      if (resultadoPaciente.criadoAgora) {
+        await limparMemoria(chatId)
+        console.log(`[Agente] Memoria antiga limpa para novo contato ${chatId}`)
+      }
+
       // Antes existia logica de STATUSES_SILENCIO/STATUSES_RETORNO aqui, mas
       // ambos arrays estavam vazios desde a refatoracao do funil comercial
       // (JLAU-...). Removido o codigo morto. Se quiser reativar "novo ciclo
