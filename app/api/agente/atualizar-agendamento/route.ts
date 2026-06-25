@@ -35,13 +35,36 @@ export async function POST(request: NextRequest) {
 
   const { data: agendamentoExistente } = await supabaseAdmin
     .from("agendamentos")
-    .select("id, contatoId, duracao, googleEventId, sincronizado")
+    .select("id, contatoId, duracao, googleEventId, sincronizado, status, realizadoEm")
     .eq("id", agendamentoId)
     .maybeSingle()
 
   if (!agendamentoExistente) {
     return NextResponse.json({ error: "Agendamento não encontrado" }, { status: 404 })
   }
+
+  if (agendamentoExistente.realizadoEm) {
+    return NextResponse.json(
+      { error: "Agendamento já foi marcado como realizado" },
+      { status: 409 }
+    )
+  }
+
+  if (agendamentoExistente.status === "cancelado") {
+    return NextResponse.json(
+      { error: "Agendamento já está cancelado" },
+      { status: 409 }
+    )
+  }
+
+  const { data: conversa } = await supabaseAdmin
+    .from("conversas")
+    .select("id")
+    .eq("contatoId", agendamentoExistente.contatoId)
+    .is("encerradaEm", null)
+    .order("criadoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (acao === "remarcar") {
     if (!novaDataHora) {
@@ -85,6 +108,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    await supabaseAdmin
+      .from("contatos")
+      .update({
+        responsavelId: "usr-lucas",
+        statusFunil: "consulta_agendada" as never,
+        ultimaMovimentacaoEm: agora(),
+        atualizadoEm: agora(),
+      })
+      .eq("id", agendamentoExistente.contatoId)
+
+    if (conversa) {
+      await supabaseAdmin
+        .from("conversas")
+        .update({
+          etapa: "consulta_agendada" as never,
+          modoConversa: "ia" as never,
+          atendenteId: null,
+          atualizadoEm: agora(),
+        })
+        .eq("id", conversa.id)
+    }
+
     return NextResponse.json({ agendamento, sincronizado })
   }
 
@@ -108,17 +153,10 @@ export async function POST(request: NextRequest) {
       .eq("id", agendamentoId)
   }
 
-  const { data: conversa } = await supabaseAdmin
-    .from("conversas")
-    .select("id")
-    .eq("contatoId", agendamentoExistente.contatoId)
-    .order("criadoEm", { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
   await supabaseAdmin
     .from("contatos")
     .update({
+      responsavelId: null,
       statusFunil: "agendamento" as never,
       ultimaMovimentacaoEm: agora(),
       atualizadoEm: agora(),
@@ -128,7 +166,12 @@ export async function POST(request: NextRequest) {
   if (conversa) {
     await supabaseAdmin
       .from("conversas")
-      .update({ etapa: "agendamento" as never, atualizadoEm: agora() })
+      .update({
+        etapa: "agendamento" as never,
+        modoConversa: "ia" as never,
+        atendenteId: null,
+        atualizadoEm: agora(),
+      })
       .eq("id", conversa.id)
   }
 

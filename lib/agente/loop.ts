@@ -636,10 +636,12 @@ interface EstimativaEnviada {
 }
 
 interface EstadoAgendamentoTemporario {
-  origem: "orcamento" | "estimativa"
+  origem: "orcamento" | "estimativa" | "remarcacao"
   slots: SlotAgendamentoOferecido[]
   slotEscolhido?: SlotAgendamentoOferecido | null
   estimativa?: EstimativaEnviada | null
+  agendamentoId?: string | null
+  cancelamentoPendente?: boolean
   atualizadoEm: string
 }
 
@@ -871,7 +873,13 @@ function normalizarEstadoAgendamento(
   if (!raw || typeof raw !== "object") return null
 
   const item = raw as Partial<EstadoAgendamentoTemporario>
-  if (item.origem !== "orcamento" && item.origem !== "estimativa") return null
+  if (
+    item.origem !== "orcamento" &&
+    item.origem !== "estimativa" &&
+    item.origem !== "remarcacao"
+  ) {
+    return null
+  }
 
   const slots = Array.isArray(item.slots)
     ? item.slots
@@ -887,6 +895,9 @@ function normalizarEstadoAgendamento(
     slots,
     slotEscolhido,
     estimativa: item.estimativa ?? null,
+    agendamentoId:
+      typeof item.agendamentoId === "string" ? item.agendamentoId : null,
+    cancelamentoPendente: item.cancelamentoPendente === true,
     atualizadoEm: item.atualizadoEm || agora(),
   }
 }
@@ -958,6 +969,43 @@ function detectarPreferenciaPeriodo(texto: string): "manha" | "tarde" | null {
   if (normalizado.includes("manha")) return "manha"
   if (normalizado.includes("tarde")) return "tarde"
   return null
+}
+
+function detectarPedidoRemarcacao(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return (
+    normalizado.includes("remarcar") ||
+    normalizado.includes("reagendar") ||
+    normalizado.includes("mudar horario") ||
+    normalizado.includes("mudar o horario") ||
+    normalizado.includes("trocar horario") ||
+    normalizado.includes("trocar o horario") ||
+    normalizado.includes("outro horario") ||
+    normalizado.includes("outro dia") ||
+    normalizado.includes("nao consigo nesse horario") ||
+    normalizado.includes("nao vou conseguir")
+  )
+}
+
+function detectarPedidoCancelamento(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return (
+    normalizado.includes("cancelar") ||
+    normalizado.includes("cancela") ||
+    normalizado.includes("desistir") ||
+    normalizado.includes("desisto") ||
+    normalizado.includes("nao vou mais") ||
+    normalizado.includes("nao quero mais")
+  )
+}
+
+function detectarNegacaoCurta(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+    .replace(/[.!?]+$/g, "")
+    .trim()
+  return ["nao", "não", "melhor nao", "melhor não", "deixa"].includes(
+    normalizado
+  )
 }
 
 function filtrarSlotsPorPeriodo(
@@ -1310,6 +1358,227 @@ async function montarFastPathAgendamento(params: {
     origem,
     estimativa: estadoAtual?.estimativa ?? null,
   })
+}
+
+async function montarOfertaSlotsRemarcacao(params: {
+  chatId: string
+  contatoId: string
+  contexto: ContextoContato
+  baseUrl: string
+  textoPaciente: string
+  agendamentoId: string
+}): Promise<string> {
+  const { chatId, contatoId, contexto, baseUrl, textoPaciente, agendamentoId } =
+    params
+  const slots = await consultarSlotsAgendamento(baseUrl)
+  const periodo = detectarPreferenciaPeriodo(textoPaciente)
+  const slotsPreferidos = filtrarSlotsPorPeriodo(slots, periodo)
+  const slotsOferta = (
+    slotsPreferidos.length > 0 ? slotsPreferidos : slots
+  ).slice(0, 3)
+
+  console.log("[Agente] Slots consultados para remarcacao", {
+    contatoId,
+    agendamentoId,
+    quantidade: slots.length,
+    periodo,
+    oferecidos: slotsOferta.map((slot) => slot.label),
+  })
+
+  if (slotsOferta.length === 0) {
+    return "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
+  }
+
+  await salvarEstadoAgendamento(chatId, {
+    origem: "remarcacao",
+    slots: slotsOferta,
+    slotEscolhido: null,
+    estimativa: null,
+    agendamentoId,
+    cancelamentoPendente: false,
+    atualizadoEm: agora(),
+  })
+
+  return comVocativo(
+    contexto,
+    `Claro{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+  )
+}
+
+async function remarcarAgendamentoDeterministico(params: {
+  agendamentoId: string
+  slot: SlotAgendamentoOferecido
+  contexto: ContextoContato
+  baseUrl: string
+}): Promise<{ ok: true; texto: string } | { ok: false; texto: string }> {
+  const { agendamentoId, slot, contexto, baseUrl } = params
+  const resultado = await executarFerramenta(
+    "atualizar_agendamento",
+    {
+      agendamentoId,
+      acao: "remarcar",
+      novaDataHora: slot.dataIso,
+    },
+    baseUrl
+  )
+  const parsed = JSON.parse(resultado) as {
+    ok?: boolean
+    error?: string
+    agendamento?: { id?: string }
+  }
+
+  if (parsed.ok === false || !parsed.agendamento) {
+    return {
+      ok: false,
+      texto:
+        parsed.error ||
+        "Esse horário acabou ficando indisponível antes de eu conseguir remarcar.",
+    }
+  }
+
+  contexto.etapa = "consulta_agendada"
+  return {
+    ok: true,
+    texto: comVocativo(
+      contexto,
+      `Pronto{nome}! Remarquei pra ${slot.label}. O convite atualizado vai chegar no seu e-mail.`
+    ),
+  }
+}
+
+async function cancelarAgendamentoDeterministico(params: {
+  agendamentoId: string
+  contexto: ContextoContato
+  baseUrl: string
+}): Promise<{ ok: true; texto: string } | { ok: false; texto: string }> {
+  const { agendamentoId, contexto, baseUrl } = params
+  const resultado = await executarFerramenta(
+    "atualizar_agendamento",
+    {
+      agendamentoId,
+      acao: "cancelar",
+    },
+    baseUrl
+  )
+  const parsed = JSON.parse(resultado) as {
+    ok?: boolean
+    error?: string
+    agendamento?: { id?: string }
+  }
+
+  if (parsed.ok === false || !parsed.agendamento) {
+    return {
+      ok: false,
+      texto: parsed.error || "NÃ£o consegui cancelar esse agendamento agora.",
+    }
+  }
+
+  contexto.etapa = "agendamento"
+  return {
+    ok: true,
+    texto: comVocativo(
+      contexto,
+      "Cancelei aqui{nome}. Se mudar de ideia, é só me chamar."
+    ),
+  }
+}
+
+async function montarFastPathReagendamentoCancelamento(params: {
+  chatId: string
+  textoPaciente: string
+  contexto: ContextoContato
+  contatoId: string
+  baseUrl: string
+}): Promise<string | null> {
+  const { chatId, textoPaciente, contexto, contatoId, baseUrl } = params
+  const agendamento = contexto.agendamentoPendente
+  if (!agendamento) return null
+
+  const estadoAtual = await obterEstadoAgendamento(chatId)
+  const estadoDesteAgendamento =
+    estadoAtual?.origem === "remarcacao" &&
+    estadoAtual.agendamentoId === agendamento.id
+      ? estadoAtual
+      : null
+  const pedidoRemarcacao = detectarPedidoRemarcacao(textoPaciente)
+  const pedidoCancelamento = detectarPedidoCancelamento(textoPaciente)
+
+  if (estadoDesteAgendamento?.cancelamentoPendente) {
+    if (ehRespostaAfirmativaCurta(textoPaciente) || pedidoCancelamento) {
+      const resultado = await cancelarAgendamentoDeterministico({
+        agendamentoId: agendamento.id,
+        contexto,
+        baseUrl,
+      })
+      await limparEstadoAgendamento(chatId)
+      return resultado.texto
+    }
+
+    if (detectarNegacaoCurta(textoPaciente)) {
+      await limparEstadoAgendamento(chatId)
+      return comVocativo(
+        contexto,
+        `Sem problema{nome}. Mantive sua avaliação de ${agendamento.label}.`
+      )
+    }
+  }
+
+  const slotsOferecidos = estadoDesteAgendamento?.slots ?? []
+  const slotEscolhido = resolverSlotEscolhido(textoPaciente, slotsOferecidos)
+  const horarioSolicitado = extrairHorarioEscolhido(textoPaciente)
+  const preferiuPeriodo = Boolean(detectarPreferenciaPeriodo(textoPaciente))
+
+  if (slotEscolhido) {
+    const resultado = await remarcarAgendamentoDeterministico({
+      agendamentoId: agendamento.id,
+      slot: slotEscolhido,
+      contexto,
+      baseUrl,
+    })
+    if (resultado.ok) {
+      await limparEstadoAgendamento(chatId)
+      return resultado.texto
+    }
+
+    const novaOferta = await montarOfertaSlotsRemarcacao({
+      chatId,
+      contatoId,
+      contexto,
+      baseUrl,
+      textoPaciente,
+      agendamentoId: agendamento.id,
+    })
+    return `${resultado.texto} Consultei de novo e ${novaOferta.charAt(0).toLowerCase()}${novaOferta.slice(1)}`
+  }
+
+  if (pedidoCancelamento) {
+    await salvarEstadoAgendamento(chatId, {
+      origem: "remarcacao",
+      slots: slotsOferecidos,
+      slotEscolhido: null,
+      estimativa: null,
+      agendamentoId: agendamento.id,
+      cancelamentoPendente: true,
+      atualizadoEm: agora(),
+    })
+    return comVocativo(
+      contexto,
+      `Tem certeza que quer cancelar a avaliação de ${agendamento.label}{nome}? Se preferir, posso só remarcar.`
+    )
+  }
+
+  if (pedidoRemarcacao || horarioSolicitado || preferiuPeriodo) {
+    return montarOfertaSlotsRemarcacao({
+      chatId,
+      contatoId,
+      contexto,
+      baseUrl,
+      textoPaciente,
+      agendamentoId: agendamento.id,
+    })
+  }
+
+  return null
 }
 
 async function obterUltimoOrcamentoRespondido(
@@ -1681,13 +1950,22 @@ export async function processarMensagens(
       .eq("id", contatoId)
       .maybeSingle()
 
+    const { data: agendamentoRealizado } = await supabaseAdmin
+      .from("agendamentos")
+      .select("id")
+      .eq("contatoId", contatoId)
+      .not("realizadoEm", "is", null)
+      .limit(1)
+      .maybeSingle()
+
     const responsavelHumanoAtivo =
       contatoResponsavel?.responsavelId &&
       contatoResponsavel.statusFunil !== "consulta_agendada"
     const atendimentoHumanoAtivo =
       contatoResponsavel?.statusFunil === "atendimento_humano"
+    const atendimentoRealizado = Boolean(agendamentoRealizado)
 
-    if (responsavelHumanoAtivo || atendimentoHumanoAtivo) {
+    if (responsavelHumanoAtivo || atendimentoHumanoAtivo || atendimentoRealizado) {
       console.log(
         `[Agente] Atendimento humano ativo no contato ${contatoId} - automacao pausada`
       )
@@ -1810,6 +2088,7 @@ export async function processarMensagens(
         .from("agendamentos")
         .select("id, dataHora, status")
         .eq("contatoId", contatoId)
+        .is("realizadoEm", null)
         .in("status", ["agendado", "remarcado"] as never)
         .gt("dataHora", new Date().toISOString())
         .order("dataHora", { ascending: true })
@@ -1949,6 +2228,39 @@ export async function processarMensagens(
     }
 
     if (contatoId) {
+      const fastPathReagendamentoCancelamento =
+        await montarFastPathReagendamentoCancelamento({
+          chatId,
+          textoPaciente: textoBuffer,
+          contexto: contextoContato,
+          contatoId,
+          baseUrl,
+        })
+
+      if (fastPathReagendamentoCancelamento) {
+        console.log(
+          "[Agente] Fast-path de remarcacao/cancelamento respondeu sem OpenAI",
+          {
+            contatoId,
+            conversaId,
+            etapa: contextoContato.etapa,
+            agendamentoId: contextoContato.agendamentoPendente?.id,
+          }
+        )
+
+        enviouResposta = await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: fastPathReagendamentoCancelamento,
+        })
+
+        return { contatoId, conversaId }
+      }
+
       const fastPathAgendamento = await montarFastPathAgendamento({
         chatId,
         textoPaciente: textoBuffer,
