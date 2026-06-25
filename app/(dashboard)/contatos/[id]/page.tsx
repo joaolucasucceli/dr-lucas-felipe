@@ -202,8 +202,8 @@ export default function ContatoDetalhePage({ params }: PageProps) {
 
   const ehPaciente = contato.tipo === "paciente"
   // Conversa ativa = primeira do array (backend ja retorna ordenado por
-  // ciclo DESC + atualizadoEm DESC). Botao Pausar/Retomar IA so faz
-  // sentido pra leads com conversa em andamento.
+  // ciclo DESC + atualizadoEm DESC). A ação manual muda para atendimento
+  // humano ou retoma a IA em leads com conversa em andamento.
   const conversaAtiva = contato.conversas?.[0] ?? null
   const atendimentoIA = !contato.responsavelId && conversaAtiva?.modoConversa === "ia"
   const dataNascimentoInput = contato.dataNascimento
@@ -240,7 +240,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
             {conversaAtiva.modoConversa === "ia" ? (
               <>
                 <Pause className="mr-2 h-4 w-4" />
-                Pausar IA
+                Mudar para atendimento humano
               </>
             ) : (
               <>
