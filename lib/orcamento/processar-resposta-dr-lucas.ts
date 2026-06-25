@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { agora } from "@/lib/db-utils"
 import { enviarMensagem, enviarMidia } from "@/lib/uazapi"
 import { gerarEHospedarOrcamento, formatarBrl } from "@/lib/orcamento/gerar"
+import { adicionarAMemoria } from "@/lib/agente/memoria"
 
 /**
  * Ingestao da resposta do Dr. Lucas pelo WhatsApp pessoal dele.
@@ -234,6 +235,9 @@ export async function processarRespostaDrLucas(args: {
       parcelamento: proc?.parcelamento ?? null,
     })
 
+    // Mensagem curta no tom da Ana apresentando o orcamento.
+    const apresentacao = `Prontinho, ${nomePaciente}! Falei com o Dr. Lucas e ele definiu seu orçamento em ${valorFormatado}. Segue o PDF com o que está incluso. Se fizer sentido pra você, posso ver os horários da reunião de diagnóstico online com ele?`
+
     // Envia o PDF como documento pra cliente.
     if (cfg?.uazapiUrl && cfg?.instanceToken) {
       await enviarMidia(
@@ -247,8 +251,6 @@ export async function processarRespostaDrLucas(args: {
         nomeArquivo
       )
 
-      // Mensagem curta no tom da Ana apresentando o orcamento.
-      const apresentacao = `Prontinho, ${nomePaciente}! Falei com o Dr. Lucas e ele definiu seu orçamento em ${valorFormatado}. Segue o PDF com o que está incluso. Se fizer sentido pra você, posso ver os horários da reunião de diagnóstico online com ele?`
       await enviarMensagem(
         cfg.uazapiUrl,
         cfg.instanceToken,
@@ -268,6 +270,12 @@ export async function processarRespostaDrLucas(args: {
       )
     }
 
+    const notaOrcamento = montarNotaOrcamento(valorFormatado, pdfUrl)
+    const sobreOPacienteAtualizado = anexarNotaContato(
+      contato.sobreOPaciente,
+      notaOrcamento
+    )
+
     // Marca pendencia respondida (guarda o valor em `observacoes` pra auditoria)
     // e retoma o atendimento da cliente.
     await Promise.all([
@@ -283,10 +291,18 @@ export async function processarRespostaDrLucas(args: {
         .update({
           aguardandoOrcamentoHumano: false,
           aguardandoOrcamentoDesde: null,
+          sobreOPaciente: sobreOPacienteAtualizado,
           atualizadoEm: agora(),
         })
         .eq("id", contato.id),
     ])
+
+    await registrarOrcamentoNaMemoria({
+      chatId: `${contato.whatsapp}@s.whatsapp.net`,
+      valorFormatado,
+      pdfUrl,
+      apresentacao,
+    })
 
     // Confirma pro Dr. Lucas.
     await avisarDrLucas(
@@ -313,6 +329,7 @@ interface ContatoMin {
   nome: string | null
   whatsapp: string
   procedimentoInteresse: string | null
+  sobreOPaciente: string | null
 }
 
 /** Acha a cliente pelo numero (match exato; fallback por sufixo de 8 digitos). */
@@ -322,7 +339,7 @@ async function acharContatoPorNumero(
   // 1. Match exato.
   const { data: exato } = await supabaseAdmin
     .from("contatos")
-    .select("id, nome, whatsapp, procedimentoInteresse")
+    .select("id, nome, whatsapp, procedimentoInteresse, sobreOPaciente")
     .eq("whatsapp", numero)
     .is("deletadoEm", null)
     .maybeSingle()
@@ -334,7 +351,7 @@ async function acharContatoPorNumero(
   if (sufixo.length < 8) return null
   const { data: candidatos } = await supabaseAdmin
     .from("contatos")
-    .select("id, nome, whatsapp, procedimentoInteresse")
+    .select("id, nome, whatsapp, procedimentoInteresse, sobreOPaciente")
     .ilike("whatsapp", `%${sufixo}`)
     .is("deletadoEm", null)
     .limit(2)
@@ -373,6 +390,52 @@ async function resolverProcedimento(
 /** Remove o prefixo "WhatsApp " de nomes genericos. */
 function limparNome(nome: string | null): string {
   return (nome ?? "").replace(/^WhatsApp\s+/, "").trim() || "tudo certo"
+}
+
+function formatarAgoraBR(): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date())
+}
+
+function montarNotaOrcamento(valorFormatado: string, pdfUrl: string): string {
+  return `Orcamento enviado ao paciente: ${valorFormatado} em ${formatarAgoraBR()}. PDF: ${pdfUrl}`
+}
+
+function anexarNotaContato(
+  sobreOPaciente: string | null,
+  notaOrcamento: string
+): string {
+  const atual = sobreOPaciente?.trim()
+  if (atual?.includes(notaOrcamento)) return atual
+  return [atual, notaOrcamento].filter(Boolean).join("\n---\n")
+}
+
+async function registrarOrcamentoNaMemoria(params: {
+  chatId: string
+  valorFormatado: string
+  pdfUrl: string
+  apresentacao: string
+}): Promise<void> {
+  const { chatId, valorFormatado, pdfUrl, apresentacao } = params
+
+  try {
+    await adicionarAMemoria(chatId, {
+      role: "system",
+      content: `Orcamento do Dr. Lucas ja foi enviado ao paciente no valor de ${valorFormatado}. PDF: ${pdfUrl}. Se o paciente aprovar, avance para agendamento. Nao gere novo orcamento neste ciclo.`,
+    })
+    await adicionarAMemoria(chatId, {
+      role: "assistant",
+      content: apresentacao,
+    })
+  } catch (err) {
+    console.error("[orcamento-dr-lucas] falha ao registrar memoria:", err)
+  }
 }
 
 /** Registra a mensagem da Ana no historico (best-effort). */

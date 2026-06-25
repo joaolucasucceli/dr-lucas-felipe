@@ -174,6 +174,130 @@ function textoPrometeEnvioOrcamento(texto: string): boolean {
   return mencionaOrcamento && prometeuEnvio
 }
 
+interface OrcamentoRespondidoContexto {
+  id: string
+  respondidoEm: string | null
+  observacoes: string | null
+  resumoCaso: string | null
+}
+
+function limparTrechoNome(raw: string): string | null {
+  const nome = raw
+    .split(/[,.;!?]|\s+(?:e|mas|porque|pra|para)\s+/i)[0]
+    .replace(/\b(o|a)\s+/i, "")
+    .trim()
+    .replace(/\s+/g, " ")
+
+  const palavras = nome.split(/\s+/).filter(Boolean)
+  if (nome.length < 2 || nome.length > 80) return null
+  if (palavras.length > 6) return null
+
+  const normalizado = normalizarTextoBusca(nome)
+  const termosInvalidos = new Set([
+    "diabetico",
+    "diabetica",
+    "hipertenso",
+    "hipertensa",
+    "casado",
+    "casada",
+    "gestante",
+    "cliente",
+    "paciente",
+  ])
+  if (termosInvalidos.has(normalizado)) return null
+
+  return nome
+}
+
+function extrairNomeAutodeclarado(texto: string): string | null {
+  for (const linha of texto.split(/\n+/)) {
+    const textoLinha = linha.trim()
+    const padroes = [
+      /\bmeu nome\s+(?:e|é)\s+(.+)$/i,
+      /\bme chamo\s+(.+)$/i,
+      /\bpode me chamar de\s+(.+)$/i,
+      /^\s*sou\s+(?:o|a)?\s*(.+)$/i,
+    ]
+
+    for (const padrao of padroes) {
+      const match = textoLinha.match(padrao)
+      const nome = match?.[1] ? limparTrechoNome(match[1]) : null
+      if (nome) return nome
+    }
+  }
+
+  return null
+}
+
+function pacienteAprovouOrcamento(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return [
+    "faz sentido",
+    "quero marcar",
+    "quero agendar",
+    "vamos marcar",
+    "vamos agendar",
+    "pode marcar",
+    "pode agendar",
+    "bora marcar",
+    "bora agendar",
+    "marcar a reuniao",
+    "agendar a reuniao",
+    "seguir para agenda",
+  ].some((termo) => normalizado.includes(termo))
+}
+
+function extrairValorOrcamento(observacoes: string | null): string | null {
+  return observacoes?.match(/R\$\s*[\d.]+(?:,\d{2})?/i)?.[0] ?? null
+}
+
+function extrairPdfOrcamento(observacoes: string | null): string | null {
+  return observacoes?.match(/https?:\/\/\S+/i)?.[0] ?? null
+}
+
+function montarRespostaAgendamentoAposOrcamento(
+  contexto: ContextoContato,
+  orcamento: OrcamentoRespondidoContexto
+): string {
+  const primeiroNome = contexto.nome?.trim().split(/\s+/)[0]
+  const vocativo = primeiroNome ? `, ${primeiroNome}` : ""
+  const valor = extrairValorOrcamento(orcamento.observacoes)
+  const prefixo = valor
+    ? `Esse orcamento de ${valor} ja foi definido pelo Dr. Lucas`
+    : "Esse orcamento ja foi definido pelo Dr. Lucas"
+
+  return `${prefixo}${vocativo}. Se fizer sentido pra voce, me passa seu e-mail e o melhor dia ou turno para eu consultar a agenda da reuniao de diagnostico online?`
+}
+
+async function obterUltimoOrcamentoRespondido(
+  contatoId: string
+): Promise<OrcamentoRespondidoContexto | null> {
+  const { data, error } = await supabaseAdmin
+    .from("eventos_orcamento_pendente")
+    .select("id, respondidoEm, observacoes, resumoCaso")
+    .eq("contatoId", contatoId)
+    .not("respondidoEm", "is", null)
+    .is("canceladoEm", null)
+    .order("respondidoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.warn("[Agente] Erro ao buscar orcamento respondido:", error.message)
+    return null
+  }
+
+  return (data as OrcamentoRespondidoContexto | null) ?? null
+}
+
+function anexarFatoContexto(
+  sobreOPaciente: string | undefined,
+  fato: string
+): string {
+  if (sobreOPaciente?.includes(fato)) return sobreOPaciente
+  return [sobreOPaciente, fato].filter(Boolean).join("\n---\n")
+}
+
 function montarResumoOrcamento(
   contexto: ContextoContato,
   textoPaciente: string
@@ -249,6 +373,8 @@ export async function processarMensagens(
   let contextoContato: ContextoContato = {}
   let contatoId: string | null = null
   let conversaId: string | null = null
+  let orcamentoRespondidoAtual: OrcamentoRespondidoContexto | null = null
+  let pacienteAprovouOrcamentoRespondido = false
 
   try {
     const resultadoPaciente = JSON.parse(
@@ -289,6 +415,38 @@ export async function processarMensagens(
     }
   } catch (error) {
     console.error("[Agente] Erro ao consultar paciente:", error)
+  }
+
+  const nomeAutodeclarado = extrairNomeAutodeclarado(textoBuffer)
+  if (contatoId && nomeAutodeclarado) {
+    const marcadorNome = `Nome informado pelo paciente: ${nomeAutodeclarado}`
+    const precisaPersistirNome =
+      contextoContato.nome !== nomeAutodeclarado ||
+      !temNomeAutodeclarado(contextoContato.sobreOPaciente, nomeAutodeclarado)
+
+    if (precisaPersistirNome) {
+      try {
+        const resultadoNome = await executarFerramenta(
+          "atualizar_lead",
+          {
+            contatoId,
+            conversaId,
+            nome: nomeAutodeclarado,
+          },
+          baseUrl
+        )
+        const parsed = JSON.parse(resultadoNome)
+        if (parsed?.ok === true) {
+          contextoContato.nome = nomeAutodeclarado
+          contextoContato.sobreOPaciente = anexarFatoContexto(
+            contextoContato.sobreOPaciente,
+            marcadorNome
+          )
+        }
+      } catch (err) {
+        console.error("[Agente] Erro ao persistir nome autodeclarado:", err)
+      }
+    }
   }
 
   if (contatoId) {
@@ -335,6 +493,38 @@ export async function processarMensagens(
     if ((conversa as { iaResponde?: boolean })?.iaResponde === false) {
       console.log(`[Agente] Conversa ${conversaId} com iaResponde=false — IA nao responde`)
       return null
+    }
+  }
+
+  if (contatoId) {
+    orcamentoRespondidoAtual = await obterUltimoOrcamentoRespondido(contatoId)
+    if (orcamentoRespondidoAtual) {
+      contextoContato.orcamentoRespondido = {
+        valor: extrairValorOrcamento(orcamentoRespondidoAtual.observacoes),
+        pdfUrl: extrairPdfOrcamento(orcamentoRespondidoAtual.observacoes),
+        respondidoEm: orcamentoRespondidoAtual.respondidoEm,
+      }
+    }
+
+    pacienteAprovouOrcamentoRespondido = Boolean(
+      orcamentoRespondidoAtual && pacienteAprovouOrcamento(textoBuffer)
+    )
+
+    if (pacienteAprovouOrcamentoRespondido) {
+      try {
+        await executarFerramenta(
+          "atualizar_lead",
+          {
+            contatoId,
+            conversaId,
+            etapaCorreta: "agendamento",
+          },
+          baseUrl
+        )
+        contextoContato.etapa = "agendamento"
+      } catch (err) {
+        console.error("[Agente] Erro ao avancar lead para agendamento:", err)
+      }
     }
   }
 
@@ -391,6 +581,23 @@ export async function processarMensagens(
     const mensagens: ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
       ...memoria,
+      ...(orcamentoRespondidoAtual
+        ? [
+            {
+              role: "system" as const,
+              content: `Ja existe orcamento respondido pelo Dr. Lucas para este contato (${contextoContato.orcamentoRespondido?.valor ?? "valor registrado"}). Nao chame gerar_orcamento novamente neste ciclo. Se o paciente aprovar ou pedir para marcar, conduza para agendamento: peca e-mail se faltar e use consultar_agenda antes de oferecer ou confirmar horario.`,
+            },
+          ]
+        : []),
+      ...(pacienteAprovouOrcamentoRespondido
+        ? [
+            {
+              role: "system" as const,
+              content:
+                "O paciente acabou de aprovar o orcamento ja enviado. Responda conduzindo para agendamento. Nao diga que enviou dados ao Dr. Lucas, nao prometa novo orcamento e nao chame gerar_orcamento.",
+            },
+          ]
+        : []),
       ...(pacienteAceitouQualificacao
         ? [
             {
@@ -545,7 +752,15 @@ export async function processarMensagens(
           try {
             const parsed = JSON.parse(resultado)
             gerouOrcamentoNestaRodada =
-              gerouOrcamentoNestaRodada || parsed?.ok === true
+              gerouOrcamentoNestaRodada ||
+              (parsed?.ok === true && parsed?.jaRespondido !== true)
+            if (parsed?.jaRespondido === true) {
+              mensagens.push({
+                role: "system",
+                content:
+                  "A tool informou que ja existe orcamento respondido. Nao diga que enviou dados agora; conduza para agendamento ou tire duvidas sobre o orcamento ja enviado.",
+              })
+            }
           } catch {
             // resposta invalida - segue fluxo normal
           }
@@ -619,7 +834,22 @@ export async function processarMensagens(
 
     if (
       textoResposta &&
+      orcamentoRespondidoAtual &&
+      textoPrometeEnvioOrcamento(textoResposta)
+    ) {
+      textoResposta = montarRespostaAgendamentoAposOrcamento(
+        contextoContato,
+        orcamentoRespondidoAtual
+      )
+      console.warn(
+        "[Agente] Resposta prometia novo orcamento, mas ja havia orcamento respondido - conduzindo para agendamento"
+      )
+    }
+
+    if (
+      textoResposta &&
       textoPrometeEnvioOrcamento(textoResposta) &&
+      !orcamentoRespondidoAtual &&
       !gerouOrcamentoNestaRodada &&
       contatoId
     ) {

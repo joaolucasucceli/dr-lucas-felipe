@@ -7,6 +7,11 @@ export interface ContextoContato {
   cicloAtual?: number
   ciclosCompletos?: number
   ultimoProcedimento?: string | null
+  orcamentoRespondido?: {
+    valor?: string | null
+    pdfUrl?: string | null
+    respondidoEm?: string | null
+  }
   /** Agendamento ativo usado apenas para remarcação/cancelamento. */
   agendamentoPendente?: {
     id: string
@@ -54,6 +59,12 @@ export async function gerarSystemPrompt(contexto?: ContextoContato): Promise<str
     if (contexto.procedimento) partes.push(`Procedimento de interesse: ${contexto.procedimento}`)
     if (contexto.etapa) partes.push(`Etapa atual no funil: ${contexto.etapa}`)
     if (contexto.sobreOPaciente) partes.push(`Informações já coletadas:\n${contexto.sobreOPaciente}`)
+
+    if (contexto.orcamentoRespondido) {
+      partes.push(
+        `ORCAMENTO JA RESPONDIDO PELO DR. LUCAS: valor ${contexto.orcamentoRespondido.valor ?? "registrado"}${contexto.orcamentoRespondido.pdfUrl ? `, PDF ${contexto.orcamentoRespondido.pdfUrl}` : ""}. Se o paciente aprovar, avance para agendamento. Nao chame gerar_orcamento de novo neste ciclo.`
+      )
+    }
 
     if (contexto.ehRetorno) {
       partes.push(`PACIENTE DE RETORNO — ${contexto.cicloAtual}º atendimento. ${contexto.ciclosCompletos} procedimento(s) anterior(es).`)

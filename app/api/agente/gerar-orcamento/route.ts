@@ -90,6 +90,28 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  // Se o Dr. Lucas ja respondeu um orcamento neste ciclo, nao cria uma nova
+  // pendencia so porque o modelo perdeu contexto ou o paciente aprovou seguir.
+  const { data: respondido } = await supabaseAdmin
+    .from("eventos_orcamento_pendente")
+    .select("id, respondidoEm, observacoes")
+    .eq("contatoId", contatoId)
+    .not("respondidoEm", "is", null)
+    .is("canceladoEm", null)
+    .order("respondidoEm", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (respondido) {
+    return NextResponse.json({
+      ok: true,
+      jaRespondido: true,
+      orcamentoRespondidoId: respondido.id,
+      respondidoEm: respondido.respondidoEm,
+      observacoes: respondido.observacoes,
+    })
+  }
+
   const id = criarId()
 
   const { error: errOrc } = await supabaseAdmin
