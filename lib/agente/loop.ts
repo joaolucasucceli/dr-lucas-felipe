@@ -160,6 +160,39 @@ function montarPerguntaQualificacaoFallback(contexto: ContextoContato): string {
   return `Perfeito${vocativo}. Pra eu montar seu orçamento certinho, qual é seu principal incômodo nessa região: gordura localizada, flacidez ou contorno?`
 }
 
+function textoPrometeEnvioOrcamento(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  const mencionaOrcamento =
+    normalizado.includes("orcamento") || normalizado.includes("valor certinho")
+  const prometeuEnvio =
+    normalizado.includes("mandei seus dados") ||
+    normalizado.includes("enviei seus dados") ||
+    normalizado.includes("dados foram enviados") ||
+    normalizado.includes("deixei o dr lucas com esses dados") ||
+    normalizado.includes("ja usei essas informacoes pra gerar")
+
+  return mencionaOrcamento && prometeuEnvio
+}
+
+function montarResumoOrcamento(
+  contexto: ContextoContato,
+  textoPaciente: string
+): string {
+  const partes = [
+    contexto.nome ? `Nome: ${contexto.nome}` : null,
+    contexto.procedimento ? `Procedimento: ${contexto.procedimento}` : null,
+    contexto.sobreOPaciente
+      ? `Informações coletadas: ${contexto.sobreOPaciente}`
+      : null,
+    textoPaciente ? `Última resposta do paciente: ${textoPaciente}` : null,
+  ].filter(Boolean)
+
+  return (
+    partes.join("\n") ||
+    "Paciente qualificado no WhatsApp solicitando orçamento exato com Dr. Lucas."
+  )
+}
+
 async function obterConfigWhatsapp() {
   // Pode haver mais de uma config ativa por bug operacional. Pegamos a mais
   // recente e logamos warn — comportamento antes era nao-deterministico
@@ -422,6 +455,7 @@ export async function processarMensagens(
     // alucinacao "acabei de enviar uma foto" sem chamar a tool.
     let proximoToolChoice: "auto" | { type: "function"; function: { name: string } } = "auto"
     let enviouMidiaNestaRodada = false
+    let gerouOrcamentoNestaRodada = false
 
     while (
       resposta.choices[0]?.message?.tool_calls &&
@@ -507,6 +541,16 @@ export async function processarMensagens(
           }
         }
 
+        if (fn.name === "gerar_orcamento") {
+          try {
+            const parsed = JSON.parse(resultado)
+            gerouOrcamentoNestaRodada =
+              gerouOrcamentoNestaRodada || parsed?.ok === true
+          } catch {
+            // resposta invalida - segue fluxo normal
+          }
+        }
+
         mensagens.push({
           role: "tool",
           tool_call_id: toolCall.id,
@@ -571,6 +615,44 @@ export async function processarMensagens(
     ) {
       textoResposta = `${textoResposta}\n---\n${montarPerguntaQualificacaoFallback(contextoContato)}`
       console.warn("[Agente] Midia enviada sem pergunta de qualificacao - anexando continuidade")
+    }
+
+    if (
+      textoResposta &&
+      textoPrometeEnvioOrcamento(textoResposta) &&
+      !gerouOrcamentoNestaRodada &&
+      contatoId
+    ) {
+      try {
+        const resultadoOrcamento = await executarFerramenta(
+          "gerar_orcamento",
+          {
+            contatoId,
+            conversaId,
+            resumoCaso: montarResumoOrcamento(contextoContato, textoBuffer),
+            prioridade: "normal",
+          },
+          baseUrl
+        )
+        const parsed = JSON.parse(resultadoOrcamento)
+        if (parsed?.ok === true) {
+          gerouOrcamentoNestaRodada = true
+          console.warn(
+            "[Agente] gerar_orcamento acionado por guarda anti-promessa"
+          )
+        } else {
+          console.error(
+            "[Agente] Guarda anti-promessa falhou ao gerar orçamento:",
+            resultadoOrcamento
+          )
+          textoResposta =
+            "Tive uma instabilidade aqui pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
+        }
+      } catch (err) {
+        console.error("[Agente] Erro na guarda anti-promessa de orçamento:", err)
+        textoResposta =
+          "Tive uma instabilidade aqui pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
+      }
     }
 
     if (!textoResposta) {
