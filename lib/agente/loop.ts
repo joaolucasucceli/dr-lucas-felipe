@@ -117,6 +117,101 @@ function ultimaMensagemAssistente(
   )
 }
 
+function saudacaoAtual(): string {
+  const partes = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date())
+  const hora = Number(partes.find((parte) => parte.type === "hour")?.value)
+
+  if (hora >= 5 && hora < 12) return "bom dia"
+  if (hora >= 12 && hora < 18) return "boa tarde"
+  return "boa noite"
+}
+
+function detectarServicoAbertura(texto: string): {
+  tipo: "mini_lipo" | "generico"
+  regiao?: string
+} | null {
+  const normalizado = normalizarTextoBusca(texto)
+  const regioes = [
+    { termo: "abdomen", label: "abdômen" },
+    { termo: "abdome", label: "abdômen" },
+    { termo: "barriga", label: "abdômen" },
+    { termo: "flanco", label: "flancos" },
+    { termo: "papada", label: "papada" },
+    { termo: "culote", label: "culote" },
+    { termo: "costas", label: "costas" },
+    { termo: "axila", label: "axilas" },
+    { termo: "braco", label: "braços" },
+  ]
+  const regiao = regioes.find((item) => normalizado.includes(item.termo))?.label
+
+  if (
+    normalizado.includes("mini lipo") ||
+    normalizado.includes("minilipo") ||
+    normalizado.includes("lipo") ||
+    regiao
+  ) {
+    return { tipo: "mini_lipo", regiao }
+  }
+
+  if (
+    normalizado.includes("procedimento") ||
+    normalizado.includes("estetico") ||
+    normalizado.includes("estetica") ||
+    normalizado.includes("anuncio") ||
+    normalizado.includes("como funciona") ||
+    normalizado.includes("quero saber")
+  ) {
+    return { tipo: "generico" }
+  }
+
+  return null
+}
+
+function montarAberturaObrigatoria(textoPaciente: string): string {
+  const servico = detectarServicoAbertura(textoPaciente)
+  const blocos = [
+    `Olá, ${saudacaoAtual()}!`,
+    "Meu nome é Ana Júlia, sou do time de pré-atendimento do Dr. Lucas Ferreira.",
+  ]
+
+  if (servico?.tipo === "mini_lipo") {
+    blocos.push(
+      "A mini lipo é uma técnica menos invasiva de lipoaspiração, focada em áreas específicas para refinar o contorno corporal."
+    )
+
+    if (servico.regiao) {
+      blocos.push(
+        `Pelo que você comentou, você quer entender se a mini lipo faz sentido para tratar ${servico.regiao}.`
+      )
+    } else {
+      blocos.push(
+        "Pelo que você comentou, você quer entender se a mini lipo faz sentido para o seu caso."
+      )
+    }
+  } else {
+    blocos.push(
+      "Vou entender melhor o que você está buscando para te orientar do jeito certo."
+    )
+  }
+
+  blocos.push(
+    "Antes da gente aprofundar mais ou eu te mandar alguns resultados de pacientes, como posso te chamar?"
+  )
+
+  return blocos.join("\n---\n")
+}
+
+function deveUsarFastPathAbertura(
+  contexto: ContextoContato,
+  memoria: Awaited<ReturnType<typeof obterMemoria>>
+): boolean {
+  return contexto.etapa === "acolhimento" && !ultimaMensagemAssistente(memoria)
+}
+
 function consentiuComQualificacao(
   textoPaciente: string,
   memoria: Awaited<ReturnType<typeof obterMemoria>>
@@ -1740,6 +1835,27 @@ export async function processarMensagens(
 
   try {
     const memoria = await obterMemoria(chatId)
+
+    if (deveUsarFastPathAbertura(contextoContato, memoria)) {
+      console.log("[Agente] Fast-path de abertura obrigatoria usado", {
+        contatoId,
+        conversaId,
+        etapa: contextoContato.etapa,
+      })
+
+      await enviarRespostaAgente({
+        chatId,
+        whatsapp,
+        contatoId,
+        conversaId,
+        configWa: configEnvio,
+        textoUsuario: textoBuffer,
+        textoResposta: montarAberturaObrigatoria(textoBuffer),
+      })
+
+      return contatoId ? { contatoId, conversaId } : null
+    }
+
     const pacienteAceitouQualificacao = consentiuComQualificacao(
       textoBuffer,
       memoria
