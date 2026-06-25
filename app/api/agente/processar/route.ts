@@ -4,16 +4,10 @@ import { z } from "zod"
 import { validarApiSecret } from "@/lib/api-auth"
 import { processarMensagens } from "@/lib/agente/loop"
 import { agendarProcessamento, deveProcessar } from "@/lib/agente/buffer"
-import { supabaseAdmin } from "@/lib/supabase"
-import { enviarDigitando } from "@/lib/uazapi"
 
-// Precisa aguentar o debounce de 20s + processamento do LLM.
-// Vercel serverless padrao (Hobby) = 10s; este endpoint declara 60s explicitamente.
+// Precisa aguentar o processamento do LLM e eventuais tools.
+// O loop interno usa deadline menor para evitar timeout de runtime.
 export const maxDuration = 60
-
-const DEBOUNCE_MS = 6_000
-// WhatsApp expira o presence "composing" em ~15s — renova a meio-caminho do debounce.
-const REFRESH_DIGITANDO_MS = 3_000
 
 const schema = z.object({
   chatId: z.string().min(1),
@@ -39,45 +33,17 @@ export async function POST(request: NextRequest) {
   }
 
   const { chatId } = parsed.data
+  console.log("[Processar] Requisicao recebida", { chatId })
 
   // Se ja ha um debounce em andamento, outra instancia vai processar. Retorna rapido.
   const podeProcessar = await deveProcessar(chatId)
   if (!podeProcessar) {
+    console.log("[Processar] Debounce ativo", { chatId })
     return NextResponse.json({ status: "debounce" })
   }
 
-  // Adquire o lock (TTL 20s). Webhooks posteriores veem isso e nao disparam.
+  // Adquire o lock curto. Webhooks posteriores veem isso e nao disparam.
   await agendarProcessamento(chatId)
-
-  // JLAU-551: renova "digitando" a meio-caminho do debounce pra nao expirar.
-  // O webhook ja disparou composing em t=0; aqui renovamos em t=10s.
-  const { data: configPresence } = await supabaseAdmin
-    .from("config_whatsapp")
-    .select("uazapiUrl, instanceToken")
-    .eq("ativo", true)
-    .maybeSingle()
-
-  await new Promise((resolve) => setTimeout(resolve, REFRESH_DIGITANDO_MS))
-
-  if (configPresence?.uazapiUrl && configPresence?.instanceToken) {
-    try {
-      await enviarDigitando(
-        configPresence.uazapiUrl,
-        configPresence.instanceToken,
-        chatId,
-        true
-      )
-    } catch (err) {
-      console.warn(
-        "[Processar] Falha ao renovar digitando:",
-        err instanceof Error ? err.message : err
-      )
-    }
-  }
-
-  await new Promise((resolve) =>
-    setTimeout(resolve, DEBOUNCE_MS - REFRESH_DIGITANDO_MS)
-  )
 
   // Processa todas as mensagens acumuladas no buffer. A Ana Júlia agora
   // mantém cadastro + funil sozinha via a tool `atualizar_lead` dentro do
@@ -89,5 +55,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Erro no processamento" }, { status: 500 })
   }
 
+  console.log("[Processar] Processamento concluido", { chatId })
   return NextResponse.json({ status: "processado" })
 }

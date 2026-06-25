@@ -12,9 +12,13 @@ import {
 } from "@/lib/agente/gatilho-midia"
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
+import { criarId, agora } from "@/lib/db-utils"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
-const MAX_TOOL_ITERATIONS = 10
+const MAX_TOOL_ITERATIONS = 4
+const PROCESSAMENTO_DEADLINE_MS = 45_000
+const OPENAI_TIMEOUT_MAX_MS = 18_000
+const DEADLINE_MARGIN_MS = 5_000
 
 export function segmentarResposta(texto: string): string[] {
   if (!texto) return []
@@ -158,6 +162,201 @@ function montarPerguntaQualificacaoFallback(contexto: ContextoContato): string {
   const primeiroNome = contexto.nome?.trim().split(/\s+/)[0]
   const vocativo = primeiroNome ? `, ${primeiroNome}` : ""
   return `Perfeito${vocativo}. Pra eu montar seu orçamento certinho, qual é seu principal incômodo nessa região: gordura localizada, flacidez ou contorno?`
+}
+
+function primeiroNome(contexto: ContextoContato): string | null {
+  return contexto.nome?.trim().split(/\s+/)[0] || null
+}
+
+function comVocativo(contexto: ContextoContato, texto: string): string {
+  const nome = primeiroNome(contexto)
+  return nome ? texto.replace("{nome}", `, ${nome}`) : texto.replace("{nome}", "")
+}
+
+function pacienteFezPerguntaOuMudouAssunto(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  if (texto.includes("?")) return true
+  return [
+    "quanto custa",
+    "qual valor",
+    "preco",
+    "preço",
+    "agenda",
+    "agendar",
+    "horario",
+    "horário",
+    "humano",
+    "atendente",
+    "dr lucas",
+  ].some((termo) => normalizado.includes(normalizarTextoBusca(termo)))
+}
+
+function perguntaPediuFoto(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return (
+    normalizado.includes("manda uma foto") ||
+    normalizado.includes("consegue mandar uma foto") ||
+    normalizado.includes("foto da regiao") ||
+    normalizado.includes("enviar uma foto")
+  )
+}
+
+function perguntaPediuTempo(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return (
+    normalizado.includes("ha quanto tempo") ||
+    normalizado.includes("quanto tempo essa regiao") ||
+    normalizado.includes("desde quando")
+  )
+}
+
+function perguntaPediuHistoricoSaude(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return (
+    normalizado.includes("procedimento estetico antes") ||
+    normalizado.includes("como esta sua saude") ||
+    normalizado.includes("problema de saude") ||
+    normalizado.includes("restricao")
+  )
+}
+
+function perguntaPediuIncomodo(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return (
+    normalizado.includes("principal incomodo") ||
+    normalizado.includes("gordura localizada") ||
+    normalizado.includes("flacidez") ||
+    normalizado.includes("contorno") ||
+    normalizado.includes("o que te incomoda") ||
+    normalizado.includes("objetivo")
+  )
+}
+
+function qualificacaoTemDadosMinimos(contexto: ContextoContato): boolean {
+  const info = normalizarTextoBusca(contexto.sobreOPaciente || "")
+  return Boolean(
+    contexto.procedimento &&
+      (info.includes("tempo de incomodo") || info.includes("desde sempre")) &&
+      (info.includes("historico") || info.includes("saude")) &&
+      (info.includes("principal incomodo") ||
+        info.includes("gordura localizada") ||
+        info.includes("flacidez") ||
+        info.includes("contorno"))
+  )
+}
+
+interface FastPathQualificacao {
+  tipo: string
+  texto: string
+  fato?: string
+  acionarOrcamento?: boolean
+}
+
+function montarFastPathQualificacao(params: {
+  textoPaciente: string
+  contexto: ContextoContato
+  memoria: Awaited<ReturnType<typeof obterMemoria>>
+  pacienteAceitouQualificacao: boolean
+  recebeuImagem: boolean
+}): FastPathQualificacao | null {
+  const {
+    textoPaciente,
+    contexto,
+    memoria,
+    pacienteAceitouQualificacao,
+    recebeuImagem,
+  } = params
+
+  if (contexto.etapa !== "qualificacao") return null
+  if (!pacienteAceitouQualificacao && pacienteFezPerguntaOuMudouAssunto(textoPaciente)) {
+    return null
+  }
+
+  if (pacienteAceitouQualificacao) {
+    return {
+      tipo: "consentimento_qualificacao",
+      texto: comVocativo(
+        contexto,
+        "Perfeito{nome}. Há quanto tempo essa região te incomoda?"
+      ),
+    }
+  }
+
+  const ultimaMensagem = ultimaMensagemAssistente(memoria)
+  if (!ultimaMensagem || !assistentePediuDadoQualificacao(ultimaMensagem)) {
+    return null
+  }
+
+  if (perguntaPediuTempo(ultimaMensagem)) {
+    return {
+      tipo: "tempo_incomodo",
+      fato: `Tempo de incômodo informado pelo paciente: ${textoPaciente.trim()}`,
+      texto: comVocativo(
+        contexto,
+        "Entendi{nome}. E você já fez algum procedimento estético antes ou tem algum problema de saúde importante?"
+      ),
+    }
+  }
+
+  if (perguntaPediuHistoricoSaude(ultimaMensagem)) {
+    return {
+      tipo: "historico_saude",
+      fato: `Histórico de procedimentos e saúde informado pelo paciente: ${textoPaciente.trim()}`,
+      texto: montarPerguntaQualificacaoFallback(contexto),
+    }
+  }
+
+  if (perguntaPediuIncomodo(ultimaMensagem)) {
+    return {
+      tipo: "principal_incomodo",
+      fato: `Principal incômodo informado pelo paciente: ${textoPaciente.trim()}`,
+      texto: comVocativo(
+        contexto,
+        "Perfeito{nome}. Pra eu mandar seus dados pro Dr. Lucas definir um orçamento exato, consegue me enviar uma foto atual da região?"
+      ),
+    }
+  }
+
+  if (perguntaPediuFoto(ultimaMensagem) && recebeuImagem) {
+    if (qualificacaoTemDadosMinimos(contexto)) {
+      return {
+        tipo: "foto_qualificacao_completa",
+        fato: "Paciente enviou foto da região pelo WhatsApp.",
+        texto: comVocativo(
+          contexto,
+          "Recebi a foto{nome}. Já mandei seus dados para o Dr. Lucas definir o orçamento exato. Assim que ele responder, te devolvo por aqui."
+        ),
+        acionarOrcamento: true,
+      }
+    }
+
+    return {
+      tipo: "foto_qualificacao_incompleta",
+      fato: "Paciente enviou foto da região pelo WhatsApp.",
+      texto: montarPerguntaQualificacaoFallback(contexto),
+    }
+  }
+
+  return null
+}
+
+function deadlineAproximando(inicioMs: number): boolean {
+  return Date.now() - inicioMs >= PROCESSAMENTO_DEADLINE_MS - DEADLINE_MARGIN_MS
+}
+
+function timeoutOpenAI(inicioMs: number): number {
+  const restante = PROCESSAMENTO_DEADLINE_MS - (Date.now() - inicioMs) - DEADLINE_MARGIN_MS
+  return Math.max(5_000, Math.min(OPENAI_TIMEOUT_MAX_MS, restante))
+}
+
+function montarFallbackDeadline(contexto: ContextoContato): string {
+  if (contexto.etapa === "qualificacao") {
+    return montarPerguntaQualificacaoFallback(contexto)
+  }
+  if (contexto.etapa === "orcamento") {
+    return "Tive uma instabilidade aqui pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
+  }
+  return "Deu uma travadinha aqui. Pode me mandar de novo?"
 }
 
 function textoPrometeEnvioOrcamento(texto: string): boolean {
@@ -356,6 +555,133 @@ function montarResumoOrcamento(
   )
 }
 
+async function adicionarFatoAoContato(
+  contatoId: string,
+  contexto: ContextoContato,
+  fato: string
+): Promise<void> {
+  const novoSobrePaciente = anexarFatoContexto(contexto.sobreOPaciente, fato)
+  if (novoSobrePaciente === contexto.sobreOPaciente) return
+
+  const { error } = await supabaseAdmin
+    .from("contatos")
+    .update({
+      sobreOPaciente: novoSobrePaciente,
+      atualizadoEm: agora(),
+    } as never)
+    .eq("id", contatoId)
+
+  if (error) {
+    console.error("[Agente] Fast-path falhou ao salvar fato:", {
+      contatoId,
+      erro: error.message,
+    })
+    throw new Error(`Falha ao salvar qualificação: ${error.message}`)
+  }
+
+  contexto.sobreOPaciente = novoSobrePaciente
+}
+
+async function registrarMensagemAgenteLocal(params: {
+  contatoId: string
+  conversaId: string | null
+  conteudo: string
+}): Promise<void> {
+  const { contatoId, conversaId, conteudo } = params
+  if (!conversaId) return
+
+  const tsAgora = agora()
+  const { error } = await supabaseAdmin
+    .from("mensagens_whatsapp")
+    .insert({
+      id: criarId(),
+      conversaId,
+      contatoId,
+      messageIdWhatsapp: `agente_${criarId()}`,
+      tipo: "texto" as never,
+      conteudo,
+      remetente: "agente" as never,
+    })
+
+  if (error) {
+    console.error("[Agente] Falha ao registrar mensagem do agente:", {
+      contatoId,
+      conversaId,
+      erro: error.message,
+    })
+    return
+  }
+
+  await supabaseAdmin
+    .from("conversas")
+    .update({ ultimaMensagemEm: tsAgora, atualizadoEm: tsAgora })
+    .eq("id", conversaId)
+}
+
+async function enviarRespostaAgente(params: {
+  chatId: string
+  whatsapp: string
+  contatoId: string | null
+  conversaId: string | null
+  configWa: { uazapiUrl: string; instanceToken: string }
+  textoUsuario: string
+  textoResposta: string
+}): Promise<boolean> {
+  const {
+    chatId,
+    whatsapp,
+    contatoId,
+    conversaId,
+    configWa,
+    textoUsuario,
+    textoResposta,
+  } = params
+  const textoFinal = humanizarTexto(textoResposta)
+  const segmentos = segmentarResposta(textoFinal)
+
+  if (segmentos.length === 0) return false
+
+  for (let i = 0; i < segmentos.length; i++) {
+    const segmento = segmentos[i]
+    console.log("[Agente] Enviando segmento WhatsApp", {
+      contatoId,
+      conversaId,
+      indice: i + 1,
+      total: segmentos.length,
+      caracteres: segmento.length,
+    })
+
+    try {
+      await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
+    } catch {
+      console.warn("[Agente] Erro ao enviar digitando antes do segmento")
+    }
+
+    const typingDelay = Math.min(segmento.length * 12, 1200)
+    await new Promise((resolve) => setTimeout(resolve, typingDelay))
+
+    await enviarMensagem(
+      configWa.uazapiUrl,
+      configWa.instanceToken,
+      whatsapp,
+      segmento
+    )
+
+    if (contatoId) {
+      await registrarMensagemAgenteLocal({ contatoId, conversaId, conteudo: segmento })
+    }
+
+    if (i < segmentos.length - 1) {
+      const delay = Math.floor(Math.random() * 601) + 600
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+  }
+
+  await adicionarAMemoria(chatId, { role: "user", content: textoUsuario })
+  await adicionarAMemoria(chatId, { role: "assistant", content: textoFinal })
+  return true
+}
+
 async function obterConfigWhatsapp() {
   // Pode haver mais de uma config ativa por bug operacional. Pegamos a mais
   // recente e logamos warn — comportamento antes era nao-deterministico
@@ -395,16 +721,26 @@ export interface ResultadoProcessamento {
 export async function processarMensagens(
   chatId: string
 ): Promise<ResultadoProcessamento | null> {
+  const inicioProcessamento = Date.now()
   const buffer = await obterELimparBuffer(chatId)
+  console.log("[Agente] Processamento iniciado", {
+    chatId,
+    mensagensBuffer: buffer.length,
+  })
   if (buffer.length === 0) return null
 
   const textoBuffer = buffer.map((m) => m.conteudo).join("\n")
+  const recebeuImagem = buffer.some((m) => m.tipo === "imagem")
   const whatsapp = extrairNumero(chatId)
 
   const configWa = await obterConfigWhatsapp()
   if (!configWa?.instanceToken || !configWa?.uazapiUrl) {
     console.warn("[Agente] ConfigWhatsapp não encontrada ou incompleta — não será possível responder")
     return null
+  }
+  const configEnvio = {
+    uazapiUrl: configWa.uazapiUrl,
+    instanceToken: configWa.instanceToken,
   }
 
   const baseUrl = getBaseUrl()
@@ -600,7 +936,7 @@ export async function processarMensagens(
   }
 
   try {
-    await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
+    await enviarDigitando(configEnvio.uazapiUrl, configEnvio.instanceToken, chatId, true)
   } catch {
     console.warn("[Agente] Erro ao enviar indicador de digitacao")
   }
@@ -640,15 +976,79 @@ export async function processarMensagens(
     }
   }
 
+  let enviouResposta = false
+
   try {
     const memoria = await obterMemoria(chatId)
-    const systemPrompt = await gerarSystemPrompt(contextoContato)
     const pacienteAceitouQualificacao = consentiuComQualificacao(textoBuffer, memoria)
     const pacienteRespondeuQualificacao = respondeuPerguntaQualificacao(
       textoBuffer,
       memoria,
       contextoContato.etapa
     )
+
+    const fastPath = montarFastPathQualificacao({
+      textoPaciente: textoBuffer,
+      contexto: contextoContato,
+      memoria,
+      pacienteAceitouQualificacao,
+      recebeuImagem,
+    })
+
+    if (fastPath && contatoId) {
+      console.log("[Agente] Fast-path de qualificação usado", {
+        contatoId,
+        conversaId,
+        tipo: fastPath.tipo,
+      })
+
+      if (fastPath.fato) {
+        await adicionarFatoAoContato(contatoId, contextoContato, fastPath.fato)
+      }
+
+      let textoRespostaFastPath = fastPath.texto
+      if (fastPath.acionarOrcamento) {
+        const resultadoOrcamento = await executarFerramenta(
+          "gerar_orcamento",
+          {
+            contatoId,
+            conversaId,
+            resumoCaso: montarResumoOrcamento(contextoContato, textoBuffer),
+            prioridade: "normal",
+          },
+          baseUrl
+        )
+        const parsed = JSON.parse(resultadoOrcamento)
+        if (parsed?.ok !== true) {
+          textoRespostaFastPath =
+            "Recebi a foto, mas tive uma instabilidade pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
+        } else {
+          contextoContato.etapa = "orcamento"
+        }
+      }
+
+      enviouResposta = await enviarRespostaAgente({
+        chatId,
+        whatsapp,
+        contatoId,
+        conversaId,
+        configWa: configEnvio,
+        textoUsuario: textoBuffer,
+        textoResposta: textoRespostaFastPath,
+      })
+
+      return { contatoId, conversaId }
+    }
+
+    console.log("[Agente] Usando loop OpenAI", {
+      contatoId,
+      conversaId,
+      etapa: contextoContato.etapa,
+      pacienteAceitouQualificacao,
+      pacienteRespondeuQualificacao,
+    })
+
+    const systemPrompt = await gerarSystemPrompt(contextoContato)
     const mensagens: ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
       ...memoria,
@@ -718,6 +1118,29 @@ export async function processarMensagens(
         )
       : ferramentasAgente
 
+    if (deadlineAproximando(inicioProcessamento)) {
+      console.warn("[Agente] Deadline antes do OpenAI - enviando fallback", {
+        contatoId,
+        conversaId,
+        etapa: contextoContato.etapa,
+      })
+      enviouResposta = await enviarRespostaAgente({
+        chatId,
+        whatsapp,
+        contatoId,
+        conversaId,
+        configWa: configEnvio,
+        textoUsuario: textoBuffer,
+        textoResposta: montarFallbackDeadline(contextoContato),
+      })
+      return contatoId ? { contatoId, conversaId } : null
+    }
+
+    console.log("[Agente] Chamando OpenAI", {
+      contatoId,
+      conversaId,
+      etapa: contextoContato.etapa,
+    })
     let resposta = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: mensagens,
@@ -725,6 +1148,14 @@ export async function processarMensagens(
       tool_choice: forcarBuscaConteudo
         ? { type: "function", function: { name: "buscar_conteudo" } }
         : "auto",
+    }, {
+      timeout: timeoutOpenAI(inicioProcessamento),
+    })
+    console.log("[Agente] OpenAI respondeu", {
+      contatoId,
+      conversaId,
+      toolCalls: resposta.choices[0]?.message?.tool_calls?.length ?? 0,
+      temTexto: Boolean(resposta.choices[0]?.message?.content),
     })
 
     let iteracoes = 0
@@ -734,12 +1165,23 @@ export async function processarMensagens(
     let proximoToolChoice: "auto" | { type: "function"; function: { name: string } } = "auto"
     let enviouMidiaNestaRodada = false
     let gerouOrcamentoNestaRodada = false
+    let textoRespostaForcado: string | null = null
 
     while (
       resposta.choices[0]?.message?.tool_calls &&
       resposta.choices[0].message.tool_calls.length > 0 &&
       iteracoes < MAX_TOOL_ITERATIONS
     ) {
+      if (deadlineAproximando(inicioProcessamento)) {
+        textoRespostaForcado = montarFallbackDeadline(contextoContato)
+        console.warn("[Agente] Deadline antes de processar tools - usando fallback", {
+          contatoId,
+          conversaId,
+          iteracoes,
+        })
+        break
+      }
+
       const toolCalls = resposta.choices[0].message.tool_calls
 
       mensagens.push(resposta.choices[0].message)
@@ -784,6 +1226,17 @@ export async function processarMensagens(
         if (toolsComIds.has(fn.name)) {
           if (contatoId) args.contatoId = contatoId
           if (conversaId) args.conversaId = conversaId
+        }
+
+        if (deadlineAproximando(inicioProcessamento)) {
+          textoRespostaForcado = montarFallbackDeadline(contextoContato)
+          console.warn("[Agente] Deadline antes de executar tool - usando fallback", {
+            contatoId,
+            conversaId,
+            ferramenta: fn.name,
+            iteracoes,
+          })
+          break
         }
 
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
@@ -852,21 +1305,46 @@ export async function processarMensagens(
         }
       }
 
+      if (textoRespostaForcado) break
+
       proximoToolChoice = forcarEnviarMidiaNext
         ? { type: "function", function: { name: "enviar_midia" } }
         : "auto"
 
+      if (deadlineAproximando(inicioProcessamento)) {
+        textoRespostaForcado = montarFallbackDeadline(contextoContato)
+        console.warn("[Agente] Deadline antes de nova chamada OpenAI - usando fallback", {
+          contatoId,
+          conversaId,
+          iteracoes,
+        })
+        break
+      }
+
+      console.log("[Agente] Chamando OpenAI após tools", {
+        contatoId,
+        conversaId,
+        iteracoes: iteracoes + 1,
+      })
       resposta = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: mensagens,
         tools: ferramentasDaRodada,
         tool_choice: proximoToolChoice,
+      }, {
+        timeout: timeoutOpenAI(inicioProcessamento),
+      })
+      console.log("[Agente] OpenAI pós-tool respondeu", {
+        contatoId,
+        conversaId,
+        toolCalls: resposta.choices[0]?.message?.tool_calls?.length ?? 0,
+        temTexto: Boolean(resposta.choices[0]?.message?.content),
       })
 
       iteracoes++
     }
 
-    let textoResposta = resposta.choices[0]?.message?.content || ""
+    let textoResposta = textoRespostaForcado ?? (resposta.choices[0]?.message?.content || "")
 
     // Se atingiu MAX_TOOL_ITERATIONS sem texto final, forca uma chamada SEM
     // tools pra obrigar GPT-4o a fechar com prosa. Antes desse fallback, o
@@ -881,6 +1359,8 @@ export async function processarMensagens(
           model: "gpt-4o",
           messages: mensagens,
           tool_choice: "none",
+        }, {
+          timeout: timeoutOpenAI(inicioProcessamento),
         })
         textoResposta = fallback.choices[0]?.message?.content || ""
       } catch (err) {
@@ -963,59 +1443,35 @@ export async function processarMensagens(
       console.warn("[Agente] Resposta vazia mesmo apos fallback — enviando frase neutra")
     }
 
-    textoResposta = humanizarTexto(textoResposta)
-
-    const segmentos = segmentarResposta(textoResposta)
-
-    for (let i = 0; i < segmentos.length; i++) {
-      const segmento = segmentos[i]
-
-      try {
-        await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, true)
-      } catch {
-        console.warn("[Agente] Erro ao enviar digitando antes do segmento")
-      }
-
-      const typingDelay = Math.min(segmento.length * 12, 1200)
-      await new Promise((resolve) => setTimeout(resolve, typingDelay))
-
-      await enviarMensagem(
-        configWa.uazapiUrl,
-        configWa.instanceToken,
-        whatsapp,
-        segmento
-      )
-
-      if (contatoId) {
-        try {
-          await executarFerramenta(
-            "registrar_mensagem",
-            {
-              conversaId,
-              contatoId,
-              conteudo: segmento,
-              direcao: "agente",
-            },
-            baseUrl
-          )
-        } catch {
-          // Não impedir envio se registro falhar
-        }
-      }
-
-      if (i < segmentos.length - 1) {
-        const delay = Math.floor(Math.random() * 601) + 600
-        await new Promise((resolve) => setTimeout(resolve, delay))
-      }
-    }
-
-    await adicionarAMemoria(chatId, { role: "user", content: textoBuffer })
-    await adicionarAMemoria(chatId, { role: "assistant", content: textoResposta })
+    enviouResposta = await enviarRespostaAgente({
+      chatId,
+      whatsapp,
+      contatoId,
+      conversaId,
+      configWa: configEnvio,
+      textoUsuario: textoBuffer,
+      textoResposta,
+    })
   } catch (error) {
     console.error("[Agente] Erro no loop de resposta:", error)
+    if (!enviouResposta) {
+      try {
+        await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: montarFallbackDeadline(contextoContato),
+        })
+      } catch (fallbackError) {
+        console.error("[Agente] Falha ao enviar fallback apos erro:", fallbackError)
+      }
+    }
   } finally {
     try {
-      await enviarDigitando(configWa.uazapiUrl, configWa.instanceToken, chatId, false)
+      await enviarDigitando(configEnvio.uazapiUrl, configEnvio.instanceToken, chatId, false)
     } catch {
       console.warn("[Agente] Erro ao parar indicador de digitacao")
     }

@@ -309,9 +309,9 @@ export const ferramentasAgente: ChatCompletionTool[] = [
 ]
 
 /** Timeout maximo para execucao de uma ferramenta (evita agente travado) */
-const TIMEOUT_FERRAMENTA_MS = 30_000
+const TIMEOUT_FERRAMENTA_MS = 15_000
 
-/** Executa uma ferramenta do agente via fetch interno com timeout de 30s */
+/** Executa uma ferramenta do agente via fetch interno com timeout curto */
 export async function executarFerramenta(
   nome: string,
   args: Record<string, unknown>,
@@ -319,6 +319,8 @@ export async function executarFerramenta(
 ): Promise<string> {
   const nomeRota = nome.replace(/_/g, "-")
   const url = `${baseUrl}/api/agente/${nomeRota}`
+  const inicio = Date.now()
+  console.log("[Ferramenta] inicio", { nome })
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_FERRAMENTA_MS)
@@ -352,6 +354,11 @@ export async function executarFerramenta(
       })
     }
 
+    console.log("[Ferramenta] fim", {
+      nome,
+      status: res.status,
+      duracaoMs: Date.now() - inicio,
+    })
     return JSON.stringify(data)
   } catch (error) {
     // Timeout / network / parse error: precisa devolver {ok:false} canonico

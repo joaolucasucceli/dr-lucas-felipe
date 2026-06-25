@@ -35,7 +35,7 @@ export async function obterELimparBuffer(
   ) as BufferMensagem[]
 }
 
-/** Agenda processamento com debounce de 20s */
+/** Agenda processamento com debounce curto para evitar execucoes simultaneas */
 export async function agendarProcessamento(chatId: string): Promise<void> {
   const chave = `${chatId}${DEBOUNCE_SUFFIX}`
   await redis.set(chave, "1", { ex: DEBOUNCE_TTL })
