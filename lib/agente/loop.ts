@@ -1677,11 +1677,17 @@ export async function processarMensagens(
   if (contatoId) {
     const { data: contatoResponsavel } = await supabaseAdmin
       .from("contatos")
-      .select("responsavelId")
+      .select("responsavelId, statusFunil")
       .eq("id", contatoId)
       .maybeSingle()
 
-    if (contatoResponsavel?.responsavelId) {
+    const responsavelHumanoAtivo =
+      contatoResponsavel?.responsavelId &&
+      contatoResponsavel.statusFunil !== "consulta_agendada"
+    const atendimentoHumanoAtivo =
+      contatoResponsavel?.statusFunil === "atendimento_humano"
+
+    if (responsavelHumanoAtivo || atendimentoHumanoAtivo) {
       console.log(
         `[Agente] Atendimento humano ativo no contato ${contatoId} - automacao pausada`
       )

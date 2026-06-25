@@ -37,8 +37,11 @@ export interface ContatoDetalhado {
     id: string
     dataHora: string
     status: string
+    tipo: string
+    duracao: number | null
     observacao: string | null
-    ciclo: number
+    googleEventUrl: string | null
+    criadoEm: string
     procedimento: { id: string; nome: string } | null
   }>
   conversas: Array<{

@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import {
   ArrowLeft,
+  CalendarClock,
+  CheckCircle2,
+  ExternalLink,
   MessageCircle,
   Pause,
   Play,
-  Sparkles,
   Star,
   Trash2,
   UserCog,
@@ -18,7 +20,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ErrorState } from "@/components/features/shared/ErrorState"
 import { SkeletonCard } from "@/components/features/shared/SkeletonCard"
-import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/features/shared/StatusBadge"
 import { ConfirmDialog } from "@/components/features/shared/ConfirmDialog"
 import { PageHeader } from "@/components/features/shared/PageHeader"
@@ -41,6 +42,15 @@ const OPCOES_STATUS_FUNIL = ETAPAS_FUNIL.map((etapa) => ({
 }))
 
 const ROTULO_ETAPA: Record<string, string> = { ...FUNIL_LABELS }
+
+const ROTULOS_TIPO_AGENDAMENTO: Record<string, string> = {
+  diagnostico: "Diagnóstico online",
+  consulta_online: "Consulta online",
+  consulta_presencial: "Consulta presencial",
+  procedimento: "Procedimento",
+  retorno: "Retorno",
+  pos_operatorio: "Pós-operatório",
+}
 
 const OPCOES_SEXO = [
   { value: "feminino", label: "Feminino" },
@@ -158,6 +168,22 @@ export default function ContatoDetalhePage({ params }: PageProps) {
     }
   }
 
+  async function handleMarcarAgendamentoRealizado(agendamentoId: string) {
+    setProcessando(true)
+    try {
+      const res = await fetch(`/api/agendamentos/${agendamentoId}/realizar`, {
+        method: "POST",
+      })
+      if (!res.ok) throw new Error((await res.json()).error || "Erro")
+      toast.success("Atendimento marcado como realizado")
+      recarregar()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao marcar como realizado")
+    } finally {
+      setProcessando(false)
+    }
+  }
+
   if (carregando) {
     return (
       <div>
@@ -197,41 +223,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
         Voltar
       </Button>
 
-      {/* JLU-171 (F 25/05): destaque do botão promover quando lead já passou pela consulta */}
-      {!ehPaciente && ehGestor && contato.statusFunil === "consulta_agendada" && (
-        <div className="flex flex-col gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-            <div>
-              <p className="font-medium text-emerald-700 dark:text-emerald-400">
-                Pronto pra virar paciente
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Esse lead já agendou (ou compareceu) na avaliação. Promova pra abrir prontuário com anamnese, evoluções, sinais vitais e fotos médicas.
-              </p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
-            onClick={() => setConfirmPromover(true)}
-          >
-            <Star className="mr-2 h-4 w-4" />
-            Promover a paciente
-          </Button>
-        </div>
-      )}
-
       <PageHeader titulo={contato.nome} descricao={descricaoHeader}>
-        {!ehPaciente && contato.statusFunil && (
-          <StatusBadge status={contato.statusFunil} />
-        )}
-        {!ehPaciente && conversaAtiva?.modoConversa === "humano" && (
-          <Badge variant="secondary" className="gap-1 border-amber-500/40 bg-amber-500/10 text-amber-400">
-            <Pause className="h-3 w-3" />
-            IA pausada
-          </Badge>
-        )}
         {ehGestor && !ehPaciente && (
           <Button size="sm" onClick={() => setConfirmPromover(true)}>
             <Star className="mr-2 h-4 w-4" />
@@ -452,6 +444,101 @@ export default function ContatoDetalhePage({ params }: PageProps) {
         {/* Coluna direita: Histórico (lead) ou Prontuário (paciente) */}
         <div className="space-y-6">
           {!ehPaciente && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <CalendarClock className="h-4 w-4" />
+                    Agendamentos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {contato.agendamentos.length === 0 ? (
+                    <p className="p-6 text-center text-sm text-muted-foreground">
+                      Nenhum agendamento registrado.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {contato.agendamentos.map((agendamento) => {
+                        const agendamentoAtivo =
+                          agendamento.status === "agendado" ||
+                          agendamento.status === "remarcado"
+                        const podeMarcarRealizado =
+                          ehGestor &&
+                          agendamentoAtivo &&
+                          contato.statusFunil !== "atendimento_humano"
+
+                        return (
+                          <div
+                            key={agendamento.id}
+                            className="rounded-lg border bg-card/50 p-4"
+                          >
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="font-medium">
+                                    {formatarData(
+                                      agendamento.dataHora,
+                                      "dd/MM/yyyy 'às' HH:mm"
+                                    )}
+                                  </span>
+                                  <StatusBadge
+                                    status={agendamento.status}
+                                    variante="agendamento"
+                                  />
+                                </div>
+                                <div className="space-y-1 text-sm text-muted-foreground">
+                                  <p>
+                                    Tipo:{" "}
+                                    {ROTULOS_TIPO_AGENDAMENTO[agendamento.tipo] ??
+                                      agendamento.tipo ??
+                                      "Diagnóstico online"}
+                                  </p>
+                                  <p>
+                                    Procedimento:{" "}
+                                    {agendamento.procedimento?.nome ?? "Não informado"}
+                                  </p>
+                                  {agendamento.observacao && (
+                                    <p>Observação: {agendamento.observacao}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {agendamento.googleEventUrl && (
+                                  <Button size="sm" variant="outline" asChild>
+                                    <a
+                                      href={agendamento.googleEventUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      <ExternalLink className="mr-2 h-4 w-4" />
+                                      Google Agenda
+                                    </a>
+                                  </Button>
+                                )}
+                                {podeMarcarRealizado && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleMarcarAgendamentoRealizado(agendamento.id)
+                                    }
+                                    disabled={processando}
+                                  >
+                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                    Marcar como realizado
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Histórico de atendimento</CardTitle>
@@ -516,6 +603,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                 )}
               </CardContent>
             </Card>
+            </>
           )}
 
           {ehPaciente && (
