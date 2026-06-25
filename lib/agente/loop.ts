@@ -366,6 +366,11 @@ function textoPrometeEnvioOrcamento(texto: string): boolean {
   const prometeuEnvio =
     normalizado.includes("mandei seus dados") ||
     normalizado.includes("enviei seus dados") ||
+    normalizado.includes("vou mandar seus dados") ||
+    normalizado.includes("vou enviar seus dados") ||
+    normalizado.includes("vou deixar o dr lucas") ||
+    normalizado.includes("vou passar pro dr lucas") ||
+    normalizado.includes("vou mandar pro dr lucas") ||
     normalizado.includes("dados foram enviados") ||
     normalizado.includes("deixei o dr lucas com esses dados") ||
     normalizado.includes("ja usei essas informacoes pra gerar")
@@ -378,6 +383,12 @@ interface OrcamentoRespondidoContexto {
   respondidoEm: string | null
   observacoes: string | null
   resumoCaso: string | null
+}
+
+interface SlotAgendamentoOferecido {
+  label: string
+  dataIso: string
+  hora: string
 }
 
 function limparTrechoNome(raw: string): string | null {
@@ -470,15 +481,22 @@ function detectarInteresseQualificacao(texto: string): {
 function pacienteAprovouOrcamento(texto: string): boolean {
   const normalizado = normalizarTextoBusca(texto)
   return [
+    "aprovado",
     "faz sentido",
     "quero marcar",
     "quero agendar",
+    "quero a reuniao",
     "vamos marcar",
     "vamos agendar",
+    "vamos sim",
+    "sim vamos",
     "pode marcar",
     "pode agendar",
     "bora marcar",
     "bora agendar",
+    "fechado",
+    "pode ser",
+    "deu certo",
     "marcar a reuniao",
     "agendar a reuniao",
     "seguir para agenda",
@@ -505,6 +523,417 @@ function montarRespostaAgendamentoAposOrcamento(
     : "Esse orcamento ja foi definido pelo Dr. Lucas"
 
   return `${prefixo}${vocativo}. Se fizer sentido pra voce, me passa seu e-mail e o melhor dia ou turno para eu consultar a agenda da reuniao de diagnostico online?`
+}
+
+const MARCADOR_SLOTS_AGENDAMENTO = "Slots de agendamento oferecidos (sistema):"
+
+function extrairEmailDoTexto(texto: string): string | null {
+  const match = texto.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
+  return match?.[0]?.toLowerCase() ?? null
+}
+
+function formatarHoraSlot(dataIso: string): string {
+  const hora = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(dataIso))
+  const [h, m] = hora.split(":")
+  return `${Number(h)}h${m && m !== "00" ? m : ""}`
+}
+
+function extrairHorarioEscolhido(texto: string): string | null {
+  const normalizado = normalizarTextoBusca(texto)
+  const match = normalizado.match(
+    /\b([01]?\d|2[0-3])\s*(?:(?:h|:)\s*([0-5]\d))?\s*(?:h|horas)?\b/
+  )
+  if (!match) return null
+
+  const hora = Number(match[1])
+  const minuto = match[2]
+  return `${hora}h${minuto && minuto !== "00" ? minuto : ""}`
+}
+
+function extrairSlotsOferecidos(sobreOPaciente?: string): SlotAgendamentoOferecido[] {
+  if (!sobreOPaciente) return []
+
+  const regex = /Slots de agendamento oferecidos \(sistema\): ([^\n]+)/g
+  let match: RegExpExecArray | null
+  let ultimoJson: string | null = null
+  while ((match = regex.exec(sobreOPaciente)) !== null) {
+    ultimoJson = match[1]
+  }
+  if (!ultimoJson) return []
+
+  try {
+    const parsed = JSON.parse(ultimoJson) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map((slot) => {
+        const item = slot as Partial<SlotAgendamentoOferecido>
+        if (!item.label || !item.dataIso) return null
+        return {
+          label: item.label,
+          dataIso: item.dataIso,
+          hora: item.hora || formatarHoraSlot(item.dataIso),
+        }
+      })
+      .filter((slot): slot is SlotAgendamentoOferecido => Boolean(slot))
+  } catch (err) {
+    console.warn("[Agente] Falha ao ler slots persistidos:", err)
+    return []
+  }
+}
+
+function resolverSlotEscolhido(
+  textoPaciente: string,
+  slots: SlotAgendamentoOferecido[]
+): SlotAgendamentoOferecido | null {
+  if (slots.length === 0) return null
+
+  const normalizado = normalizarTextoBusca(textoPaciente)
+  if (/\b(1|primeir[ao])\b/.test(normalizado)) return slots[0] ?? null
+  if (/\b(2|segund[ao])\b/.test(normalizado)) return slots[1] ?? null
+  if (/\b(3|terceir[ao])\b/.test(normalizado)) return slots[2] ?? null
+
+  const porLabel = slots.find((slot) =>
+    normalizado.includes(normalizarTextoBusca(slot.label))
+  )
+  if (porLabel) return porLabel
+
+  const horaEscolhida = extrairHorarioEscolhido(textoPaciente)
+  if (!horaEscolhida) return null
+
+  return slots.find((slot) => slot.hora === horaEscolhida) ?? null
+}
+
+function detectarPreferenciaPeriodo(texto: string): "manha" | "tarde" | null {
+  const normalizado = normalizarTextoBusca(texto)
+  if (normalizado.includes("manha")) return "manha"
+  if (normalizado.includes("tarde")) return "tarde"
+  return null
+}
+
+function filtrarSlotsPorPeriodo(
+  slots: SlotAgendamentoOferecido[],
+  periodo: "manha" | "tarde" | null
+): SlotAgendamentoOferecido[] {
+  if (!periodo) return slots
+  return slots.filter((slot) => {
+    const hora = Number(
+      new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit",
+        hour12: false,
+      }).format(new Date(slot.dataIso))
+    )
+    return periodo === "manha" ? hora < 12 : hora >= 12
+  })
+}
+
+function formatarListaSlots(slots: SlotAgendamentoOferecido[]): string {
+  if (slots.length === 1) return slots[0].label
+  if (slots.length === 2) return `${slots[0].label} ou ${slots[1].label}`
+  return `${slots[0].label}, ${slots[1].label} ou ${slots[2].label}`
+}
+
+async function consultarSlotsAgendamento(
+  baseUrl: string
+): Promise<SlotAgendamentoOferecido[]> {
+  const resultado = await executarFerramenta("consultar_agenda", {}, baseUrl)
+  const parsed = JSON.parse(resultado) as {
+    ok?: boolean
+    error?: string
+    slots?: Array<{ label?: string; dataIso?: string }>
+  }
+
+  if (parsed.ok === false) {
+    throw new Error(parsed.error || "Falha ao consultar agenda")
+  }
+
+  return (parsed.slots ?? [])
+    .filter((slot): slot is { label: string; dataIso: string } =>
+      Boolean(slot.label && slot.dataIso)
+    )
+    .map((slot) => ({
+      label: slot.label,
+      dataIso: slot.dataIso,
+      hora: formatarHoraSlot(slot.dataIso),
+    }))
+}
+
+async function salvarEmailContato(
+  contatoId: string,
+  contexto: ContextoContato,
+  email: string
+): Promise<void> {
+  if (contexto.email === email) return
+
+  const { error } = await supabaseAdmin
+    .from("contatos")
+    .update({ email, atualizadoEm: agora() } as never)
+    .eq("id", contatoId)
+
+  if (error) {
+    console.error("[Agente] Falha ao salvar email informado:", {
+      contatoId,
+      erro: error.message,
+    })
+    throw new Error(`Falha ao salvar e-mail: ${error.message}`)
+  }
+
+  contexto.email = email
+  await adicionarFatoAoContato(
+    contatoId,
+    contexto,
+    `E-mail informado pelo paciente: ${email}`
+  )
+}
+
+async function salvarSlotsOferecidos(
+  contatoId: string,
+  contexto: ContextoContato,
+  slots: SlotAgendamentoOferecido[]
+): Promise<void> {
+  const payload = slots.map((slot) => ({
+    label: slot.label,
+    dataIso: slot.dataIso,
+    hora: slot.hora,
+  }))
+  await adicionarFatoAoContato(
+    contatoId,
+    contexto,
+    `${MARCADOR_SLOTS_AGENDAMENTO} ${JSON.stringify(payload)}`
+  )
+}
+
+async function avancarParaAgendamento(
+  contatoId: string,
+  conversaId: string | null,
+  contexto: ContextoContato,
+  baseUrl: string
+): Promise<void> {
+  if (contexto.etapa === "agendamento") return
+
+  const resultado = await executarFerramenta(
+    "atualizar_lead",
+    {
+      contatoId,
+      conversaId,
+      etapaCorreta: "agendamento",
+    },
+    baseUrl
+  )
+  const parsed = JSON.parse(resultado) as { ok?: boolean; error?: string }
+  if (parsed.ok === false) {
+    throw new Error(parsed.error || "Falha ao avançar para agendamento")
+  }
+
+  contexto.etapa = "agendamento"
+}
+
+async function montarOfertaSlotsAgendamento(params: {
+  contatoId: string
+  contexto: ContextoContato
+  baseUrl: string
+  textoPaciente: string
+}): Promise<string> {
+  const { contatoId, contexto, baseUrl, textoPaciente } = params
+  const slots = await consultarSlotsAgendamento(baseUrl)
+  const periodo = detectarPreferenciaPeriodo(textoPaciente)
+  const slotsPreferidos = filtrarSlotsPorPeriodo(slots, periodo)
+  const slotsOferta = (slotsPreferidos.length > 0 ? slotsPreferidos : slots).slice(0, 3)
+
+  console.log("[Agente] Slots consultados para agendamento", {
+    contatoId,
+    quantidade: slots.length,
+    periodo,
+    oferecidos: slotsOferta.map((slot) => slot.label),
+  })
+
+  if (slotsOferta.length === 0) {
+    return "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
+  }
+
+  await salvarSlotsOferecidos(contatoId, contexto, slotsOferta)
+
+  return comVocativo(
+    contexto,
+    `Perfeito{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+  )
+}
+
+async function registrarAgendamentoDeterministico(params: {
+  contatoId: string
+  conversaId: string | null
+  contexto: ContextoContato
+  baseUrl: string
+  slot: SlotAgendamentoOferecido
+  email: string
+}): Promise<{ ok: true; texto: string } | { ok: false; texto: string }> {
+  const { contatoId, conversaId, contexto, baseUrl, slot, email } = params
+
+  console.log("[Agente] Registrando agendamento deterministico", {
+    contatoId,
+    conversaId,
+    slot: slot.label,
+    dataIso: slot.dataIso,
+  })
+
+  const resultado = await executarFerramenta(
+    "registrar_agendamento",
+    {
+      contatoId,
+      conversaId,
+      dataHora: slot.dataIso,
+      email,
+      observacao: `Reunião de diagnóstico online agendada pela Ana Júlia após orçamento aprovado. Slot escolhido: ${slot.label}.`,
+    },
+    baseUrl
+  )
+  const parsed = JSON.parse(resultado) as {
+    ok?: boolean
+    error?: string
+    agendamento?: { id?: string }
+    sincronizado?: boolean
+  }
+
+  console.log("[Agente] Resultado registrar_agendamento", {
+    contatoId,
+    ok: parsed.ok !== false && Boolean(parsed.agendamento),
+    agendamentoId: parsed.agendamento?.id,
+    sincronizado: parsed.sincronizado,
+    erro: parsed.error,
+  })
+
+  if (parsed.ok === false || !parsed.agendamento) {
+    return {
+      ok: false,
+      texto:
+        parsed.error ||
+        "Esse horário acabou ficando indisponível antes de eu conseguir confirmar.",
+    }
+  }
+
+  contexto.etapa = "consulta_agendada"
+  return {
+    ok: true,
+    texto: comVocativo(
+      contexto,
+      `Agendado{nome}! Ficou para ${slot.label}. O convite vai chegar no e-mail ${email}.`
+    ),
+  }
+}
+
+async function montarFastPathAgendamento(params: {
+  textoPaciente: string
+  contexto: ContextoContato
+  contatoId: string
+  conversaId: string | null
+  baseUrl: string
+  orcamentoRespondido: OrcamentoRespondidoContexto | null
+}): Promise<string | null> {
+  const {
+    textoPaciente,
+    contexto,
+    contatoId,
+    conversaId,
+    baseUrl,
+    orcamentoRespondido,
+  } = params
+  if (!orcamentoRespondido) return null
+  if (contexto.etapa === "consulta_agendada" || contexto.agendamentoPendente) {
+    return null
+  }
+
+  const emailInformado = extrairEmailDoTexto(textoPaciente)
+  const slotsOferecidos = extrairSlotsOferecidos(contexto.sobreOPaciente)
+  const slotEscolhido = resolverSlotEscolhido(textoPaciente, slotsOferecidos)
+  const horarioSolicitado = extrairHorarioEscolhido(textoPaciente)
+  const aprovou = pacienteAprovouOrcamento(textoPaciente)
+  const preferiuPeriodo = Boolean(detectarPreferenciaPeriodo(textoPaciente))
+  const emAgendamento = contexto.etapa === "agendamento"
+  const deveEntrarNoAgendamento =
+    aprovou ||
+    emailInformado ||
+    slotEscolhido ||
+    horarioSolicitado ||
+    preferiuPeriodo ||
+    emAgendamento
+
+  if (!deveEntrarNoAgendamento) return null
+
+  console.log("[Agente] Fast-path de agendamento pos-orcamento", {
+    contatoId,
+    conversaId,
+    etapa: contexto.etapa,
+    aprovou,
+    emailInformado: Boolean(emailInformado),
+    slotEscolhido: slotEscolhido?.label,
+    horarioSolicitado,
+    preferiuPeriodo,
+  })
+
+  await avancarParaAgendamento(contatoId, conversaId, contexto, baseUrl)
+
+  if (emailInformado) {
+    await salvarEmailContato(contatoId, contexto, emailInformado)
+  }
+
+  const email = emailInformado || contexto.email || null
+
+  if (slotEscolhido) {
+    if (!email) {
+      return comVocativo(
+        contexto,
+        `Esse horário funciona, sim{nome}. Pra eu confirmar na agenda e enviar o convite, me passa seu e-mail?`
+      )
+    }
+
+    const resultadoAgendamento = await registrarAgendamentoDeterministico({
+      contatoId,
+      conversaId,
+      contexto,
+      baseUrl,
+      slot: slotEscolhido,
+      email,
+    })
+
+    if (resultadoAgendamento.ok) return resultadoAgendamento.texto
+
+    const novaOferta = await montarOfertaSlotsAgendamento({
+      contatoId,
+      contexto,
+      baseUrl,
+      textoPaciente,
+    })
+    return `${resultadoAgendamento.texto} Consultei de novo e ${novaOferta.charAt(0).toLowerCase()}${novaOferta.slice(1)}`
+  }
+
+  if (horarioSolicitado) {
+    const novaOferta = await montarOfertaSlotsAgendamento({
+      contatoId,
+      contexto,
+      baseUrl,
+      textoPaciente,
+    })
+    return `Esse horário não estava na lista que eu tinha acabado de te oferecer. ${novaOferta}`
+  }
+
+  if (!email) {
+    return comVocativo(
+      contexto,
+      `Perfeito{nome}. Pra eu marcar sua reunião de diagnóstico online, me passa seu e-mail para eu enviar o convite?`
+    )
+  }
+
+  return montarOfertaSlotsAgendamento({
+    contatoId,
+    contexto,
+    baseUrl,
+    textoPaciente,
+  })
 }
 
 async function obterUltimoOrcamentoRespondido(
@@ -777,6 +1206,7 @@ export async function processarMensagens(
           : undefined
       contextoContato = {
         nome: nomePaciente,
+        email: resultadoPaciente.contato.email,
         procedimento: resultadoPaciente.contato.procedimentoInteresse,
         etapa: resultadoPaciente.contato.statusFunil,
         sobreOPaciente: resultadoPaciente.sobreOPaciente,
@@ -986,6 +1416,37 @@ export async function processarMensagens(
       memoria,
       contextoContato.etapa
     )
+
+    if (contatoId && orcamentoRespondidoAtual) {
+      const fastPathAgendamento = await montarFastPathAgendamento({
+        textoPaciente: textoBuffer,
+        contexto: contextoContato,
+        contatoId,
+        conversaId,
+        baseUrl,
+        orcamentoRespondido: orcamentoRespondidoAtual,
+      })
+
+      if (fastPathAgendamento) {
+        console.log("[Agente] Fast-path de agendamento respondeu sem OpenAI", {
+          contatoId,
+          conversaId,
+          etapa: contextoContato.etapa,
+        })
+
+        enviouResposta = await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: fastPathAgendamento,
+        })
+
+        return { contatoId, conversaId }
+      }
+    }
 
     const fastPath = montarFastPathQualificacao({
       textoPaciente: textoBuffer,
@@ -1418,6 +1879,10 @@ export async function processarMensagens(
         const parsed = JSON.parse(resultadoOrcamento)
         if (parsed?.ok === true) {
           gerouOrcamentoNestaRodada = true
+          textoResposta = comVocativo(
+            contextoContato,
+            "Perfeito{nome}. Mandei seus dados para o Dr. Lucas definir o orçamento exato. Assim que ele responder, te devolvo por aqui."
+          )
           console.warn(
             "[Agente] gerar_orcamento acionado por guarda anti-promessa"
           )

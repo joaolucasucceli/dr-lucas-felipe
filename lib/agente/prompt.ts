@@ -1,5 +1,6 @@
 export interface ContextoContato {
   nome?: string
+  email?: string | null
   procedimento?: string
   etapa?: string
   sobreOPaciente?: string
@@ -56,6 +57,7 @@ export async function gerarSystemPrompt(contexto?: ContextoContato): Promise<str
   if (contexto) {
     const partes: string[] = []
     if (contexto.nome) partes.push(`Nome do paciente: ${contexto.nome}`)
+    if (contexto.email) partes.push(`E-mail do paciente: ${contexto.email}`)
     if (contexto.procedimento) partes.push(`Procedimento de interesse: ${contexto.procedimento}`)
     if (contexto.etapa) partes.push(`Etapa atual no funil: ${contexto.etapa}`)
     if (contexto.sobreOPaciente) partes.push(`Informações já coletadas:\n${contexto.sobreOPaciente}`)

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   const { data: contatoExistente } = await supabaseAdmin
     .from("contatos")
     .select(
-      "id, nome, whatsapp, tipo, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
+      "id, nome, whatsapp, email, tipo, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
     )
     .eq("whatsapp", whatsapp)
     .is("deletadoEm", null)
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         statusFunil: "acolhimento",
       })
       .select(
-        "id, nome, whatsapp, tipo, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
+        "id, nome, whatsapp, email, tipo, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
       )
       .single()
 
@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
       id: contato.id,
       nome: contato.nome,
       whatsapp: contato.whatsapp,
+      email: contato.email,
       tipo: contato.tipo,
       statusFunil: contato.statusFunil,
       procedimentoInteresse: contato.procedimentoInteresse,
