@@ -28,6 +28,8 @@ export type Database = {
           id: string
           observacao: string | null
           procedimentoId: string | null
+          realizadoEm: string | null
+          realizadoPor: string | null
           sincronizado: boolean
           status: Database["public"]["Enums"]["StatusAgendamento"]
           tipo: Database["public"]["Enums"]["TipoAgendamento"]
@@ -45,6 +47,8 @@ export type Database = {
           id: string
           observacao?: string | null
           procedimentoId?: string | null
+          realizadoEm?: string | null
+          realizadoPor?: string | null
           sincronizado?: boolean
           status?: Database["public"]["Enums"]["StatusAgendamento"]
           tipo?: Database["public"]["Enums"]["TipoAgendamento"]
@@ -62,6 +66,8 @@ export type Database = {
           id?: string
           observacao?: string | null
           procedimentoId?: string | null
+          realizadoEm?: string | null
+          realizadoPor?: string | null
           sincronizado?: boolean
           status?: Database["public"]["Enums"]["StatusAgendamento"]
           tipo?: Database["public"]["Enums"]["TipoAgendamento"]
@@ -74,15 +80,22 @@ export type Database = {
             referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "agendamentos_procedimentoId_fkey"
-            columns: ["procedimentoId"]
-            isOneToOne: false
-            referencedRelation: "procedimentos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+            {
+              foreignKeyName: "agendamentos_procedimentoId_fkey"
+              columns: ["procedimentoId"]
+              isOneToOne: false
+              referencedRelation: "procedimentos"
+              referencedColumns: ["id"]
+            },
+            {
+              foreignKeyName: "agendamentos_realizadoPor_fkey"
+              columns: ["realizadoPor"]
+              isOneToOne: false
+              referencedRelation: "usuarios"
+              referencedColumns: ["id"]
+            },
+          ]
+        }
       analista_logs: {
         Row: {
           aplicado: boolean

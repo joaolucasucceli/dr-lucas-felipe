@@ -31,12 +31,19 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 
   const { data: agendamento } = await supabaseAdmin
     .from("agendamentos")
-    .select("id, contatoId, status, dataHora")
+    .select("id, contatoId, status, dataHora, realizadoEm, realizadoPor")
     .eq("id", id)
     .maybeSingle()
 
   if (!agendamento) {
     return NextResponse.json({ error: "Agendamento não encontrado" }, { status: 404 })
+  }
+
+  if (agendamento.realizadoEm) {
+    return NextResponse.json(
+      { error: "Agendamento já marcado como realizado" },
+      { status: 409 }
+    )
   }
 
   if (!["agendado", "remarcado"].includes(agendamento.status)) {
@@ -66,6 +73,25 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
   }
 
   const tsAgora = agora()
+
+  const { data: agendamentoAtualizado, error: erroAgendamento } = await supabaseAdmin
+    .from("agendamentos")
+    .update({
+      realizadoEm: tsAgora,
+      realizadoPor: auth.session.user.id,
+      atualizadoEm: tsAgora,
+    } as never)
+    .eq("id", id)
+    .is("realizadoEm", null)
+    .select("id, contatoId, status, dataHora, realizadoEm, realizadoPor")
+    .maybeSingle()
+
+  if (erroAgendamento || !agendamentoAtualizado) {
+    return NextResponse.json(
+      { error: erroAgendamento?.message || "Agendamento já marcado como realizado" },
+      { status: erroAgendamento ? 500 : 409 }
+    )
+  }
 
   const { data: conversaAberta } = await supabaseAdmin
     .from("conversas")
@@ -118,6 +144,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       conversaId: conversaAberta?.id ?? null,
     },
     dadosDepois: {
+      agendamento: agendamentoAtualizado,
       contato: contatoAtualizado,
       conversaId: conversaAberta?.id ?? null,
     },
@@ -125,6 +152,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 
   return NextResponse.json({
     sucesso: true,
+    agendamento: agendamentoAtualizado,
     contato: contatoAtualizado,
     conversaId: conversaAberta?.id ?? null,
   })

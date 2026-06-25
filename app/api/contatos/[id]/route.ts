@@ -29,7 +29,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     .select(`
       ${SELECT_CONTATO_ATUALIZADO},
       responsavel:usuarios!contatos_responsavelId_fkey(id, nome),
-      agendamentos(id, dataHora, status, tipo, duracao, observacao, googleEventUrl, criadoEm, procedimento:procedimentos(id, nome)),
+      agendamentos(id, dataHora, status, tipo, duracao, observacao, googleEventUrl, criadoEm, realizadoEm, realizadoPor, procedimento:procedimentos(id, nome)),
       conversas(id, ciclo, etapa, modoConversa, criadoEm, atualizadoEm, mensagens:mensagens_whatsapp(id, tipo, conteudo, remetente, mediaUrl, mediaType, criadoEm, replyTo:mensagens_whatsapp!replyToId(id, conteudo, remetente))),
       fotos:fotos_contato(id, url, descricao, categoria, tipoAnalise, criadoEm),
       prontuario:prontuarios(*, anamnese:anamneses(*))

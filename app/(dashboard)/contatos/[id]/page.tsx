@@ -16,6 +16,7 @@ import {
   UserCog,
 } from "lucide-react"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ErrorState } from "@/components/features/shared/ErrorState"
@@ -206,6 +207,13 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   // humano ou retoma a IA em leads com conversa em andamento.
   const conversaAtiva = contato.conversas?.[0] ?? null
   const atendimentoIA = !contato.responsavelId && conversaAtiva?.modoConversa === "ia"
+  const possuiAgendamentoRealizado = contato.agendamentos.some(
+    (agendamento) => Boolean(agendamento.realizadoEm)
+  )
+  const mostrarControleIa =
+    !ehPaciente &&
+    conversaAtiva &&
+    !(contato.statusFunil === "atendimento_humano" && possuiAgendamentoRealizado)
   const dataNascimentoInput = contato.dataNascimento
     ? new Date(contato.dataNascimento).toISOString().slice(0, 10)
     : ""
@@ -230,7 +238,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
             Promover a paciente
           </Button>
         )}
-        {!ehPaciente && conversaAtiva && (
+        {mostrarControleIa && conversaAtiva && (
           <Button
             size="sm"
             variant="outline"
@@ -463,9 +471,11 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                         const agendamentoAtivo =
                           agendamento.status === "agendado" ||
                           agendamento.status === "remarcado"
+                        const agendamentoRealizado = Boolean(agendamento.realizadoEm)
                         const podeMarcarRealizado =
                           ehGestor &&
                           agendamentoAtivo &&
+                          !agendamentoRealizado &&
                           contato.statusFunil !== "atendimento_humano"
 
                         return (
@@ -486,6 +496,14 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                                     status={agendamento.status}
                                     variante="agendamento"
                                   />
+                                  {agendamentoRealizado && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                                    >
+                                      Realizado
+                                    </Badge>
+                                  )}
                                 </div>
                                 <div className="space-y-1 text-sm text-muted-foreground">
                                   <p>
@@ -500,6 +518,15 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                                   </p>
                                   {agendamento.observacao && (
                                     <p>Observação: {agendamento.observacao}</p>
+                                  )}
+                                  {agendamento.realizadoEm && (
+                                    <p>
+                                      Realizado em{" "}
+                                      {formatarData(
+                                        agendamento.realizadoEm,
+                                        "dd/MM/yyyy 'às' HH:mm"
+                                      )}
+                                    </p>
                                   )}
                                 </div>
                               </div>

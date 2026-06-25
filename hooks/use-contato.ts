@@ -42,6 +42,8 @@ export interface ContatoDetalhado {
     observacao: string | null
     googleEventUrl: string | null
     criadoEm: string
+    realizadoEm: string | null
+    realizadoPor: string | null
     procedimento: { id: string; nome: string } | null
   }>
   conversas: Array<{
