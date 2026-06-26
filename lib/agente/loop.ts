@@ -979,6 +979,7 @@ interface JanelaAgendaSolicitada {
   dataInicio: string
   dataFim: string
   labelDia: string
+  ymd: string
   horario?: string | null
 }
 
@@ -1223,14 +1224,28 @@ function formatarHoraSlot(dataIso: string): string {
 
 function extrairHorarioEscolhido(texto: string): string | null {
   const normalizado = normalizarTextoBusca(texto)
-  const match = normalizado.match(
-    /\b([01]?\d|2[0-3])\s*(?:(?:h|:)\s*([0-5]\d))?\s*(?:h|horas)?\b/
-  )
+  const padroes = [
+    /\b(?:as|a|para|pra|pelas|por volta das)\s+([01]?\d|2[0-3])\s*(?:(?:h|:)\s*([0-5]\d))?\s*(?:h|horas)?\b/,
+    /\b([01]?\d|2[0-3])\s*h\s*([0-5]\d)?\b/,
+    /\b([01]?\d|2[0-3]):([0-5]\d)\b/,
+    /\b([01]?\d|2[0-3])\s+horas\b/,
+  ]
+  const match = padroes.map((padrao) => normalizado.match(padrao)).find(Boolean)
   if (!match) return null
 
   const hora = Number(match[1])
   const minuto = match[2]
   return `${hora}h${minuto && minuto !== "00" ? minuto : ""}`
+}
+
+function slotsSemIgnorados(
+  slots: SlotAgendamentoOferecido[],
+  slotsIgnorados: SlotAgendamentoOferecido[] = []
+): SlotAgendamentoOferecido[] {
+  if (slotsIgnorados.length === 0) return slots
+
+  const dataIsoIgnorados = new Set(slotsIgnorados.map((slot) => slot.dataIso))
+  return slots.filter((slot) => !dataIsoIgnorados.has(slot.dataIso))
 }
 
 function chaveEstadoAgendamento(chatId: string): string {
@@ -1542,6 +1557,7 @@ function detectarJanelaAgenda(texto: string): JanelaAgendaSolicitada | null {
   return {
     ...inicioFimDiaSP(ymd),
     labelDia: labelDiaAgenda(ymd),
+    ymd,
     horario: extrairHorarioEscolhido(texto),
   }
 }
@@ -1579,6 +1595,24 @@ async function consultarSlotsAgendamento(
       dataIso: slot.dataIso,
       hora: formatarHoraSlot(slot.dataIso),
     }))
+}
+
+async function consultarSlotsProximosAposJanela(
+  baseUrl: string,
+  janela: JanelaAgendaSolicitada,
+  slotsIgnorados: SlotAgendamentoOferecido[] = []
+): Promise<SlotAgendamentoOferecido[]> {
+  const inicioYmd = somarDiasSP(janela.ymd, 1)
+  const fimYmd = somarDiasSP(janela.ymd, 14)
+  const proximosSlots = await consultarSlotsAgendamento(baseUrl, {
+    ...inicioFimDiaSP(inicioYmd),
+    dataFim: dataSP(fimYmd, 23, 59).toISOString(),
+    labelDia: labelDiaAgenda(inicioYmd),
+    ymd: inicioYmd,
+    horario: null,
+  })
+
+  return slotsSemIgnorados(proximosSlots, slotsIgnorados).slice(0, 3)
 }
 
 async function salvarEmailContato(
@@ -1642,6 +1676,8 @@ async function montarOfertaSlotsAgendamento(params: {
   textoPaciente: string
   origem: "orcamento" | "estimativa"
   estimativa?: EstimativaEnviada | null
+  slotsIgnorados?: SlotAgendamentoOferecido[]
+  reconsulta?: boolean
 }): Promise<string> {
   const {
     chatId,
@@ -1651,13 +1687,16 @@ async function montarOfertaSlotsAgendamento(params: {
     textoPaciente,
     origem,
     estimativa,
+    slotsIgnorados = [],
+    reconsulta = false,
   } = params
   const janela = detectarJanelaAgenda(textoPaciente)
   const slots = await consultarSlotsAgendamento(baseUrl, janela)
   const periodo = janela ? null : detectarPreferenciaPeriodo(textoPaciente)
-  const slotsPreferidos = filtrarSlotsPorPeriodo(slots, periodo)
+  const slotsDisponiveis = slotsSemIgnorados(slots, slotsIgnorados)
+  const slotsPreferidos = filtrarSlotsPorPeriodo(slotsDisponiveis, periodo)
   const baseOferta = (
-    slotsPreferidos.length > 0 ? slotsPreferidos : slots
+    slotsPreferidos.length > 0 ? slotsPreferidos : slotsDisponiveis
   )
   const slotExato = janela?.horario
     ? baseOferta.find((slot) => slot.hora === janela.horario) ?? null
@@ -1671,12 +1710,39 @@ async function montarOfertaSlotsAgendamento(params: {
     horarioSolicitado: janela?.horario,
     periodo,
     oferecidos: slotsOferta.map((slot) => slot.label),
+    ignorados: slotsIgnorados.map((slot) => slot.label),
   })
 
   if (slotsOferta.length === 0) {
-    return janela
-      ? `Consultei a agenda para ${janela.labelDia} e não encontrei horários livres nesse dia. Se você tiver outro dia em mente, me manda que eu consulto pra você.`
-      : "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
+    if (janela) {
+      const proximosSlots = await consultarSlotsProximosAposJanela(
+        baseUrl,
+        janela,
+        slotsIgnorados
+      )
+
+      if (proximosSlots.length > 0) {
+        await salvarEstadoAgendamento(chatId, {
+          origem,
+          slots: proximosSlots,
+          slotEscolhido: null,
+          estimativa: estimativa ?? null,
+          atualizadoEm: agora(),
+        })
+
+        return comVocativo(
+          contexto,
+          `Consultei a agenda para ${janela.labelDia} e não encontrei horários livres nesse dia{nome}. Mas encontrei opções logo na sequência: ${formatarListaSlots(proximosSlots)}. Qual desses fica melhor pra você?`
+        )
+      }
+
+      return comVocativo(
+        contexto,
+        `Consultei a agenda para ${janela.labelDia} e não encontrei horários livres nesse dia{nome}. Também não achei horários nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?`
+      )
+    }
+
+    return "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
   }
 
   await salvarEstadoAgendamento(chatId, {
@@ -1698,9 +1764,13 @@ async function montarOfertaSlotsAgendamento(params: {
 
   return comVocativo(
     contexto,
-    janela
-      ? `Perfeito{nome}. Consultei a agenda do Dr. Lucas para ${janela.labelDia} e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
-      : `Perfeito{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+    reconsulta
+      ? `Consultei de novo e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+      : janela?.horario && !slotExato
+        ? `Não encontrei ${janela.horario} livre em ${janela.labelDia}{nome}, mas tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+        : janela
+          ? `Perfeito{nome}. Consultei a agenda do Dr. Lucas para ${janela.labelDia} e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+          : `Perfeito{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
   )
 }
 
@@ -1750,9 +1820,7 @@ async function registrarAgendamentoDeterministico(params: {
   if (parsed.ok === false || !parsed.agendamento) {
     return {
       ok: false,
-      texto:
-        parsed.error ||
-        "Esse horário acabou ficando indisponível antes de eu conseguir confirmar.",
+      texto: "Esse horário acabou de ficar indisponível.",
     }
   }
 
@@ -1920,8 +1988,10 @@ async function montarFastPathAgendamento(params: {
       textoPaciente,
       origem,
       estimativa: estadoAtual?.estimativa ?? null,
+      slotsIgnorados: [slotParaRegistrar],
+      reconsulta: true,
     })
-    return `${resultadoAgendamento.texto} Consultei de novo e ${novaOferta.charAt(0).toLowerCase()}${novaOferta.slice(1)}`
+    return `${resultadoAgendamento.texto} ${novaOferta}`
   }
 
   if (horarioSolicitado) {
@@ -1954,15 +2024,26 @@ async function montarOfertaSlotsRemarcacao(params: {
   baseUrl: string
   textoPaciente: string
   agendamentoId: string
+  slotsIgnorados?: SlotAgendamentoOferecido[]
+  reconsulta?: boolean
 }): Promise<string> {
-  const { chatId, contatoId, contexto, baseUrl, textoPaciente, agendamentoId } =
-    params
+  const {
+    chatId,
+    contatoId,
+    contexto,
+    baseUrl,
+    textoPaciente,
+    agendamentoId,
+    slotsIgnorados = [],
+    reconsulta = false,
+  } = params
   const janela = detectarJanelaAgenda(textoPaciente)
   const slots = await consultarSlotsAgendamento(baseUrl, janela)
   const periodo = janela ? null : detectarPreferenciaPeriodo(textoPaciente)
-  const slotsPreferidos = filtrarSlotsPorPeriodo(slots, periodo)
+  const slotsDisponiveis = slotsSemIgnorados(slots, slotsIgnorados)
+  const slotsPreferidos = filtrarSlotsPorPeriodo(slotsDisponiveis, periodo)
   const baseOferta = (
-    slotsPreferidos.length > 0 ? slotsPreferidos : slots
+    slotsPreferidos.length > 0 ? slotsPreferidos : slotsDisponiveis
   )
   const slotExato = janela?.horario
     ? baseOferta.find((slot) => slot.hora === janela.horario) ?? null
@@ -1977,12 +2058,41 @@ async function montarOfertaSlotsRemarcacao(params: {
     horarioSolicitado: janela?.horario,
     periodo,
     oferecidos: slotsOferta.map((slot) => slot.label),
+    ignorados: slotsIgnorados.map((slot) => slot.label),
   })
 
   if (slotsOferta.length === 0) {
-    return janela
-      ? `Consultei a agenda para ${janela.labelDia} e não encontrei horários livres nesse dia. Se você tiver outro dia em mente, me manda que eu consulto pra você.`
-      : "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
+    if (janela) {
+      const proximosSlots = await consultarSlotsProximosAposJanela(
+        baseUrl,
+        janela,
+        slotsIgnorados
+      )
+
+      if (proximosSlots.length > 0) {
+        await salvarEstadoAgendamento(chatId, {
+          origem: "remarcacao",
+          slots: proximosSlots,
+          slotEscolhido: null,
+          estimativa: null,
+          agendamentoId,
+          cancelamentoPendente: false,
+          atualizadoEm: agora(),
+        })
+
+        return comVocativo(
+          contexto,
+          `Consultei a agenda para ${janela.labelDia} e não encontrei horários livres nesse dia{nome}. Mas encontrei opções logo na sequência: ${formatarListaSlots(proximosSlots)}. Qual desses fica melhor pra você?`
+        )
+      }
+
+      return comVocativo(
+        contexto,
+        `Consultei a agenda para ${janela.labelDia} e não encontrei horários livres nesse dia{nome}. Também não achei horários nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?`
+      )
+    }
+
+    return "Consultei a agenda agora e não encontrei horários livres nos próximos dias. Me confirma se você prefere manhã ou tarde que eu tento buscar uma janela melhor?"
   }
 
   await salvarEstadoAgendamento(chatId, {
@@ -2004,9 +2114,13 @@ async function montarOfertaSlotsRemarcacao(params: {
 
   return comVocativo(
     contexto,
-    janela
-      ? `Claro{nome}. Consultei a agenda do Dr. Lucas para ${janela.labelDia} e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
-      : `Claro{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+    reconsulta
+      ? `Consultei de novo e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+      : janela?.horario && !slotExato
+        ? `Não encontrei ${janela.horario} livre em ${janela.labelDia}{nome}, mas tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+        : janela
+          ? `Claro{nome}. Consultei a agenda do Dr. Lucas para ${janela.labelDia} e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
+          : `Claro{nome}. Consultei a agenda do Dr. Lucas e tenho ${formatarListaSlots(slotsOferta)}. Qual desses fica melhor pra você?`
   )
 }
 
@@ -2035,9 +2149,7 @@ async function remarcarAgendamentoDeterministico(params: {
   if (parsed.ok === false || !parsed.agendamento) {
     return {
       ok: false,
-      texto:
-        parsed.error ||
-        "Esse horário acabou ficando indisponível antes de eu conseguir remarcar.",
+      texto: "Esse horário acabou de ficar indisponível.",
     }
   }
 
@@ -2166,8 +2278,10 @@ async function montarFastPathReagendamentoCancelamento(params: {
       baseUrl,
       textoPaciente,
       agendamentoId: agendamento.id,
+      slotsIgnorados: [slotEscolhido],
+      reconsulta: true,
     })
-    return `${resultado.texto} Consultei de novo e ${novaOferta.charAt(0).toLowerCase()}${novaOferta.slice(1)}`
+    return `${resultado.texto} ${novaOferta}`
   }
 
   if (pedidoCancelamento) {
