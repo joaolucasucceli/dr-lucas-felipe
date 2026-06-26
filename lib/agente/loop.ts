@@ -288,6 +288,30 @@ function pacienteEscolheuOrcamentoPreciso(texto: string): boolean {
   ].some((termo) => normalizado.includes(termo))
 }
 
+function pacienteEscolheuAgendamentoAposEstimativa(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return [
+    "agendar",
+    "agendamento",
+    "marcar",
+    "reuniao",
+    "avaliacao",
+    "diagnostico",
+    "ver horario",
+    "ver horarios",
+    "pode ver horario",
+    "pode ver horarios",
+    "quero marcar",
+    "quero agendar",
+    "quero a reuniao",
+    "gostei",
+    "ok pra mim",
+    "pra mim ok",
+    "esta bom pra mim",
+    "ta bom pra mim",
+  ].some((termo) => normalizado.includes(termo))
+}
+
 function pacienteRespondeuSimAmbiguoEscolhaInicial(texto: string): boolean {
   const normalizado = normalizarTextoBusca(texto)
   return ["sim", "s", "ok", "okay", "ta", "ta bom"].includes(normalizado)
@@ -312,7 +336,7 @@ function montarRespostaEstimativaInicial(
 
   return comVocativo(
     contexto,
-    `Claro{nome}. Como estimativa inicial, ${procedimento} costuma ficar em ${estimativa.faixa}.\n---\nEsse valor é aproximado. O orçamento mais preciso depende do seu caso e é definido pelo Dr. Lucas com base nas informações e na foto.`
+    `Claro{nome}. Como estimativa inicial, ${procedimento} costuma ficar em ${estimativa.faixa}.\n---\nEsse valor é aproximado. O orçamento mais preciso depende do seu caso e é definido pelo Dr. Lucas com base nas informações e na foto.\n---\nSe essa estimativa fizer sentido pra você, posso seguir por dois caminhos: te faço algumas perguntas rápidas pra buscar um orçamento mais preciso, ou já vejo os horários da reunião online com o Dr. Lucas. Qual você prefere?`
   )
 }
 
@@ -1772,16 +1796,58 @@ async function montarFastPathAgendamento(params: {
       : null
   if (!origem) return null
 
+  const estimativaSemSlots =
+    origem === "estimativa" && (estadoAtual?.slots?.length ?? 0) === 0
+
+  if (
+    estimativaSemSlots &&
+    pacienteEscolheuOrcamentoPreciso(textoPaciente)
+  ) {
+    console.log("[Agente] Fast-path pos-estimativa para orcamento preciso", {
+      contatoId,
+      conversaId,
+      etapa: contexto.etapa,
+    })
+
+    if (contexto.etapa !== "qualificacao") {
+      await executarFerramenta(
+        "atualizar_lead",
+        {
+          contatoId,
+          conversaId,
+          etapaCorreta: "qualificacao",
+        },
+        baseUrl
+      )
+      contexto.etapa = "qualificacao"
+    }
+
+    return montarProximaPerguntaQualificacao(contexto)
+  }
+
+  if (
+    estimativaSemSlots &&
+    pacienteRespondeuSimAmbiguoEscolhaInicial(textoPaciente)
+  ) {
+    return comVocativo(
+      contexto,
+      "Você prefere que eu busque um orçamento mais preciso ou que eu veja horários da reunião com o Dr. Lucas{nome}?"
+    )
+  }
+
   const emailInformado = extrairEmailDoTexto(textoPaciente)
   const slotsOferecidos = estadoAtual?.slots ?? []
   const slotEscolhido = resolverSlotEscolhido(textoPaciente, slotsOferecidos)
   const horarioSolicitado = extrairHorarioEscolhido(textoPaciente)
   const aprovou = pacienteAprovouOrcamento(textoPaciente)
+  const escolheuAgendamentoAposEstimativa =
+    estimativaSemSlots && pacienteEscolheuAgendamentoAposEstimativa(textoPaciente)
   const preferiuPeriodo = Boolean(detectarPreferenciaPeriodo(textoPaciente))
   const emAgendamento = contexto.etapa === "agendamento"
   const slotPendente = estadoAtual?.slotEscolhido ?? null
   const deveEntrarNoAgendamento =
     aprovou ||
+    escolheuAgendamentoAposEstimativa ||
     emailInformado ||
     slotEscolhido ||
     slotPendente ||
@@ -1801,6 +1867,7 @@ async function montarFastPathAgendamento(params: {
     slotPendente: slotPendente?.label,
     horarioSolicitado,
     preferiuPeriodo,
+    escolheuAgendamentoAposEstimativa,
     origem,
   })
 
