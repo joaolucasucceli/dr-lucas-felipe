@@ -100,6 +100,7 @@ function ehRespostaAfirmativaCurta(texto: string): boolean {
 
 function assistentePediuPerguntasQualificacao(texto: string): boolean {
   const normalizado = normalizarTextoBusca(texto)
+  if (assistenteOfereceuEstimativaOuOrcamentoPreciso(texto)) return false
   return (
     normalizado.includes("posso te fazer algumas perguntas") ||
     (normalizado.includes("perguntas rapidas") &&
@@ -210,26 +211,19 @@ function montarAberturaObrigatoria(textoPaciente: string): string {
     return [
       saudacao,
       `A mini lipo é uma técnica menos invasiva de lipoaspiração, focada em áreas específicas para refinar o contorno corporal. ${conexao}`,
-      "Antes da gente aprofundar ou eu te mandar resultados, como posso te chamar?",
+      "Antes da gente aprofundar, como posso te chamar?",
     ].join("\n---\n")
   }
 
   return [
     saudacao,
     "Vou entender melhor o que você está buscando para te orientar do jeito certo.",
-    "Antes da gente aprofundar ou eu te mandar resultados, como posso te chamar?",
+    "Antes da gente aprofundar, como posso te chamar?",
   ].join("\n---\n")
 }
 
 function temIntencaoInicialRegistrada(sobreOPaciente?: string | null): boolean {
   return normalizarTextoBusca(sobreOPaciente || "").includes("intencao inicial do lead")
-}
-
-function textoProcedimentoParaPaciente(procedimento?: string | null): string {
-  const normalizado = normalizarTextoBusca(procedimento || "")
-  if (!normalizado) return "o que você comentou"
-  if (normalizado.includes("mini lipo")) return "mini lipo"
-  return procedimento || "o procedimento que você comentou"
 }
 
 function deveUsarFastPathPosNome(
@@ -252,11 +246,189 @@ function deveUsarFastPathPosNome(
 }
 
 function montarRespostaPosNomeComIntencao(contexto: ContextoContato): string {
-  const procedimento = textoProcedimentoParaPaciente(contexto.procedimento)
   return comVocativo(
     contexto,
-    `Perfeito{nome}!\n---\nVi que você tem interesse na ${procedimento}. Pra eu te ajudar melhor e montar um orçamento certinho, posso te fazer algumas perguntas rápidas?`
+    "Perfeito{nome}!\n---\nNormalmente eu consigo te passar uma estimativa dos procedimentos do Dr. Lucas, ou posso te fazer algumas perguntas rápidas pra montar um orçamento mais preciso com base no seu caso. Qual você prefere?"
   )
+}
+
+function assistenteOfereceuEstimativaOuOrcamentoPreciso(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return (
+    normalizado.includes("estimativa dos procedimentos") &&
+    normalizado.includes("orcamento mais preciso") &&
+    normalizado.includes("qual voce prefere")
+  )
+}
+
+function pacienteEscolheuEstimativaInicial(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return [
+    "estimativa",
+    "preco estimado",
+    "preco aproximado",
+    "valor estimado",
+    "valor aproximado",
+    "media",
+    "faixa",
+  ].some((termo) => normalizado.includes(termo))
+}
+
+function pacienteEscolheuOrcamentoPreciso(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return [
+    "orcamento preciso",
+    "orcamento mais preciso",
+    "perguntas",
+    "pode perguntar",
+    "pode fazer",
+    "faz as perguntas",
+    "pode sim",
+    "pergunte",
+  ].some((termo) => normalizado.includes(termo))
+}
+
+function pacienteRespondeuSimAmbiguoEscolhaInicial(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return ["sim", "s", "ok", "okay", "ta", "ta bom"].includes(normalizado)
+}
+
+function filtroProcedimentoParaEstimativa(
+  procedimento?: string | null
+): string {
+  const normalizado = normalizarTextoBusca(procedimento || "")
+  if (normalizado.includes("mini lipo") || normalizado.includes("lipo")) {
+    return "mini lipo"
+  }
+  return procedimento?.trim() || "mini lipo"
+}
+
+function montarRespostaEstimativaInicial(
+  contexto: ContextoContato,
+  estimativa: EstimativaEnviada
+): string {
+  const procedimento =
+    estimativa.procedimento || contexto.procedimento || "mini lipo"
+
+  return comVocativo(
+    contexto,
+    `Claro{nome}. Como estimativa inicial, ${procedimento} costuma ficar em ${estimativa.faixa}.\n---\nEsse valor é aproximado. O orçamento mais preciso depende do seu caso e é definido pelo Dr. Lucas com base nas informações e na foto.`
+  )
+}
+
+async function montarFastPathEscolhaInicial(params: {
+  chatId: string
+  textoPaciente: string
+  contexto: ContextoContato
+  contatoId: string
+  conversaId: string | null
+  memoria: Awaited<ReturnType<typeof obterMemoria>>
+  baseUrl: string
+}): Promise<string | null> {
+  const { chatId, textoPaciente, contexto, contatoId, conversaId, memoria, baseUrl } =
+    params
+  const ultimaMensagem = ultimaMensagemAssistente(memoria)
+  if (
+    !ultimaMensagem ||
+    !assistenteOfereceuEstimativaOuOrcamentoPreciso(ultimaMensagem)
+  ) {
+    return null
+  }
+
+  if (pacienteEscolheuEstimativaInicial(textoPaciente)) {
+    const filtro = filtroProcedimentoParaEstimativa(contexto.procedimento)
+    console.log("[Agente] Fast-path de estimativa inicial escolhido", {
+      contatoId,
+      conversaId,
+      filtro,
+    })
+
+    const resultado = await executarFerramenta(
+      "consultar_procedimentos",
+      { filtro },
+      baseUrl
+    )
+    const estimativa = extrairEstimativaDaConsulta(resultado)
+
+    if (!estimativa) {
+      return comVocativo(
+        contexto,
+        "Consigo te orientar melhor com uma estimativa, mas não encontrei uma faixa segura aqui agora{nome}.\n---\nSe você preferir, posso te fazer algumas perguntas rápidas pra buscar um orçamento mais preciso com o Dr. Lucas."
+      )
+    }
+
+    await adicionarFatoAoContato(
+      contatoId,
+      contexto,
+      `Estimativa enviada ao paciente: ${estimativa.faixa}${
+        estimativa.procedimento ? ` (${estimativa.procedimento})` : ""
+      }.`
+    )
+    await salvarEstadoAgendamento(chatId, {
+      origem: "estimativa",
+      slots: [],
+      slotEscolhido: null,
+      estimativa,
+      atualizadoEm: agora(),
+    })
+
+    try {
+      await executarFerramenta(
+        "atualizar_lead",
+        {
+          contatoId,
+          conversaId,
+          etapaCorreta: "orcamento",
+        },
+        baseUrl
+      )
+      contexto.etapa = "orcamento"
+    } catch (err) {
+      console.warn(
+        "[Agente] Falha ao mover lead para orcamento apos estimativa inicial:",
+        err
+      )
+    }
+
+    return montarRespostaEstimativaInicial(contexto, estimativa)
+  }
+
+  if (pacienteEscolheuOrcamentoPreciso(textoPaciente)) {
+    console.log("[Agente] Fast-path de orcamento preciso escolhido", {
+      contatoId,
+      conversaId,
+    })
+    if (contexto.etapa !== "qualificacao") {
+      try {
+        await executarFerramenta(
+          "atualizar_lead",
+          {
+            contatoId,
+            conversaId,
+            etapaCorreta: "qualificacao",
+          },
+          baseUrl
+        )
+        contexto.etapa = "qualificacao"
+      } catch (err) {
+        console.warn(
+          "[Agente] Falha ao mover lead para qualificacao apos escolha inicial:",
+          err
+        )
+      }
+    }
+
+    return montarProximaPerguntaQualificacao(contexto)
+  }
+
+  if (pacienteRespondeuSimAmbiguoEscolhaInicial(textoPaciente)) {
+    return comVocativo(
+      contexto,
+      "Você prefere que eu te mande uma estimativa agora ou que eu faça algumas perguntas pra buscar um orçamento mais preciso{nome}?"
+    )
+  }
+
+  return null
 }
 
 async function persistirIntencaoInicialLead(params: {
@@ -2543,6 +2715,32 @@ export async function processarMensagens(
       })
 
       return contatoId ? { contatoId, conversaId } : null
+    }
+
+    if (contatoId) {
+      const respostaEscolhaInicial = await montarFastPathEscolhaInicial({
+        chatId,
+        textoPaciente: textoBuffer,
+        contexto: contextoContato,
+        contatoId,
+        conversaId,
+        memoria,
+        baseUrl,
+      })
+
+      if (respostaEscolhaInicial) {
+        await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: respostaEscolhaInicial,
+        })
+
+        return { contatoId, conversaId }
+      }
     }
 
     const pacienteAceitouQualificacao = consentiuComQualificacao(
