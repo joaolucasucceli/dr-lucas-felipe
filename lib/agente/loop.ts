@@ -492,11 +492,12 @@ async function persistirIntencaoInicialLead(params: {
 
 function deveUsarFastPathAbertura(
   contexto: ContextoContato,
-  memoria: Awaited<ReturnType<typeof obterMemoria>>
+  memoria: Awaited<ReturnType<typeof obterMemoria>>,
+  primeiraRespostaDaConversa = false
 ): boolean {
   return (
     ["acolhimento", "qualificacao"].includes(contexto.etapa ?? "") &&
-    !ultimaMensagemAssistente(memoria)
+    (primeiraRespostaDaConversa || !ultimaMensagemAssistente(memoria))
   )
 }
 
@@ -1296,6 +1297,30 @@ async function limparEstadoAgendamento(chatId: string): Promise<void> {
       err
     )
   }
+}
+
+async function conversaTemRespostaAgente(
+  conversaId: string | null
+): Promise<boolean> {
+  if (!conversaId) return false
+
+  const { data, error } = await supabaseAdmin
+    .from("mensagens_whatsapp")
+    .select("id")
+    .eq("conversaId", conversaId)
+    .eq("remetente", "agente")
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.warn("[Agente] Falha ao verificar primeira resposta da conversa:", {
+      conversaId,
+      erro: error.message,
+    })
+    return true
+  }
+
+  return Boolean(data)
 }
 
 function resolverSlotEscolhido(
@@ -2358,6 +2383,7 @@ export async function processarMensagens(
   let contextoContato: ContextoContato = {}
   let contatoId: string | null = null
   let conversaId: string | null = null
+  let primeiraRespostaDaConversa = false
   let orcamentoRespondidoAtual: OrcamentoRespondidoContexto | null = null
   let pacienteAprovouOrcamentoRespondido = false
 
@@ -2366,11 +2392,6 @@ export async function processarMensagens(
       await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
     )
     if (resultadoPaciente.contato) {
-      if (resultadoPaciente.criadoAgora) {
-        await limparMemoria(chatId)
-        console.log(`[Agente] Memoria antiga limpa para novo contato ${chatId}`)
-      }
-
       // Antes existia logica de STATUSES_SILENCIO/STATUSES_RETORNO aqui, mas
       // ambos arrays estavam vazios desde a refatoracao do funil comercial
       // (JLAU-...). Removido o codigo morto. Se quiser reativar "novo ciclo
@@ -2400,6 +2421,26 @@ export async function processarMensagens(
       }
       contatoId = resultadoPaciente.contato.id
       conversaId = resultadoPaciente.conversa?.id || null
+      primeiraRespostaDaConversa =
+        Boolean(conversaId) && !(await conversaTemRespostaAgente(conversaId))
+
+      if (primeiraRespostaDaConversa) {
+        await Promise.all([
+          limparMemoria(chatId),
+          limparEstadoAgendamento(chatId),
+        ])
+        console.log(
+          "[Agente] Memoria antiga limpa para primeira resposta da conversa",
+          {
+            chatId,
+            contatoId,
+            conversaId,
+          }
+        )
+      } else if (resultadoPaciente.criadoAgora) {
+        await limparMemoria(chatId)
+        console.log(`[Agente] Memoria antiga limpa para novo contato ${chatId}`)
+      }
 
       if (
         ["acolhimento", "qualificacao"].includes(
@@ -2676,11 +2717,18 @@ export async function processarMensagens(
   try {
     const memoria = await obterMemoria(chatId)
 
-    if (deveUsarFastPathAbertura(contextoContato, memoria)) {
+    if (
+      deveUsarFastPathAbertura(
+        contextoContato,
+        memoria,
+        primeiraRespostaDaConversa
+      )
+    ) {
       console.log("[Agente] Fast-path de abertura obrigatoria usado", {
         contatoId,
         conversaId,
         etapa: contextoContato.etapa,
+        primeiraRespostaDaConversa,
       })
 
       await enviarRespostaAgente({
