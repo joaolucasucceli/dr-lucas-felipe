@@ -992,6 +992,7 @@ interface EstadoAgendamentoTemporario {
   origem: "orcamento" | "estimativa" | "remarcacao"
   slots: SlotAgendamentoOferecido[]
   slotEscolhido?: SlotAgendamentoOferecido | null
+  janela?: JanelaAgendaSolicitada | null
   estimativa?: EstimativaEnviada | null
   agendamentoId?: string | null
   cancelamentoPendente?: boolean
@@ -1285,11 +1286,28 @@ function normalizarEstadoAgendamento(
   const slotEscolhido = item.slotEscolhido
     ? normalizarSlotPersistido(item.slotEscolhido)
     : null
+  const janela =
+    item.janela &&
+    typeof item.janela === "object" &&
+    typeof item.janela.dataInicio === "string" &&
+    typeof item.janela.dataFim === "string" &&
+    typeof item.janela.labelDia === "string" &&
+    typeof item.janela.ymd === "string"
+      ? {
+          dataInicio: item.janela.dataInicio,
+          dataFim: item.janela.dataFim,
+          labelDia: item.janela.labelDia,
+          ymd: item.janela.ymd,
+          horario:
+            typeof item.janela.horario === "string" ? item.janela.horario : null,
+        }
+      : null
 
   return {
     origem: item.origem,
     slots,
     slotEscolhido,
+    janela,
     estimativa: item.estimativa ?? null,
     agendamentoId:
       typeof item.agendamentoId === "string" ? item.agendamentoId : null,
@@ -1678,6 +1696,7 @@ async function montarOfertaSlotsAgendamento(params: {
   estimativa?: EstimativaEnviada | null
   slotsIgnorados?: SlotAgendamentoOferecido[]
   reconsulta?: boolean
+  janelaForcada?: JanelaAgendaSolicitada | null
 }): Promise<string> {
   const {
     chatId,
@@ -1689,8 +1708,9 @@ async function montarOfertaSlotsAgendamento(params: {
     estimativa,
     slotsIgnorados = [],
     reconsulta = false,
+    janelaForcada = null,
   } = params
-  const janela = detectarJanelaAgenda(textoPaciente)
+  const janela = janelaForcada ?? detectarJanelaAgenda(textoPaciente)
   const slots = await consultarSlotsAgendamento(baseUrl, janela)
   const periodo = janela ? null : detectarPreferenciaPeriodo(textoPaciente)
   const slotsDisponiveis = slotsSemIgnorados(slots, slotsIgnorados)
@@ -1726,6 +1746,7 @@ async function montarOfertaSlotsAgendamento(params: {
           origem,
           slots: proximosSlots,
           slotEscolhido: null,
+          janela: null,
           estimativa: estimativa ?? null,
           atualizadoEm: agora(),
         })
@@ -1749,6 +1770,7 @@ async function montarOfertaSlotsAgendamento(params: {
     origem,
     slots: slotsOferta,
     slotEscolhido: slotExato,
+    janela,
     estimativa: estimativa ?? null,
     atualizadoEm: agora(),
   })
@@ -1834,6 +1856,17 @@ async function registrarAgendamentoDeterministico(params: {
   }
 }
 
+function combinarFalhaAgendamentoComOferta(falha: string, oferta: string): string {
+  const ofertaNormalizada = normalizarTextoBusca(oferta)
+  if (
+    ofertaNormalizada.includes("esse horario esta livre") ||
+    ofertaNormalizada.includes("pra eu confirmar na agenda")
+  ) {
+    return oferta
+  }
+  return `${falha} ${oferta}`
+}
+
 async function montarFastPathAgendamento(params: {
   chatId: string
   textoPaciente: string
@@ -1905,7 +1938,10 @@ async function montarFastPathAgendamento(params: {
 
   const emailInformado = extrairEmailDoTexto(textoPaciente)
   const slotsOferecidos = estadoAtual?.slots ?? []
-  const slotEscolhido = resolverSlotEscolhido(textoPaciente, slotsOferecidos)
+  const janelaSolicitada = detectarJanelaAgenda(textoPaciente)
+  const slotEscolhido = janelaSolicitada
+    ? null
+    : resolverSlotEscolhido(textoPaciente, slotsOferecidos)
   const horarioSolicitado = extrairHorarioEscolhido(textoPaciente)
   const aprovou = pacienteAprovouOrcamento(textoPaciente)
   const escolheuAgendamentoAposEstimativa =
@@ -1919,6 +1955,7 @@ async function montarFastPathAgendamento(params: {
     emailInformado ||
     slotEscolhido ||
     slotPendente ||
+    janelaSolicitada ||
     horarioSolicitado ||
     preferiuPeriodo ||
     emAgendamento
@@ -1933,6 +1970,7 @@ async function montarFastPathAgendamento(params: {
     emailInformado: Boolean(emailInformado),
     slotEscolhido: slotEscolhido?.label,
     slotPendente: slotPendente?.label,
+    janelaSolicitada: janelaSolicitada?.labelDia,
     horarioSolicitado,
     preferiuPeriodo,
     escolheuAgendamentoAposEstimativa,
@@ -1948,12 +1986,26 @@ async function montarFastPathAgendamento(params: {
   const email = emailInformado || contexto.email || null
   const slotParaRegistrar = slotEscolhido ?? slotPendente
 
+  if (janelaSolicitada) {
+    return montarOfertaSlotsAgendamento({
+      chatId,
+      contatoId,
+      contexto,
+      baseUrl,
+      textoPaciente,
+      origem,
+      estimativa: estadoAtual?.estimativa ?? null,
+      janelaForcada: janelaSolicitada,
+    })
+  }
+
   if (slotParaRegistrar) {
     if (slotEscolhido) {
       await salvarEstadoAgendamento(chatId, {
         origem,
         slots: slotsOferecidos,
         slotEscolhido,
+        janela: estadoAtual?.janela ?? null,
         estimativa: estadoAtual?.estimativa ?? null,
         atualizadoEm: agora(),
       })
@@ -1990,8 +2042,22 @@ async function montarFastPathAgendamento(params: {
       estimativa: estadoAtual?.estimativa ?? null,
       slotsIgnorados: [slotParaRegistrar],
       reconsulta: true,
+      janelaForcada: estadoAtual?.janela ?? null,
     })
-    return `${resultadoAgendamento.texto} ${novaOferta}`
+    return combinarFalhaAgendamentoComOferta(resultadoAgendamento.texto, novaOferta)
+  }
+
+  if (emailInformado && estadoAtual?.janela) {
+    return montarOfertaSlotsAgendamento({
+      chatId,
+      contatoId,
+      contexto,
+      baseUrl,
+      textoPaciente,
+      origem,
+      estimativa: estadoAtual?.estimativa ?? null,
+      janelaForcada: estadoAtual.janela,
+    })
   }
 
   if (horarioSolicitado) {
