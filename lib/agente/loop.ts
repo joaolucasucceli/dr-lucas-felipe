@@ -228,7 +228,7 @@ function temIntencaoInicialRegistrada(sobreOPaciente?: string | null): boolean {
 function textoProcedimentoParaPaciente(procedimento?: string | null): string {
   const normalizado = normalizarTextoBusca(procedimento || "")
   if (!normalizado) return "o que você comentou"
-  if (normalizado.includes("mini lipo")) return procedimento || "mini lipo"
+  if (normalizado.includes("mini lipo")) return "mini lipo"
   return procedimento || "o procedimento que você comentou"
 }
 
@@ -255,7 +255,7 @@ function montarRespostaPosNomeComIntencao(contexto: ContextoContato): string {
   const procedimento = textoProcedimentoParaPaciente(contexto.procedimento)
   return comVocativo(
     contexto,
-    `Prazer{nome}. Vi que seu interesse é ${procedimento}. Pra eu te orientar melhor e montar um orçamento certinho, posso te fazer algumas perguntas rápidas?`
+    `Perfeito{nome}!\n---\nVi que você tem interesse na ${procedimento}. Pra eu te ajudar melhor e montar um orçamento certinho, posso te fazer algumas perguntas rápidas?`
   )
 }
 
@@ -2228,6 +2228,22 @@ export async function processarMensagens(
       }
       contatoId = resultadoPaciente.contato.id
       conversaId = resultadoPaciente.conversa?.id || null
+
+      if (
+        ["acolhimento", "qualificacao"].includes(
+          contextoContato.etapa ?? ""
+        ) &&
+        (resultadoPaciente.criadoAgora ||
+          !temIntencaoInicialRegistrada(contextoContato.sobreOPaciente))
+      ) {
+        await persistirIntencaoInicialLead({
+          contatoId,
+          conversaId,
+          textoPaciente: textoBuffer,
+          contextoContato,
+          baseUrl,
+        })
+      }
     }
   } catch (error) {
     console.error("[Agente] Erro ao consultar paciente:", error)
@@ -2493,14 +2509,6 @@ export async function processarMensagens(
         contatoId,
         conversaId,
         etapa: contextoContato.etapa,
-      })
-
-      await persistirIntencaoInicialLead({
-        contatoId,
-        conversaId,
-        textoPaciente: textoBuffer,
-        contextoContato,
-        baseUrl,
       })
 
       await enviarRespostaAgente({

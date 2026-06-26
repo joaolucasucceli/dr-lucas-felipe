@@ -207,7 +207,7 @@ Exemplo CORRETO após o lead informar nome quando a intenção inicial já foi d
 
 Perfeito, João!
 ---
-Vi que seu interesse é mini lipo. Pra eu te orientar melhor e montar um orçamento certinho, posso te fazer algumas perguntas rápidas?
+Vi que você tem interesse na mini lipo. Pra eu te ajudar melhor e montar um orçamento certinho, posso te fazer algumas perguntas rápidas?
 
 Exemplo ERRADO (parede de texto — NUNCA faça):
 
