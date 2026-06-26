@@ -171,45 +171,161 @@ function detectarServicoAbertura(texto: string): {
   return null
 }
 
-function montarAberturaObrigatoria(textoPaciente: string): string {
-  const servico = detectarServicoAbertura(textoPaciente)
-  const blocos = [
-    `Olá, ${saudacaoAtual()}!`,
-    "Meu nome é Ana Júlia, sou do time de pré-atendimento do Dr. Lucas Ferreira.",
-  ]
+function montarIntencaoInicialLead(texto: string): {
+  procedimentoInteresse: string | null
+  fato: string | null
+} {
+  const servico = detectarServicoAbertura(texto)
+  if (!servico) return { procedimentoInteresse: null, fato: null }
 
-  if (servico?.tipo === "mini_lipo") {
-    blocos.push(
-      "A mini lipo é uma técnica menos invasiva de lipoaspiração, focada em áreas específicas para refinar o contorno corporal."
-    )
+  if (servico.tipo === "mini_lipo") {
+    const procedimentoInteresse = servico.regiao
+      ? `mini lipo ${servico.regiao}`
+      : "mini lipo"
+    const alvo = servico.regiao
+      ? `mini lipo em ${servico.regiao}`
+      : "mini lipo"
 
-    if (servico.regiao) {
-      blocos.push(
-        `Pelo que você comentou, você quer entender se a mini lipo faz sentido para tratar ${servico.regiao}.`
-      )
-    } else {
-      blocos.push(
-        "Pelo que você comentou, você quer entender se a mini lipo faz sentido para o seu caso."
-      )
+    return {
+      procedimentoInteresse,
+      fato: `Intenção inicial do lead: demonstrou interesse em ${alvo} e quer entender como funciona.`,
     }
-  } else {
-    blocos.push(
-      "Vou entender melhor o que você está buscando para te orientar do jeito certo."
-    )
   }
 
-  blocos.push(
-    "Antes da gente aprofundar mais ou eu te mandar alguns resultados de pacientes, como posso te chamar?"
-  )
+  return {
+    procedimentoInteresse: null,
+    fato: "Intenção inicial do lead: quer entender melhor o atendimento e os procedimentos do Dr. Lucas.",
+  }
+}
 
-  return blocos.join("\n---\n")
+function montarAberturaObrigatoria(textoPaciente: string): string {
+  const servico = detectarServicoAbertura(textoPaciente)
+  const saudacao = `Olá, ${saudacaoAtual()}! Meu nome é Ana Júlia, sou do time de pré-atendimento do Dr. Lucas Ferreira.`
+
+  if (servico?.tipo === "mini_lipo") {
+    const conexao = servico.regiao
+      ? `Pelo que você comentou, você quer entender se a mini lipo faz sentido para tratar ${servico.regiao}.`
+      : "Pelo que você comentou, você quer entender se a mini lipo faz sentido para o seu caso."
+
+    return [
+      saudacao,
+      `A mini lipo é uma técnica menos invasiva de lipoaspiração, focada em áreas específicas para refinar o contorno corporal. ${conexao}`,
+      "Antes da gente aprofundar ou eu te mandar resultados, como posso te chamar?",
+    ].join("\n---\n")
+  }
+
+  return [
+    saudacao,
+    "Vou entender melhor o que você está buscando para te orientar do jeito certo.",
+    "Antes da gente aprofundar ou eu te mandar resultados, como posso te chamar?",
+  ].join("\n---\n")
+}
+
+function temIntencaoInicialRegistrada(sobreOPaciente?: string | null): boolean {
+  return normalizarTextoBusca(sobreOPaciente || "").includes("intencao inicial do lead")
+}
+
+function textoProcedimentoParaPaciente(procedimento?: string | null): string {
+  const normalizado = normalizarTextoBusca(procedimento || "")
+  if (!normalizado) return "o que você comentou"
+  if (normalizado.includes("mini lipo")) return procedimento || "mini lipo"
+  return procedimento || "o procedimento que você comentou"
+}
+
+function deveUsarFastPathPosNome(
+  textoPaciente: string,
+  contexto: ContextoContato,
+  memoria: Awaited<ReturnType<typeof obterMemoria>>
+): boolean {
+  if (!["acolhimento", "qualificacao"].includes(contexto.etapa ?? "")) {
+    return false
+  }
+  if (!extrairNomeAutodeclarado(textoPaciente)) return false
+
+  const ultimaMensagem = ultimaMensagemAssistente(memoria)
+  if (!ultimaMensagem) return false
+  if (!normalizarTextoBusca(ultimaMensagem).includes("como posso te chamar")) {
+    return false
+  }
+
+  return Boolean(contexto.procedimento)
+}
+
+function montarRespostaPosNomeComIntencao(contexto: ContextoContato): string {
+  const procedimento = textoProcedimentoParaPaciente(contexto.procedimento)
+  return comVocativo(
+    contexto,
+    `Prazer{nome}. Vi que seu interesse é ${procedimento}. Pra eu te orientar melhor e montar um orçamento certinho, posso te fazer algumas perguntas rápidas?`
+  )
+}
+
+async function persistirIntencaoInicialLead(params: {
+  contatoId: string | null
+  conversaId: string | null
+  textoPaciente: string
+  contextoContato: ContextoContato
+  baseUrl: string
+}) {
+  const { contatoId, conversaId, textoPaciente, contextoContato, baseUrl } = params
+  if (!contatoId) return
+
+  const intencao = montarIntencaoInicialLead(textoPaciente)
+  if (!intencao.procedimentoInteresse && !intencao.fato) return
+
+  const procedimentoInteresseInicial = intencao.procedimentoInteresse
+  const devePersistirProcedimento = Boolean(
+    procedimentoInteresseInicial &&
+    devePersistirProcedimentoInteresse(
+      contextoContato.procedimento,
+      procedimentoInteresseInicial
+    )
+  )
+  const devePersistirFato =
+    intencao.fato && !temIntencaoInicialRegistrada(contextoContato.sobreOPaciente)
+
+  if (!devePersistirProcedimento && !devePersistirFato) return
+
+  try {
+    const resultado = await executarFerramenta(
+      "atualizar_lead",
+      {
+        contatoId,
+        conversaId,
+        ...(devePersistirProcedimento
+          ? { procedimentoInteresse: procedimentoInteresseInicial }
+          : {}),
+        ...(devePersistirFato
+          ? { sobreOPacienteAdicionar: intencao.fato }
+          : {}),
+        etapaCorreta: "manter",
+      },
+      baseUrl
+    )
+    const parsed = JSON.parse(resultado)
+    if (parsed?.ok === true) {
+      if (devePersistirProcedimento && procedimentoInteresseInicial) {
+        contextoContato.procedimento = procedimentoInteresseInicial
+      }
+      if (devePersistirFato && intencao.fato) {
+        contextoContato.sobreOPaciente = anexarFatoContexto(
+          contextoContato.sobreOPaciente,
+          intencao.fato
+        )
+      }
+    }
+  } catch (err) {
+    console.error("[Agente] Erro ao persistir intenção inicial:", err)
+  }
 }
 
 function deveUsarFastPathAbertura(
   contexto: ContextoContato,
   memoria: Awaited<ReturnType<typeof obterMemoria>>
 ): boolean {
-  return contexto.etapa === "acolhimento" && !ultimaMensagemAssistente(memoria)
+  return (
+    ["acolhimento", "qualificacao"].includes(contexto.etapa ?? "") &&
+    !ultimaMensagemAssistente(memoria)
+  )
 }
 
 function consentiuComQualificacao(
@@ -2379,6 +2495,14 @@ export async function processarMensagens(
         etapa: contextoContato.etapa,
       })
 
+      await persistirIntencaoInicialLead({
+        contatoId,
+        conversaId,
+        textoPaciente: textoBuffer,
+        contextoContato,
+        baseUrl,
+      })
+
       await enviarRespostaAgente({
         chatId,
         whatsapp,
@@ -2387,6 +2511,27 @@ export async function processarMensagens(
         configWa: configEnvio,
         textoUsuario: textoBuffer,
         textoResposta: montarAberturaObrigatoria(textoBuffer),
+      })
+
+      return contatoId ? { contatoId, conversaId } : null
+    }
+
+    if (deveUsarFastPathPosNome(textoBuffer, contextoContato, memoria)) {
+      console.log("[Agente] Fast-path pos-nome com intencao inicial usado", {
+        contatoId,
+        conversaId,
+        etapa: contextoContato.etapa,
+        procedimento: contextoContato.procedimento,
+      })
+
+      await enviarRespostaAgente({
+        chatId,
+        whatsapp,
+        contatoId,
+        conversaId,
+        configWa: configEnvio,
+        textoUsuario: textoBuffer,
+        textoResposta: montarRespostaPosNomeComIntencao(contextoContato),
       })
 
       return contatoId ? { contatoId, conversaId } : null
