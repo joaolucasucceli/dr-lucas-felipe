@@ -1761,7 +1761,7 @@ async function registrarAgendamentoDeterministico(params: {
     ok: true,
     texto: comVocativo(
       contexto,
-      `Agendado{nome}! Ficou para ${slot.label}. O convite vai chegar no e-mail ${email}.`
+      `Agendado{nome}! Ficou para ${slot.label}. O convite vai chegar no e-mail ${email}. Qualquer dúvida, é só me chamar por aqui.`
     ),
   }
 }
