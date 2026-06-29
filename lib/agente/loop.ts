@@ -593,7 +593,11 @@ function assistentePediuDadoQualificacao(texto: string): boolean {
     "restricao",
     "manda uma foto",
     "consegue mandar uma foto",
+    "consegue me enviar uma foto",
+    "enviar uma foto atual",
+    "foto atual da regiao",
     "foto da regiao",
+    "mandar um caso bem completo",
     "qual regiao",
     "quais regioes",
     "area especifica",
@@ -936,6 +940,26 @@ function montarFastPathQualificacao(params: {
   } = params
 
   if (contexto.etapa !== "qualificacao") return null
+
+  if (recebeuImagem) {
+    const fato = FATO_FOTO_QUALIFICACAO
+    const proximoContexto = contextoComFato(contexto, fato)
+    if (qualificacaoTemDadosMinimos(proximoContexto)) {
+      return {
+        tipo: "foto_qualificacao_completa",
+        fato,
+        texto: montarRespostaFotoQualificacaoCompleta(proximoContexto),
+        acionarOrcamento: true,
+      }
+    }
+
+    return {
+      tipo: "foto_qualificacao_incompleta",
+      fato,
+      texto: montarRespostaFotoQualificacaoIncompleta(proximoContexto),
+    }
+  }
+
   if (
     !pacienteAceitouQualificacao &&
     pacienteFezPerguntaOuMudouAssunto(textoPaciente)
@@ -966,25 +990,6 @@ function montarFastPathQualificacao(params: {
   const ultimaMensagem = ultimaMensagemAssistente(memoria)
   if (!ultimaMensagem || !assistentePediuDadoQualificacao(ultimaMensagem)) {
     return null
-  }
-
-  if (recebeuImagem) {
-    const fato = FATO_FOTO_QUALIFICACAO
-    const proximoContexto = contextoComFato(contexto, fato)
-    if (qualificacaoTemDadosMinimos(proximoContexto)) {
-      return {
-        tipo: "foto_qualificacao_completa",
-        fato,
-        texto: montarRespostaFotoQualificacaoCompleta(proximoContexto),
-        acionarOrcamento: true,
-      }
-    }
-
-    return {
-      tipo: "foto_qualificacao_incompleta",
-      fato,
-      texto: montarRespostaFotoQualificacaoIncompleta(proximoContexto),
-    }
   }
 
   if (perguntaPediuRegiao(ultimaMensagem)) {
@@ -3700,6 +3705,11 @@ export async function processarMensagens(
             gerouOrcamentoNestaRodada =
               gerouOrcamentoNestaRodada ||
               (parsed?.ok === true && parsed?.jaRespondido !== true)
+            if (parsed?.ok === true && parsed?.jaRespondido !== true) {
+              contextoContato.etapa = "orcamento"
+              textoRespostaForcado =
+                montarRespostaFotoQualificacaoCompleta(contextoContato)
+            }
             if (parsed?.jaRespondido === true) {
               mensagens.push({
                 role: "system",
@@ -3717,6 +3727,8 @@ export async function processarMensagens(
           tool_call_id: toolCall.id,
           content: resultado,
         })
+
+        if (textoRespostaForcado) break
 
         if (enviouMidiaAgora) {
           mensagens.push({
