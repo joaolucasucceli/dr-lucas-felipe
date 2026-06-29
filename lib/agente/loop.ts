@@ -94,9 +94,53 @@ function ehRespostaAfirmativaCurta(texto: string): boolean {
     "tudo bem",
     "beleza",
     "combinado",
+    "obg",
+    "obrigado",
+    "obrigada",
+    "ok obg",
+    "ok obrigado",
+    "ok obrigada",
+    "valeu",
+    "show",
+    "show de bola",
   ])
 
   return respostasDiretas.has(normalizado)
+}
+
+function ehPedidoStatusOrcamentoPendente(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return (
+    /\b(quanto|valor|preco|orcamento|orçamento)\b/.test(normalizado) &&
+      /\b(ficou|fica|saiu|voltou|deu|custa|custaria|vai ficar|ja|já)\b/.test(
+        normalizado
+      )
+  )
+}
+
+function ehPedidoAgendamentoDuranteOrcamentoPendente(texto: string): boolean {
+  const normalizado = normalizarTextoBusca(texto)
+  return /\b(agendar|agenda|marcar|reuniao|reunião|horario|horário)\b/.test(
+    normalizado
+  )
+}
+
+function montarRespostaStatusOrcamentoPendente(
+  contexto: ContextoContato
+): string {
+  return comVocativo(
+    contexto,
+    "Ainda estou aguardando o Dr. Lucas definir o valor certinho{nome}. Assim que ele responder, eu te aviso por aqui."
+  )
+}
+
+function montarRespostaAgendamentoDuranteOrcamentoPendente(
+  contexto: ContextoContato
+): string {
+  return comVocativo(
+    contexto,
+    "Combinado{nome}. A reunião online pode ser o próximo passo, mas primeiro vou te devolver o orçamento exato do Dr. Lucas. Assim que ele responder e fizer sentido pra você, eu vejo os horários disponíveis."
+  )
 }
 
 function assistentePediuPerguntasQualificacao(texto: string): boolean {
@@ -2783,6 +2827,7 @@ export async function processarMensagens(
   let primeiraRespostaDaConversa = false
   let orcamentoRespondidoAtual: OrcamentoRespondidoContexto | null = null
   let pacienteAprovouOrcamentoRespondido = false
+  let orcamentoPendenteConsultivo = false
 
   try {
     const resultadoPaciente = JSON.parse(
@@ -2965,9 +3010,8 @@ export async function processarMensagens(
       return null
     }
 
-    // Handoff humano ativo: IA pausa ate o Dr. Lucas assumir o chat.
-    // O flag `aguardandoOrcamentoHumano` no contato sinaliza o transbordo;
-    // o detector de retomada no webhook zera quando ele responde fromMe=true.
+    // Orcamento pendente nao e handoff humano: a Ana Julia continua consultiva,
+    // mas nao pode criar novo orcamento nem iniciar agenda antes do valor voltar.
     const { data: contatoHandoff } = await supabaseAdmin
       .from("contatos")
       .select("aguardandoOrcamentoHumano")
@@ -2978,12 +3022,14 @@ export async function processarMensagens(
       (contatoHandoff as { aguardandoOrcamentoHumano?: boolean })
         ?.aguardandoOrcamentoHumano
     ) {
-      console.log(
-        `[Agente] Contato ${contatoId} aguardando orcamento manual do Dr. Lucas — IA pausada`
-      )
+      orcamentoPendenteConsultivo = true
       if (ehRespostaAfirmativaCurta(textoBuffer)) {
         const memoriaAtual = await obterMemoria(chatId)
         if (assistenteJaAvisouAguardandoOrcamento(memoriaAtual)) {
+          console.log("[Agente] orcamento_pendente_ack_silencioso", {
+            contatoId,
+            conversaId,
+          })
           return null
         }
 
@@ -3002,7 +3048,47 @@ export async function processarMensagens(
         })
         return { contatoId, conversaId }
       }
-      return null
+
+      if (ehPedidoStatusOrcamentoPendente(textoBuffer)) {
+        console.log("[Agente] orcamento_pendente_status", {
+          contatoId,
+          conversaId,
+        })
+        await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: montarRespostaStatusOrcamentoPendente(contextoContato),
+        })
+        return { contatoId, conversaId }
+      }
+
+      if (ehPedidoAgendamentoDuranteOrcamentoPendente(textoBuffer)) {
+        console.log("[Agente] orcamento_pendente_agendamento_bloqueado", {
+          contatoId,
+          conversaId,
+        })
+        await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: montarRespostaAgendamentoDuranteOrcamentoPendente(
+            contextoContato
+          ),
+        })
+        return { contatoId, conversaId }
+      }
+
+      console.log("[Agente] orcamento_pendente_consultivo", {
+        contatoId,
+        conversaId,
+      })
     }
   }
 
@@ -3491,6 +3577,15 @@ export async function processarMensagens(
             },
           ]
         : []),
+      ...(orcamentoPendenteConsultivo
+        ? [
+            {
+              role: "system" as const,
+              content:
+                "O orçamento exato já foi enviado para o Dr. Lucas e ainda está pendente. A Ana Julia deve ficar em modo consultivo: responda dúvidas sobre Dr. Lucas, clínica, procedimento, recuperação, pagamento, resultados ou próximos passos usando as ferramentas permitidas quando necessário. Não chame gerar_orcamento, não avance para agendamento, não registre agenda e não prometa valor antes da resposta do Dr. Lucas. Se o paciente pedir preço/status, diga que está aguardando o Dr. Lucas definir o valor certinho e que avisará por aqui. Se pedir para falar com humano, use acionar_atendimento_humano.",
+            },
+          ]
+        : []),
       { role: "user", content: textoBuffer },
     ]
 
@@ -3512,8 +3607,19 @@ export async function processarMensagens(
       temNomeAcolhido &&
       (gatilhoVisual || (gatilhoProcedimento && contextoProntoParaMidia))
 
-    const ferramentasDaRodada =
-      pacienteAceitouQualificacao || pacienteRespondeuQualificacao
+    const ferramentasPermitidasOrcamentoPendente = new Set([
+      "buscar_conteudo",
+      "consultar_procedimentos",
+      "enviar_midia",
+      "acionar_atendimento_humano",
+    ])
+    const ferramentasDaRodada = orcamentoPendenteConsultivo
+      ? ferramentasAgente.filter(
+          (tool) =>
+            tool.type !== "function" ||
+            ferramentasPermitidasOrcamentoPendente.has(tool.function.name)
+        )
+      : pacienteAceitouQualificacao || pacienteRespondeuQualificacao
         ? ferramentasAgente.filter(
             (tool) =>
               tool.type !== "function" ||
