@@ -191,7 +191,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "consultar_procedimentos",
       description:
-        "Consulta os procedimentos da clínica. Retorna descrição, duração, pós-operatório, escopoOferta, parcelamento e faixaFormatada. Use para explicar o procedimento e, como fallback, para faixa aproximada quando o paciente pede média e recusa qualificação/foto. NÃO use para responder automaticamente com preço quando o paciente só informou a região. Valor exato só vem pelo fluxo gerar_orcamento + resposta do Dr. Lucas. Depois de enviar estimativa, ofereça o próximo caminho: perguntas para orçamento mais preciso ou reunião online. Se a estimativa for aprovada, pode seguir para consulta de agenda. Campos legados não devem ser citados.",
+        "Consulta os procedimentos da clínica. Retorna descrição, duração, pós-operatório, escopoOferta, parcelamento e faixaFormatada. Use para explicar o procedimento e, como fallback, para faixa aproximada quando o paciente pede média e recusa qualificação/foto. NÃO use para responder automaticamente com preço quando o paciente só informou a região. Valor exato só vem pelo fluxo gerar_orcamento + resposta do Dr. Lucas. Depois de enviar estimativa, ofereça o próximo caminho: perguntas para orçamento mais preciso ou reunião online. Resultados visuais relacionados são enviados pelo sistema, se houver mídia válida; não prometa imagem manualmente. Se a estimativa for aprovada, pode seguir para consulta de agenda. Campos legados não devem ser citados.",
       parameters: {
         type: "object",
         properties: {

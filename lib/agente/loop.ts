@@ -10,6 +10,7 @@ import {
 import { temNomeAutodeclarado } from "@/lib/agente/atualizar-lead"
 import { gerarSystemPrompt, type ContextoContato } from "@/lib/agente/prompt"
 import { ferramentasAgente, executarFerramenta } from "@/lib/agente/ferramentas"
+import { enviarResultadosProcedimento } from "@/lib/agente/enviar-resultados-procedimento"
 import {
   detectarGatilhoProcedimentoMidia,
   detectarGatilhoVisualMidia,
@@ -348,7 +349,7 @@ async function montarFastPathEscolhaInicial(params: {
   conversaId: string | null
   memoria: Awaited<ReturnType<typeof obterMemoria>>
   baseUrl: string
-}): Promise<string | null> {
+}): Promise<{ texto: string; enviarResultadosEstimativa?: boolean } | null> {
   const { chatId, textoPaciente, contexto, contatoId, conversaId, memoria, baseUrl } =
     params
   const ultimaMensagem = ultimaMensagemAssistente(memoria)
@@ -375,10 +376,12 @@ async function montarFastPathEscolhaInicial(params: {
     const estimativa = extrairEstimativaDaConsulta(resultado)
 
     if (!estimativa) {
-      return comVocativo(
-        contexto,
-        "Consigo te orientar melhor com uma estimativa, mas não encontrei uma faixa segura aqui agora{nome}.\n---\nSe você preferir, posso te fazer algumas perguntas rápidas pra buscar um orçamento mais preciso com o Dr. Lucas."
-      )
+      return {
+        texto: comVocativo(
+          contexto,
+          "Consigo te orientar melhor com uma estimativa, mas não encontrei uma faixa segura aqui agora{nome}.\n---\nSe você preferir, posso te fazer algumas perguntas rápidas pra buscar um orçamento mais preciso com o Dr. Lucas."
+        ),
+      }
     }
 
     await adicionarFatoAoContato(
@@ -414,7 +417,10 @@ async function montarFastPathEscolhaInicial(params: {
       )
     }
 
-    return montarRespostaEstimativaInicial(contexto, estimativa)
+    return {
+      texto: montarRespostaEstimativaInicial(contexto, estimativa),
+      enviarResultadosEstimativa: true,
+    }
   }
 
   if (pacienteEscolheuOrcamentoPreciso(textoPaciente)) {
@@ -442,14 +448,16 @@ async function montarFastPathEscolhaInicial(params: {
       }
     }
 
-    return montarProximaPerguntaQualificacao(contexto)
+    return { texto: montarProximaPerguntaQualificacao(contexto) }
   }
 
   if (pacienteRespondeuSimAmbiguoEscolhaInicial(textoPaciente)) {
-    return comVocativo(
-      contexto,
-      "Você prefere que eu te mande uma estimativa agora ou que eu faça algumas perguntas pra buscar um orçamento mais preciso{nome}?"
-    )
+    return {
+      texto: comVocativo(
+        contexto,
+        "Você prefere que eu te mande uma estimativa agora ou que eu faça algumas perguntas pra buscar um orçamento mais preciso{nome}?"
+      ),
+    }
   }
 
   return null
@@ -3032,15 +3040,30 @@ export async function processarMensagens(
       })
 
       if (respostaEscolhaInicial) {
-        await enviarRespostaAgente({
+        const enviouEscolhaInicial = await enviarRespostaAgente({
           chatId,
           whatsapp,
           contatoId,
           conversaId,
           configWa: configEnvio,
           textoUsuario: textoBuffer,
-          textoResposta: respostaEscolhaInicial,
+          textoResposta: respostaEscolhaInicial.texto,
         })
+
+        if (
+          enviouEscolhaInicial &&
+          respostaEscolhaInicial.enviarResultadosEstimativa
+        ) {
+          await enviarResultadosProcedimento({
+            contatoId,
+            conversaId,
+            whatsapp,
+            configWa: configEnvio,
+            procedimentoInteresse: contextoContato.procedimento,
+            origem: "orcamento_estimado",
+            chatId,
+          })
+        }
 
         return { contatoId, conversaId }
       }
@@ -3697,11 +3720,17 @@ export async function processarMensagens(
       }
     }
 
-    if (
+    const deveEnviarResultadosEstimativa = Boolean(
       textoResposta &&
+        estimativaConsultadaNestaRodada &&
+        contatoId &&
+        respostaContemEstimativa(textoResposta, estimativaConsultadaNestaRodada)
+    )
+
+    if (
+      deveEnviarResultadosEstimativa &&
       estimativaConsultadaNestaRodada &&
-      contatoId &&
-      respostaContemEstimativa(textoResposta, estimativaConsultadaNestaRodada)
+      contatoId
     ) {
       await adicionarFatoAoContato(
         contatoId,
@@ -3756,6 +3785,22 @@ export async function processarMensagens(
       textoUsuario: textoBuffer,
       textoResposta,
     })
+
+    if (
+      enviouResposta &&
+      deveEnviarResultadosEstimativa &&
+      contatoId
+    ) {
+      await enviarResultadosProcedimento({
+        contatoId,
+        conversaId,
+        whatsapp,
+        configWa: configEnvio,
+        procedimentoInteresse: contextoContato.procedimento,
+        origem: "orcamento_estimado",
+        chatId,
+      })
+    }
   } catch (error) {
     console.error("[Agente] Erro no loop de resposta:", error)
     if (!enviouResposta) {
