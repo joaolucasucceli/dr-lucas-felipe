@@ -806,10 +806,7 @@ function montarProximaPerguntaQualificacao(contexto: ContextoContato): string {
     )
   }
 
-  return comVocativo(
-    contexto,
-    "Perfeito{nome}. Mandei seus dados para o Dr. Lucas e te devolvo por aqui assim que ele responder."
-  )
+  return montarRespostaFotoQualificacaoCompleta(contexto)
 }
 
 function regiaoQualificacaoTexto(contexto: ContextoContato): string {
@@ -3302,10 +3299,7 @@ export async function processarMensagens(
       const parsed = JSON.parse(resultadoOrcamento)
       const textoRetry =
         parsed?.ok === true
-          ? comVocativo(
-              contextoContato,
-              "Perfeito{nome}. Mandei seus dados para o Dr. Lucas e te devolvo por aqui assim que ele responder."
-            )
+          ? montarRespostaFotoQualificacaoCompleta(contextoContato)
           : comVocativo(
               contextoContato,
               "Certo{nome}. Deixei seu caso separado aqui e sigo com seu orçamento por aqui."
@@ -3816,6 +3810,10 @@ export async function processarMensagens(
       )
     }
 
+    if (gerouOrcamentoNestaRodada && !orcamentoRespondidoAtual) {
+      textoResposta = montarRespostaFotoQualificacaoCompleta(contextoContato)
+    }
+
     if (
       textoResposta &&
       enviouMidiaNestaRodada &&
@@ -3863,10 +3861,7 @@ export async function processarMensagens(
         const parsed = JSON.parse(resultadoOrcamento)
         if (parsed?.ok === true) {
           gerouOrcamentoNestaRodada = true
-          textoResposta = comVocativo(
-            contextoContato,
-            "Perfeito{nome}. Mandei seus dados para o Dr. Lucas definir o orçamento exato. Assim que ele responder, te devolvo por aqui."
-          )
+          textoResposta = montarRespostaFotoQualificacaoCompleta(contextoContato)
           console.warn(
             "[Agente] gerar_orcamento acionado por guarda anti-promessa"
           )

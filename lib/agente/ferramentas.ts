@@ -71,7 +71,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "gerar_orcamento",
       description:
-        "Gera o ORÇAMENTO EXATO do paciente com Dr. Lucas. Chame quando a qualificação estiver completa: procedimento desejado + região + objetivo/incômodo + foto recebida + paciente aceitou responder perguntas/seguir com orçamento. Não exija uma segunda autorização artificial se o paciente já aceitou a qualificação para orçamento. Esta tool só retorna ok quando a mensagem principal chegou ao Dr. Lucas; se falhar, não diga que enviou. Depois de ok, responda uma vez: 'Mandei seus dados para o Dr. Lucas e te devolvo por aqui assim que ele responder.' NÃO use para quem pediu só média e recusou qualificação/foto; nesse caso, use consultar_procedimentos apenas como faixa aproximada.",
+        "Gera o ORÇAMENTO EXATO do paciente com Dr. Lucas. Chame quando a qualificação estiver completa: procedimento desejado + região + objetivo/incômodo + foto recebida + paciente aceitou responder perguntas/seguir com orçamento. Não exija uma segunda autorização artificial se o paciente já aceitou a qualificação para orçamento. Esta tool só retorna ok quando a mensagem principal chegou ao Dr. Lucas; se falhar, não diga que enviou. Depois de ok, responda uma vez em dois blocos: 'Recebi, [nome]. Obrigada por enviar.' e 'Agora tenho os dados principais para deixar seu caso bem claro pro Dr. Lucas. Vou enviar pra ele definir o orçamento exato e te retorno por aqui.' NÃO use para quem pediu só média e recusou qualificação/foto; nesse caso, use consultar_procedimentos apenas como faixa aproximada.",
       parameters: {
         type: "object",
         properties: {
