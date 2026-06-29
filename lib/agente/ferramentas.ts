@@ -271,7 +271,8 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "atualizar_agendamento",
-      description: "Remarca ou cancela um agendamento existente do paciente.",
+      description:
+        "Remarca ou cancela um agendamento existente do paciente. Em remarcações, preserve histórico operacional informando o label do novo slot quando disponível.",
       parameters: {
         type: "object",
         properties: {
@@ -288,6 +289,16 @@ export const ferramentasAgente: ChatCompletionTool[] = [
             type: "string",
             description:
               "Nova data e hora (obrigatório se ação for 'remarcar'), formato ISO 8601",
+          },
+          novoSlotLabel: {
+            type: "string",
+            description:
+              "Label humano do novo horário escolhido, como 'seg 06/07 8h'. Use em remarcações para registrar histórico legível.",
+          },
+          mensagemPaciente: {
+            type: "string",
+            description:
+              "Mensagem do paciente que confirmou a remarcação ou cancelamento, quando útil para auditoria.",
           },
         },
         required: ["agendamentoId", "acao"],

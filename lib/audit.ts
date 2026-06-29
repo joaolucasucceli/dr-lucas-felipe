@@ -2,7 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { criarId } from "@/lib/db-utils"
 
 interface AuditLogParams {
-  usuarioId: string
+  usuarioId?: string | null
   acao: string
   entidade: string
   entidadeId?: string
@@ -23,7 +23,7 @@ export async function registrarAuditLog({
   try {
     const insertData = {
       id: criarId(),
-      usuarioId,
+      usuarioId: usuarioId || null,
       acao,
       entidade,
       entidadeId: entidadeId ?? null,

@@ -2195,14 +2195,17 @@ async function remarcarAgendamentoDeterministico(params: {
   slot: SlotAgendamentoOferecido
   contexto: ContextoContato
   baseUrl: string
+  mensagemPaciente?: string
 }): Promise<{ ok: true; texto: string } | { ok: false; texto: string }> {
-  const { agendamentoId, slot, contexto, baseUrl } = params
+  const { agendamentoId, slot, contexto, baseUrl, mensagemPaciente } = params
   const resultado = await executarFerramenta(
     "atualizar_agendamento",
     {
       agendamentoId,
       acao: "remarcar",
       novaDataHora: slot.dataIso,
+      novoSlotLabel: slot.label,
+      ...(mensagemPaciente ? { mensagemPaciente } : {}),
     },
     baseUrl
   )
@@ -2233,13 +2236,15 @@ async function cancelarAgendamentoDeterministico(params: {
   agendamentoId: string
   contexto: ContextoContato
   baseUrl: string
+  mensagemPaciente?: string
 }): Promise<{ ok: true; texto: string } | { ok: false; texto: string }> {
-  const { agendamentoId, contexto, baseUrl } = params
+  const { agendamentoId, contexto, baseUrl, mensagemPaciente } = params
   const resultado = await executarFerramenta(
     "atualizar_agendamento",
     {
       agendamentoId,
       acao: "cancelar",
+      ...(mensagemPaciente ? { mensagemPaciente } : {}),
     },
     baseUrl
   )
@@ -2292,6 +2297,7 @@ async function montarFastPathReagendamentoCancelamento(params: {
         agendamentoId: agendamento.id,
         contexto,
         baseUrl,
+        mensagemPaciente: textoPaciente,
       })
       await limparEstadoAgendamento(chatId)
       return resultado.texto
@@ -2318,6 +2324,7 @@ async function montarFastPathReagendamentoCancelamento(params: {
       slot: slotPendente,
       contexto,
       baseUrl,
+      mensagemPaciente: textoPaciente,
     })
     if (resultado.ok) {
       await limparEstadoAgendamento(chatId)
@@ -2331,6 +2338,7 @@ async function montarFastPathReagendamentoCancelamento(params: {
       slot: slotEscolhido,
       contexto,
       baseUrl,
+      mensagemPaciente: textoPaciente,
     })
     if (resultado.ok) {
       await limparEstadoAgendamento(chatId)

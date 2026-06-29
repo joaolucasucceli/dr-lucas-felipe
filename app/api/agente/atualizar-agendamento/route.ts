@@ -5,12 +5,44 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { atualizarEvento, cancelarEvento } from "@/lib/google-calendar"
 import { agora } from "@/lib/db-utils"
+import { registrarAuditLog } from "@/lib/audit"
+import { validarSlotManual } from "@/lib/agendamento/validar-slot"
 
 const schema = z.object({
   agendamentoId: z.string().min(1),
   acao: z.enum(["remarcar", "cancelar"]),
   novaDataHora: z.string().min(10).optional(),
+  novoSlotLabel: z.string().min(1).optional(),
+  mensagemPaciente: z.string().min(1).optional(),
 })
+
+function parseDataBanco(valor: string): Date {
+  return new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(valor) ? valor : `${valor}Z`)
+}
+
+function formatarDataHora(valor: Date | string): string {
+  const data = typeof valor === "string" ? parseDataBanco(valor) : valor
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(data)
+}
+
+function normalizarObservacao(texto?: string | null): string {
+  return texto?.trim() ?? ""
+}
+
+function anexarHistoricoObservacao(
+  observacaoAtual: string | null | undefined,
+  linha: string
+): string {
+  const atual = normalizarObservacao(observacaoAtual)
+  return atual ? `${atual}\n---\n${linha}` : linha
+}
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -31,11 +63,14 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { agendamentoId, acao, novaDataHora } = parsed.data
+  const { agendamentoId, acao, novaDataHora, novoSlotLabel, mensagemPaciente } =
+    parsed.data
 
   const { data: agendamentoExistente } = await supabaseAdmin
     .from("agendamentos")
-    .select("id, contatoId, duracao, googleEventId, sincronizado, status, realizadoEm")
+    .select(
+      "id, contatoId, procedimentoId, dataHora, duracao, googleEventId, googleEventUrl, sincronizado, status, realizadoEm, observacao, tipo"
+    )
     .eq("id", agendamentoId)
     .maybeSingle()
 
@@ -75,12 +110,33 @@ export async function POST(request: NextRequest) {
     }
 
     const novaInicio = new Date(novaDataHora)
+    const duracaoMin = agendamentoExistente.duracao ?? 60
+    const validacao = await validarSlotManual(novaInicio, duracaoMin, agendamentoId)
+    if (!validacao.ok) {
+      return NextResponse.json(
+        { error: validacao.motivo || "Horário indisponível" },
+        { status: 400 }
+      )
+    }
+
+    const observacao = anexarHistoricoObservacao(
+      agendamentoExistente.observacao,
+      [
+        `Remarcado em ${formatarDataHora(new Date())}: de ${formatarDataHora(
+          agendamentoExistente.dataHora
+        )} para ${novoSlotLabel ?? formatarDataHora(novaInicio)} via WhatsApp.`,
+        mensagemPaciente ? `Pedido do paciente: ${mensagemPaciente}` : null,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    )
 
     const { data: agendamento, error } = await supabaseAdmin
       .from("agendamentos")
       .update({
         dataHora: novaInicio.toISOString(),
         status: "remarcado",
+        observacao,
         atualizadoEm: agora(),
       })
       .eq("id", agendamentoId)
@@ -93,9 +149,9 @@ export async function POST(request: NextRequest) {
 
     let sincronizado = agendamentoExistente.sincronizado
     if (agendamentoExistente.googleEventId) {
-      const duracaoMin = agendamentoExistente.duracao ?? 60
       const novoFim = new Date(novaInicio.getTime() + duracaoMin * 60_000)
       const ok = await atualizarEvento(agendamentoExistente.googleEventId, {
+        descricao: observacao,
         inicio: novaInicio,
         fim: novoFim,
       })
@@ -130,15 +186,54 @@ export async function POST(request: NextRequest) {
         .eq("id", conversa.id)
     }
 
+    const { data: agendamentoAudit } = await supabaseAdmin
+      .from("agendamentos")
+      .select("*")
+      .eq("id", agendamentoId)
+      .maybeSingle()
+
+    await registrarAuditLog({
+      usuarioId: null,
+      acao: "remarcar_agendamento_ia",
+      entidade: "Agendamento",
+      entidadeId: agendamentoId,
+      dadosAntes: agendamentoExistente as unknown as Record<string, unknown>,
+      dadosDepois: (agendamentoAudit ?? agendamento) as unknown as Record<
+        string,
+        unknown
+      >,
+    })
+
     return NextResponse.json({ agendamento, sincronizado })
   }
 
-  const { data: agendamento } = await supabaseAdmin
+  const observacaoCancelamento = anexarHistoricoObservacao(
+    agendamentoExistente.observacao,
+    [
+      `Cancelado em ${formatarDataHora(new Date())} via WhatsApp.`,
+      mensagemPaciente ? `Pedido do paciente: ${mensagemPaciente}` : null,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  )
+
+  const { data: agendamento, error: cancelError } = await supabaseAdmin
     .from("agendamentos")
-    .update({ status: "cancelado", atualizadoEm: agora() })
+    .update({
+      status: "cancelado",
+      observacao: observacaoCancelamento,
+      atualizadoEm: agora(),
+    })
     .eq("id", agendamentoId)
     .select("*")
     .single()
+
+  if (cancelError || !agendamento) {
+    return NextResponse.json(
+      { error: cancelError?.message || "Erro ao cancelar agendamento" },
+      { status: 500 }
+    )
+  }
 
   if (agendamentoExistente.googleEventId) {
     await cancelarEvento(agendamentoExistente.googleEventId)
@@ -175,5 +270,23 @@ export async function POST(request: NextRequest) {
       .eq("id", conversa.id)
   }
 
-  return NextResponse.json({ agendamento })
+  const { data: agendamentoAudit } = await supabaseAdmin
+    .from("agendamentos")
+    .select("*")
+    .eq("id", agendamentoId)
+    .maybeSingle()
+
+  await registrarAuditLog({
+    usuarioId: null,
+    acao: "cancelar_agendamento_ia",
+    entidade: "Agendamento",
+    entidadeId: agendamentoId,
+    dadosAntes: agendamentoExistente as unknown as Record<string, unknown>,
+    dadosDepois: (agendamentoAudit ?? agendamento) as unknown as Record<
+      string,
+      unknown
+    >,
+  })
+
+  return NextResponse.json({ agendamento: agendamentoAudit ?? agendamento })
 }

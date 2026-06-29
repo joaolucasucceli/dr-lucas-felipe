@@ -518,7 +518,9 @@ export default function ContatoDetalhePage({ params }: PageProps) {
                                     {agendamento.procedimento?.nome ?? "Não informado"}
                                   </p>
                                   {agendamento.observacao && (
-                                    <p>Observação: {agendamento.observacao}</p>
+                                    <p className="whitespace-pre-line">
+                                      Observação: {agendamento.observacao}
+                                    </p>
                                   )}
                                   {agendamento.realizadoEm && (
                                     <p>
