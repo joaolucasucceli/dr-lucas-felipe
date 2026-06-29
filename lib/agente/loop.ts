@@ -328,17 +328,41 @@ function filtroProcedimentoParaEstimativa(
   return procedimento?.trim() || "mini lipo"
 }
 
-function montarRespostaEstimativaInicial(
+function montarRespostaEstimativaInicialPartes(
   contexto: ContextoContato,
   estimativa: EstimativaEnviada
-): string {
+): { textoAntesResultados: string; textoDepoisResultados: string } {
   const procedimento =
     estimativa.procedimento || contexto.procedimento || "mini lipo"
 
-  return comVocativo(
-    contexto,
-    `Claro{nome}. Como estimativa inicial, ${procedimento} costuma ficar em ${estimativa.faixa}.\n---\nEsse valor é aproximado. O orçamento mais preciso depende do seu caso e é definido pelo Dr. Lucas com base nas informações e na foto.\n---\nSe essa estimativa fizer sentido pra você, posso seguir por dois caminhos: te faço algumas perguntas rápidas pra buscar um orçamento mais preciso, ou já vejo os horários da reunião online com o Dr. Lucas. Qual você prefere?`
-  )
+  return {
+    textoAntesResultados: comVocativo(
+      contexto,
+      `Claro{nome}. Como estimativa inicial, ${procedimento} costuma ficar em ${estimativa.faixa}.\n---\nEsse valor é aproximado. O orçamento mais preciso depende do seu caso e é definido pelo Dr. Lucas com base nas informações e na foto.`
+    ),
+    textoDepoisResultados:
+      "Se essa estimativa fizer sentido pra você, posso seguir por dois caminhos: te faço algumas perguntas rápidas pra buscar um orçamento mais preciso, ou já vejo os horários da reunião online com o Dr. Lucas. Qual você prefere?",
+  }
+}
+
+function dividirRespostaEstimativaComPerguntaFinal(
+  texto: string
+): { textoAntesResultados: string; textoDepoisResultados: string } | null {
+  const match = texto.match(/Se essa estimativa fizer sentido[\s\S]*$/i)
+  if (!match || match.index == null || match.index <= 0) return null
+
+  const textoAntesResultados = texto
+    .slice(0, match.index)
+    .replace(/\n?---\n?$/g, "")
+    .trim()
+  const textoDepoisResultados = texto
+    .slice(match.index)
+    .replace(/^\n?---\n?/g, "")
+    .trim()
+
+  if (!textoAntesResultados || !textoDepoisResultados) return null
+
+  return { textoAntesResultados, textoDepoisResultados }
 }
 
 async function montarFastPathEscolhaInicial(params: {
@@ -349,7 +373,12 @@ async function montarFastPathEscolhaInicial(params: {
   conversaId: string | null
   memoria: Awaited<ReturnType<typeof obterMemoria>>
   baseUrl: string
-}): Promise<{ texto: string; enviarResultadosEstimativa?: boolean } | null> {
+}): Promise<{
+  texto: string
+  enviarResultadosEstimativa?: boolean
+  textoAntesResultados?: string
+  textoDepoisResultados?: string
+} | null> {
   const { chatId, textoPaciente, contexto, contatoId, conversaId, memoria, baseUrl } =
     params
   const ultimaMensagem = ultimaMensagemAssistente(memoria)
@@ -417,9 +446,12 @@ async function montarFastPathEscolhaInicial(params: {
       )
     }
 
+    const partes = montarRespostaEstimativaInicialPartes(contexto, estimativa)
     return {
-      texto: montarRespostaEstimativaInicial(contexto, estimativa),
+      texto: `${partes.textoAntesResultados}\n---\n${partes.textoDepoisResultados}`,
       enviarResultadosEstimativa: true,
+      textoAntesResultados: partes.textoAntesResultados,
+      textoDepoisResultados: partes.textoDepoisResultados,
     }
   }
 
@@ -3040,6 +3072,46 @@ export async function processarMensagens(
       })
 
       if (respostaEscolhaInicial) {
+        if (
+          respostaEscolhaInicial.enviarResultadosEstimativa &&
+          respostaEscolhaInicial.textoAntesResultados &&
+          respostaEscolhaInicial.textoDepoisResultados
+        ) {
+          const enviouTextoAntes = await enviarRespostaAgente({
+            chatId,
+            whatsapp,
+            contatoId,
+            conversaId,
+            configWa: configEnvio,
+            textoUsuario: textoBuffer,
+            textoResposta: respostaEscolhaInicial.textoAntesResultados,
+          })
+
+          if (enviouTextoAntes) {
+            await enviarResultadosProcedimento({
+              contatoId,
+              conversaId,
+              whatsapp,
+              configWa: configEnvio,
+              procedimentoInteresse: contextoContato.procedimento,
+              origem: "orcamento_estimado",
+              chatId,
+            })
+
+            await enviarRespostaAgente({
+              chatId,
+              whatsapp,
+              contatoId,
+              conversaId,
+              configWa: configEnvio,
+              textoUsuario: textoBuffer,
+              textoResposta: respostaEscolhaInicial.textoDepoisResultados,
+            })
+          }
+
+          return { contatoId, conversaId }
+        }
+
         const enviouEscolhaInicial = await enviarRespostaAgente({
           chatId,
           whatsapp,
@@ -3776,30 +3848,69 @@ export async function processarMensagens(
       )
     }
 
-    enviouResposta = await enviarRespostaAgente({
-      chatId,
-      whatsapp,
-      contatoId,
-      conversaId,
-      configWa: configEnvio,
-      textoUsuario: textoBuffer,
-      textoResposta,
-    })
+    const partesEstimativa =
+      deveEnviarResultadosEstimativa && contatoId
+        ? dividirRespostaEstimativaComPerguntaFinal(textoResposta)
+        : null
 
-    if (
-      enviouResposta &&
-      deveEnviarResultadosEstimativa &&
-      contatoId
-    ) {
-      await enviarResultadosProcedimento({
+    if (partesEstimativa && contatoId) {
+      enviouResposta = await enviarRespostaAgente({
+        chatId,
+        whatsapp,
         contatoId,
         conversaId,
-        whatsapp,
         configWa: configEnvio,
-        procedimentoInteresse: contextoContato.procedimento,
-        origem: "orcamento_estimado",
-        chatId,
+        textoUsuario: textoBuffer,
+        textoResposta: partesEstimativa.textoAntesResultados,
       })
+
+      if (enviouResposta) {
+        await enviarResultadosProcedimento({
+          contatoId,
+          conversaId,
+          whatsapp,
+          configWa: configEnvio,
+          procedimentoInteresse: contextoContato.procedimento,
+          origem: "orcamento_estimado",
+          chatId,
+        })
+
+        await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: partesEstimativa.textoDepoisResultados,
+        })
+      }
+    } else {
+      enviouResposta = await enviarRespostaAgente({
+        chatId,
+        whatsapp,
+        contatoId,
+        conversaId,
+        configWa: configEnvio,
+        textoUsuario: textoBuffer,
+        textoResposta,
+      })
+
+      if (
+        enviouResposta &&
+        deveEnviarResultadosEstimativa &&
+        contatoId
+      ) {
+        await enviarResultadosProcedimento({
+          contatoId,
+          conversaId,
+          whatsapp,
+          configWa: configEnvio,
+          procedimentoInteresse: contextoContato.procedimento,
+          origem: "orcamento_estimado",
+          chatId,
+        })
+      }
     }
   } catch (error) {
     console.error("[Agente] Erro no loop de resposta:", error)
