@@ -812,6 +812,100 @@ function montarProximaPerguntaQualificacao(contexto: ContextoContato): string {
   )
 }
 
+function regiaoQualificacaoTexto(contexto: ContextoContato): string {
+  const fonte = normalizarTextoBusca(
+    [contexto.procedimento, contexto.sobreOPaciente].filter(Boolean).join(" ")
+  )
+
+  if (fonte.includes("abdomen") || fonte.includes("abdome")) {
+    return "no abdômen"
+  }
+
+  return "nessa região"
+}
+
+function montarRespostaTempoIncomodo(
+  contexto: ContextoContato,
+  respostaPaciente: string
+): string {
+  const tempo = normalizarTextoBusca(respostaPaciente)
+  const pareceLongo =
+    tempo.includes("desde sempre") ||
+    tempo.includes("faz tempo") ||
+    tempo.includes("muito tempo") ||
+    tempo.includes("desde crianca") ||
+    tempo.includes("desde a infancia") ||
+    tempo.includes("desde adolescente") ||
+    tempo.includes("desde a adolescencia") ||
+    /\b(?:ha|faz|tem)\s+\d+\s+anos?\b/.test(tempo) ||
+    /\b\d+\s+anos?\b/.test(tempo)
+
+  return comVocativo(
+    contexto,
+    [
+      pareceLongo
+        ? "Entendi{nome}. Quando isso incomoda há tanto tempo, faz sentido querer uma solução mais direcionada."
+        : "Entendi{nome}. Esse tempo de incômodo ajuda o Dr. Lucas a avaliar seu caso com mais contexto.",
+      "Vou deixar esse contexto claro pro Dr. Lucas avaliar melhor. Você já fez algum procedimento estético antes ou tem algum problema de saúde importante?",
+    ].join("\n---\n")
+  )
+}
+
+function montarRespostaHistoricoSaude(contexto: ContextoContato): string {
+  return comVocativo(
+    contexto,
+    [
+      "Perfeito{nome}. Isso ajuda bastante a entender seu caso com mais segurança.",
+      `E hoje o que mais te incomoda ${regiaoQualificacaoTexto(contexto)}: gordura localizada, flacidez ou contorno?`,
+    ].join("\n---\n")
+  )
+}
+
+function montarRespostaPrincipalIncomodo(contexto: ContextoContato): string {
+  return comVocativo(
+    contexto,
+    [
+      "Entendi{nome}. Esse é justamente o tipo de detalhe que ajuda o Dr. Lucas a avaliar melhor a indicação e o planejamento.",
+      "Pra eu mandar um caso bem completo pra ele, consegue me enviar uma foto atual da região?",
+    ].join("\n---\n")
+  )
+}
+
+function montarRespostaFotoQualificacaoCompleta(
+  contexto: ContextoContato
+): string {
+  return comVocativo(
+    contexto,
+    [
+      "Recebi{nome}. Obrigada por enviar.",
+      "Agora tenho os dados principais para deixar seu caso bem claro pro Dr. Lucas. Vou enviar pra ele definir o orçamento exato e te retorno por aqui.",
+    ].join("\n---\n")
+  )
+}
+
+function montarRespostaFotoQualificacaoIncompleta(
+  contexto: ContextoContato
+): string {
+  return comVocativo(
+    contexto,
+    [
+      "Recebi{nome}. Obrigada por enviar.",
+      `Pra eu completar seu caso antes de mandar pro Dr. Lucas, ${montarProximaPerguntaQualificacao(
+        contexto
+      ).replace(/^[^.?!]+[.?!]\s*/, "")}`,
+    ].join("\n---\n")
+  )
+}
+
+function montarContinuidadeQualificacao(contexto: ContextoContato): string {
+  return comVocativo(
+    contexto,
+    `Pra eu completar seu caso com segurança, ${montarProximaPerguntaQualificacao(
+      contexto
+    ).replace(/^[^.?!]+[.?!]\s*/, "")}`
+  )
+}
+
 function contextoComFato(
   contexto: ContextoContato,
   fato: string
@@ -865,7 +959,10 @@ function montarFastPathQualificacao(params: {
     return {
       tipo: "tempo_incomodo_fallback",
       fato,
-      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
+      texto: montarRespostaTempoIncomodo(
+        contextoComFato(contexto, fato),
+        textoPaciente
+      ),
     }
   }
 
@@ -881,7 +978,7 @@ function montarFastPathQualificacao(params: {
       return {
         tipo: "foto_qualificacao_completa",
         fato,
-        texto: montarProximaPerguntaQualificacao(proximoContexto),
+        texto: montarRespostaFotoQualificacaoCompleta(proximoContexto),
         acionarOrcamento: true,
       }
     }
@@ -889,7 +986,7 @@ function montarFastPathQualificacao(params: {
     return {
       tipo: "foto_qualificacao_incompleta",
       fato,
-      texto: montarProximaPerguntaQualificacao(proximoContexto),
+      texto: montarRespostaFotoQualificacaoIncompleta(proximoContexto),
     }
   }
 
@@ -907,7 +1004,10 @@ function montarFastPathQualificacao(params: {
     return {
       tipo: "tempo_incomodo",
       fato,
-      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
+      texto: montarRespostaTempoIncomodo(
+        contextoComFato(contexto, fato),
+        textoPaciente
+      ),
     }
   }
 
@@ -916,7 +1016,7 @@ function montarFastPathQualificacao(params: {
     return {
       tipo: "historico_saude",
       fato,
-      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
+      texto: montarRespostaHistoricoSaude(contextoComFato(contexto, fato)),
     }
   }
 
@@ -925,7 +1025,7 @@ function montarFastPathQualificacao(params: {
     return {
       tipo: "principal_incomodo",
       fato,
-      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
+      texto: montarRespostaPrincipalIncomodo(contextoComFato(contexto, fato)),
     }
   }
 
@@ -944,7 +1044,7 @@ function timeoutOpenAI(inicioMs: number): number {
 
 function montarFallbackDeadline(contexto: ContextoContato): string {
   if (contexto.etapa === "qualificacao") {
-    return montarPerguntaQualificacaoFallback(contexto)
+    return montarContinuidadeQualificacao(contexto)
   }
   if (contexto.etapa === "orcamento") {
     return comVocativo(
@@ -3326,7 +3426,7 @@ export async function processarMensagens(
         const parsed = JSON.parse(resultadoOrcamento)
         if (parsed?.ok !== true) {
           textoRespostaFastPath =
-            "Recebi a foto, mas tive uma instabilidade pra enviar seus dados ao Dr. Lucas. Me manda só um ok que eu tento de novo?"
+            "Recebi a foto. Só preciso tentar enviar seus dados ao Dr. Lucas novamente. Me manda só um ok que eu sigo por aqui?"
         } else {
           contextoContato.etapa = "orcamento"
         }
