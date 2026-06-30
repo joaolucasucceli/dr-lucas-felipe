@@ -8,14 +8,14 @@ import {
 } from "@react-pdf/renderer"
 
 /**
- * Documento PDF do orcamento da clinica do Dr. Lucas Felipe.
+ * Documento PDF do orcamento da clinica do Dr. Lucas Ferreira.
  *
  * Renderizado on-the-fly quando o Dr. Lucas responde o valor pelo WhatsApp
  * pessoal dele (formato `<numero> - <valor>`). Identidade visual limpa e
- * profissional — cabecalho com foto do Dr. Lucas, dados do orcamento, rodape
- * com contato da clinica.
+ * profissional: cabecalho com foto do Dr. Lucas, contexto do atendimento,
+ * valor em destaque, inclusoes resumidas e proximo passo.
  *
- * Runtime: Node (nao edge) — `@react-pdf/renderer` usa APIs de Node.
+ * Runtime: Node (nao edge). `@react-pdf/renderer` usa APIs de Node.
  */
 
 export interface DadosOrcamento {
@@ -29,11 +29,11 @@ export interface DadosOrcamento {
   valorFormatado: string
   /** Condicoes de parcelamento, se houver. */
   parcelamento: string | null
-  /** Resumo enviado para o Dr. Lucas no pedido de orçamento. */
+  /** Resumo enviado para o Dr. Lucas no pedido de orcamento. */
   resumoCaso?: string | null
-  /** Histórico estruturado do atendimento no contato. */
+  /** Historico estruturado do atendimento no contato. */
   sobreOPaciente?: string | null
-  /** Texto comercial original do procedimento/região de interesse. */
+  /** Texto comercial original do procedimento/regiao de interesse. */
   procedimentoInteresse?: string | null
   /** Validade em dias (default 7). */
   validadeDias: number
@@ -45,54 +45,59 @@ export interface DadosOrcamento {
   contatoClinica?: string
 }
 
-// Paleta sobria — azul petroleo + cinzas. PDF e claro (impressao/leitura),
-// independente do tema dark-only do painel.
+const NOME_MEDICO = "Dr. Lucas Ferreira"
+const SUBTITULO_MEDICO = "Estética avançada e planejamento corporal"
+const PROXIMO_PASSO =
+  "Próximo passo: reunião online de diagnóstico com o Dr. Lucas para avaliar seu caso, tirar dúvidas e orientar com segurança antes de qualquer decisão."
+
+// Paleta sobria: azul petroleo + cinzas. PDF claro para leitura e impressao.
 const COR_PRIMARIA = "#0f3d54"
 const COR_ACENTO = "#1f7a99"
 const COR_TEXTO = "#1a1a1a"
 const COR_SUAVE = "#5b6b73"
 const COR_LINHA = "#e2e8ec"
+const COR_FUNDO = "#f4f8fa"
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 40,
-    paddingBottom: 56,
-    paddingHorizontal: 44,
-    fontSize: 11,
+    paddingTop: 32,
+    paddingBottom: 44,
+    paddingHorizontal: 40,
+    fontSize: 10.2,
     color: COR_TEXTO,
     fontFamily: "Helvetica",
-    lineHeight: 1.5,
+    lineHeight: 1.34,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 28,
-    paddingBottom: 20,
+    marginBottom: 16,
+    paddingBottom: 14,
     borderBottomWidth: 2,
     borderBottomColor: COR_PRIMARIA,
   },
   foto: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginRight: 16,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    marginRight: 14,
     objectFit: "cover",
   },
   headerTexto: {
     flexDirection: "column",
   },
   nomeMedico: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: "Helvetica-Bold",
     color: COR_PRIMARIA,
   },
   subtituloMedico: {
-    fontSize: 10,
+    fontSize: 9,
     color: COR_SUAVE,
     marginTop: 2,
   },
   tituloDoc: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: "Helvetica-Bold",
     color: COR_ACENTO,
     marginLeft: "auto",
@@ -100,70 +105,119 @@ const styles = StyleSheet.create({
   metaLinha: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 14,
   },
   metaItem: {
     flexDirection: "column",
   },
   metaLabel: {
-    fontSize: 8,
+    fontSize: 7.5,
     color: COR_SUAVE,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   metaValor: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Helvetica-Bold",
     color: COR_TEXTO,
     marginTop: 2,
   },
   secao: {
-    marginBottom: 20,
+    marginBottom: 11,
+  },
+  secaoCompacta: {
+    marginBottom: 9,
   },
   secaoTitulo: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontFamily: "Helvetica-Bold",
     color: COR_ACENTO,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 6,
+    letterSpacing: 0.7,
+    marginBottom: 4,
   },
   secaoTexto: {
-    fontSize: 11,
+    fontSize: 10.2,
     color: COR_TEXTO,
+  },
+  procedimentoCard: {
+    backgroundColor: COR_FUNDO,
+    borderWidth: 1,
+    borderColor: COR_LINHA,
+    borderRadius: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    marginBottom: 11,
+  },
+  procedimentoTexto: {
+    fontSize: 12,
+    fontFamily: "Helvetica-Bold",
+    color: COR_PRIMARIA,
   },
   caixaValor: {
     backgroundColor: COR_PRIMARIA,
     borderRadius: 8,
-    paddingVertical: 18,
-    paddingHorizontal: 22,
-    marginBottom: 22,
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   caixaValorLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#cfe2ea",
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
   caixaValorNumero: {
-    fontSize: 26,
+    fontSize: 24,
     fontFamily: "Helvetica-Bold",
     color: "#ffffff",
   },
-  divisor: {
-    borderBottomWidth: 1,
-    borderBottomColor: COR_LINHA,
-    marginVertical: 16,
+  lista: {
+    marginTop: 1,
+  },
+  listaItem: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  bullet: {
+    width: 10,
+    fontSize: 10,
+    color: COR_ACENTO,
+    fontFamily: "Helvetica-Bold",
+  },
+  bulletTexto: {
+    flex: 1,
+    fontSize: 10,
+    color: COR_TEXTO,
+  },
+  proximoPasso: {
+    backgroundColor: "#eef7fa",
+    borderLeftWidth: 3,
+    borderLeftColor: COR_ACENTO,
+    borderRadius: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 11,
+    marginBottom: 10,
+  },
+  proximoPassoTexto: {
+    fontSize: 10,
+    color: COR_PRIMARIA,
+    fontFamily: "Helvetica-Bold",
+  },
+  validade: {
+    borderTopWidth: 1,
+    borderTopColor: COR_LINHA,
+    paddingTop: 8,
   },
   rodape: {
     position: "absolute",
-    bottom: 28,
-    left: 44,
-    right: 44,
-    paddingTop: 12,
+    bottom: 24,
+    left: 40,
+    right: 40,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: COR_LINHA,
     flexDirection: "row",
@@ -182,6 +236,66 @@ function normalizarTexto(texto: string): string {
     .toLowerCase()
 }
 
+function limparTexto(texto: string | null | undefined): string | null {
+  const limpo = texto
+    ?.replace(/\s+/g, " ")
+    .replace(/\s+([.,;:!?])/g, "$1")
+    .replace(/([.!?]){2,}$/g, "$1")
+    .trim()
+
+  if (!limpo) {
+    return null
+  }
+
+  return limpo.replace(/[.;:,\s]+$/g, "").trim()
+}
+
+function minusculaInicial(texto: string): string {
+  if (!texto) {
+    return texto
+  }
+
+  return texto.charAt(0).toLocaleLowerCase("pt-BR") + texto.slice(1)
+}
+
+function capitalizarInicial(texto: string): string {
+  if (!texto) {
+    return texto
+  }
+
+  return texto.charAt(0).toLocaleUpperCase("pt-BR") + texto.slice(1)
+}
+
+function adaptarPrimeiraPessoa(texto: string): string {
+  return texto
+    .replace(/^não fiz\b/i, "não fez")
+    .replace(/^nao fiz\b/i, "não fez")
+    .replace(/\bnão tenho\b/gi, "não tem")
+    .replace(/\bnao tenho\b/gi, "não tem")
+    .replace(/^fiz\b/i, "fez")
+    .replace(/^tenho\b/i, "tem")
+}
+
+function formatarProcedimento(texto: string | null | undefined): string | null {
+  const limpo = limparTexto(texto)
+  if (!limpo) {
+    return null
+  }
+
+  const comRegiao = limpo
+    .replace(/\bmini\s*lipo\s+(abd[oô]men|abdome)\b/i, "mini lipo no abdômen")
+    .replace(/\blipo\s+(abd[oô]men|abdome)\b/i, "lipo no abdômen")
+
+  return capitalizarInicial(comRegiao)
+}
+
+function formatarProcedimentoFrase(
+  texto: string | null | undefined
+): string | null {
+  const formatado = formatarProcedimento(texto)
+  return formatado ? minusculaInicial(formatado) : null
+}
+
 function extrairFato(texto: string, prefixo: string): string | null {
   const prefixoNorm = normalizarTexto(prefixo)
   const partes = texto
@@ -192,7 +306,7 @@ function extrairFato(texto: string, prefixo: string): string | null {
   for (const parte of partes) {
     const normalizado = normalizarTexto(parte)
     if (normalizado.startsWith(prefixoNorm)) {
-      return parte.slice(parte.indexOf(":") + 1).trim() || null
+      return limparTexto(parte.slice(parte.indexOf(":") + 1)) || null
     }
   }
 
@@ -200,36 +314,95 @@ function extrairFato(texto: string, prefixo: string): string | null {
 }
 
 function montarTextoPreparado(dados: DadosOrcamento): string {
-  const fonte = [dados.sobreOPaciente, dados.resumoCaso].filter(Boolean).join("\n")
-  const procedimento = dados.procedimentoInteresse || dados.procedimento
+  const fonte = [dados.sobreOPaciente, dados.resumoCaso]
+    .filter(Boolean)
+    .join("\n")
+  const procedimento = formatarProcedimentoFrase(
+    dados.procedimentoInteresse || dados.procedimento
+  )
   const tempo = extrairFato(fonte, "Tempo de incômodo informado pelo paciente:")
   const historico = extrairFato(
     fonte,
     "Histórico de procedimentos e saúde informado pelo paciente:"
   )
-  const incomodo = extrairFato(fonte, "Principal incômodo informado pelo paciente:")
+  const incomodo = extrairFato(
+    fonte,
+    "Principal incômodo informado pelo paciente:"
+  )
+  const partesContexto = [
+    procedimento ? `o foco é ${procedimento}` : null,
+    tempo ? `a região incomoda ${minusculaInicial(tempo)}` : null,
+    incomodo ? `o principal incômodo é ${minusculaInicial(incomodo)}` : null,
+    historico
+      ? `você informou que ${adaptarPrimeiraPessoa(minusculaInicial(historico))}`
+      : null,
+  ].filter(Boolean)
 
   const frases = [
-    `${dados.nomePaciente}, este orçamento foi preparado a partir do que você compartilhou no pré-atendimento com a Ana Júlia.`,
-    procedimento
-      ? `Pelo seu relato, o procedimento indicado para avaliação é ${procedimento}.`
+    `${dados.nomePaciente}, preparei esta proposta com base no que você compartilhou no pré-atendimento com a Ana Júlia.`,
+    partesContexto.length
+      ? `Considerei que ${partesContexto.join("; ")}.`
       : null,
-    tempo ? `Você contou que essa região incomoda ${tempo}.` : null,
-    incomodo ? `O principal ponto que você quer melhorar é: ${incomodo}.` : null,
-    historico ? `Também consideramos seu histórico informado: ${historico}.` : null,
-    procedimento
-      ? `Por isso, a proposta abaixo organiza o valor definido pelo Dr. Lucas e o que está incluso para esse plano de cuidado.`
-      : `A proposta abaixo organiza o valor definido pelo Dr. Lucas e o que está incluso para o seu caso.`,
+    `Abaixo estão o valor definido pelo Dr. Lucas, os principais itens inclusos e o próximo passo.`,
   ].filter(Boolean)
 
   return frases.join(" ")
+}
+
+function adicionarUnico(lista: string[], item: string | null): void {
+  const limpo = limparTexto(item)
+  if (!limpo) {
+    return
+  }
+
+  if (
+    !lista.some(
+      (existente) => normalizarTexto(existente) === normalizarTexto(limpo)
+    )
+  ) {
+    lista.push(`${limpo}.`)
+  }
+}
+
+function montarItensInclusos(dados: DadosOrcamento): string[] {
+  const procedimento = formatarProcedimentoFrase(
+    dados.procedimentoInteresse || dados.procedimento
+  )
+  const fonte = normalizarTexto(dados.oQueInclui ?? "")
+  const itens: string[] = []
+
+  adicionarUnico(itens, "Avaliação online de diagnóstico com o Dr. Lucas")
+  adicionarUnico(
+    itens,
+    procedimento
+      ? `Planejamento individual para ${procedimento}`
+      : "Planejamento individual conforme avaliação do caso"
+  )
+  adicionarUnico(itens, "Orientações de preparo e recuperação")
+
+  if (fonte.includes("retorno") || fonte.includes("acompanh")) {
+    adicionarUnico(
+      itens,
+      "Retornos ou acompanhamento conforme escopo cadastrado"
+    )
+  }
+
+  if (fonte.includes("correc")) {
+    adicionarUnico(itens, "Correções previstas no escopo quando necessárias")
+  }
+
+  adicionarUnico(
+    itens,
+    "Suporte da equipe para dúvidas logísticas antes da reunião"
+  )
+
+  return itens.slice(0, 5)
 }
 
 export function OrcamentoPDF({ dados }: { dados: DadosOrcamento }) {
   const {
     nomePaciente,
     procedimento,
-    oQueInclui,
     valorFormatado,
     parcelamento,
     validadeDias,
@@ -237,29 +410,29 @@ export function OrcamentoPDF({ dados }: { dados: DadosOrcamento }) {
     dataEmissao,
     contatoClinica,
   } = dados
+  const procedimentoFormatado = formatarProcedimento(
+    dados.procedimentoInteresse || procedimento
+  )
+  const itensInclusos = montarItensInclusos(dados)
 
   return (
     <Document
-      title={`Orçamento — ${nomePaciente}`}
-      author="Dr. Lucas Felipe"
+      title={`Orçamento - ${nomePaciente}`}
+      author={NOME_MEDICO}
       subject="Orçamento de procedimento"
     >
       <Page size="A4" style={styles.page}>
-        {/* Cabecalho: foto + nome do Dr. Lucas + titulo */}
         <View style={styles.header}>
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
           <Image src={fotoDrLucasUrl} style={styles.foto} />
           <View style={styles.headerTexto}>
-            <Text style={styles.nomeMedico}>Dr. Lucas Felipe</Text>
-            <Text style={styles.subtituloMedico}>
-              Estética avançada e planejamento corporal
-            </Text>
+            <Text style={styles.nomeMedico}>{NOME_MEDICO}</Text>
+            <Text style={styles.subtituloMedico}>{SUBTITULO_MEDICO}</Text>
           </View>
           <Text style={styles.tituloDoc}>Orçamento</Text>
         </View>
 
-        {/* Metadados: paciente + data */}
-        <View style={styles.metaLinha}>
+        <View style={styles.metaLinha} wrap={false}>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Paciente</Text>
             <Text style={styles.metaValor}>{nomePaciente}</Text>
@@ -275,39 +448,44 @@ export function OrcamentoPDF({ dados }: { dados: DadosOrcamento }) {
           <Text style={styles.secaoTexto}>{montarTextoPreparado(dados)}</Text>
         </View>
 
-        {/* Procedimento + o que inclui */}
-        {procedimento ? (
-          <View style={styles.secao}>
-            <Text style={styles.secaoTitulo}>Procedimento</Text>
-            <Text style={styles.secaoTexto}>{procedimento}</Text>
+        {procedimentoFormatado ? (
+          <View style={styles.procedimentoCard} wrap={false}>
+            <Text style={styles.secaoTitulo}>Procedimento indicado</Text>
+            <Text style={styles.procedimentoTexto}>
+              {procedimentoFormatado}
+            </Text>
           </View>
         ) : null}
 
-        {oQueInclui ? (
-          <View style={styles.secao}>
-            <Text style={styles.secaoTitulo}>O que está incluso</Text>
-            <Text style={styles.secaoTexto}>{oQueInclui}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.divisor} />
-
-        {/* Caixa de destaque do valor */}
-        <View style={styles.caixaValor}>
-          <Text style={styles.caixaValorLabel}>Valor</Text>
+        <View style={styles.caixaValor} wrap={false}>
+          <Text style={styles.caixaValorLabel}>Valor definido</Text>
           <Text style={styles.caixaValorNumero}>{valorFormatado}</Text>
         </View>
 
-        {/* Parcelamento (se houver) */}
         {parcelamento ? (
-          <View style={styles.secao}>
+          <View style={styles.secaoCompacta} wrap={false}>
             <Text style={styles.secaoTitulo}>Formas de pagamento</Text>
             <Text style={styles.secaoTexto}>{parcelamento}</Text>
           </View>
         ) : null}
 
-        {/* Validade */}
         <View style={styles.secao}>
+          <Text style={styles.secaoTitulo}>Itens principais inclusos</Text>
+          <View style={styles.lista}>
+            {itensInclusos.map((item) => (
+              <View key={item} style={styles.listaItem} wrap={false}>
+                <Text style={styles.bullet}>-</Text>
+                <Text style={styles.bulletTexto}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.proximoPasso} wrap={false}>
+          <Text style={styles.proximoPassoTexto}>{PROXIMO_PASSO}</Text>
+        </View>
+
+        <View style={styles.validade} wrap={false}>
           <Text style={styles.secaoTitulo}>Validade</Text>
           <Text style={styles.secaoTexto}>
             Este orçamento é válido por {validadeDias} dias a partir da data de
@@ -315,10 +493,9 @@ export function OrcamentoPDF({ dados }: { dados: DadosOrcamento }) {
           </Text>
         </View>
 
-        {/* Rodape */}
         <View style={styles.rodape} fixed>
           <Text style={styles.rodapeTexto}>
-            Dr. Lucas Felipe — Estética avançada
+            {NOME_MEDICO} - Estética avançada
           </Text>
           <Text style={styles.rodapeTexto}>
             {contatoClinica ?? "Atendimento via WhatsApp"}
