@@ -255,20 +255,6 @@ export async function processarRespostaDrLucas(args: {
         nomeArquivo
       )
 
-      await enviarMensagem(
-        cfg.uazapiUrl,
-        cfg.instanceToken,
-        contato.whatsapp,
-        apresentacao
-      )
-
-      // Registra a mensagem da Ana no historico do contato (best-effort).
-      try {
-        await registrarMensagemAna(contato.id, pendencia.conversaId, apresentacao)
-      } catch (err) {
-        console.error("[orcamento-dr-lucas] falha ao registrar msg da Ana:", err)
-      }
-
       try {
         await enviarResultadosProcedimento({
           contatoId: contato.id,
@@ -284,6 +270,20 @@ export async function processarRespostaDrLucas(args: {
           "[orcamento-dr-lucas] falha best-effort ao enviar resultados:",
           err
         )
+      }
+
+      await enviarMensagem(
+        cfg.uazapiUrl,
+        cfg.instanceToken,
+        contato.whatsapp,
+        apresentacao
+      )
+
+      // Registra a mensagem da Ana no historico do contato (best-effort).
+      try {
+        await registrarMensagemAna(contato.id, pendencia.conversaId, apresentacao)
+      } catch (err) {
+        console.error("[orcamento-dr-lucas] falha ao registrar msg da Ana:", err)
       }
     } else {
       console.error(
