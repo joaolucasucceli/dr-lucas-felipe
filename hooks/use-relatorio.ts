@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 type TipoRelatorio = "funil" | "receita" | "atendimento"
 
@@ -40,12 +41,14 @@ export function useRelatorio({
       const params = new URLSearchParams({ dataInicio, dataFim })
       if (agrupar) params.set("agrupar", agrupar)
 
-      const res = await fetch(`/api/relatorios/${tipo}?${params.toString()}`)
-      if (!res.ok) throw new Error("Erro ao carregar relatório")
-      const json = await res.json()
+      const json = await fetchJson<DadosRelatorio>(
+        `/api/relatorios/${tipo}?${params.toString()}`,
+        undefined,
+        { recurso: "Relatório", fallback: "Erro ao carregar relatório" }
+      )
       setDados(json)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      setErro(normalizarErroApi(e, "Erro ao carregar relatório").mensagem)
     } finally {
       setCarregando(false)
     }

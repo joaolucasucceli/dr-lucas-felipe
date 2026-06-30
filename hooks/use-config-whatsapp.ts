@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 interface ConfigWhatsapp {
   uazapiUrl: string
@@ -33,20 +34,25 @@ export function useConfigWhatsapp(): UseConfigWhatsappReturn {
     setErro(null)
 
     try {
-      const res = await fetch("/api/whatsapp/status")
-
-      if (!res.ok) {
-        throw new Error("Erro ao carregar configuração")
-      }
-
-      const json = await res.json()
+      const json = await fetchJson<{
+        configurado: boolean
+        ativo: boolean
+        status: string
+        numeroWhatsapp?: string | null
+        config?: ConfigWhatsapp | null
+      }>("/api/whatsapp/status", undefined, {
+        recurso: "WhatsApp",
+        fallback: "Erro ao carregar configuração",
+      })
       setConfigurado(json.configurado)
       setConectado(json.ativo)
       setStatus(json.status)
       setNumeroWhatsapp(json.numeroWhatsapp || null)
       setConfig(json.config || null)
     } catch (e) {
-      if (!silencioso) setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      if (!silencioso) {
+        setErro(normalizarErroApi(e, "Erro ao carregar configuração").mensagem)
+      }
     } finally {
       if (!silencioso) setCarregando(false)
     }

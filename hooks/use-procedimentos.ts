@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 interface Procedimento {
   id: string
@@ -45,16 +46,14 @@ export function useProcedimentos(params: UseProcedimentosParams = {}): UseProced
       if (params.ativo) searchParams.set("ativo", params.ativo)
       if (params.busca) searchParams.set("busca", params.busca)
 
-      const res = await fetch(`/api/procedimentos?${searchParams.toString()}`)
-
-      if (!res.ok) {
-        throw new Error("Erro ao carregar procedimentos")
-      }
-
-      const json = await res.json()
+      const json = await fetchJson<{ dados: Procedimento[] }>(
+        `/api/procedimentos?${searchParams.toString()}`,
+        undefined,
+        { recurso: "Procedimentos", fallback: "Erro ao carregar procedimentos" }
+      )
       setDados(json.dados)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      setErro(normalizarErroApi(e, "Erro ao carregar procedimentos").mensagem)
     } finally {
       setCarregando(false)
     }

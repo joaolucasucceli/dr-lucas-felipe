@@ -3,6 +3,7 @@
 import useSWR from "swr"
 import { toast } from "sonner"
 import { useRealtimeTabela } from "@/lib/realtime"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 export interface KanbanContato {
   id: string
@@ -31,7 +32,11 @@ interface KanbanData {
   total: number
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = (url: string) =>
+  fetchJson<KanbanData>(url, undefined, {
+    recurso: "Kanban",
+    fallback: "Erro ao carregar kanban",
+  })
 
 function buildUrl(params: UseKanbanParams) {
   const searchParams = new URLSearchParams()
@@ -98,7 +103,7 @@ export function useKanban(params: UseKanbanParams = {}) {
       return true
     } catch (err) {
       mutate(data, false)
-      toast.error(err instanceof Error ? err.message : "Erro ao mover contato")
+      toast.error(normalizarErroApi(err, "Erro ao mover contato").mensagem)
       return false
     }
   }
@@ -107,7 +112,7 @@ export function useKanban(params: UseKanbanParams = {}) {
     colunas: data?.colunas ?? {},
     total: data?.total ?? 0,
     carregando: isLoading,
-    erro: error ? "Erro ao carregar kanban" : null,
+    erro: error ? normalizarErroApi(error, "Erro ao carregar kanban").mensagem : null,
     recarregar: () => mutate(),
     moverContato,
   }

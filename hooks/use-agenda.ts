@@ -2,6 +2,7 @@
 
 import useSWR from "swr"
 import { useRealtimeTabela } from "@/lib/realtime"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 export interface AgendamentoAgenda {
   id: string
@@ -32,7 +33,11 @@ interface RespostaAgenda {
   total: number
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = (url: string) =>
+  fetchJson<RespostaAgenda>(url, undefined, {
+    recurso: "Agenda",
+    fallback: "Erro ao carregar agenda",
+  })
 
 export function useAgenda(periodo: string = "semana") {
   const { data, error, isLoading, mutate } = useSWR<RespostaAgenda>(
@@ -52,7 +57,7 @@ export function useAgenda(periodo: string = "semana") {
     total: data?.total ?? 0,
     periodo: data?.periodo,
     carregando: isLoading,
-    erro: error ? "Erro ao carregar agenda" : null,
+    erro: error ? normalizarErroApi(error, "Erro ao carregar agenda").mensagem : null,
     recarregar: () => mutate(),
   }
 }

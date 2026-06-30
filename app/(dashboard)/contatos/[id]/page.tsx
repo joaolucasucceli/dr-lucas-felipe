@@ -32,6 +32,7 @@ import { PainelProntuarioInline } from "@/components/features/prontuario/PainelP
 import { useContato } from "@/hooks/use-contato"
 import { useUsuarios } from "@/hooks/use-usuarios"
 import { ETAPAS_FUNIL, FUNIL_LABELS } from "@/lib/funil"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -98,15 +99,11 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   )
 
   async function salvarCampo(campo: string, valor: unknown) {
-    const res = await fetch(`/api/contatos/${id}`, {
+    await fetchJson(`/api/contatos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [campo]: valor }),
     })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      throw new Error(json.error || "Erro ao salvar")
-    }
     recarregar()
   }
 
@@ -117,12 +114,11 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   async function handleExcluir() {
     setProcessando(true)
     try {
-      const res = await fetch(`/api/contatos/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error((await res.json()).error || "Erro")
+      await fetchJson(`/api/contatos/${id}`, { method: "DELETE" })
       toast.success("Contato excluído")
       router.push("/contatos")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao excluir")
+      toast.error(normalizarErroApi(err, "Erro ao excluir").mensagem)
     } finally {
       setProcessando(false)
       setConfirmExcluir(false)
@@ -132,14 +128,13 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   async function handlePromover() {
     setProcessando(true)
     try {
-      const res = await fetch(`/api/contatos/${id}/promover-paciente`, {
+      await fetchJson(`/api/contatos/${id}/promover-paciente`, {
         method: "POST",
       })
-      if (!res.ok) throw new Error((await res.json()).error || "Erro")
       toast.success("Contato promovido a paciente")
       recarregar()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao promover")
+      toast.error(normalizarErroApi(err, "Erro ao promover").mensagem)
     } finally {
       setProcessando(false)
       setConfirmPromover(false)
@@ -150,12 +145,11 @@ export default function ContatoDetalhePage({ params }: PageProps) {
     const rota = modoAtual === "ia" ? "pausar-ia" : "retomar-ia"
     setProcessando(true)
     try {
-      const res = await fetch(`/api/atendimento/${rota}`, {
+      await fetchJson(`/api/atendimento/${rota}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversaId }),
       })
-      if (!res.ok) throw new Error((await res.json()).error || "Erro")
       toast.success(
         modoAtual === "ia"
           ? "IA pausada — você assumiu o atendimento"
@@ -163,7 +157,7 @@ export default function ContatoDetalhePage({ params }: PageProps) {
       )
       recarregar()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao alternar IA")
+      toast.error(normalizarErroApi(err, "Erro ao alternar IA").mensagem)
     } finally {
       setProcessando(false)
     }
@@ -172,14 +166,13 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   async function handleMarcarAgendamentoRealizado(agendamentoId: string) {
     setProcessando(true)
     try {
-      const res = await fetch(`/api/agendamentos/${agendamentoId}/realizar`, {
+      await fetchJson(`/api/agendamentos/${agendamentoId}/realizar`, {
         method: "POST",
       })
-      if (!res.ok) throw new Error((await res.json()).error || "Erro")
       toast.success("Atendimento marcado como realizado")
       recarregar()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao marcar como realizado")
+      toast.error(normalizarErroApi(err, "Erro ao marcar como realizado").mensagem)
     } finally {
       setProcessando(false)
     }
@@ -194,9 +187,27 @@ export default function ContatoDetalhePage({ params }: PageProps) {
   }
 
   if (erro || !contato) {
+    const acoesErro =
+      erro?.kind === "not_found"
+        ? [
+            { label: "Voltar para Contatos", href: "/contatos" },
+            { label: "Ir para Atendimentos", href: "/atendimentos", variant: "outline" as const },
+          ]
+        : erro?.kind === "unauthorized"
+          ? [{ label: "Ir para login", href: "/login" }]
+          : erro?.kind === "forbidden"
+            ? [{ label: "Voltar para Contatos", href: "/contatos" }]
+            : undefined
+
     return (
       <div>
-        <ErrorState mensagem={erro || "Contato não encontrado"} onTentar={recarregar} />
+        <ErrorState
+          erro={erro}
+          titulo={!erro ? "Contato não encontrado" : undefined}
+          mensagem={!erro ? "Esse contato pode ter sido excluído ou não está mais disponível." : undefined}
+          acoes={acoesErro}
+          onTentar={recarregar}
+        />
       </div>
     )
   }

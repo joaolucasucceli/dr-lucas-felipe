@@ -2,6 +2,7 @@
 
 import useSWR from "swr"
 import { useRealtimeTabela } from "@/lib/realtime"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 interface EtapaFunil {
   etapa: string
@@ -15,7 +16,11 @@ export interface DashboardMetricas {
   leadsPorEtapa: EtapaFunil[]
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = (url: string) =>
+  fetchJson<DashboardMetricas>(url, undefined, {
+    recurso: "Métricas",
+    fallback: "Erro ao carregar métricas",
+  })
 
 export function useDashboard() {
   const { data, error, isLoading, mutate } = useSWR<DashboardMetricas>(
@@ -30,7 +35,7 @@ export function useDashboard() {
   return {
     metricas: data ?? null,
     carregando: isLoading,
-    erro: error ? "Erro ao carregar métricas" : null,
+    erro: error ? normalizarErroApi(error, "Erro ao carregar métricas").mensagem : null,
     recarregar: () => mutate(),
   }
 }

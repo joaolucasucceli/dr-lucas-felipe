@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRealtimeTabela } from "@/lib/realtime"
+import {
+  fetchJson,
+  normalizarErroApi,
+  type ApiErrorInfo,
+} from "@/lib/api-client"
 
 export interface ContatoDetalhado {
   id: string
@@ -91,30 +96,29 @@ export interface ContatoDetalhado {
 interface UseContatoReturn {
   contato: ContatoDetalhado | null
   carregando: boolean
-  erro: string | null
+  erro: ApiErrorInfo | null
   recarregar: () => void
 }
 
 export function useContato(id: string): UseContatoReturn {
   const [contato, setContato] = useState<ContatoDetalhado | null>(null)
   const [carregando, setCarregando] = useState(true)
-  const [erro, setErro] = useState<string | null>(null)
+  const [erro, setErro] = useState<ApiErrorInfo | null>(null)
 
   const buscar = useCallback(async () => {
     setCarregando(true)
     setErro(null)
 
     try {
-      const res = await fetch(`/api/contatos/${id}`)
-
-      if (!res.ok) {
-        throw new Error("Erro ao carregar contato")
-      }
-
-      const json = await res.json()
+      const json = await fetchJson<ContatoDetalhado>(`/api/contatos/${id}`, undefined, {
+        recurso: "Contato",
+        titulo404: "Contato não encontrado",
+        mensagem404: "Esse contato pode ter sido excluído ou não está mais disponível.",
+      })
       setContato(json)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      setContato(null)
+      setErro(normalizarErroApi(e, "Erro ao carregar contato"))
     } finally {
       setCarregando(false)
     }

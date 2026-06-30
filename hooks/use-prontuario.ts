@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 interface Anamnese {
   id: string
@@ -99,17 +100,20 @@ export function useProntuario(pacienteId: string): UseProntuarioReturn {
     setErro(null)
 
     try {
-      const res = await fetch(`/api/contatos/${pacienteId}/prontuario`)
-
-      if (!res.ok) {
-        throw new Error("Erro ao carregar prontuário")
-      }
-
-      const json = await res.json()
+      const json = await fetchJson<Prontuario>(
+        `/api/contatos/${pacienteId}/prontuario`,
+        undefined,
+        {
+          recurso: "Prontuário",
+          fallback: "Erro ao carregar prontuário",
+          titulo404: "Prontuário não encontrado",
+          mensagem404: "Esse prontuário pode ter sido removido ou ainda não foi criado.",
+        }
+      )
       setProntuario(json)
       carregouUmaVez.current = true
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      setErro(normalizarErroApi(e, "Erro ao carregar prontuário").mensagem)
     } finally {
       setCarregando(false)
     }

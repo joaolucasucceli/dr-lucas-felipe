@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 interface MidiaMarketing {
   id: string
@@ -24,12 +25,14 @@ export function useMidiaMarketing(opcoes: Opcoes = {}) {
     try {
       const params = new URLSearchParams()
       if (opcoes.busca) params.set("busca", opcoes.busca)
-      const res = await fetch(`/api/midia-marketing?${params}`)
-      if (!res.ok) throw new Error("Erro ao buscar")
-      const json = await res.json()
+      const json = await fetchJson<{ dados: MidiaMarketing[] }>(
+        `/api/midia-marketing?${params}`,
+        undefined,
+        { recurso: "Mídias", fallback: "Erro ao buscar mídias" }
+      )
       setDados(json.dados || [])
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro desconhecido")
+      setErro(normalizarErroApi(err, "Erro ao buscar mídias").mensagem)
     } finally {
       setCarregando(false)
     }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 interface ConfigGoogle {
   id: string
@@ -31,17 +32,15 @@ export function useConfigGoogle(): UseConfigGoogleReturn {
     setErro(null)
 
     try {
-      const res = await fetch("/api/configuracoes/google-agenda")
-
-      if (!res.ok) {
-        throw new Error("Erro ao carregar configuração")
-      }
-
-      const json = await res.json()
+      const json = await fetchJson<{ configurado: boolean; config: ConfigGoogle | null }>(
+        "/api/configuracoes/google-agenda",
+        undefined,
+        { recurso: "Configuração", fallback: "Erro ao carregar configuração" }
+      )
       setConfigurado(json.configurado)
       setConfig(json.config)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      setErro(normalizarErroApi(e, "Erro ao carregar configuração").mensagem)
     } finally {
       setCarregando(false)
     }

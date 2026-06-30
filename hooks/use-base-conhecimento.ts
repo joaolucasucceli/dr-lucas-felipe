@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 interface BaseConhecimento {
   id: string
@@ -36,16 +37,17 @@ export function useBaseConhecimento(
       const searchParams = new URLSearchParams()
       if (params.busca) searchParams.set("busca", params.busca)
 
-      const res = await fetch(`/api/base-conhecimento?${searchParams.toString()}`)
-
-      if (!res.ok) {
-        throw new Error("Erro ao carregar base de conhecimento")
-      }
-
-      const json = await res.json()
+      const json = await fetchJson<{ dados: BaseConhecimento[] }>(
+        `/api/base-conhecimento?${searchParams.toString()}`,
+        undefined,
+        {
+          recurso: "Base de conhecimento",
+          fallback: "Erro ao carregar base de conhecimento",
+        }
+      )
       setDados(json.dados)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      setErro(normalizarErroApi(e, "Erro ao carregar base de conhecimento").mensagem)
     } finally {
       setCarregando(false)
     }

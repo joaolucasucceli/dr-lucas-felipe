@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRealtimeTabela } from "@/lib/realtime"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 export interface Contato {
   id: string
@@ -55,17 +56,15 @@ export function useContatos(params: UseContatosParams): UseContatosReturn {
       if (params.busca) searchParams.set("busca", params.busca)
       if (params.filtroEspecial === "followup") searchParams.set("followup", "true")
 
-      const res = await fetch(`/api/contatos?${searchParams.toString()}`)
-
-      if (!res.ok) {
-        throw new Error("Erro ao carregar contatos")
-      }
-
-      const json = await res.json()
+      const json = await fetchJson<{ dados: Contato[]; total: number }>(
+        `/api/contatos?${searchParams.toString()}`,
+        undefined,
+        { recurso: "Contatos", fallback: "Erro ao carregar contatos" }
+      )
       setDados(json.dados)
       setTotal(json.total)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      setErro(normalizarErroApi(e, "Erro ao carregar contatos").mensagem)
     } finally {
       setCarregando(false)
     }

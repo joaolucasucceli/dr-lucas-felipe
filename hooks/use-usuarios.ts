@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { fetchJson, normalizarErroApi } from "@/lib/api-client"
 
 interface Usuario {
   id: string
@@ -44,15 +45,15 @@ export function useUsuarios(params: UseUsuariosParams): UseUsuariosReturn {
     if (params.busca) searchParams.set("busca", params.busca)
 
     try {
-      const res = await fetch(`/api/usuarios?${searchParams.toString()}`)
-      if (!res.ok) {
-        throw new Error("Erro ao carregar usuários")
-      }
-      const json = await res.json()
+      const json = await fetchJson<{ dados: Usuario[]; total: number }>(
+        `/api/usuarios?${searchParams.toString()}`,
+        undefined,
+        { recurso: "Usuários", fallback: "Erro ao carregar usuários" }
+      )
       setDados(json.dados)
       setTotal(json.total)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido")
+      setErro(normalizarErroApi(e, "Erro ao carregar usuários").mensagem)
     } finally {
       setCarregando(false)
     }

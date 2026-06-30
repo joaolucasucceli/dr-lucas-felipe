@@ -15,6 +15,12 @@ type RouteParams = { params: Promise<{ id: string }> }
 const SELECT_CONTATO_ATUALIZADO =
   "id, tipo, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, sobreOPaciente, responsavelId, arquivado, cpf, dataNascimento, sexo, endereco, cidade, estado, contatoEmergencia, contatoEmergenciaTel, consentimentoLgpd, consentimentoLgpdEm, criadoEm, atualizadoEm, promovidoEm"
 
+const CONTATO_NAO_ENCONTRADO = {
+  code: "CONTATO_NAO_ENCONTRADO",
+  error: "Contato não encontrado",
+  message: "Esse contato pode ter sido excluído ou não está mais disponível.",
+}
+
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const auth = await requireAuth()
   if (auth.error) return auth.error
@@ -39,12 +45,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     .maybeSingle()
 
   if (!contato) {
-    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
+    return NextResponse.json(CONTATO_NAO_ENCONTRADO, { status: 404 })
   }
 
   // Atendente só vê contatos tipo lead
   if (auth.session.user.perfil === "atendente" && contato.tipo !== "lead") {
-    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
+    return NextResponse.json(CONTATO_NAO_ENCONTRADO, { status: 404 })
   }
 
   type ConversaOrdenavel = { ciclo?: number | null; atualizadoEm?: string | null }
@@ -149,7 +155,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     .maybeSingle()
 
   if (!contatoAtual) {
-    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
+    return NextResponse.json(CONTATO_NAO_ENCONTRADO, { status: 404 })
   }
 
   // Atendente só mexe em contato tipo lead
@@ -244,7 +250,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     .maybeSingle()
 
   if (!contato) {
-    return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
+    return NextResponse.json(CONTATO_NAO_ENCONTRADO, { status: 404 })
   }
 
   const chatId = contato.whatsapp ? `${contato.whatsapp}@s.whatsapp.net` : null
