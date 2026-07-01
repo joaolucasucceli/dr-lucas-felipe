@@ -244,7 +244,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
   const { data: contato } = await supabaseAdmin
     .from("contatos")
-    .select("id, whatsapp")
+    .select("id, tipo, nome, whatsapp")
     .eq("id", id)
     .is("deletadoEm", null)
     .maybeSingle()
@@ -260,18 +260,24 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   } catch (err) {
     console.error("[contatos.DELETE] Falha ao limpar dependencias:", err)
     return NextResponse.json(
-      { error: "Erro ao limpar dados do contato" },
+      {
+        code: "FALHA_LIMPEZA_CONTATO",
+        error: "Erro ao limpar dados do contato",
+        message:
+          "A exclusao nao foi concluida porque uma dependencia do contato nao pode ser removida.",
+      },
       { status: 500 }
     )
   }
 
   const whatsappAnonimo = contato.whatsapp ? anonimizarWhatsapp(contato.whatsapp, id) : null
+  const deletadoEm = agora()
 
   const { data: atualizado, error: updateError } = await supabaseAdmin
     .from("contatos")
     .update({
-      deletadoEm: agora(),
-      atualizadoEm: agora(),
+      deletadoEm,
+      atualizadoEm: deletadoEm,
       ...(whatsappAnonimo ? { whatsapp: whatsappAnonimo } : {}),
     })
     .eq("id", id)
@@ -284,10 +290,56 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       updateError: updateError?.message,
     })
     return NextResponse.json(
-      { error: `Falha ao marcar contato como deletado: ${updateError?.message || "update nao aplicado"}` },
+      {
+        code: "FALHA_SOFT_DELETE_CONTATO",
+        error: `Falha ao marcar contato como deletado: ${updateError?.message || "update nao aplicado"}`,
+      },
       { status: 500 }
     )
   }
 
-  return NextResponse.json({ mensagem: "Contato removido" })
+  if (contato.whatsapp) {
+    const { data: ativoComMesmoWhatsapp, error: verificacaoError } = await supabaseAdmin
+      .from("contatos")
+      .select("id")
+      .eq("whatsapp", contato.whatsapp)
+      .is("deletadoEm", null)
+      .maybeSingle()
+
+    if (verificacaoError || ativoComMesmoWhatsapp) {
+      console.error("[contatos.DELETE] WhatsApp ainda vinculado a contato ativo:", {
+        contatoId: id,
+        whatsapp: contato.whatsapp,
+        ativoComMesmoWhatsapp: ativoComMesmoWhatsapp?.id,
+        verificacaoError: verificacaoError?.message,
+      })
+      return NextResponse.json(
+        {
+          code: "WHATSAPP_NAO_LIBERADO",
+          error: "Contato removido parcialmente, mas o WhatsApp ainda aparece ativo",
+          message:
+            "A exclusao nao foi confirmada porque o numero ainda esta vinculado a um contato ativo.",
+        },
+        { status: 500 }
+      )
+    }
+  }
+
+  await registrarAuditLog({
+    usuarioId: auth.session.user.id,
+    acao: "excluir",
+    entidade: "Contato",
+    entidadeId: id,
+    dadosAntes: contato as unknown as Record<string, unknown>,
+    dadosDepois: {
+      deletadoEm,
+      whatsappAnonimizado: Boolean(whatsappAnonimo),
+    },
+  })
+
+  return NextResponse.json({
+    mensagem: "Contato removido",
+    contatoId: id,
+    whatsappLiberado: Boolean(contato.whatsapp),
+  })
 }

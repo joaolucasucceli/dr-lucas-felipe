@@ -8,6 +8,7 @@ import {
   anonimizarWhatsapp,
 } from "@/lib/contatos/limpar-dependencias"
 import { agora } from "@/lib/db-utils"
+import { registrarAuditLog } from "@/lib/audit"
 
 const schema = z.object({
   ids: z.array(z.string().cuid()).min(1).max(100),
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
   const { data: contatos } = await supabaseAdmin
     .from("contatos")
-    .select("id, whatsapp")
+    .select("id, tipo, nome, whatsapp")
     .in("id", ids)
     .is("deletadoEm", null)
 
@@ -52,15 +53,45 @@ export async function POST(request: NextRequest) {
       const whatsappAnonimo = contato.whatsapp
         ? anonimizarWhatsapp(contato.whatsapp, contato.id)
         : null
+      const deletadoEm = agora()
       const { error } = await supabaseAdmin
         .from("contatos")
         .update({
-          deletadoEm: agora(),
-          atualizadoEm: agora(),
+          deletadoEm,
+          atualizadoEm: deletadoEm,
           ...(whatsappAnonimo ? { whatsapp: whatsappAnonimo } : {}),
         })
         .eq("id", contato.id)
       if (error) throw error
+
+      if (contato.whatsapp) {
+        const { data: ativoComMesmoWhatsapp, error: verificacaoError } = await supabaseAdmin
+          .from("contatos")
+          .select("id")
+          .eq("whatsapp", contato.whatsapp)
+          .is("deletadoEm", null)
+          .maybeSingle()
+
+        if (verificacaoError) throw verificacaoError
+        if (ativoComMesmoWhatsapp) {
+          throw new Error(
+            `WhatsApp ${contato.whatsapp} ainda ativo no contato ${ativoComMesmoWhatsapp.id}`
+          )
+        }
+      }
+
+      await registrarAuditLog({
+        usuarioId: authGestor.session.user.id,
+        acao: "excluir",
+        entidade: "Contato",
+        entidadeId: contato.id,
+        dadosAntes: contato as unknown as Record<string, unknown>,
+        dadosDepois: {
+          deletadoEm,
+          whatsappAnonimizado: Boolean(whatsappAnonimo),
+        },
+      })
+
       sucesso++
     } catch (err) {
       console.error(`[contatos/batch excluir] ${contato.id}:`, err)

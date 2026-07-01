@@ -116,7 +116,8 @@ export default function ContatoDetalhePage({ params }: PageProps) {
     try {
       await fetchJson(`/api/contatos/${id}`, { method: "DELETE" })
       toast.success("Contato excluído")
-      router.push("/contatos")
+      router.replace("/contatos")
+      router.refresh()
     } catch (err) {
       toast.error(normalizarErroApi(err, "Erro ao excluir").mensagem)
     } finally {
