@@ -3,7 +3,6 @@ import { agora } from "@/lib/db-utils"
 import { enviarMensagem, enviarMidia } from "@/lib/uazapi"
 import { gerarEHospedarOrcamento, formatarBrl } from "@/lib/orcamento/gerar"
 import { adicionarAMemoria } from "@/lib/agente/memoria"
-import { enviarResultadosProcedimento } from "@/lib/agente/enviar-resultados-procedimento"
 
 /**
  * Ingestao da resposta do Dr. Lucas pelo WhatsApp pessoal dele.
@@ -254,23 +253,6 @@ export async function processarRespostaDrLucas(args: {
         undefined,
         nomeArquivo
       )
-
-      try {
-        await enviarResultadosProcedimento({
-          contatoId: contato.id,
-          conversaId: pendencia.conversaId,
-          whatsapp: contato.whatsapp,
-          configWa: cfg,
-          procedimentoInteresse: contato.procedimentoInteresse ?? proc?.nome ?? null,
-          origem: "orcamento_exato",
-          chatId: `${contato.whatsapp}@s.whatsapp.net`,
-        })
-      } catch (err) {
-        console.error(
-          "[orcamento-dr-lucas] falha best-effort ao enviar resultados:",
-          err
-        )
-      }
 
       await enviarMensagem(
         cfg.uazapiUrl,

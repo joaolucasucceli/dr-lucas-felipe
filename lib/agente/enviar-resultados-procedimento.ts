@@ -8,6 +8,15 @@ import {
 import { filtrarMidiasComArquivo } from "@/lib/agente/midia-marketing-storage"
 import { supabaseAdmin } from "@/lib/supabase"
 
+type OrigemResultadosProcedimento =
+  | "orcamento_estimado"
+  | "orcamento_exato_pendente"
+
+type MidiaSelecionada = {
+  midia: MidiaMarketingEnvio
+  jaEnviada: boolean
+}
+
 function normalizar(texto: string | null | undefined): string {
   return (texto || "")
     .normalize("NFD")
@@ -117,8 +126,14 @@ async function selecionarResultados(params: {
   conversaId: string | null
   procedimentoInteresse?: string | null
   limite: number
-}): Promise<MidiaMarketingEnvio[]> {
-  const { conversaId, procedimentoInteresse, limite } = params
+  permitirReenvioJaEnviadas: boolean
+}): Promise<MidiaSelecionada[]> {
+  const {
+    conversaId,
+    procedimentoInteresse,
+    limite,
+    permitirReenvioJaEnviadas,
+  } = params
   const contexto = normalizar(procedimentoInteresse)
   const termos = termosDeBusca(procedimentoInteresse)
   const urlsJaEnviadas = await obterUrlsJaEnviadas(conversaId)
@@ -134,20 +149,46 @@ async function selecionarResultados(params: {
     return []
   }
 
-  const candidatas = ((data ?? []) as MidiaMarketingEnvio[])
-    .filter((midia) => !urlJaEnviada(midia.url, urlsJaEnviadas))
+  const candidatasPontuadas = ((data ?? []) as MidiaMarketingEnvio[])
     .filter((midia) => !descricaoEhOutroProcedimento(normalizar(midia.descricao), contexto))
-    .map((midia) => ({ midia, score: pontuarMidia(midia, termos) }))
+    .map((midia) => ({
+      midia,
+      score: pontuarMidia(midia, termos),
+      jaEnviada: urlJaEnviada(midia.url, urlsJaEnviadas),
+    }))
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score)
-    .map((item) => item.midia)
 
-  const comArquivo = await filtrarMidiasComArquivo(
-    candidatas,
+  const novas = candidatasPontuadas
+    .filter((item) => !item.jaEnviada)
+    .map((item) => item.midia)
+  const novasComArquivo = await filtrarMidiasComArquivo(
+    novas,
     `resultados procedimento="${procedimentoInteresse || ""}"`
   )
 
-  return comArquivo.slice(0, limite)
+  const selecionadas: MidiaSelecionada[] = novasComArquivo
+    .slice(0, limite)
+    .map((midia) => ({ midia, jaEnviada: false }))
+
+  if (!permitirReenvioJaEnviadas || selecionadas.length >= limite) {
+    return selecionadas
+  }
+
+  const jaEnviadas = candidatasPontuadas
+    .filter((item) => item.jaEnviada)
+    .map((item) => item.midia)
+  const jaEnviadasComArquivo = await filtrarMidiasComArquivo(
+    jaEnviadas,
+    `resultados procedimento="${procedimentoInteresse || ""}" reenvio`
+  )
+
+  return [
+    ...selecionadas,
+    ...jaEnviadasComArquivo
+      .slice(0, limite - selecionadas.length)
+      .map((midia) => ({ midia, jaEnviada: true })),
+  ]
 }
 
 export async function enviarResultadosProcedimento(params: {
@@ -158,7 +199,7 @@ export async function enviarResultadosProcedimento(params: {
   procedimentoInteresse?: string | null
   limite?: number
   baseUrl?: string | null
-  origem: "orcamento_estimado" | "orcamento_exato"
+  origem: OrigemResultadosProcedimento
   chatId?: string | null
 }): Promise<{
   enviadas: number
@@ -171,26 +212,29 @@ export async function enviarResultadosProcedimento(params: {
     conversaId,
     procedimentoInteresse: params.procedimentoInteresse,
     limite,
+    permitirReenvioJaEnviadas: params.origem === "orcamento_exato_pendente",
   })
 
   let enviadas = 0
   let ignoradas = 0
+  let reaproveitadas = 0
   const midiaIds: string[] = []
 
-  for (const midia of selecionadas) {
+  for (const item of selecionadas) {
     const resultado = await enviarMidiaMarketing({
       contatoId: params.contatoId,
       conversaId,
       whatsapp: params.whatsapp,
       configWa: params.configWa,
-      midia,
+      midia: item.midia,
       baseUrl: params.baseUrl,
       contextoLog: params.origem,
     })
 
     if (resultado.enviado) {
       enviadas++
-      midiaIds.push(midia.id)
+      if (item.jaEnviada) reaproveitadas++
+      midiaIds.push(item.midia.id)
     } else {
       ignoradas++
     }
@@ -203,13 +247,18 @@ export async function enviarResultadosProcedimento(params: {
     procedimentoInteresse: params.procedimentoInteresse,
     enviadas,
     ignoradas,
+    reaproveitadas,
     midiaIds,
   })
 
   if (params.chatId && enviadas > 0) {
     await adicionarAMemoria(params.chatId, {
       role: "system",
-      content: `Foram enviados ${enviadas} resultado(s) visual(is) relacionado(s) ao procedimento junto do ${params.origem === "orcamento_estimado" ? "orcamento estimado" : "orcamento exato"}. Nao diga que faltou enviar imagens.`,
+      content: `Foram enviados ${enviadas} resultado(s) visual(is) relacionado(s) ao procedimento ${
+        params.origem === "orcamento_estimado"
+          ? "junto do orcamento estimado"
+          : "enquanto o paciente aguarda o orcamento exato"
+      }. Nao diga que faltou enviar imagens.`,
     })
   }
 

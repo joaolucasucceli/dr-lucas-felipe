@@ -924,6 +924,7 @@ function montarRespostaFotoQualificacaoCompleta(
     [
       "Recebi{nome}. Obrigada por enviar.",
       "Agora tenho os dados principais para deixar seu caso bem claro pro Dr. Lucas. Vou enviar pra ele definir o orçamento exato e te retorno por aqui.",
+      "Enquanto ele avalia, vou te mandar alguns resultados pra você ter uma referência.",
     ].join("\n---\n")
   )
 }
@@ -2828,6 +2829,26 @@ export async function processarMensagens(
   let orcamentoRespondidoAtual: OrcamentoRespondidoContexto | null = null
   let pacienteAprovouOrcamentoRespondido = false
   let orcamentoPendenteConsultivo = false
+  const enviarResultadosDuranteEsperaOrcamento = async () => {
+    if (!contatoId) return
+
+    try {
+      await enviarResultadosProcedimento({
+        contatoId,
+        conversaId,
+        whatsapp,
+        configWa: configEnvio,
+        procedimentoInteresse: contextoContato.procedimento,
+        origem: "orcamento_exato_pendente",
+        chatId,
+      })
+    } catch (err) {
+      console.error(
+        "[Agente] Falha best-effort ao enviar resultados durante espera do orcamento:",
+        err
+      )
+    }
+  }
 
   try {
     const resultadoPaciente = JSON.parse(
@@ -3388,6 +3409,7 @@ export async function processarMensagens(
         baseUrl
       )
       const parsed = JSON.parse(resultadoOrcamento)
+      let enviarResultadosOrcamentoPendente = false
       const textoRetry =
         parsed?.ok === true
           ? montarRespostaFotoQualificacaoCompleta(contextoContato)
@@ -3398,9 +3420,10 @@ export async function processarMensagens(
 
       if (parsed?.ok === true) {
         contextoContato.etapa = "orcamento"
+        enviarResultadosOrcamentoPendente = true
       }
 
-      await enviarRespostaAgente({
+      const enviouRetry = await enviarRespostaAgente({
         chatId,
         whatsapp,
         contatoId,
@@ -3409,6 +3432,10 @@ export async function processarMensagens(
         textoUsuario: textoBuffer,
         textoResposta: textoRetry,
       })
+
+      if (enviouRetry && enviarResultadosOrcamentoPendente) {
+        await enviarResultadosDuranteEsperaOrcamento()
+      }
       return { contatoId, conversaId }
     }
 
@@ -3497,6 +3524,7 @@ export async function processarMensagens(
       }
 
       let textoRespostaFastPath = fastPath.texto
+      let enviarResultadosOrcamentoPendente = false
       if (fastPath.acionarOrcamento) {
         const resultadoOrcamento = await executarFerramenta(
           "gerar_orcamento",
@@ -3514,6 +3542,7 @@ export async function processarMensagens(
             "Recebi a foto. Só preciso tentar enviar seus dados ao Dr. Lucas novamente. Me manda só um ok que eu sigo por aqui?"
         } else {
           contextoContato.etapa = "orcamento"
+          enviarResultadosOrcamentoPendente = true
         }
       }
 
@@ -3526,6 +3555,10 @@ export async function processarMensagens(
         textoUsuario: textoBuffer,
         textoResposta: textoRespostaFastPath,
       })
+
+      if (enviouResposta && enviarResultadosOrcamentoPendente) {
+        await enviarResultadosDuranteEsperaOrcamento()
+      }
 
       return { contatoId, conversaId }
     }
@@ -3680,6 +3713,7 @@ export async function processarMensagens(
       | { type: "function"; function: { name: string } } = "auto"
     let enviouMidiaNestaRodada = false
     let gerouOrcamentoNestaRodada = false
+    let enviarResultadosOrcamentoPendenteAposResposta = false
     let estimativaConsultadaNestaRodada: EstimativaEnviada | null = null
     let textoRespostaForcado: string | null = null
 
@@ -3813,6 +3847,7 @@ export async function processarMensagens(
               (parsed?.ok === true && parsed?.jaRespondido !== true)
             if (parsed?.ok === true && parsed?.jaRespondido !== true) {
               contextoContato.etapa = "orcamento"
+              enviarResultadosOrcamentoPendenteAposResposta = true
               textoRespostaForcado =
                 montarRespostaFotoQualificacaoCompleta(contextoContato)
             }
@@ -3979,6 +4014,7 @@ export async function processarMensagens(
         const parsed = JSON.parse(resultadoOrcamento)
         if (parsed?.ok === true) {
           gerouOrcamentoNestaRodada = true
+          enviarResultadosOrcamentoPendenteAposResposta = true
           textoResposta = montarRespostaFotoQualificacaoCompleta(contextoContato)
           console.warn(
             "[Agente] gerar_orcamento acionado por guarda anti-promessa"
@@ -4123,6 +4159,10 @@ export async function processarMensagens(
           origem: "orcamento_estimado",
           chatId,
         })
+      }
+
+      if (enviouResposta && enviarResultadosOrcamentoPendenteAposResposta) {
+        await enviarResultadosDuranteEsperaOrcamento()
       }
     }
   } catch (error) {
