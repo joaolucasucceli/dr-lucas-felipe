@@ -17,6 +17,29 @@ type MidiaSelecionada = {
   jaEnviada: boolean
 }
 
+type MotivoSemEnvio =
+  | "sem_midias_ativas"
+  | "sem_midias_compativeis"
+  | "midias_compativeis_sem_arquivo"
+  | "todas_midias_ja_enviadas"
+  | "erro_busca_midias"
+  | "falha_envio_midia"
+
+type DiagnosticoResultados = {
+  motivo?: MotivoSemEnvio
+  totalAtivas: number
+  totalCompativeis: number
+  totalNovas: number
+  totalNovasComArquivo: number
+  totalJaEnviadas: number
+  totalJaEnviadasComArquivo: number
+}
+
+type SelecaoResultados = {
+  selecionadas: MidiaSelecionada[]
+  diagnostico: DiagnosticoResultados
+}
+
 function normalizar(texto: string | null | undefined): string {
   return (texto || "")
     .normalize("NFD")
@@ -127,7 +150,7 @@ async function selecionarResultados(params: {
   procedimentoInteresse?: string | null
   limite: number
   permitirReenvioJaEnviadas: boolean
-}): Promise<MidiaSelecionada[]> {
+}): Promise<SelecaoResultados> {
   const {
     conversaId,
     procedimentoInteresse,
@@ -146,9 +169,21 @@ async function selecionarResultados(params: {
 
   if (error) {
     console.error("[resultados-procedimento] Falha ao buscar midias:", error.message)
-    return []
+    return {
+      selecionadas: [],
+      diagnostico: {
+        motivo: "erro_busca_midias",
+        totalAtivas: 0,
+        totalCompativeis: 0,
+        totalNovas: 0,
+        totalNovasComArquivo: 0,
+        totalJaEnviadas: 0,
+        totalJaEnviadasComArquivo: 0,
+      },
+    }
   }
 
+  const totalAtivas = data?.length ?? 0
   const candidatasPontuadas = ((data ?? []) as MidiaMarketingEnvio[])
     .filter((midia) => !descricaoEhOutroProcedimento(normalizar(midia.descricao), contexto))
     .map((midia) => ({
@@ -171,24 +206,101 @@ async function selecionarResultados(params: {
     .slice(0, limite)
     .map((midia) => ({ midia, jaEnviada: false }))
 
-  if (!permitirReenvioJaEnviadas || selecionadas.length >= limite) {
-    return selecionadas
-  }
-
   const jaEnviadas = candidatasPontuadas
     .filter((item) => item.jaEnviada)
     .map((item) => item.midia)
-  const jaEnviadasComArquivo = await filtrarMidiasComArquivo(
+  let jaEnviadasComArquivo: MidiaMarketingEnvio[] = []
+
+  if (!permitirReenvioJaEnviadas || selecionadas.length >= limite) {
+    return {
+      selecionadas,
+      diagnostico: {
+        motivo: motivoSemSelecao({
+          selecionadas: selecionadas.length,
+          totalAtivas,
+          totalCompativeis: candidatasPontuadas.length,
+          totalNovas: novas.length,
+          totalNovasComArquivo: novasComArquivo.length,
+          totalJaEnviadas: jaEnviadas.length,
+          totalJaEnviadasComArquivo: 0,
+          permitirReenvioJaEnviadas,
+        }),
+        totalAtivas,
+        totalCompativeis: candidatasPontuadas.length,
+        totalNovas: novas.length,
+        totalNovasComArquivo: novasComArquivo.length,
+        totalJaEnviadas: jaEnviadas.length,
+        totalJaEnviadasComArquivo: 0,
+      },
+    }
+  }
+
+  jaEnviadasComArquivo = await filtrarMidiasComArquivo(
     jaEnviadas,
     `resultados procedimento="${procedimentoInteresse || ""}" reenvio`
   )
 
-  return [
+  const selecionadasComReenvio = [
     ...selecionadas,
     ...jaEnviadasComArquivo
       .slice(0, limite - selecionadas.length)
       .map((midia) => ({ midia, jaEnviada: true })),
   ]
+
+  return {
+    selecionadas: selecionadasComReenvio,
+    diagnostico: {
+      motivo: motivoSemSelecao({
+        selecionadas: selecionadasComReenvio.length,
+        totalAtivas,
+        totalCompativeis: candidatasPontuadas.length,
+        totalNovas: novas.length,
+        totalNovasComArquivo: novasComArquivo.length,
+        totalJaEnviadas: jaEnviadas.length,
+        totalJaEnviadasComArquivo: jaEnviadasComArquivo.length,
+        permitirReenvioJaEnviadas,
+      }),
+      totalAtivas,
+      totalCompativeis: candidatasPontuadas.length,
+      totalNovas: novas.length,
+      totalNovasComArquivo: novasComArquivo.length,
+      totalJaEnviadas: jaEnviadas.length,
+      totalJaEnviadasComArquivo: jaEnviadasComArquivo.length,
+    },
+  }
+}
+
+function motivoSemSelecao(params: {
+  selecionadas: number
+  totalAtivas: number
+  totalCompativeis: number
+  totalNovas: number
+  totalNovasComArquivo: number
+  totalJaEnviadas: number
+  totalJaEnviadasComArquivo: number
+  permitirReenvioJaEnviadas: boolean
+}): MotivoSemEnvio | undefined {
+  if (params.selecionadas > 0) return undefined
+  if (params.totalAtivas === 0) return "sem_midias_ativas"
+  if (params.totalCompativeis === 0) return "sem_midias_compativeis"
+  if (params.totalNovas > 0 && params.totalNovasComArquivo === 0) {
+    return "midias_compativeis_sem_arquivo"
+  }
+  if (
+    !params.permitirReenvioJaEnviadas &&
+    params.totalNovas === 0 &&
+    params.totalJaEnviadas > 0
+  ) {
+    return "todas_midias_ja_enviadas"
+  }
+  if (
+    params.permitirReenvioJaEnviadas &&
+    params.totalJaEnviadas > 0 &&
+    params.totalJaEnviadasComArquivo === 0
+  ) {
+    return "midias_compativeis_sem_arquivo"
+  }
+  return "sem_midias_compativeis"
 }
 
 export async function enviarResultadosProcedimento(params: {
@@ -205,10 +317,12 @@ export async function enviarResultadosProcedimento(params: {
   enviadas: number
   ignoradas: number
   midiaIds: string[]
+  motivo?: MotivoSemEnvio
+  diagnostico: DiagnosticoResultados
 }> {
   const conversaId = await resolverConversaAtiva(params.contatoId, params.conversaId)
   const limite = params.limite ?? 3
-  const selecionadas = await selecionarResultados({
+  const { selecionadas, diagnostico } = await selecionarResultados({
     conversaId,
     procedimentoInteresse: params.procedimentoInteresse,
     limite,
@@ -248,8 +362,12 @@ export async function enviarResultadosProcedimento(params: {
     enviadas,
     ignoradas,
     reaproveitadas,
+    motivo: enviadas === 0 ? diagnostico.motivo : undefined,
+    diagnostico,
     midiaIds,
   })
+
+  const motivo = enviadas === 0 && ignoradas > 0 ? "falha_envio_midia" : diagnostico.motivo
 
   if (params.chatId && enviadas > 0) {
     await adicionarAMemoria(params.chatId, {
@@ -262,5 +380,11 @@ export async function enviarResultadosProcedimento(params: {
     })
   }
 
-  return { enviadas, ignoradas, midiaIds }
+  return {
+    enviadas,
+    ignoradas,
+    midiaIds,
+    motivo,
+    diagnostico: { ...diagnostico, motivo },
+  }
 }

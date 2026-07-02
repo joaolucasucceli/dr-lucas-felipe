@@ -3297,7 +3297,7 @@ export async function processarMensagens(
           })
 
           if (enviouTextoAntes) {
-            await enviarResultadosProcedimento({
+            const resultadoMidias = await enviarResultadosProcedimento({
               contatoId,
               conversaId,
               whatsapp,
@@ -3306,6 +3306,16 @@ export async function processarMensagens(
               origem: "orcamento_estimado",
               chatId,
             })
+
+            if (resultadoMidias.enviadas === 0) {
+              console.warn("[Agente] Orçamento estimado sem resultados enviados", {
+                contatoId,
+                conversaId,
+                procedimentoInteresse: contextoContato.procedimento,
+                motivo: resultadoMidias.motivo,
+                diagnostico: resultadoMidias.diagnostico,
+              })
+            }
 
             await enviarRespostaAgente({
               chatId,
@@ -3335,7 +3345,7 @@ export async function processarMensagens(
           enviouEscolhaInicial &&
           respostaEscolhaInicial.enviarResultadosEstimativa
         ) {
-          await enviarResultadosProcedimento({
+          const resultadoMidias = await enviarResultadosProcedimento({
             contatoId,
             conversaId,
             whatsapp,
@@ -3344,6 +3354,16 @@ export async function processarMensagens(
             origem: "orcamento_estimado",
             chatId,
           })
+
+          if (resultadoMidias.enviadas === 0) {
+            console.warn("[Agente] Orçamento estimado sem resultados enviados", {
+              contatoId,
+              conversaId,
+              procedimentoInteresse: contextoContato.procedimento,
+              motivo: resultadoMidias.motivo,
+              diagnostico: resultadoMidias.diagnostico,
+            })
+          }
         }
 
         return { contatoId, conversaId }
