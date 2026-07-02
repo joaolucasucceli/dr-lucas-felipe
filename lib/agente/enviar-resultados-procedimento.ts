@@ -33,6 +33,14 @@ type DiagnosticoResultados = {
   totalNovasComArquivo: number
   totalJaEnviadas: number
   totalJaEnviadasComArquivo: number
+  totalFallback: number
+  totalFallbackComArquivo: number
+  totalFallbackJaEnviado: number
+  totalFallbackJaEnviadoComArquivo: number
+  contextuais: number
+  fallback: number
+  fallbackUsado: boolean
+  motivoFallback?: "completar_limite" | "sem_contextuais_validas"
 }
 
 type SelecaoResultados = {
@@ -145,6 +153,38 @@ function urlJaEnviada(url: string, urlsJaEnviadas: Set<string>): boolean {
   return chavesUrl(url).some((chave) => urlsJaEnviadas.has(chave))
 }
 
+function criarChaveMidia(midia: MidiaMarketingEnvio): string {
+  return `${midia.id}:${midia.url}`
+}
+
+function removerSelecionadas(
+  midias: MidiaMarketingEnvio[],
+  selecionadas: MidiaSelecionada[]
+): MidiaMarketingEnvio[] {
+  const chavesSelecionadas = new Set(
+    selecionadas.map((item) => criarChaveMidia(item.midia))
+  )
+
+  return midias.filter((midia) => !chavesSelecionadas.has(criarChaveMidia(midia)))
+}
+
+function completarSelecao(params: {
+  selecionadas: MidiaSelecionada[]
+  midias: MidiaMarketingEnvio[]
+  limite: number
+  jaEnviada: boolean
+}): MidiaSelecionada[] {
+  const faltantes = params.limite - params.selecionadas.length
+  if (faltantes <= 0) return params.selecionadas
+
+  return [
+    ...params.selecionadas,
+    ...removerSelecionadas(params.midias, params.selecionadas)
+      .slice(0, faltantes)
+      .map((midia) => ({ midia, jaEnviada: params.jaEnviada })),
+  ]
+}
+
 async function selecionarResultados(params: {
   conversaId: string | null
   procedimentoInteresse?: string | null
@@ -179,12 +219,20 @@ async function selecionarResultados(params: {
         totalNovasComArquivo: 0,
         totalJaEnviadas: 0,
         totalJaEnviadasComArquivo: 0,
+        totalFallback: 0,
+        totalFallbackComArquivo: 0,
+        totalFallbackJaEnviado: 0,
+        totalFallbackJaEnviadoComArquivo: 0,
+        contextuais: 0,
+        fallback: 0,
+        fallbackUsado: false,
       },
     }
   }
 
   const totalAtivas = data?.length ?? 0
-  const candidatasPontuadas = ((data ?? []) as MidiaMarketingEnvio[])
+  const midiasAtivas = (data ?? []) as MidiaMarketingEnvio[]
+  const candidatasPontuadas = midiasAtivas
     .filter((midia) => !descricaoEhOutroProcedimento(normalizar(midia.descricao), contexto))
     .map((midia) => ({
       midia,
@@ -210,48 +258,130 @@ async function selecionarResultados(params: {
     .filter((item) => item.jaEnviada)
     .map((item) => item.midia)
   let jaEnviadasComArquivo: MidiaMarketingEnvio[] = []
+  let selecionadasCompletas = selecionadas
 
-  if (!permitirReenvioJaEnviadas || selecionadas.length >= limite) {
+  if (permitirReenvioJaEnviadas && selecionadasCompletas.length < limite) {
+    jaEnviadasComArquivo = await filtrarMidiasComArquivo(
+      jaEnviadas,
+      `resultados procedimento="${procedimentoInteresse || ""}" reenvio`
+    )
+    selecionadasCompletas = completarSelecao({
+      selecionadas: selecionadasCompletas,
+      midias: jaEnviadasComArquivo,
+      limite,
+      jaEnviada: true,
+    })
+  }
+
+  const precisaFallback = selecionadasCompletas.length < limite
+  const midiasFallback = midiasAtivas
+    .filter((midia) => !urlJaEnviada(midia.url, urlsJaEnviadas))
+    .filter((midia) => {
+      const chave = criarChaveMidia(midia)
+      return !candidatasPontuadas.some(
+        (item) => criarChaveMidia(item.midia) === chave
+      )
+    })
+  const fallbackComArquivo = precisaFallback
+    ? await filtrarMidiasComArquivo(
+        midiasFallback,
+        `fallback resultados procedimento="${procedimentoInteresse || ""}"`
+      )
+    : []
+
+  selecionadasCompletas = completarSelecao({
+    selecionadas: selecionadasCompletas,
+    midias: fallbackComArquivo,
+    limite,
+    jaEnviada: false,
+  })
+
+  const precisaFallbackReenvio =
+    permitirReenvioJaEnviadas && selecionadasCompletas.length < limite
+  const midiasFallbackJaEnviadas = midiasAtivas
+    .filter((midia) => urlJaEnviada(midia.url, urlsJaEnviadas))
+    .filter((midia) => {
+      const chave = criarChaveMidia(midia)
+      return !candidatasPontuadas.some(
+        (item) => criarChaveMidia(item.midia) === chave
+      )
+    })
+  const fallbackJaEnviadoComArquivo = precisaFallbackReenvio
+    ? await filtrarMidiasComArquivo(
+        midiasFallbackJaEnviadas,
+        `fallback resultados procedimento="${procedimentoInteresse || ""}" reenvio`
+      )
+    : []
+
+  selecionadasCompletas = completarSelecao({
+    selecionadas: selecionadasCompletas,
+    midias: fallbackJaEnviadoComArquivo,
+    limite,
+    jaEnviada: true,
+  })
+
+  const fallbackSelecionadas = selecionadasCompletas.filter((item) => {
+    const chave = criarChaveMidia(item.midia)
+    return !candidatasPontuadas.some(
+      (candidata) => criarChaveMidia(candidata.midia) === chave
+    )
+  }).length
+  const fallbackUsado = fallbackSelecionadas > 0
+  const motivoFallback = fallbackUsado
+    ? selecionadas.length === 0
+      ? "sem_contextuais_validas"
+      : "completar_limite"
+    : undefined
+
+  const diagnosticoBase = {
+    totalAtivas,
+    totalCompativeis: candidatasPontuadas.length,
+    totalNovas: novas.length,
+    totalNovasComArquivo: novasComArquivo.length,
+    totalJaEnviadas: jaEnviadas.length,
+    totalJaEnviadasComArquivo: jaEnviadasComArquivo.length,
+    totalFallback: midiasFallback.length,
+    totalFallbackComArquivo: fallbackComArquivo.length,
+    totalFallbackJaEnviado: midiasFallbackJaEnviadas.length,
+    totalFallbackJaEnviadoComArquivo: fallbackJaEnviadoComArquivo.length,
+    contextuais: selecionadasCompletas.length - fallbackSelecionadas,
+    fallback: fallbackSelecionadas,
+    fallbackUsado,
+    motivoFallback,
+  } satisfies Omit<DiagnosticoResultados, "motivo">
+
+  if (fallbackUsado) {
+    console.log("[resultados-procedimento] fallback geral usado", {
+      procedimentoInteresse,
+      fallback: fallbackSelecionadas,
+      motivoFallback,
+    })
+  }
+
+  if (!permitirReenvioJaEnviadas || selecionadasCompletas.length >= limite) {
     return {
-      selecionadas,
+      selecionadas: selecionadasCompletas,
       diagnostico: {
         motivo: motivoSemSelecao({
-          selecionadas: selecionadas.length,
+          selecionadas: selecionadasCompletas.length,
           totalAtivas,
           totalCompativeis: candidatasPontuadas.length,
           totalNovas: novas.length,
           totalNovasComArquivo: novasComArquivo.length,
           totalJaEnviadas: jaEnviadas.length,
-          totalJaEnviadasComArquivo: 0,
+          totalJaEnviadasComArquivo: jaEnviadasComArquivo.length,
           permitirReenvioJaEnviadas,
         }),
-        totalAtivas,
-        totalCompativeis: candidatasPontuadas.length,
-        totalNovas: novas.length,
-        totalNovasComArquivo: novasComArquivo.length,
-        totalJaEnviadas: jaEnviadas.length,
-        totalJaEnviadasComArquivo: 0,
+        ...diagnosticoBase,
       },
     }
   }
 
-  jaEnviadasComArquivo = await filtrarMidiasComArquivo(
-    jaEnviadas,
-    `resultados procedimento="${procedimentoInteresse || ""}" reenvio`
-  )
-
-  const selecionadasComReenvio = [
-    ...selecionadas,
-    ...jaEnviadasComArquivo
-      .slice(0, limite - selecionadas.length)
-      .map((midia) => ({ midia, jaEnviada: true })),
-  ]
-
   return {
-    selecionadas: selecionadasComReenvio,
+    selecionadas: selecionadasCompletas,
     diagnostico: {
       motivo: motivoSemSelecao({
-        selecionadas: selecionadasComReenvio.length,
+        selecionadas: selecionadasCompletas.length,
         totalAtivas,
         totalCompativeis: candidatasPontuadas.length,
         totalNovas: novas.length,
@@ -260,12 +390,7 @@ async function selecionarResultados(params: {
         totalJaEnviadasComArquivo: jaEnviadasComArquivo.length,
         permitirReenvioJaEnviadas,
       }),
-      totalAtivas,
-      totalCompativeis: candidatasPontuadas.length,
-      totalNovas: novas.length,
-      totalNovasComArquivo: novasComArquivo.length,
-      totalJaEnviadas: jaEnviadas.length,
-      totalJaEnviadasComArquivo: jaEnviadasComArquivo.length,
+      ...diagnosticoBase,
     },
   }
 }
