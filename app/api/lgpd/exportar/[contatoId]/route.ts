@@ -17,7 +17,8 @@ export async function GET(
       *,
       conversas(id, etapa, criadoEm, mensagens:mensagens_whatsapp(id, tipo, conteudo, remetente, criadoEm)),
       agendamentos(id, dataHora, status, observacao, criadoEm),
-      fotos:fotos_contato(id, url, descricao, categoria, tipoAnalise, criadoEm)
+      fotos:fotos_contato(id, url, descricao, categoria, tipoAnalise, criadoEm),
+      anexos:anexos_contato(id, tipo, origem, titulo, descricao, url, nomeArquivo, mimeType, valor, procedimento, criadoEm)
     `)
     .eq("id", contatoId)
     .maybeSingle()
@@ -56,6 +57,20 @@ export async function GET(
     criadoEm: string
   }
 
+  type AnexoPayload = {
+    id: string
+    tipo: string
+    origem: string
+    titulo: string
+    descricao: string | null
+    url: string
+    nomeArquivo: string
+    mimeType: string
+    valor: number | null
+    procedimento: string | null
+    criadoEm: string
+  }
+
   const payload = {
     exportadoEm: new Date().toISOString(),
     dadosPessoais: {
@@ -85,6 +100,7 @@ export async function GET(
       tipoAnalise: f.tipoAnalise,
       criadoEm: f.criadoEm,
     })),
+    anexos: (lead.anexos as AnexoPayload[]) ?? [],
   }
 
   return new NextResponse(JSON.stringify(payload, null, 2), {

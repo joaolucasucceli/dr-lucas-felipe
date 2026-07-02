@@ -78,7 +78,13 @@ export async function renderizarPdfOrcamento(
  */
 export async function gerarEHospedarOrcamento(
   params: ParametrosPdfOrcamento & { contatoId: string }
-): Promise<{ url: string; nomeArquivo: string }> {
+): Promise<{
+  url: string
+  nomeArquivo: string
+  storageBucket: string
+  storagePath: string
+  tamanhoBytes: number
+}> {
   const buffer = await renderizarPdfOrcamento(params)
 
   const slug = params.nomePaciente
@@ -104,5 +110,11 @@ export async function gerarEHospedarOrcamento(
   }
 
   const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path)
-  return { url: data.publicUrl, nomeArquivo }
+  return {
+    url: data.publicUrl,
+    nomeArquivo,
+    storageBucket: BUCKET,
+    storagePath: path,
+    tamanhoBytes: buffer.length,
+  }
 }

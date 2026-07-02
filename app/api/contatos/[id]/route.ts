@@ -80,6 +80,25 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     (b.dataHora ?? "").localeCompare(a.dataHora ?? "")
   )
 
+  const { data: anexos, error: anexosError } = await supabaseAdmin
+    .from("anexos_contato")
+    .select(
+      "id, tipo, origem, titulo, descricao, url, nomeArquivo, mimeType, tamanhoBytes, valor, procedimento, eventoOrcamentoId, criadoEm"
+    )
+    .eq("contatoId", id)
+    .order("criadoEm", { ascending: false })
+
+  if (anexosError) {
+    console.error("[contatos.GET] Falha ao carregar anexos:", {
+      contatoId: id,
+      erro: anexosError.message,
+    })
+    return NextResponse.json(
+      { error: "Erro ao carregar anexos do contato" },
+      { status: 500 }
+    )
+  }
+
   const fotosOrdenadas = [...((contato.fotos as FotoOrdenavel[]) ?? [])].sort((a, b) =>
     (b.criadoEm ?? "").localeCompare(a.criadoEm ?? "")
   )
@@ -127,6 +146,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     ...contato,
     conversas: conversasOrdenadas,
     agendamentos: agendamentosOrdenados,
+    anexos: anexos ?? [],
     fotos: fotosOrdenadas,
     prontuario,
   })

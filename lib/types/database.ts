@@ -96,6 +96,81 @@ export type Database = {
             },
           ]
         }
+      anexos_contato: {
+        Row: {
+          atualizadoEm: string
+          contatoId: string
+          criadoEm: string
+          descricao: string | null
+          eventoOrcamentoId: string | null
+          id: string
+          mimeType: string
+          nomeArquivo: string
+          origem: string
+          procedimento: string | null
+          storageBucket: string | null
+          storagePath: string | null
+          tamanhoBytes: number | null
+          tipo: string
+          titulo: string
+          url: string
+          valor: number | null
+        }
+        Insert: {
+          atualizadoEm?: string
+          contatoId: string
+          criadoEm?: string
+          descricao?: string | null
+          eventoOrcamentoId?: string | null
+          id: string
+          mimeType?: string
+          nomeArquivo: string
+          origem?: string
+          procedimento?: string | null
+          storageBucket?: string | null
+          storagePath?: string | null
+          tamanhoBytes?: number | null
+          tipo?: string
+          titulo: string
+          url: string
+          valor?: number | null
+        }
+        Update: {
+          atualizadoEm?: string
+          contatoId?: string
+          criadoEm?: string
+          descricao?: string | null
+          eventoOrcamentoId?: string | null
+          id?: string
+          mimeType?: string
+          nomeArquivo?: string
+          origem?: string
+          procedimento?: string | null
+          storageBucket?: string | null
+          storagePath?: string | null
+          tamanhoBytes?: number | null
+          tipo?: string
+          titulo?: string
+          url?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexos_contato_contatoId_fkey"
+            columns: ["contatoId"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_contato_eventoOrcamentoId_fkey"
+            columns: ["eventoOrcamentoId"]
+            isOneToOne: false
+            referencedRelation: "eventos_orcamento_pendente"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analista_logs: {
         Row: {
           aplicado: boolean

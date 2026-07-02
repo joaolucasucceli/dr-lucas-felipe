@@ -51,6 +51,21 @@ export interface ContatoDetalhado {
     realizadoPor: string | null
     procedimento: { id: string; nome: string } | null
   }>
+  anexos: Array<{
+    id: string
+    tipo: string
+    origem: string
+    titulo: string
+    descricao: string | null
+    url: string
+    nomeArquivo: string
+    mimeType: string
+    tamanhoBytes: number | null
+    valor: number | string | null
+    procedimento: string | null
+    eventoOrcamentoId: string | null
+    criadoEm: string
+  }>
   conversas: Array<{
     id: string
     etapa: string

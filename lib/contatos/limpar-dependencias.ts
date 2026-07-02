@@ -20,6 +20,13 @@ type SupabaseUntyped = {
   }
 }
 
+type AnexoContatoStorage = {
+  id: string
+  storageBucket: string | null
+  storagePath: string | null
+  url: string
+}
+
 function extrairPathDoStorageUrl(url: string, bucket: string): string | null {
   const marker = `/${bucket}/`
   const idx = url.indexOf(marker)
@@ -78,6 +85,7 @@ async function deletarPorContato(
     | "conversas"
     | "agendamentos"
     | "eventos_orcamento_pendente"
+    | "anexos_contato"
     | "analista_logs",
   contatoId: string
 ) {
@@ -113,6 +121,7 @@ async function contarPorContato(
     | "conversas"
     | "agendamentos"
     | "eventos_orcamento_pendente"
+    | "anexos_contato"
     | "analista_logs",
   contatoId: string
 ) {
@@ -138,6 +147,7 @@ async function verificarSemDependencias(params: {
     "conversas",
     "agendamentos",
     "eventos_orcamento_pendente",
+    "anexos_contato",
     "analista_logs",
   ] as const) {
     const count = await contarPorContato(tabela, contatoId)
@@ -187,6 +197,12 @@ export async function limparDependenciasDoContato(params: {
     .eq("contatoId", contatoId)
   assertSemErro("buscar fotos_contato", fotosError)
 
+  const { data: anexosContato, error: anexosContatoError } = await supabaseAdmin
+    .from("anexos_contato")
+    .select("id, storageBucket, storagePath, url")
+    .eq("contatoId", contatoId)
+  assertSemErro("buscar anexos_contato", anexosContatoError)
+
   const { data: prontuarios, error: prontuariosError } = await supabaseAdmin
     .from("prontuarios")
     .select("id")
@@ -232,6 +248,19 @@ export async function limparDependenciasDoContato(params: {
     adicionarUnico(
       pathsAtendimentoMidias,
       extrairPathDoStorageUrl(foto.url, BUCKET_ATENDIMENTO_MIDIAS)
+    )
+  }
+
+  for (const anexo of (anexosContato ?? []) as AnexoContatoStorage[]) {
+    if (anexo.storageBucket === BUCKET_ATENDIMENTO_MIDIAS) {
+      adicionarUnico(pathsAtendimentoMidias, anexo.storagePath)
+    } else if (anexo.storageBucket === BUCKET_DOCUMENTOS_PRONTUARIO) {
+      adicionarUnico(pathsDocumentosProntuario, anexo.storagePath)
+    }
+
+    adicionarUnico(
+      pathsAtendimentoMidias,
+      extrairPathDoStorageUrl(anexo.url, BUCKET_ATENDIMENTO_MIDIAS)
     )
   }
 
@@ -299,6 +328,7 @@ export async function limparDependenciasDoContato(params: {
   await deletarPorProntuario("anamneses", prontuarioIds)
   await deletarPorProntuario("documentos_prontuario", prontuarioIds)
   await deletarPorProntuario("evolucoes", prontuarioIds)
+  await deletarPorContato("anexos_contato", contatoId)
   await deletarPorContato("eventos_orcamento_pendente", contatoId)
   await deletarTabelaSemTipoPorContato("aprovacoes_agendamento", contatoId)
   await deletarPorContato("analista_logs", contatoId)

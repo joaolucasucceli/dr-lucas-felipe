@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase"
-import { agora } from "@/lib/db-utils"
+import { agora, criarId } from "@/lib/db-utils"
 import { enviarMensagem, enviarMidia } from "@/lib/uazapi"
 import { gerarEHospedarOrcamento, formatarBrl } from "@/lib/orcamento/gerar"
 import { adicionarAMemoria } from "@/lib/agente/memoria"
@@ -226,7 +226,13 @@ export async function processarRespostaDrLucas(args: {
     const proc = await resolverProcedimento(contato.procedimentoInteresse)
 
     // Gera + hospeda o PDF.
-    const { url: pdfUrl, nomeArquivo } = await gerarEHospedarOrcamento({
+    const {
+      url: pdfUrl,
+      nomeArquivo,
+      storageBucket,
+      storagePath,
+      tamanhoBytes,
+    } = await gerarEHospedarOrcamento({
       contatoId: contato.id,
       nomePaciente,
       procedimento: contato.procedimentoInteresse ?? proc?.nome ?? null,
@@ -254,6 +260,17 @@ export async function processarRespostaDrLucas(args: {
         nomeArquivo
       )
 
+      try {
+        await registrarDocumentoOrcamentoNoHistorico({
+          contatoId: contato.id,
+          conversaId: pendencia.conversaId,
+          pdfUrl,
+          nomeArquivo,
+        })
+      } catch (err) {
+        console.error("[orcamento-dr-lucas] falha ao registrar PDF no historico:", err)
+      }
+
       await enviarMensagem(
         cfg.uazapiUrl,
         cfg.instanceToken,
@@ -278,6 +295,24 @@ export async function processarRespostaDrLucas(args: {
       contato.sobreOPaciente,
       notaOrcamento
     )
+
+    try {
+      await registrarAnexoOrcamento({
+        contatoId: contato.id,
+        eventoOrcamentoId: pendencia.id,
+        nomePaciente,
+        valor,
+        valorFormatado,
+        procedimento: contato.procedimentoInteresse ?? proc?.nome ?? null,
+        pdfUrl,
+        nomeArquivo,
+        storageBucket,
+        storagePath,
+        tamanhoBytes,
+      })
+    } catch (err) {
+      console.error("[orcamento-dr-lucas] falha ao anexar PDF ao contato:", err)
+    }
 
     // Marca pendencia respondida (guarda o valor em `observacoes` pra auditoria)
     // e retoma o atendimento da cliente.
@@ -476,6 +511,101 @@ async function registrarOrcamentoNaMemoria(params: {
   }
 }
 
+async function registrarAnexoOrcamento(params: {
+  contatoId: string
+  eventoOrcamentoId: string
+  nomePaciente: string
+  valor: number
+  valorFormatado: string
+  procedimento: string | null
+  pdfUrl: string
+  nomeArquivo: string
+  storageBucket: string
+  storagePath: string
+  tamanhoBytes: number
+}): Promise<void> {
+  const titulo = `Orçamento - ${params.nomePaciente}`
+  const descricao = `Orçamento definido pelo Dr. Lucas em ${params.valorFormatado}.`
+
+  const payload = {
+    contatoId: params.contatoId,
+    tipo: "orcamento",
+    origem: "orcamento_exato",
+    titulo,
+    descricao,
+    url: params.pdfUrl,
+    storageBucket: params.storageBucket,
+    storagePath: params.storagePath,
+    nomeArquivo: params.nomeArquivo,
+    mimeType: "application/pdf",
+    tamanhoBytes: params.tamanhoBytes,
+    valor: params.valor,
+    procedimento: params.procedimento,
+    eventoOrcamentoId: params.eventoOrcamentoId,
+    atualizadoEm: agora(),
+  }
+
+  const { data: existente, error: buscarError } = await supabaseAdmin
+    .from("anexos_contato")
+    .select("id")
+    .eq("eventoOrcamentoId", params.eventoOrcamentoId)
+    .maybeSingle()
+
+  if (buscarError) {
+    throw new Error(`Falha ao buscar anexo existente: ${buscarError.message}`)
+  }
+
+  const { error } = existente?.id
+    ? await supabaseAdmin
+        .from("anexos_contato")
+        .update(payload)
+        .eq("id", existente.id)
+    : await supabaseAdmin.from("anexos_contato").insert({
+        id: criarId(),
+        ...payload,
+      })
+
+  if (error) {
+    throw new Error(`Falha ao anexar PDF ao contato: ${error.message}`)
+  }
+}
+
+async function registrarDocumentoOrcamentoNoHistorico(params: {
+  contatoId: string
+  conversaId: string | null
+  pdfUrl: string
+  nomeArquivo: string
+}): Promise<void> {
+  let convId = params.conversaId
+  if (!convId) {
+    const { data: conv } = await supabaseAdmin
+      .from("conversas")
+      .select("id")
+      .eq("contatoId", params.contatoId)
+      .order("criadoEm", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    convId = conv?.id ?? null
+  }
+  if (!convId) return
+
+  const { error } = await supabaseAdmin.from("mensagens_whatsapp").insert({
+    id: criarId(),
+    conversaId: convId,
+    contatoId: params.contatoId,
+    messageIdWhatsapp: `orcamento-documento-${criarId()}`,
+    tipo: "documento",
+    conteudo: params.nomeArquivo,
+    mediaUrl: params.pdfUrl,
+    mediaType: "application/pdf",
+    remetente: "agente",
+  })
+
+  if (error) {
+    throw new Error(`Falha ao registrar documento no historico: ${error.message}`)
+  }
+}
+
 /** Registra a mensagem da Ana no historico (best-effort). */
 async function registrarMensagemAna(
   contatoId: string,
@@ -495,7 +625,6 @@ async function registrarMensagemAna(
   }
   if (!convId) return
 
-  const { criarId } = await import("@/lib/db-utils")
   // messageIdWhatsapp e NOT NULL + UNIQUE. Como essa msg nao veio do WhatsApp
   // (foi gerada internamente apos o PDF), usamos um id sintetico unico.
   await supabaseAdmin.from("mensagens_whatsapp").insert({

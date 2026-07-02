@@ -8,6 +8,7 @@ import {
   CalendarClock,
   CheckCircle2,
   ExternalLink,
+  FileText,
   MessageCircle,
   Pause,
   Play,
@@ -75,6 +76,16 @@ const formatarCpf = (v: string) => {
   const d = v.replace(/\D/g, "")
   if (d.length !== 11) return v
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+}
+
+const formatarValorMonetario = (valor: number | string | null) => {
+  if (valor === null || valor === undefined || valor === "") return null
+  const numero = typeof valor === "number" ? valor : Number(valor)
+  if (!Number.isFinite(numero)) return null
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(numero)
 }
 
 export default function ContatoDetalhePage({ params }: PageProps) {
@@ -463,6 +474,64 @@ export default function ContatoDetalhePage({ params }: PageProps) {
 
         {/* Coluna direita: Histórico (lead) ou Prontuário (paciente) */}
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="h-4 w-4" />
+                Orçamentos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {contato.anexos.length === 0 ? (
+                <p className="p-6 text-center text-sm text-muted-foreground">
+                  Nenhum orçamento anexado.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {contato.anexos.map((anexo) => {
+                    const valorFormatado = formatarValorMonetario(anexo.valor)
+
+                    return (
+                      <div key={anexo.id} className="rounded-lg border bg-card/50 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium">{anexo.titulo}</span>
+                              <Badge
+                                variant="secondary"
+                                className="border-sky-500/40 bg-sky-500/10 text-sky-300"
+                              >
+                                PDF
+                              </Badge>
+                            </div>
+                            <div className="space-y-1 text-sm text-muted-foreground">
+                              <p>
+                                Emitido em{" "}
+                                {formatarData(anexo.criadoEm, "dd/MM/yyyy 'às' HH:mm")}
+                              </p>
+                              {anexo.procedimento && (
+                                <p>Procedimento: {anexo.procedimento}</p>
+                              )}
+                              {valorFormatado && <p>Valor: {valorFormatado}</p>}
+                              <p>Arquivo: {anexo.nomeArquivo}</p>
+                              {anexo.descricao && <p>{anexo.descricao}</p>}
+                            </div>
+                          </div>
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={anexo.url} target="_blank" rel="noreferrer">
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Abrir PDF
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {!ehPaciente && (
             <>
               <Card>
