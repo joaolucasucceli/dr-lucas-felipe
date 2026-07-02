@@ -246,7 +246,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
           procedimentoId: {
             type: "string",
             description:
-              "ID do procedimento (opcional). Se omitir, o backend tenta resolver via procedimentoInteresse do contato.",
+              "ID do procedimento (opcional). Normalmente pode omitir: o backend valida esse ID e, se ele nao vier, resolve pelo procedimentoInteresse salvo no contato.",
           },
           dataHora: {
             type: "string",

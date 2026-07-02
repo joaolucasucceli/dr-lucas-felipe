@@ -6,6 +6,7 @@ import { validarApiSecret } from "@/lib/api-auth"
 import { criarEvento } from "@/lib/google-calendar"
 import { criarId, agora } from "@/lib/db-utils"
 import { validarSlotManual } from "@/lib/agendamento/validar-slot"
+import { resolverProcedimentoPorInteresse } from "@/lib/procedimentos/resolver-procedimento"
 
 const schema = z.object({
   contatoId: z.string().min(1),
@@ -41,7 +42,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { contatoId, conversaId, procedimentoId, dataHora, observacao, email } = parsed.data
+  const { contatoId, conversaId, procedimentoId, dataHora, observacao, email } =
+    parsed.data
 
   const inicio = new Date(dataHora)
 
@@ -63,27 +65,35 @@ export async function POST(request: NextRequest) {
       .eq("id", contatoId)
   }
 
-  // Fallback de procedimento: se IA nao passou procedimentoId, tenta
-  // resolver pelo procedimentoInteresse ja gravado pela Ana Julia (atualizar_lead).
-  let finalProcedimentoId = procedimentoId
-  if (!finalProcedimentoId) {
-    const { data: contatoProc } = await supabaseAdmin
-      .from("contatos")
-      .select("procedimentoInteresse")
-      .eq("id", contatoId)
-      .maybeSingle()
-    const interesse = contatoProc?.procedimentoInteresse?.trim()
-    if (interesse) {
-      const { data: proc } = await supabaseAdmin
-        .from("procedimentos")
-        .select("id")
-        .ilike("nome", `%${interesse}%`)
-        .eq("ativo", true)
-        .is("deletadoEm", null)
-        .limit(1)
-        .maybeSingle()
-      if (proc?.id) finalProcedimentoId = proc.id
-    }
+  const { data: contatoProc } = await supabaseAdmin
+    .from("contatos")
+    .select("procedimentoInteresse")
+    .eq("id", contatoId)
+    .maybeSingle()
+
+  const procedimentoResolvido = await resolverProcedimentoPorInteresse({
+    procedimentoId,
+    procedimentoInteresse: contatoProc?.procedimentoInteresse ?? null,
+  })
+  const finalProcedimentoId = procedimentoResolvido?.id ?? null
+
+  if (procedimentoResolvido) {
+    console.log("[registrar-agendamento] Procedimento resolvido", {
+      contatoId,
+      procedimentoId: procedimentoResolvido.id,
+      procedimentoNome: procedimentoResolvido.nome,
+      origem: procedimentoResolvido.origem,
+      procedimentoInteresse: contatoProc?.procedimentoInteresse ?? null,
+    })
+  } else {
+    console.warn(
+      "[registrar-agendamento] Agendamento sem procedimento resolvido",
+      {
+        contatoId,
+        procedimentoIdInformado: procedimentoId ?? null,
+        procedimentoInteresse: contatoProc?.procedimentoInteresse ?? null,
+      }
+    )
   }
 
   const { data: agendamento, error: agendError } = await supabaseAdmin
@@ -92,7 +102,7 @@ export async function POST(request: NextRequest) {
       id: criarId(),
       atualizadoEm: agora(),
       contatoId,
-      procedimentoId: finalProcedimentoId || null,
+      procedimentoId: finalProcedimentoId,
       dataHora: inicio.toISOString(),
       status: "agendado",
       // Tipo unico no escopo da IA: a reuniao de avaliacao online = diagnostico
