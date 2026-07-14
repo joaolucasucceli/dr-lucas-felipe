@@ -16,6 +16,11 @@ import { baixarMidia, enviarDigitando, enviarMensagem } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
 import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
 import { processarRespostaDrLucas } from "@/lib/orcamento/processar-resposta-dr-lucas"
+import {
+  apenasDigitos,
+  buscarContatoAtivoPorWhatsappNormalizado,
+  mesmoNumeroBR,
+} from "@/lib/contatos/whatsapp"
 
 // @react-pdf/renderer (usado pela ingestao do orcamento do Dr. Lucas) exige
 // runtime Node — nunca edge. App Router ja usa Node por padrao, mas fixamos
@@ -23,30 +28,6 @@ import { processarRespostaDrLucas } from "@/lib/orcamento/processar-resposta-dr-
 export const runtime = "nodejs"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-/** So digitos — usado pra comparar numeros de WhatsApp. */
-function apenasDigitos(s: string): string {
-  return (s ?? "").replace(/\D+/g, "")
-}
-
-/** Normaliza um numero BR pra "DDD + 8 digitos locais" (10 digitos), removendo
- *  o codigo do pais (55) e o nono digito opcional do celular. Resolve a
- *  ambiguidade do nono digito: `5545991237219` e `554591237219` viram o mesmo
- *  `4591237219`. Usado pra reconhecer o Dr. Lucas independente do formato. */
-function normalizarNumeroBR(s: string): string {
-  let d = apenasDigitos(s)
-  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2) // tira o pais
-  // Agora d = DDD(2) + local. Se local tem 9 digitos e comeca com 9, tira o 9.
-  if (d.length === 11 && d[2] === "9") d = d.slice(0, 2) + d.slice(3)
-  return d.slice(-10) // DDD + 8 (estavel)
-}
-
-/** Compara dois numeros BR tolerando o nono digito e o codigo do pais. */
-function mesmoNumeroBR(a: string, b: string): boolean {
-  const na = normalizarNumeroBR(a)
-  const nb = normalizarNumeroBR(b)
-  return na.length >= 10 && na === nb
-}
 
 interface MensagemNormalizada {
   id: string
@@ -493,11 +474,31 @@ export async function POST(request: NextRequest) {
       continue
     }
 
-    // Rate limit por numero do remetente. Paciente real fica bem abaixo dos
+    const ehAtendente = msg.fromMe === true
+    const { contato: contatoEncontrado, error: contatoBuscaError } =
+      await buscarContatoAtivoPorWhatsappNormalizado(msg.numero)
+
+    if (contatoBuscaError) {
+      console.error("[Webhook] Falha ao buscar contato:", contatoBuscaError.message)
+      continue
+    }
+
+    const pacienteSilenciado = !ehAtendente && contatoEncontrado?.tipo === "paciente"
+
+    if (pacienteSilenciado) {
+      console.log("[Webhook] Paciente cadastrado ignorado sem registrar mensagem", {
+        contatoId: contatoEncontrado.id,
+        whatsapp: msg.numero,
+        tipoMensagem: msg.tipo,
+      })
+      continue
+    }
+
+    // Rate limit por numero do remetente. Lead real fica bem abaixo dos
     // 30/min; quem ultrapassa e bot ou abuso (cada msg vira call OpenAI).
     // Mensagem ainda salva no banco (barato) mas NAO dispara /processar.
     let bloqueadoPorRate = false
-    if (!msg.fromMe) {
+    if (!ehAtendente) {
       const rl = await checkRateLimitWhatsappWebhook(msg.numero)
       if (rl.bloqueado) {
         console.warn(
@@ -513,8 +514,6 @@ export async function POST(request: NextRequest) {
     // Pode ser: (a) IA via registrar-mensagem; (b) atendente pelo WhatsApp pessoal da clinica
     // apos pausar a IA. Em (a) o dedup por messageIdWhatsapp (UNIQUE) protege duplicata.
     // Em (b) registramos como remetente "atendente" para aparecer no historico do contato.
-    const ehAtendente = msg.fromMe === true
-
     const { data: existe } = await supabaseAdmin
       .from("mensagens_whatsapp")
       .select("id")
@@ -563,7 +562,7 @@ export async function POST(request: NextRequest) {
       .eq("whatsapp", msg.numero)
       .maybeSingle()
 
-    let contato = contatoExistente
+    let contato = contatoEncontrado ?? contatoExistente
 
     if (contato && contato.deletadoEm) {
       // JLAU-552: nao reativar contato soft-deletado. O DELETE ja hasheou o whatsapp,
@@ -588,17 +587,19 @@ export async function POST(request: NextRequest) {
 
       if (createErr) {
         if (createErr.code === "23505") {
-          const { data: paralelo } = await supabaseAdmin
-            .from("contatos")
-            .select("*")
-            .eq("whatsapp", msg.numero)
-            .maybeSingle()
+          const { contato: paralelo, error: paraleloError } =
+            await buscarContatoAtivoPorWhatsappNormalizado(msg.numero)
 
-          if (paralelo?.deletadoEm) {
+          if (paraleloError) {
+            console.error("[Webhook] Falha ao buscar contato paralelo:", paraleloError.message)
+            continue
+          }
+
+          if (!paralelo) {
             // JLAU-552: nao reativa — nao deveria acontecer apos hash do whatsapp.
             console.error(
-              "[Webhook] Conflito inesperado: contato paralelo soft-deletado com whatsapp nao hasheado",
-              { contatoId: paralelo.id, whatsapp: msg.numero }
+              "[Webhook] Conflito inesperado: contato paralelo nao encontrado apos dup",
+              { whatsapp: msg.numero }
             )
             continue
           } else {

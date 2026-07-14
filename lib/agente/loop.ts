@@ -2855,6 +2855,17 @@ export async function processarMensagens(
       await executarFerramenta("consultar_paciente", { whatsapp }, baseUrl)
     )
     if (resultadoPaciente.contato) {
+      if (resultadoPaciente.contato.tipo === "paciente") {
+        console.log("[Agente] Contato paciente silenciado", {
+          chatId,
+          contatoId: resultadoPaciente.contato.id,
+        })
+        return {
+          contatoId: resultadoPaciente.contato.id,
+          conversaId: resultadoPaciente.conversa?.id || null,
+        }
+      }
+
       // Antes existia logica de STATUSES_SILENCIO/STATUSES_RETORNO aqui, mas
       // ambos arrays estavam vazios desde a refatoracao do funil comercial
       // (JLAU-...). Removido o codigo morto. Se quiser reativar "novo ciclo

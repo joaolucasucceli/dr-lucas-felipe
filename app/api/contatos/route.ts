@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth, requireAnyRole } from "@/lib/auth-helpers"
 import { criarContatoSchema, tipoContatoSchema } from "@/lib/validations/contato"
 import { criarId, agora } from "@/lib/db-utils"
+import { buscarContatoAtivoPorWhatsappNormalizado } from "@/lib/contatos/whatsapp"
 
 const SELECT_CONTATO =
   "id, tipo, nome, whatsapp, email, procedimentoInteresse, statusFunil, origem, arquivado, cpf, criadoEm, promovidoEm, " +
@@ -92,12 +93,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { data: existente } = await supabaseAdmin
-    .from("contatos")
-    .select("id")
-    .eq("whatsapp", whatsapp)
-    .is("deletadoEm", null)
-    .maybeSingle()
+  const { contato: existente, error: existenteError } =
+    await buscarContatoAtivoPorWhatsappNormalizado(
+      whatsapp,
+      "id, tipo, whatsapp, criadoEm"
+    )
+
+  if (existenteError) {
+    return NextResponse.json({ error: existenteError.message }, { status: 500 })
+  }
 
   if (existente) {
     return NextResponse.json(

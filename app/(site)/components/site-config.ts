@@ -19,7 +19,7 @@ const config = {
   },
 
   redesSociais: {
-    instagram: "https://instagram.com/dr.lucasfelipe",
+    instagram: "https://www.instagram.com/dr.lucasferreiraa",
   },
 
   contato: {

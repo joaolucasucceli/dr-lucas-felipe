@@ -3,6 +3,29 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarId, agora } from "@/lib/db-utils"
+import { buscarContatoAtivoPorWhatsappNormalizado } from "@/lib/contatos/whatsapp"
+import type { Database } from "@/lib/types/database"
+
+const SELECT_CONTATO =
+  "id, nome, whatsapp, email, tipo, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
+
+type ContatoRow = Database["public"]["Tables"]["contatos"]["Row"]
+type ContatoConsulta = Pick<
+  ContatoRow,
+  | "id"
+  | "nome"
+  | "whatsapp"
+  | "email"
+  | "tipo"
+  | "statusFunil"
+  | "procedimentoInteresse"
+  | "origem"
+  | "ehRetorno"
+  | "cicloAtual"
+  | "ciclosCompletos"
+  | "responsavelId"
+  | "sobreOPaciente"
+>
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -20,14 +43,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "whatsapp é obrigatório" }, { status: 400 })
   }
 
-  const { data: contatoExistente } = await supabaseAdmin
-    .from("contatos")
-    .select(
-      "id, nome, whatsapp, email, tipo, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
+  const { contato: contatoExistente, error: buscarError } =
+    await buscarContatoAtivoPorWhatsappNormalizado<ContatoConsulta>(
+      whatsapp,
+      SELECT_CONTATO
     )
-    .eq("whatsapp", whatsapp)
-    .is("deletadoEm", null)
-    .maybeSingle()
+
+  if (buscarError) {
+    return NextResponse.json(
+      { error: buscarError.message },
+      { status: 500 }
+    )
+  }
 
   let contato = contatoExistente
   let criadoAgora = false
@@ -44,9 +71,7 @@ export async function POST(request: NextRequest) {
         origem: "whatsapp",
         statusFunil: "acolhimento",
       })
-      .select(
-        "id, nome, whatsapp, email, tipo, statusFunil, procedimentoInteresse, origem, ehRetorno, cicloAtual, ciclosCompletos, responsavelId, sobreOPaciente"
-      )
+      .select(SELECT_CONTATO)
       .single()
 
     if (criarError || !novoContato) {
@@ -58,6 +83,10 @@ export async function POST(request: NextRequest) {
 
     contato = novoContato
     criadoAgora = true
+  }
+
+  if (!contato) {
+    return NextResponse.json({ error: "Contato nao encontrado" }, { status: 500 })
   }
 
   const { data: conversa } = await supabaseAdmin
