@@ -10,7 +10,7 @@
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "db:types": "npx supabase gen types typescript --project-id gbcrmiplukilalwyjxxp --schema public > lib/types/database.ts"
+    "db:types": "npx supabase gen types typescript --project-id gbcrmiplukilalwyjxxp --schema public > src/lib/types/database.ts"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
