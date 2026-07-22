@@ -1459,6 +1459,7 @@ async function registrarAgendamentoDeterministico(params: {
     error?: string
     agendamento?: { id?: string }
     sincronizado?: boolean
+    linkReuniao?: string | null
   }
 
   console.log("[Agente] Resultado registrar_agendamento", {
@@ -1466,6 +1467,7 @@ async function registrarAgendamentoDeterministico(params: {
     ok: parsed.ok !== false && Boolean(parsed.agendamento),
     agendamentoId: parsed.agendamento?.id,
     sincronizado: parsed.sincronizado,
+    temLinkReuniao: Boolean(parsed.linkReuniao),
     erro: parsed.error,
   })
 
@@ -1477,13 +1479,25 @@ async function registrarAgendamentoDeterministico(params: {
   }
 
   contexto.etapa = "consulta_agendada"
-  return {
-    ok: true,
-    texto: comVocativo(
+
+  // O link do Meet vai no WhatsApp ALEM do convite por email. Ate 22/07/2026 a
+  // reuniao era "online" sem videochamada nenhuma, e a unica confirmacao
+  // dependia de um email que podia nao chegar (caixa cheia, spam, email
+  // digitado errado). Com o link aqui, o paciente sempre tem por onde entrar.
+  const blocoLink = parsed.linkReuniao
+    ? `O link da reunião é esse: ${parsed.linkReuniao} — é só clicar na hora.`
+    : null
+
+  const blocos = [
+    comVocativo(
       contexto,
-      `Agendado{nome}! Ficou para ${slot.label}. O convite vai chegar no e-mail ${email}.\n---\nAgora o próximo passo é a reunião com o Dr. Lucas, para ele avaliar seu caso e te orientar com segurança. Se antes disso você precisar remarcar ou cancelar, pode me chamar por aqui.`
+      `Agendado{nome}! Ficou para ${slot.label}. O convite vai chegar no e-mail ${email}.`
     ),
-  }
+    blocoLink,
+    "Agora o próximo passo é a reunião com o Dr. Lucas, para ele avaliar seu caso e te orientar com segurança. Se antes disso você precisar remarcar ou cancelar, pode me chamar por aqui.",
+  ].filter(Boolean)
+
+  return { ok: true, texto: blocos.join("\n---\n") }
 }
 
 function combinarFalhaAgendamentoComOferta(falha: string, oferta: string): string {

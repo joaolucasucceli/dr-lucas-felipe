@@ -184,6 +184,7 @@ export async function POST(request: NextRequest) {
       .update({
         googleEventId: resultadoCalendar.googleEventId,
         googleEventUrl: resultadoCalendar.googleEventUrl,
+        linkReuniao: resultadoCalendar.linkReuniao,
         sincronizado: true,
         duracao: duracaoMin,
         atualizadoEm: agora(),
@@ -193,5 +194,13 @@ export async function POST(request: NextRequest) {
 
   // JLU-170 (P3+P4): ping pro Dr. Lucas sobre novo agendamento.
   // Fire-and-forget — nao bloqueia resposta da IA pro paciente. Falha silenciosa.
-  return NextResponse.json({ agendamento, sincronizado: !!resultadoCalendar })
+  //
+  // `linkReuniao` volta pra IA de proposito: o convite por email pode nao
+  // chegar (caixa cheia, spam, email digitado errado), entao a Ana manda o link
+  // do Meet no WhatsApp tambem. O paciente sempre tem por onde entrar.
+  return NextResponse.json({
+    agendamento,
+    sincronizado: !!resultadoCalendar,
+    linkReuniao: resultadoCalendar?.linkReuniao ?? null,
+  })
 }

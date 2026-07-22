@@ -26,6 +26,7 @@ export type Database = {
           googleEventId: string | null
           googleEventUrl: string | null
           id: string
+          linkReuniao: string | null
           observacao: string | null
           procedimentoId: string | null
           realizadoEm: string | null
@@ -45,6 +46,7 @@ export type Database = {
           googleEventId?: string | null
           googleEventUrl?: string | null
           id: string
+          linkReuniao?: string | null
           observacao?: string | null
           procedimentoId?: string | null
           realizadoEm?: string | null
@@ -64,6 +66,7 @@ export type Database = {
           googleEventId?: string | null
           googleEventUrl?: string | null
           id?: string
+          linkReuniao?: string | null
           observacao?: string | null
           procedimentoId?: string | null
           realizadoEm?: string | null

@@ -82,7 +82,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (atualizado.googleEventId && (dataHoraMudou || duracaoMudou)) {
     const inicio = new Date(atualizado.dataHora)
     const fim = new Date(inicio.getTime() + (atualizado.duracao ?? 60) * 60_000)
-    await atualizarEvento(atualizado.googleEventId, { inicio, fim })
+    const resultadoCalendar = await atualizarEvento(atualizado.googleEventId, {
+      inicio,
+      fim,
+    })
+    if (resultadoCalendar.linkReuniao) {
+      await supabaseAdmin
+        .from("agendamentos")
+        .update({
+          linkReuniao: resultadoCalendar.linkReuniao,
+          atualizadoEm: agora(),
+        })
+        .eq("id", atualizado.id)
+    }
   }
 
   await registrarAuditLog({

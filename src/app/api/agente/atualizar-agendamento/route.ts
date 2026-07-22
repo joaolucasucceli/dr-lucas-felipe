@@ -150,16 +150,25 @@ export async function POST(request: NextRequest) {
     let sincronizado = agendamentoExistente.sincronizado
     if (agendamentoExistente.googleEventId) {
       const novoFim = new Date(novaInicio.getTime() + duracaoMin * 60_000)
-      const ok = await atualizarEvento(agendamentoExistente.googleEventId, {
-        descricao: observacao,
-        inicio: novaInicio,
-        fim: novoFim,
-      })
-      if (!ok) {
+      const resultado = await atualizarEvento(
+        agendamentoExistente.googleEventId,
+        { descricao: observacao, inicio: novaInicio, fim: novoFim }
+      )
+      if (!resultado.ok) {
         sincronizado = false
         await supabaseAdmin
           .from("agendamentos")
           .update({ sincronizado: false, atualizadoEm: agora() })
+          .eq("id", agendamentoId)
+      } else if (resultado.linkReuniao) {
+        // Eventos criados antes de 22/07/2026 nasceram sem videochamada;
+        // `atualizarEvento` cria uma na remarcacao, entao o link pode ser novo.
+        await supabaseAdmin
+          .from("agendamentos")
+          .update({
+            linkReuniao: resultado.linkReuniao,
+            atualizadoEm: agora(),
+          })
           .eq("id", agendamentoId)
       }
     }
