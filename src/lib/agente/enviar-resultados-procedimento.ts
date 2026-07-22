@@ -8,9 +8,9 @@ import {
 import { filtrarMidiasComArquivo } from "@/lib/agente/midia-marketing-storage"
 import { supabaseAdmin } from "@/lib/supabase"
 
-type OrigemResultadosProcedimento =
-  | "orcamento_estimado"
-  | "orcamento_exato_pendente"
+// "orcamento_estimado" saiu em 22/07/2026 junto com a estimativa automatica:
+// resultados visuais so acompanham a espera do orcamento exato do Dr. Lucas.
+type OrigemResultadosProcedimento = "orcamento_exato_pendente"
 
 type MidiaSelecionada = {
   midia: MidiaMarketingEnvio
@@ -497,11 +497,7 @@ export async function enviarResultadosProcedimento(params: {
   if (params.chatId && enviadas > 0) {
     await adicionarAMemoria(params.chatId, {
       role: "system",
-      content: `Foram enviados ${enviadas} resultado(s) visual(is) relacionado(s) ao procedimento ${
-        params.origem === "orcamento_estimado"
-          ? "junto do orcamento estimado"
-          : "enquanto o paciente aguarda o orcamento exato"
-      }. Nao diga que faltou enviar imagens.`,
+      content: `Foram enviados ${enviadas} resultado(s) visual(is) relacionado(s) ao procedimento enquanto o paciente aguarda o orcamento exato. Nao diga que faltou enviar imagens.`,
     })
   }
 

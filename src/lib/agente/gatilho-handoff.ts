@@ -70,7 +70,7 @@ function extrairRegioes(texto: string): {
 
 /**
  * Combos Paciente Modelo padrão que CABEM na regra 1 (consultar_procedimentos
- * resolve com valorEstimadoBrl preenchido). Qualquer multi-região fora desses
+ * eram os combos com valor cadastrado). Qualquer multi-região fora desses
  * combos é caso de handoff.
  */
 function ehComboPacienteModelo(regioes: Set<string>): boolean {

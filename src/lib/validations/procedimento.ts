@@ -3,10 +3,11 @@ import { TIPOS_PROCEDIMENTO } from "@/lib/procedimentos/tipos"
 import { normalizarTextoProcedimento } from "@/lib/procedimentos/texto"
 
 // Campos comerciais (valor/escopo/parcelamento) — todos opcionais.
-// JLU-167 (25/05/2026): valorBaseMinBrl + valorBaseMaxBrl viraram fonte primaria
-// pra Ana Julia citar FAIXA ("R$ 10k a R$ 12k"). valorEstimadoBrl mantido como
-// fallback legado por 1 semana, depois deprecar.
-// Quando NENHUM dos 3 estiver preenchido, IA pede mais info ao paciente.
+// ATENCAO: nenhum destes campos chega na Ana Julia. Desde 22/07/2026 ela nao
+// cita valor em hipotese alguma (a rota /api/agente/consultar-procedimentos nao
+// seleciona campo de preco). Sao referencia interna do dashboard. Valor por
+// REGIAO, que e o que o Dr. Lucas usa pra fechar orcamento, fica em
+// `procedimento_regioes` — ver src/lib/validations/procedimento-regiao.ts.
 const camposComerciais = {
   valorBaseMinBrl: z.number().positive().nullable().optional(),
   valorBaseMaxBrl: z.number().positive().nullable().optional(),
