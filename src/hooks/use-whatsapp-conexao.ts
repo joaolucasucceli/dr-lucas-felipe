@@ -1,30 +1,35 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 /** Countdown de 120s enquanto qrcode visivel. Retorna segundos restantes
  *  (0 quando expira ou qrcode vazio). */
 export function useQrCountdown(qrcode: string) {
   const [qrSegs, setQrSegs] = useState(0)
-  const qrExpiraRef = useRef<number | null>(null)
 
   useEffect(() => {
+    // Todo setState sai por timer, nunca no corpo do effect: o React Compiler
+    // trata setState síncrono em effect como render em cascata. Date.now()
+    // também fica só aqui dentro — chamá-lo no render seria impureza.
     if (!qrcode) {
-      qrExpiraRef.current = null
-      setQrSegs((s) => (s === 0 ? s : 0))
-      return
+      const zerar = setTimeout(() => setQrSegs(0), 0)
+      return () => clearTimeout(zerar)
     }
-    qrExpiraRef.current = Date.now() + 120_000
-    setQrSegs((s) => (s === 120 ? s : 120))
+
+    const expiraEm = Date.now() + 120_000
+    const atualizar = () =>
+      setQrSegs(Math.max(0, Math.ceil((expiraEm - Date.now()) / 1000)))
+
+    const inicial = setTimeout(atualizar, 0)
     const iv = setInterval(() => {
-      const restante = Math.max(
-        0,
-        Math.ceil(((qrExpiraRef.current ?? 0) - Date.now()) / 1000)
-      )
-      setQrSegs(restante)
-      if (restante === 0) clearInterval(iv)
+      atualizar()
+      if (Date.now() >= expiraEm) clearInterval(iv)
     }, 1000)
-    return () => clearInterval(iv)
+
+    return () => {
+      clearTimeout(inicial)
+      clearInterval(iv)
+    }
   }, [qrcode])
 
   return qrSegs

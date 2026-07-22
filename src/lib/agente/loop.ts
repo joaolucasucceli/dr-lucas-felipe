@@ -2351,7 +2351,7 @@ export async function processarMensagens(
       // ambos arrays estavam vazios desde a refatoracao do funil comercial
       // (JLAU-...). Removido o codigo morto. Se quiser reativar "novo ciclo
       // pra paciente de retorno", `abrirNovoCiclo` continua disponivel em
-      // `lib/agente/kanban-sync.ts` — basta plugar aqui novamente.
+      // um helper de kanban-sync, removido em 22/07/2026 por estar sem uso — se precisar religar, o codigo esta no historico do Git.
       const nomeAtual = resultadoPaciente.contato.nome ?? ""
       const nomePerfilWhatsappNaoConfirmado =
         resultadoPaciente.contato.origem === "whatsapp" &&

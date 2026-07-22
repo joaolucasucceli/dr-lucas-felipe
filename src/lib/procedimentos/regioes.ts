@@ -1,12 +1,12 @@
 /**
  * FONTE ÚNICA das regiões anatômicas do corpo que o sistema reconhece.
  *
- * Antes de 22/07/2026 a lista existia só dentro de `gatilho-handoff.ts`, para
- * decidir transbordo. Quando o Dr. Lucas pediu preço por região (22/07/2026),
- * ficou claro que a mesma lista precisa servir a três consumidores: o detector
- * de handoff, o cadastro de preços do dashboard e o resumo de caso enviado a
- * ele. Duplicar a lista era repetir exatamente o erro que gerou a estimativa
- * genérica — uma verdade escrita em dois lugares que divergem com o tempo.
+ * A lista nasceu dentro de um detector de transbordo que já não é chamado por
+ * ninguém (removido em 22/07/2026, ver histórico do Git). Quando o Dr. Lucas
+ * pediu preço por região, ela passou a servir a três consumidores reais: o
+ * resolvedor de procedimento, o cadastro de preços do dashboard e o resumo de
+ * caso enviado a ele. Duplicar a lista seria repetir o erro que gerou a
+ * estimativa genérica — uma verdade escrita em dois lugares que divergem.
  *
  * Para adicionar uma região nova, edite APENAS `REGIOES_CORPO`.
  */

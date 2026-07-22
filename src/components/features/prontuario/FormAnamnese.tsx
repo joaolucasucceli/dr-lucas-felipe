@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useCallback } from "react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,46 +35,45 @@ export function FormAnamnese({ anamnese, pacienteId, onAtualizar }: FormAnamnese
   const [anticoncepcional, setAnticoncepcional] = useState("")
   const [pesoKg, setPesoKg] = useState("")
   const [alturaCm, setAlturaCm] = useState("")
-  const [imc, setImc] = useState("")
   const [pressaoArterial, setPressaoArterial] = useState("")
   const [observacoes, setObservacoes] = useState("")
 
-  const initialized = useRef(false)
+  // Preenche os campos quando a anamnese chega. Ajuste de estado durante o
+  // render (padrão React para estado derivado de prop) em vez de useEffect: o
+  // formulário nasce preenchido, sem um render intermediário com campos vazios.
+  // A guarda é o id em estado, não um ref — o React Compiler proíbe ler ref
+  // durante o render.
+  const [idCarregado, setIdCarregado] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (anamnese && !initialized.current) {
-      setQueixaPrincipal(anamnese.queixaPrincipal || "")
-      setHistoricoMedico(anamnese.historicoMedico || "")
-      setCirurgiasAnteriores(anamnese.cirurgiasAnteriores || "")
-      setAlergias(anamnese.alergias || "")
-      setMedicamentosEmUso(anamnese.medicamentosEmUso || "")
-      setDoencasPreExistentes(anamnese.doencasPreExistentes || "")
-      setTabagismo(anamnese.tabagismo)
-      setEtilismo(anamnese.etilismo)
-      setAtividadeFisica(anamnese.atividadeFisica || "")
-      setGestacoes(anamnese.gestacoes || "")
-      setAnticoncepcional(anamnese.anticoncepcional || "")
-      setPesoKg(anamnese.pesoKg?.toString() || "")
-      setAlturaCm(anamnese.alturaCm?.toString() || "")
-      setImc(anamnese.imc?.toString() || "")
-      setPressaoArterial(anamnese.pressaoArterial || "")
-      setObservacoes(anamnese.observacoes || "")
-      initialized.current = true
-    }
-  }, [anamnese])
+  if (anamnese && anamnese.id !== idCarregado) {
+    setIdCarregado(anamnese.id)
+    setQueixaPrincipal(anamnese.queixaPrincipal || "")
+    setHistoricoMedico(anamnese.historicoMedico || "")
+    setCirurgiasAnteriores(anamnese.cirurgiasAnteriores || "")
+    setAlergias(anamnese.alergias || "")
+    setMedicamentosEmUso(anamnese.medicamentosEmUso || "")
+    setDoencasPreExistentes(anamnese.doencasPreExistentes || "")
+    setTabagismo(anamnese.tabagismo)
+    setEtilismo(anamnese.etilismo)
+    setAtividadeFisica(anamnese.atividadeFisica || "")
+    setGestacoes(anamnese.gestacoes || "")
+    setAnticoncepcional(anamnese.anticoncepcional || "")
+    setPesoKg(anamnese.pesoKg?.toString() || "")
+    setAlturaCm(anamnese.alturaCm?.toString() || "")
+    setPressaoArterial(anamnese.pressaoArterial || "")
+    setObservacoes(anamnese.observacoes || "")
+  }
 
-  // Calcular IMC localmente
-  useEffect(() => {
+  // IMC é derivado de peso e altura — calculado no render, sem estado próprio.
+  // Antes era um useEffect com setState, o que renderizava uma vez com o IMC
+  // velho antes de corrigir.
+  const imc = (() => {
     const peso = parseFloat(pesoKg)
     const altura = parseFloat(alturaCm)
-    if (peso > 0 && altura > 0) {
-      const alturaM = altura / 100
-      const imcCalc = peso / (alturaM * alturaM)
-      setImc(imcCalc.toFixed(2))
-    } else {
-      setImc("")
-    }
-  }, [pesoKg, alturaCm])
+    if (!(peso > 0) || !(altura > 0)) return ""
+    const alturaM = altura / 100
+    return (peso / (alturaM * alturaM)).toFixed(2)
+  })()
 
   const salvarCampo = useCallback(
     async (dados: Record<string, unknown>) => {

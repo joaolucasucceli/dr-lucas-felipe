@@ -52,11 +52,13 @@ export function useAutosave<T>({
       return
     }
 
-    setStatus((s) => (s === "pendente" ? s : "pendente"))
-
+    // setStatus fica no timer, não no corpo do effect: marcar "pendente"
+    // sincronamente forçava um render extra a cada tecla digitada.
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
+
+    const marcarPendente = setTimeout(() => setStatus("pendente"), 0)
 
     timeoutRef.current = setTimeout(() => {
       salvar(valor)
@@ -64,6 +66,7 @@ export function useAutosave<T>({
     }, delay)
 
     return () => {
+      clearTimeout(marcarPendente)
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
