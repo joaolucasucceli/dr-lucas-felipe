@@ -139,24 +139,6 @@ export function temProcedimentoDefinido(dados: DadosQualificacao): boolean {
   )
 }
 
-export type EstadoQualificacao = Record<
-  EtapaQualificacao["chave"] | "procedimento",
-  boolean
->
-
-export function estadoQualificacao(
-  dados: DadosQualificacao
-): EstadoQualificacao {
-  const fontes = extrairFontes(dados)
-  const estado = { procedimento: temProcedimentoDefinido(dados) } as EstadoQualificacao
-
-  for (const etapa of ETAPAS_QUALIFICACAO) {
-    estado[etapa.chave] = etapa.jaColetado(fontes)
-  }
-
-  return estado
-}
-
 /** Primeira etapa ainda não coletada, ou `null` quando o caso está completo. */
 export function proximaEtapaPendente(
   dados: DadosQualificacao

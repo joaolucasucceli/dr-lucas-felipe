@@ -97,10 +97,6 @@ export const REGIOES_CORPO: readonly RegiaoCorpo[] = [
 
 export const CHAVES_REGIAO = REGIOES_CORPO.map((r) => r.chave)
 
-export function ehChaveRegiaoValida(chave: string): boolean {
-  return CHAVES_REGIAO.includes(chave)
-}
-
 export function rotuloRegiao(chave: string): string {
   return REGIOES_CORPO.find((r) => r.chave === chave)?.rotulo ?? chave
 }
