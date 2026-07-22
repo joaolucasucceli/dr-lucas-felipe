@@ -80,93 +80,18 @@ export type Database = {
             referencedRelation: "contatos"
             referencedColumns: ["id"]
           },
-            {
-              foreignKeyName: "agendamentos_procedimentoId_fkey"
-              columns: ["procedimentoId"]
-              isOneToOne: false
-              referencedRelation: "procedimentos"
-              referencedColumns: ["id"]
-            },
-            {
-              foreignKeyName: "agendamentos_realizadoPor_fkey"
-              columns: ["realizadoPor"]
-              isOneToOne: false
-              referencedRelation: "usuarios"
-              referencedColumns: ["id"]
-            },
-          ]
-        }
-      anexos_contato: {
-        Row: {
-          atualizadoEm: string
-          contatoId: string
-          criadoEm: string
-          descricao: string | null
-          eventoOrcamentoId: string | null
-          id: string
-          mimeType: string
-          nomeArquivo: string
-          origem: string
-          procedimento: string | null
-          storageBucket: string | null
-          storagePath: string | null
-          tamanhoBytes: number | null
-          tipo: string
-          titulo: string
-          url: string
-          valor: number | null
-        }
-        Insert: {
-          atualizadoEm?: string
-          contatoId: string
-          criadoEm?: string
-          descricao?: string | null
-          eventoOrcamentoId?: string | null
-          id: string
-          mimeType?: string
-          nomeArquivo: string
-          origem?: string
-          procedimento?: string | null
-          storageBucket?: string | null
-          storagePath?: string | null
-          tamanhoBytes?: number | null
-          tipo?: string
-          titulo: string
-          url: string
-          valor?: number | null
-        }
-        Update: {
-          atualizadoEm?: string
-          contatoId?: string
-          criadoEm?: string
-          descricao?: string | null
-          eventoOrcamentoId?: string | null
-          id?: string
-          mimeType?: string
-          nomeArquivo?: string
-          origem?: string
-          procedimento?: string | null
-          storageBucket?: string | null
-          storagePath?: string | null
-          tamanhoBytes?: number | null
-          tipo?: string
-          titulo?: string
-          url?: string
-          valor?: number | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "anexos_contato_contatoId_fkey"
-            columns: ["contatoId"]
+            foreignKeyName: "agendamentos_procedimentoId_fkey"
+            columns: ["procedimentoId"]
             isOneToOne: false
-            referencedRelation: "contatos"
+            referencedRelation: "procedimentos"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "anexos_contato_eventoOrcamentoId_fkey"
-            columns: ["eventoOrcamentoId"]
+            foreignKeyName: "agendamentos_realizadoPor_fkey"
+            columns: ["realizadoPor"]
             isOneToOne: false
-            referencedRelation: "eventos_orcamento_pendente"
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -301,6 +226,158 @@ export type Database = {
             columns: ["prontuarioId"]
             isOneToOne: false
             referencedRelation: "prontuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anexos_contato: {
+        Row: {
+          atualizadoEm: string
+          contatoId: string
+          criadoEm: string
+          descricao: string | null
+          eventoOrcamentoId: string | null
+          id: string
+          mimeType: string
+          nomeArquivo: string
+          origem: string
+          procedimento: string | null
+          storageBucket: string | null
+          storagePath: string | null
+          tamanhoBytes: number | null
+          tipo: string
+          titulo: string
+          url: string
+          valor: number | null
+        }
+        Insert: {
+          atualizadoEm?: string
+          contatoId: string
+          criadoEm?: string
+          descricao?: string | null
+          eventoOrcamentoId?: string | null
+          id: string
+          mimeType?: string
+          nomeArquivo: string
+          origem?: string
+          procedimento?: string | null
+          storageBucket?: string | null
+          storagePath?: string | null
+          tamanhoBytes?: number | null
+          tipo?: string
+          titulo: string
+          url: string
+          valor?: number | null
+        }
+        Update: {
+          atualizadoEm?: string
+          contatoId?: string
+          criadoEm?: string
+          descricao?: string | null
+          eventoOrcamentoId?: string | null
+          id?: string
+          mimeType?: string
+          nomeArquivo?: string
+          origem?: string
+          procedimento?: string | null
+          storageBucket?: string | null
+          storagePath?: string | null
+          tamanhoBytes?: number | null
+          tipo?: string
+          titulo?: string
+          url?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexos_contato_contatoId_fkey"
+            columns: ["contatoId"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_contato_eventoOrcamentoId_fkey"
+            columns: ["eventoOrcamentoId"]
+            isOneToOne: false
+            referencedRelation: "eventos_orcamento_pendente"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aprovacoes_agendamento: {
+        Row: {
+          agendamentoCriadoId: string | null
+          contatoId: string
+          conversaId: string | null
+          criadoEm: string
+          dataHora: string
+          email: string
+          id: string
+          motivoRejeicao: string | null
+          observacao: string | null
+          procedimentoId: string | null
+          respondidoEm: string | null
+          respondidoPor: string | null
+          status: string
+        }
+        Insert: {
+          agendamentoCriadoId?: string | null
+          contatoId: string
+          conversaId?: string | null
+          criadoEm?: string
+          dataHora: string
+          email: string
+          id: string
+          motivoRejeicao?: string | null
+          observacao?: string | null
+          procedimentoId?: string | null
+          respondidoEm?: string | null
+          respondidoPor?: string | null
+          status?: string
+        }
+        Update: {
+          agendamentoCriadoId?: string | null
+          contatoId?: string
+          conversaId?: string | null
+          criadoEm?: string
+          dataHora?: string
+          email?: string
+          id?: string
+          motivoRejeicao?: string | null
+          observacao?: string | null
+          procedimentoId?: string | null
+          respondidoEm?: string | null
+          respondidoPor?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aprovacoes_agendamento_agendamentoCriadoId_fkey"
+            columns: ["agendamentoCriadoId"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aprovacoes_agendamento_contatoId_fkey"
+            columns: ["contatoId"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aprovacoes_agendamento_procedimentoId_fkey"
+            columns: ["procedimentoId"]
+            isOneToOne: false
+            referencedRelation: "procedimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aprovacoes_agendamento_respondidoPor_fkey"
+            columns: ["respondidoPor"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -501,6 +578,8 @@ export type Database = {
       }
       contatos: {
         Row: {
+          aguardandoOrcamentoDesde: string | null
+          aguardandoOrcamentoHumano: boolean
           arquivado: boolean
           arquivadoEm: string | null
           atualizadoEm: string
@@ -533,6 +612,8 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          aguardandoOrcamentoDesde?: string | null
+          aguardandoOrcamentoHumano?: boolean
           arquivado?: boolean
           arquivadoEm?: string | null
           atualizadoEm?: string
@@ -565,6 +646,8 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          aguardandoOrcamentoDesde?: string | null
+          aguardandoOrcamentoHumano?: boolean
           arquivado?: boolean
           arquivadoEm?: string | null
           atualizadoEm?: string
@@ -621,9 +704,6 @@ export type Database = {
           modoConversa: Database["public"]["Enums"]["ModoConversa"]
           ultimaMensagemEm: string | null
         }
-        // contatos.aguardandoOrcamentoHumano + contatos.aguardandoOrcamentoDesde
-        // + tabela eventos_orcamento_pendente foram adicionados em 2026-05-13
-        // mas nao estao tipados aqui — uso de `as never` nos pontos de acesso.
         Insert: {
           atendenteId?: string | null
           atualizadoEm: string
@@ -715,40 +795,40 @@ export type Database = {
       }
       eventos_orcamento_pendente: {
         Row: {
-          id: string
+          canceladoEm: string | null
           contatoId: string
           conversaId: string | null
-          resumoCaso: string
-          prioridade: "normal" | "urgente"
           criadoEm: string
-          respondidoEm: string | null
-          canceladoEm: string | null
-          observacoes: string | null
+          id: string
           notificacaoEnviadaEm: string | null
+          observacoes: string | null
+          prioridade: string
+          respondidoEm: string | null
+          resumoCaso: string
         }
         Insert: {
-          id: string
+          canceladoEm?: string | null
           contatoId: string
           conversaId?: string | null
-          resumoCaso: string
-          prioridade?: "normal" | "urgente"
           criadoEm?: string
-          respondidoEm?: string | null
-          canceladoEm?: string | null
-          observacoes?: string | null
+          id: string
           notificacaoEnviadaEm?: string | null
+          observacoes?: string | null
+          prioridade?: string
+          respondidoEm?: string | null
+          resumoCaso: string
         }
         Update: {
-          id?: string
+          canceladoEm?: string | null
           contatoId?: string
           conversaId?: string | null
-          resumoCaso?: string
-          prioridade?: "normal" | "urgente"
           criadoEm?: string
-          respondidoEm?: string | null
-          canceladoEm?: string | null
-          observacoes?: string | null
+          id?: string
           notificacaoEnviadaEm?: string | null
+          observacoes?: string | null
+          prioridade?: string
+          respondidoEm?: string | null
+          resumoCaso?: string
         }
         Relationships: [
           {
@@ -756,6 +836,13 @@ export type Database = {
             columns: ["contatoId"]
             isOneToOne: false
             referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_orcamento_pendente_conversaId_fkey"
+            columns: ["conversaId"]
+            isOneToOne: false
+            referencedRelation: "conversas"
             referencedColumns: ["id"]
           },
         ]
@@ -979,6 +1066,53 @@ export type Database = {
         }
         Relationships: []
       }
+      procedimento_regioes: {
+        Row: {
+          ativo: boolean
+          atualizadoEm: string
+          criadoEm: string
+          deletadoEm: string | null
+          id: string
+          observacao: string | null
+          procedimentoId: string
+          regiao: string
+          valorMaxBrl: number
+          valorMinBrl: number
+        }
+        Insert: {
+          ativo?: boolean
+          atualizadoEm?: string
+          criadoEm?: string
+          deletadoEm?: string | null
+          id: string
+          observacao?: string | null
+          procedimentoId: string
+          regiao: string
+          valorMaxBrl: number
+          valorMinBrl: number
+        }
+        Update: {
+          ativo?: boolean
+          atualizadoEm?: string
+          criadoEm?: string
+          deletadoEm?: string | null
+          id?: string
+          observacao?: string | null
+          procedimentoId?: string
+          regiao?: string
+          valorMaxBrl?: number
+          valorMinBrl?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedimento_regioes_procedimentoId_fkey"
+            columns: ["procedimentoId"]
+            isOneToOne: false
+            referencedRelation: "procedimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       procedimentos: {
         Row: {
           ativo: boolean
@@ -987,10 +1121,16 @@ export type Database = {
           deletadoEm: string | null
           descricao: string | null
           duracaoMin: number
+          escopoOferta: string | null
           id: string
           nome: string
+          parcelamento: string | null
           posOperatorio: string | null
           tipo: string
+          valorBaseMaxBrl: number | null
+          valorBaseMinBrl: number | null
+          valorCheioBrl: number | null
+          valorEstimadoBrl: number | null
         }
         Insert: {
           ativo?: boolean
@@ -999,10 +1139,16 @@ export type Database = {
           deletadoEm?: string | null
           descricao?: string | null
           duracaoMin: number
+          escopoOferta?: string | null
           id: string
           nome: string
+          parcelamento?: string | null
           posOperatorio?: string | null
           tipo: string
+          valorBaseMaxBrl?: number | null
+          valorBaseMinBrl?: number | null
+          valorCheioBrl?: number | null
+          valorEstimadoBrl?: number | null
         }
         Update: {
           ativo?: boolean
@@ -1011,10 +1157,16 @@ export type Database = {
           deletadoEm?: string | null
           descricao?: string | null
           duracaoMin?: number
+          escopoOferta?: string | null
           id?: string
           nome?: string
+          parcelamento?: string | null
           posOperatorio?: string | null
           tipo?: string
+          valorBaseMaxBrl?: number | null
+          valorBaseMinBrl?: number | null
+          valorCheioBrl?: number | null
+          valorEstimadoBrl?: number | null
         }
         Relationships: []
       }
@@ -1249,6 +1401,7 @@ export type Database = {
           criadoEm: string
           deletadoEm: string | null
           email: string
+          exigirAprovacaoAgendamento: boolean
           fotoUrl: string | null
           id: string
           nome: string
@@ -1262,6 +1415,7 @@ export type Database = {
           criadoEm?: string
           deletadoEm?: string | null
           email: string
+          exigirAprovacaoAgendamento?: boolean
           fotoUrl?: string | null
           id: string
           nome: string
@@ -1275,6 +1429,7 @@ export type Database = {
           criadoEm?: string
           deletadoEm?: string | null
           email?: string
+          exigirAprovacaoAgendamento?: boolean
           fotoUrl?: string | null
           id?: string
           nome?: string
@@ -1302,10 +1457,7 @@ export type Database = {
         | "atendimento_humano"
       ModoConversa: "ia" | "humano"
       Perfil: "gestor" | "atendente"
-      StatusAgendamento:
-        | "agendado"
-        | "cancelado"
-        | "remarcado"
+      StatusAgendamento: "agendado" | "cancelado" | "remarcado"
       StatusFunil:
         | "acolhimento"
         | "qualificacao"
@@ -1495,11 +1647,7 @@ export const Constants = {
       ],
       ModoConversa: ["ia", "humano"],
       Perfil: ["gestor", "atendente"],
-      StatusAgendamento: [
-        "agendado",
-        "cancelado",
-        "remarcado",
-      ],
+      StatusAgendamento: ["agendado", "cancelado", "remarcado"],
       StatusFunil: [
         "acolhimento",
         "qualificacao",

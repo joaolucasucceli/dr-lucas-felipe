@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase"
+import { extrairRegioesDoTexto } from "@/lib/procedimentos/regioes"
 
 type ProcedimentoResumo = {
   id: string
@@ -61,41 +62,39 @@ function resolverOfertaPacienteModelo(
   procedimentos: ProcedimentoResumo[]
 ): ProcedimentoResumo | null {
   const pediuOferta = contemAlgum(interesse, ["paciente modelo", "oferta"])
-  const pediuSoAbdome = contemAlgum(interesse, [
-    "so abdome",
-    "so abdomen",
-    "so barriga",
-  ])
-  const pediuAbdomeFlancos = contemAlgum(interesse, [
-    "abdome flancos",
-    "abdomen flancos",
-    "abdome + flancos",
-    "abdomen + flancos",
-    "barriga flancos",
-  ])
   const pediuSemEnxerto = contemAlgum(interesse, ["sem enxerto"])
-  const pediuComEnxerto =
-    pediuOferta && contemAlgum(interesse, ["com enxerto", "enxerto gluteo"])
+  const pediuComEnxerto = contemAlgum(interesse, ["com enxerto", "enxerto gluteo"])
 
-  if (
-    !pediuOferta &&
-    !pediuSoAbdome &&
-    !pediuAbdomeFlancos &&
-    !pediuSemEnxerto &&
-    !pediuComEnxerto
-  ) {
-    return null
-  }
+  // O combo é decidido pelo CONJUNTO de regiões citadas, não por variação de
+  // escrita. A lista antiga casava "abdome flancos" mas não "abdome e flancos"
+  // nem "abdome, flancos" — um "e" mandava o lead para o procedimento genérico.
+  // Extrair as regiões elimina a classe do problema em vez de cada variante.
+  const regioes = new Set(extrairRegioesDoTexto(interesse).chaves)
+  const temAbdome = regioes.has("abdome")
+  const temFlancos = regioes.has("flancos")
+  const temGluteo = regioes.has("gluteo")
 
-  if (pediuComEnxerto) {
+  if (!pediuOferta && !pediuSemEnxerto && !pediuComEnxerto) return null
+
+  // Abdome + flancos + glúteo (ou menção explícita a enxerto) = combo completo.
+  if (pediuComEnxerto || (temAbdome && temFlancos && temGluteo)) {
     return encontrarPorId(procedimentos, "proc-oferta-pm-mini-lipo-completa")
   }
 
-  if (pediuSoAbdome) {
+  if (temAbdome && temFlancos) {
+    return encontrarPorId(
+      procedimentos,
+      "proc-oferta-pm-abdome-flancos-sem-enxerto"
+    )
+  }
+
+  // Abdome sozinho — inclusive quando o paciente escreve "só abdome".
+  if (temAbdome) {
     return encontrarPorId(procedimentos, "proc-oferta-pm-so-abdome")
   }
 
-  if (pediuSemEnxerto || pediuAbdomeFlancos) {
+  // "sem enxerto" sem região identificada: o combo sem enxerto é o padrão.
+  if (pediuSemEnxerto) {
     return encontrarPorId(
       procedimentos,
       "proc-oferta-pm-abdome-flancos-sem-enxerto"
@@ -135,16 +134,21 @@ function resolverPorInteresse(
     )
   }
 
-  const mencionaLipo = contemAlgum(interesse, [
-    "mini lipo",
-    "minilipo",
-    "lipo fracionada",
-    "lipoaspiracao",
-    "lipo",
-    "abdome",
-    "abdomen",
-    "barriga",
-  ])
+  // Qualquer regiao anatomica conhecida conta como intencao de lipo. Antes de
+  // 22/07/2026 so "abdome/abdomen/barriga" estavam nesta lista, entao "quero na
+  // papada", "culote" ou "flancos" resolviam para NULL — o agendamento ficava
+  // sem procedimento vinculado e a referencia de valor por regiao nao era
+  // montada. A lista de regioes vem de src/lib/procedimentos/regioes.ts.
+  const { chaves: regioesMencionadas } = extrairRegioesDoTexto(interesse)
+  const mencionaLipo =
+    regioesMencionadas.length > 0 ||
+    contemAlgum(interesse, [
+      "mini lipo",
+      "minilipo",
+      "lipo fracionada",
+      "lipoaspiracao",
+      "lipo",
+    ])
   const mencionaEnxertoOuGluteo = contemAlgum(interesse, [
     "enxerto",
     "gluteo",

@@ -16,11 +16,8 @@ export async function POST(request: NextRequest) {
 
   let query = supabaseAdmin
     .from("procedimentos")
-    .select(
-      "id, nome, tipo, descricao, duracaoMin, posOperatorio, " +
-        "valorEstimadoBrl, valorCheioBrl, parcelamento, escopoOferta, " +
-        "valorBaseMinBrl, valorBaseMaxBrl",
-    )
+    // NENHUM campo de valor e selecionado de proposito. Ver comentario abaixo.
+    .select("id, nome, tipo, descricao, duracaoMin, posOperatorio, parcelamento, escopoOferta")
     .eq("ativo", true)
     .is("deletadoEm", null)
 
@@ -34,64 +31,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Faixa aproximada continua disponivel apenas como fallback conversacional
-  // quando o paciente pede uma media e recusa qualificacao/foto. O fluxo
-  // principal de valor exato passa por gerar_orcamento + Dr. Lucas.
-  const formatarBrlCompacto = (v: number): string => {
-    if (v >= 1000) {
-      const milhares = v / 1000
-      const txt = milhares.toFixed(milhares % 1 === 0 ? 0 : 1).replace(".", ",")
-      return `R$ ${txt}k`
-    }
-    return `R$ ${Math.round(v)}`
-  }
+  // A Ana Julia NAO recebe valor nenhum por esta rota — nem faixa, nem valor
+  // base, nem estimado. Decisao do Dr. Lucas (audio de 14/07/2026), executada
+  // em 22/07/2026: a estimativa automatica dava a faixa GENERICA do
+  // procedimento (R$ 8k a 11k da mini lipo) independentemente da regiao do
+  // paciente, porque `extrairEstimativaDaConsulta` pegava o primeiro item da
+  // lista. Ele reclamou que "esse valor nao e de acordo" e definiu o fluxo:
+  // foto -> caso vai pro Dr. Lucas -> ele responde o valor -> Ana envia.
+  //
+  // A correcao de raiz e cortar o numero na ORIGEM: se a faixa nunca chega ao
+  // modelo, nenhuma mudanca de prompt pode fazer a IA emitir preco chutado.
+  // Preco por regiao vive em `procedimento_regioes` e serve ao Dr. Lucas
+  // (referencia interna ao definir o orcamento), nunca ao paciente.
 
-  // Cast manual: types do Supabase ainda nao regerados pra incluir
-  // valorBaseMinBrl/Max. Pra regenerar: `npm run db:types` com
-  // SUPABASE_ACCESS_TOKEN valido. Cast e seguro porque a coluna existe no
-  // banco (migration 20260525120000) e o select acima nomeia explicitamente.
-  type ProcedimentoLido = {
-    id: string
-    nome: string | null
-    tipo: string | null
-    descricao: string | null
-    duracaoMin: number | null
-    posOperatorio: string | null
-    valorEstimadoBrl: number | null
-    valorCheioBrl: number | null
-    parcelamento: string | null
-    escopoOferta: string | null
-    valorBaseMinBrl: number | null
-    valorBaseMaxBrl: number | null
-  }
-
-  const enriquecidos = ((procedimentos ?? []) as unknown as ProcedimentoLido[]).map((p) => {
-    const min = p.valorBaseMinBrl != null ? Number(p.valorBaseMinBrl) : null
-    const max = p.valorBaseMaxBrl != null ? Number(p.valorBaseMaxBrl) : null
-
-    let faixaFormatada: string | null = null
-    let temFaixaReal = false
-
-    if (min != null && max != null) {
-      faixaFormatada = `${formatarBrlCompacto(min)} a ${formatarBrlCompacto(max)}`
-      temFaixaReal = true
-    } else if (p.valorEstimadoBrl != null) {
-      // Fallback automatico: gera faixa +-15% do valor estimado legado.
-      // Marcado como temFaixaReal=false pra IA saber que e estimativa.
-      const v = Number(p.valorEstimadoBrl)
-      const minCalc = Math.round((v * 0.85) / 100) * 100
-      const maxCalc = Math.round((v * 1.15) / 100) * 100
-      faixaFormatada = `${formatarBrlCompacto(minCalc)} a ${formatarBrlCompacto(maxCalc)}`
-    }
-
-    return {
-      ...p,
-      valorBaseMinBrl: min,
-      valorBaseMaxBrl: max,
-      faixaFormatada,
-      temFaixaReal,
-    }
-  })
-
-  return NextResponse.json({ procedimentos: enriquecidos })
+  return NextResponse.json({ procedimentos: procedimentos ?? [] })
 }

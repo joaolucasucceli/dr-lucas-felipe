@@ -1,3 +1,5 @@
+import { extrairRegioesDoTexto } from "@/lib/procedimentos/regioes"
+
 /**
  * Detecta se a mensagem do paciente combina **pergunta explícita de valor** com
  * **pelo menos um sinal de complexidade** (caso fora do combo padrão Paciente
@@ -55,45 +57,15 @@ const URGENCIA: RegExp[] = [
 ]
 
 /**
- * Regiões anatômicas que a IA pode receber. `foraPM=true` significa que a região
- * NÃO faz parte do combo Paciente Modelo padrão — qualquer menção isolada delas
- * + pedido de valor já é caso pra handoff.
- *
- * Lista conservadora — quando tiver dúvida sobre uma região, marcar `foraPM=true`
- * (falso positivo é OK; falso negativo é dano).
+ * As regiões vêm de `src/lib/procedimentos/regioes.ts` — mesma lista usada pelo
+ * cadastro de preço por região e pelo resumo enviado ao Dr. Lucas.
  */
-const REGIAO_PATTERNS: { re: RegExp; canonica: string; foraPM: boolean }[] = [
-  { re: /\babd[oô]m/i, canonica: "abdome", foraPM: false },
-  { re: /\bbarriga\b/i, canonica: "abdome", foraPM: false },
-  { re: /\bflancos?\b/i, canonica: "flancos", foraPM: false },
-  { re: /\bcintura\b/i, canonica: "flancos", foraPM: false },
-  { re: /\bgl[uú]teos?\b/i, canonica: "gluteo", foraPM: false },
-  { re: /\bbumbum\b/i, canonica: "gluteo", foraPM: false },
-  { re: /\bbra[çc]os?\b/i, canonica: "bracos", foraPM: true },
-  { re: /\bcostas\b/i, canonica: "costas", foraPM: true },
-  { re: /\bcoxas?\b/i, canonica: "coxas", foraPM: true },
-  { re: /\bculote\b/i, canonica: "culote", foraPM: true },
-  { re: /\bpapada\b/i, canonica: "papada", foraPM: true },
-  { re: /\bmamas?\b/i, canonica: "mamas", foraPM: true },
-  { re: /\bpeito\b/i, canonica: "mamas", foraPM: true },
-  { re: /\bpernas?\b/i, canonica: "pernas", foraPM: true },
-  { re: /\baxilas?\b/i, canonica: "axilas", foraPM: true },
-  { re: /\bj[oô]w?l\b/i, canonica: "papada", foraPM: true },
-]
-
 function extrairRegioes(texto: string): {
   todas: Set<string>
   contemForaPM: boolean
 } {
-  const todas = new Set<string>()
-  let contemForaPM = false
-  for (const { re, canonica, foraPM } of REGIAO_PATTERNS) {
-    if (re.test(texto)) {
-      todas.add(canonica)
-      if (foraPM) contemForaPM = true
-    }
-  }
-  return { todas, contemForaPM }
+  const { chaves, temRegiaoForaDoProgramaModelo } = extrairRegioesDoTexto(texto)
+  return { todas: new Set(chaves), contemForaPM: temRegiaoForaDoProgramaModelo }
 }
 
 /**

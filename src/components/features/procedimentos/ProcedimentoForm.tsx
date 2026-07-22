@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select"
 import { FormDialog } from "@/components/features/shared/FormDialog"
 import { TIPOS_PROCEDIMENTO } from "@/lib/procedimentos/tipos"
+import { ValoresPorRegiao } from "@/components/features/procedimentos/ValoresPorRegiao"
 
 const formSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -280,10 +281,9 @@ export function ProcedimentoForm({
       </div>
 
       <div className="grid gap-2 pt-2 border-t">
-        <Label className="text-sm font-semibold">Faixa de orçamento (Ana Júlia cita ao paciente)</Label>
+        <Label className="text-sm font-semibold">Faixa geral do procedimento (uso interno)</Label>
         <p className="text-xs text-muted-foreground">
-          Política do Dr. Lucas (25/05/2026): IA cita FAIXA, valor exato sai depois da consulta. Preencha min e max — IA vai falar &quot;R$ X a R$ Y&quot; pro paciente. Se deixar vazio, IA pede foto + região antes.
-        </p>
+          Referência ampla do procedimento, sem separar por região. Desde 22/07/2026 a Ana Júlia NÃO cita valor nenhum ao paciente: ela pede a foto e o Dr. Lucas define o orçamento. Para valor por região, use a seção abaixo.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -312,8 +312,7 @@ export function ProcedimentoForm({
       <div className="grid gap-2 pt-2 border-t">
         <Label className="text-sm font-semibold text-muted-foreground">Campos legados (descontinuando)</Label>
         <p className="text-xs text-muted-foreground">
-          Mantidos por compatibilidade — Ana Júlia usa faixa acima por padrão. Se faixa estiver vazia, IA cai num cálculo automático ±15% sobre o valor estimado.
-        </p>
+          Mantidos por compatibilidade com relatórios antigos. Não alimentam mais nenhuma resposta da Ana Júlia.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -361,6 +360,18 @@ export function ProcedimentoForm({
           Útil pra combos do Programa Paciente Modelo — deixa a IA descrever qual região está incluída na oferta.
         </p>
       </div>
+
+      {procedimento ? (
+        <ValoresPorRegiao procedimentoId={procedimento.id} />
+      ) : (
+        <div className="grid gap-1 pt-2 border-t">
+          <Label className="text-sm font-semibold">Valores por regiao</Label>
+          <p className="text-xs text-muted-foreground">
+            Salve o procedimento primeiro. Depois e so reabrir para cadastrar o
+            valor de cada regiao.
+          </p>
+        </div>
+      )}
     </FormDialog>
   )
 }

@@ -2,6 +2,8 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { enviarMensagem, enviarMidia } from "@/lib/uazapi"
 import { agora } from "@/lib/db-utils"
 import { getBaseUrl } from "@/lib/env"
+import { montarReferenciaValorPorRegiao } from "@/lib/procedimentos/faixa-regiao"
+import { resolverProcedimentoPorInteresse } from "@/lib/procedimentos/resolver-procedimento"
 
 interface NotificacaoArgs {
   orcamentoPendenteId: string
@@ -110,6 +112,28 @@ export async function notificarDrLucasOrcamento(
     sobreOPaciente: contato?.sobreOPaciente ?? null,
   })
 
+  // Referencia de valor por regiao — so pro Dr. Lucas, nunca pro paciente.
+  // Cadastrada em /procedimentos > Valores por regiao. Se nada casar, a secao
+  // simplesmente nao aparece (melhor sem numero do que com numero errado).
+  let referenciaValor: string | null = null
+  try {
+    const procedimentoResolvido = await resolverProcedimentoPorInteresse({
+      procedimentoInteresse: contato?.procedimentoInteresse ?? null,
+    })
+    referenciaValor = await montarReferenciaValorPorRegiao({
+      procedimentoId: procedimentoResolvido?.id ?? null,
+      textoParaExtrairRegioes: [
+        contato?.procedimentoInteresse ?? "",
+        contato?.sobreOPaciente ?? "",
+        args.resumoCaso,
+      ].join(" "),
+    })
+  } catch (err) {
+    // Referencia e um conforto, nao um requisito: nunca pode impedir o
+    // Dr. Lucas de receber o caso.
+    console.warn("[notificar-handoff] falha ao montar referencia de valor:", err)
+  }
+
   const mensagem = [
     `${titulo} - ${nome}`,
     ``,
@@ -122,6 +146,9 @@ export async function notificarDrLucasOrcamento(
     ``,
     `Resumo do caso:`,
     resumo,
+    ...(referenciaValor
+      ? [``, `Sua faixa cadastrada pra regiao:`, referenciaValor]
+      : []),
     ``,
     `Abrir conversa: ${linkConversa}`,
   ].join("\n")

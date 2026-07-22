@@ -310,69 +310,6 @@ function montarRespostaPosNome(contexto: ContextoContato): string {
   return `${comVocativo(contexto, "Perfeito{nome}!")}\n---\n${frase}`
 }
 
-function pacienteEscolheuOrcamentoPreciso(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  return [
-    "orcamento preciso",
-    "orcamento mais preciso",
-    "perguntas",
-    "pode perguntar",
-    "pode fazer",
-    "faz as perguntas",
-    "pode sim",
-    "pergunte",
-  ].some((termo) => normalizado.includes(termo))
-}
-
-function pacienteEscolheuAgendamentoAposEstimativa(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  return [
-    "agendar",
-    "agendamento",
-    "marcar",
-    "reuniao",
-    "avaliacao",
-    "diagnostico",
-    "ver horario",
-    "ver horarios",
-    "pode ver horario",
-    "pode ver horarios",
-    "quero marcar",
-    "quero agendar",
-    "quero a reuniao",
-    "gostei",
-    "ok pra mim",
-    "pra mim ok",
-    "esta bom pra mim",
-    "ta bom pra mim",
-  ].some((termo) => normalizado.includes(termo))
-}
-
-function pacienteRespondeuSimAmbiguoEscolhaInicial(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  return ["sim", "s", "ok", "okay", "ta", "ta bom"].includes(normalizado)
-}
-
-function dividirRespostaEstimativaComPerguntaFinal(
-  texto: string
-): { textoAntesResultados: string; textoDepoisResultados: string } | null {
-  const match = texto.match(/Se essa estimativa fizer sentido[\s\S]*$/i)
-  if (!match || match.index == null || match.index <= 0) return null
-
-  const textoAntesResultados = texto
-    .slice(0, match.index)
-    .replace(/\n?---\n?$/g, "")
-    .trim()
-  const textoDepoisResultados = texto
-    .slice(match.index)
-    .replace(/^\n?---\n?/g, "")
-    .trim()
-
-  if (!textoAntesResultados || !textoDepoisResultados) return null
-
-  return { textoAntesResultados, textoDepoisResultados }
-}
-
 async function persistirIntencaoInicialLead(params: {
   contatoId: string | null
   conversaId: string | null
@@ -726,17 +663,15 @@ interface JanelaAgendaSolicitada {
   horario?: string | null
 }
 
-interface EstimativaEnviada {
-  procedimento?: string | null
-  faixa: string
-}
-
 interface EstadoAgendamentoTemporario {
-  origem: "orcamento" | "estimativa" | "remarcacao"
+  // "estimativa" saiu em 22/07/2026 junto com a estimativa automatica. Estados
+  // antigos com essa origem ainda podem estar no Redis (TTL 3h) e sao
+  // descartados por `normalizarEstadoAgendamento` — a conversa apenas volta ao
+  // fluxo normal, sem agendar em cima de um valor que a Ana nao deveria ter dado.
+  origem: "orcamento" | "remarcacao"
   slots: SlotAgendamentoOferecido[]
   slotEscolhido?: SlotAgendamentoOferecido | null
   janela?: JanelaAgendaSolicitada | null
-  estimativa?: EstimativaEnviada | null
   agendamentoId?: string | null
   cancelamentoPendente?: boolean
   atualizadoEm: string
@@ -897,45 +832,6 @@ function extrairPdfOrcamento(observacoes: string | null): string | null {
   return observacoes?.match(/https?:\/\/\S+/i)?.[0] ?? null
 }
 
-function extrairEstimativaDaConsulta(
-  resultado: string
-): EstimativaEnviada | null {
-  try {
-    const parsed = JSON.parse(resultado) as {
-      procedimentos?: Array<{
-        nome?: string | null
-        faixaFormatada?: string | null
-      }>
-    }
-    const procedimento = parsed.procedimentos?.find(
-      (item) => item.faixaFormatada
-    )
-    if (!procedimento?.faixaFormatada) return null
-    return {
-      procedimento: procedimento.nome ?? null,
-      faixa: procedimento.faixaFormatada,
-    }
-  } catch {
-    return null
-  }
-}
-
-function respostaContemEstimativa(
-  texto: string,
-  estimativa: EstimativaEnviada
-): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  const faixaNormalizada = normalizarTextoBusca(estimativa.faixa)
-  if (normalizado.includes(faixaNormalizada)) return true
-  return (
-    normalizado.includes("r$") &&
-    faixaNormalizada
-      .split(/\s+a\s+|\s+e\s+/)
-      .filter((parte) => parte.includes("r$"))
-      .some((parte) => normalizado.includes(parte.trim()))
-  )
-}
-
 function montarRespostaAgendamentoAposOrcamento(
   contexto: ContextoContato,
   orcamento: OrcamentoRespondidoContexto
@@ -1013,11 +909,7 @@ function normalizarEstadoAgendamento(
   if (!raw || typeof raw !== "object") return null
 
   const item = raw as Partial<EstadoAgendamentoTemporario>
-  if (
-    item.origem !== "orcamento" &&
-    item.origem !== "estimativa" &&
-    item.origem !== "remarcacao"
-  ) {
+  if (item.origem !== "orcamento" && item.origem !== "remarcacao") {
     return null
   }
 
@@ -1051,7 +943,6 @@ function normalizarEstadoAgendamento(
     slots,
     slotEscolhido,
     janela,
-    estimativa: item.estimativa ?? null,
     agendamentoId:
       typeof item.agendamentoId === "string" ? item.agendamentoId : null,
     cancelamentoPendente: item.cancelamentoPendente === true,
@@ -1435,8 +1326,7 @@ async function montarOfertaSlotsAgendamento(params: {
   contexto: ContextoContato
   baseUrl: string
   textoPaciente: string
-  origem: "orcamento" | "estimativa"
-  estimativa?: EstimativaEnviada | null
+  origem: "orcamento"
   slotsIgnorados?: SlotAgendamentoOferecido[]
   reconsulta?: boolean
   janelaForcada?: JanelaAgendaSolicitada | null
@@ -1448,7 +1338,6 @@ async function montarOfertaSlotsAgendamento(params: {
     baseUrl,
     textoPaciente,
     origem,
-    estimativa,
     slotsIgnorados = [],
     reconsulta = false,
     janelaForcada = null,
@@ -1490,7 +1379,6 @@ async function montarOfertaSlotsAgendamento(params: {
           slots: proximosSlots,
           slotEscolhido: null,
           janela: null,
-          estimativa: estimativa ?? null,
           atualizadoEm: agora(),
         })
 
@@ -1514,7 +1402,6 @@ async function montarOfertaSlotsAgendamento(params: {
     slots: slotsOferta,
     slotEscolhido: slotExato,
     janela,
-    estimativa: estimativa ?? null,
     atualizadoEm: agora(),
   })
 
@@ -1633,51 +1520,11 @@ async function montarFastPathAgendamento(params: {
   }
 
   const estadoAtual = await obterEstadoAgendamento(chatId)
-  const origem = orcamentoRespondido
-    ? "orcamento"
-    : estadoAtual?.origem === "estimativa"
-      ? "estimativa"
-      : null
+  // Agendamento so existe depois que o Dr. Lucas respondeu o valor. Antes de
+  // 22/07/2026 uma estimativa aprovada tambem abria a agenda — saiu junto com
+  // a estimativa automatica, que dava faixa generica sem relacao com o caso.
+  const origem = orcamentoRespondido ? "orcamento" : null
   if (!origem) return null
-
-  const estimativaSemSlots =
-    origem === "estimativa" && (estadoAtual?.slots?.length ?? 0) === 0
-
-  if (
-    estimativaSemSlots &&
-    pacienteEscolheuOrcamentoPreciso(textoPaciente)
-  ) {
-    console.log("[Agente] Fast-path pos-estimativa para orcamento preciso", {
-      contatoId,
-      conversaId,
-      etapa: contexto.etapa,
-    })
-
-    if (contexto.etapa !== "qualificacao") {
-      await executarFerramenta(
-        "atualizar_lead",
-        {
-          contatoId,
-          conversaId,
-          etapaCorreta: "qualificacao",
-        },
-        baseUrl
-      )
-      contexto.etapa = "qualificacao"
-    }
-
-    return montarProximaPerguntaQualificacao(contexto)
-  }
-
-  if (
-    estimativaSemSlots &&
-    pacienteRespondeuSimAmbiguoEscolhaInicial(textoPaciente)
-  ) {
-    return comVocativo(
-      contexto,
-      "Você prefere que eu busque um orçamento mais preciso ou que eu veja horários da reunião com o Dr. Lucas{nome}?"
-    )
-  }
 
   const emailInformado = extrairEmailDoTexto(textoPaciente)
   const slotsOferecidos = estadoAtual?.slots ?? []
@@ -1687,14 +1534,11 @@ async function montarFastPathAgendamento(params: {
     : resolverSlotEscolhido(textoPaciente, slotsOferecidos)
   const horarioSolicitado = extrairHorarioEscolhido(textoPaciente)
   const aprovou = pacienteAprovouOrcamento(textoPaciente)
-  const escolheuAgendamentoAposEstimativa =
-    estimativaSemSlots && pacienteEscolheuAgendamentoAposEstimativa(textoPaciente)
   const preferiuPeriodo = Boolean(detectarPreferenciaPeriodo(textoPaciente))
   const emAgendamento = contexto.etapa === "agendamento"
   const slotPendente = estadoAtual?.slotEscolhido ?? null
   const deveEntrarNoAgendamento =
     aprovou ||
-    escolheuAgendamentoAposEstimativa ||
     emailInformado ||
     slotEscolhido ||
     slotPendente ||
@@ -1716,7 +1560,6 @@ async function montarFastPathAgendamento(params: {
     janelaSolicitada: janelaSolicitada?.labelDia,
     horarioSolicitado,
     preferiuPeriodo,
-    escolheuAgendamentoAposEstimativa,
     origem,
   })
 
@@ -1737,7 +1580,6 @@ async function montarFastPathAgendamento(params: {
       baseUrl,
       textoPaciente,
       origem,
-      estimativa: estadoAtual?.estimativa ?? null,
       janelaForcada: janelaSolicitada,
     })
   }
@@ -1749,7 +1591,6 @@ async function montarFastPathAgendamento(params: {
         slots: slotsOferecidos,
         slotEscolhido,
         janela: estadoAtual?.janela ?? null,
-        estimativa: estadoAtual?.estimativa ?? null,
         atualizadoEm: agora(),
       })
     }
@@ -1782,7 +1623,6 @@ async function montarFastPathAgendamento(params: {
       baseUrl,
       textoPaciente,
       origem,
-      estimativa: estadoAtual?.estimativa ?? null,
       slotsIgnorados: [slotParaRegistrar],
       reconsulta: true,
       janelaForcada: estadoAtual?.janela ?? null,
@@ -1798,7 +1638,6 @@ async function montarFastPathAgendamento(params: {
       baseUrl,
       textoPaciente,
       origem,
-      estimativa: estadoAtual?.estimativa ?? null,
       janelaForcada: estadoAtual.janela,
     })
   }
@@ -1811,7 +1650,6 @@ async function montarFastPathAgendamento(params: {
       baseUrl,
       textoPaciente,
       origem,
-      estimativa: estadoAtual?.estimativa ?? null,
     })
   }
 
@@ -1822,7 +1660,6 @@ async function montarFastPathAgendamento(params: {
     baseUrl,
     textoPaciente,
     origem,
-    estimativa: estadoAtual?.estimativa ?? null,
   })
 }
 
@@ -1883,7 +1720,6 @@ async function montarOfertaSlotsRemarcacao(params: {
           origem: "remarcacao",
           slots: proximosSlots,
           slotEscolhido: null,
-          estimativa: null,
           agendamentoId,
           cancelamentoPendente: false,
           atualizadoEm: agora(),
@@ -1908,7 +1744,6 @@ async function montarOfertaSlotsRemarcacao(params: {
     origem: "remarcacao",
     slots: slotsOferta,
     slotEscolhido: slotExato,
-    estimativa: null,
     agendamentoId,
     cancelamentoPendente: false,
     atualizadoEm: agora(),
@@ -2106,7 +1941,6 @@ async function montarFastPathReagendamentoCancelamento(params: {
       origem: "remarcacao",
       slots: slotsOferecidos,
       slotEscolhido: null,
-      estimativa: null,
       agendamentoId: agendamento.id,
       cancelamentoPendente: true,
       atualizadoEm: agora(),
@@ -3220,7 +3054,6 @@ export async function processarMensagens(
     let enviouMidiaNestaRodada = false
     let gerouOrcamentoNestaRodada = false
     let enviarResultadosOrcamentoPendenteAposResposta = false
-    let estimativaConsultadaNestaRodada: EstimativaEnviada | null = null
     let textoRespostaForcado: string | null = null
 
     while (
@@ -3303,13 +3136,6 @@ export async function processarMensagens(
 
         const resultado = await executarFerramenta(fn.name, args, baseUrl)
         let enviouMidiaAgora = false
-
-        if (fn.name === "consultar_procedimentos") {
-          const estimativa = extrairEstimativaDaConsulta(resultado)
-          if (estimativa) {
-            estimativaConsultadaNestaRodada = estimativa
-          }
-        }
 
         // Lógica anti-alucinação: se busca retornou mídia nova e o momento
         // permite, próxima iteração EXIGE enviar_midia.
@@ -3547,53 +3373,6 @@ export async function processarMensagens(
       }
     }
 
-    const deveEnviarResultadosEstimativa = Boolean(
-      textoResposta &&
-        estimativaConsultadaNestaRodada &&
-        contatoId &&
-        respostaContemEstimativa(textoResposta, estimativaConsultadaNestaRodada)
-    )
-
-    if (
-      deveEnviarResultadosEstimativa &&
-      estimativaConsultadaNestaRodada &&
-      contatoId
-    ) {
-      await adicionarFatoAoContato(
-        contatoId,
-        contextoContato,
-        `Estimativa enviada ao paciente: ${estimativaConsultadaNestaRodada.faixa}${
-          estimativaConsultadaNestaRodada.procedimento
-            ? ` (${estimativaConsultadaNestaRodada.procedimento})`
-            : ""
-        }.`
-      )
-      await salvarEstadoAgendamento(chatId, {
-        origem: "estimativa",
-        slots: [],
-        slotEscolhido: null,
-        estimativa: estimativaConsultadaNestaRodada,
-        atualizadoEm: agora(),
-      })
-      try {
-        await executarFerramenta(
-          "atualizar_lead",
-          {
-            contatoId,
-            conversaId,
-            etapaCorreta: "orcamento",
-          },
-          baseUrl
-        )
-        contextoContato.etapa = "orcamento"
-      } catch (err) {
-        console.warn(
-          "[Agente] Falha ao mover lead para orcamento apos estimativa:",
-          err
-        )
-      }
-    }
-
     if (!textoResposta) {
       // Ultimo recurso — frase neutra que pede o paciente reformular sem
       // expor erro tecnico (regra absoluta #11 do system prompt).
@@ -3603,73 +3382,18 @@ export async function processarMensagens(
       )
     }
 
-    const partesEstimativa =
-      deveEnviarResultadosEstimativa && contatoId
-        ? dividirRespostaEstimativaComPerguntaFinal(textoResposta)
-        : null
+    enviouResposta = await enviarRespostaAgente({
+      chatId,
+      whatsapp,
+      contatoId,
+      conversaId,
+      configWa: configEnvio,
+      textoUsuario: textoBuffer,
+      textoResposta,
+    })
 
-    if (partesEstimativa && contatoId) {
-      enviouResposta = await enviarRespostaAgente({
-        chatId,
-        whatsapp,
-        contatoId,
-        conversaId,
-        configWa: configEnvio,
-        textoUsuario: textoBuffer,
-        textoResposta: partesEstimativa.textoAntesResultados,
-      })
-
-      if (enviouResposta) {
-        await enviarResultadosProcedimento({
-          contatoId,
-          conversaId,
-          whatsapp,
-          configWa: configEnvio,
-          procedimentoInteresse: contextoContato.procedimento,
-          origem: "orcamento_estimado",
-          chatId,
-        })
-
-        await enviarRespostaAgente({
-          chatId,
-          whatsapp,
-          contatoId,
-          conversaId,
-          configWa: configEnvio,
-          textoUsuario: textoBuffer,
-          textoResposta: partesEstimativa.textoDepoisResultados,
-        })
-      }
-    } else {
-      enviouResposta = await enviarRespostaAgente({
-        chatId,
-        whatsapp,
-        contatoId,
-        conversaId,
-        configWa: configEnvio,
-        textoUsuario: textoBuffer,
-        textoResposta,
-      })
-
-      if (
-        enviouResposta &&
-        deveEnviarResultadosEstimativa &&
-        contatoId
-      ) {
-        await enviarResultadosProcedimento({
-          contatoId,
-          conversaId,
-          whatsapp,
-          configWa: configEnvio,
-          procedimentoInteresse: contextoContato.procedimento,
-          origem: "orcamento_estimado",
-          chatId,
-        })
-      }
-
-      if (enviouResposta && enviarResultadosOrcamentoPendenteAposResposta) {
-        await enviarResultadosDuranteEsperaOrcamento()
-      }
+    if (enviouResposta && enviarResultadosOrcamentoPendenteAposResposta) {
+      await enviarResultadosDuranteEsperaOrcamento()
     }
   } catch (error) {
     console.error("[Agente] Erro no loop de resposta:", error)
