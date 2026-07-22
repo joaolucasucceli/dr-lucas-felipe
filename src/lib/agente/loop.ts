@@ -16,6 +16,14 @@ import {
   detectarGatilhoVisualMidia,
 } from "@/lib/agente/gatilho-midia"
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
+import {
+  FATO_FOTO_QUALIFICACAO,
+  assistentePediuDadoQualificacao,
+  etapaPerguntadaPeloAssistente,
+  normalizarTextoBusca,
+  proximaEtapaPendente,
+  qualificacaoTemDadosMinimos,
+} from "@/lib/agente/fluxo-qualificacao"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
 import { redis } from "@/lib/redis"
@@ -64,14 +72,6 @@ export function segmentarResposta(texto: string): string[] {
 
 function extrairNumero(chatId: string): string {
   return chatId.split("@")[0]
-}
-
-function normalizarTextoBusca(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-BR")
-    .trim()
 }
 
 function ehRespostaAfirmativaCurta(texto: string): boolean {
@@ -143,9 +143,13 @@ function montarRespostaAgendamentoDuranteOrcamentoPendente(
   )
 }
 
+/**
+ * Rede de segurança: o script não pede mais permissão para qualificar, mas se
+ * a OpenAI emitir uma frase desse tipo por conta própria, o "pode sim" do
+ * paciente ainda precisa cair na próxima etapa em vez de voltar pro modelo.
+ */
 function assistentePediuPerguntasQualificacao(texto: string): boolean {
   const normalizado = normalizarTextoBusca(texto)
-  if (assistenteOfereceuEstimativaOuOrcamentoPreciso(texto)) return false
   return (
     normalizado.includes("posso te fazer algumas perguntas") ||
     (normalizado.includes("perguntas rapidas") &&
@@ -290,33 +294,20 @@ function deveUsarFastPathPosNome(
   return Boolean(contexto.procedimento)
 }
 
-function montarRespostaPosNomeComIntencao(contexto: ContextoContato): string {
-  return comVocativo(
-    contexto,
-    "Perfeito{nome}!\n---\nNormalmente eu consigo te passar uma estimativa dos procedimentos do Dr. Lucas, ou posso te fazer algumas perguntas rápidas pra montar um orçamento mais preciso com base no seu caso. Qual você prefere?"
-  )
-}
+/**
+ * Resposta imediatamente após o paciente se apresentar.
+ *
+ * Antes de 22/07/2026 esta função oferecia a bifurcação "estimativa OU
+ * perguntas rápidas", que abria um ramo de 5 perguntas antes da foto. Agora
+ * ela entra direto na primeira etapa pendente de ETAPAS_QUALIFICACAO — que é
+ * região (ou já a foto, quando o lead chegou com a região no anúncio).
+ */
+function montarRespostaPosNome(contexto: ContextoContato): string {
+  const etapa = proximaEtapaPendente(contexto)
+  if (!etapa) return montarRespostaFotoQualificacaoCompleta(contexto)
 
-function assistenteOfereceuEstimativaOuOrcamentoPreciso(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  return (
-    normalizado.includes("estimativa dos procedimentos") &&
-    normalizado.includes("orcamento mais preciso") &&
-    normalizado.includes("qual voce prefere")
-  )
-}
-
-function pacienteEscolheuEstimativaInicial(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  return [
-    "estimativa",
-    "preco estimado",
-    "preco aproximado",
-    "valor estimado",
-    "valor aproximado",
-    "media",
-    "faixa",
-  ].some((termo) => normalizado.includes(termo))
+  const frase = etapa.continuacao.charAt(0).toUpperCase() + etapa.continuacao.slice(1)
+  return `${comVocativo(contexto, "Perfeito{nome}!")}\n---\n${frase}`
 }
 
 function pacienteEscolheuOrcamentoPreciso(texto: string): boolean {
@@ -362,33 +353,6 @@ function pacienteRespondeuSimAmbiguoEscolhaInicial(texto: string): boolean {
   return ["sim", "s", "ok", "okay", "ta", "ta bom"].includes(normalizado)
 }
 
-function filtroProcedimentoParaEstimativa(
-  procedimento?: string | null
-): string {
-  const normalizado = normalizarTextoBusca(procedimento || "")
-  if (normalizado.includes("mini lipo") || normalizado.includes("lipo")) {
-    return "mini lipo"
-  }
-  return procedimento?.trim() || "mini lipo"
-}
-
-function montarRespostaEstimativaInicialPartes(
-  contexto: ContextoContato,
-  estimativa: EstimativaEnviada
-): { textoAntesResultados: string; textoDepoisResultados: string } {
-  const procedimento =
-    estimativa.procedimento || contexto.procedimento || "mini lipo"
-
-  return {
-    textoAntesResultados: comVocativo(
-      contexto,
-      `Claro{nome}. Como estimativa inicial, ${procedimento} costuma ficar em ${estimativa.faixa}.\n---\nEsse valor é aproximado. O orçamento mais preciso depende do seu caso e é definido pelo Dr. Lucas com base nas informações e na foto.`
-    ),
-    textoDepoisResultados:
-      "Se essa estimativa fizer sentido pra você, posso seguir por dois caminhos: te faço algumas perguntas rápidas pra buscar um orçamento mais preciso, ou já vejo os horários da reunião online com o Dr. Lucas. Qual você prefere?",
-  }
-}
-
 function dividirRespostaEstimativaComPerguntaFinal(
   texto: string
 ): { textoAntesResultados: string; textoDepoisResultados: string } | null {
@@ -407,136 +371,6 @@ function dividirRespostaEstimativaComPerguntaFinal(
   if (!textoAntesResultados || !textoDepoisResultados) return null
 
   return { textoAntesResultados, textoDepoisResultados }
-}
-
-async function montarFastPathEscolhaInicial(params: {
-  chatId: string
-  textoPaciente: string
-  contexto: ContextoContato
-  contatoId: string
-  conversaId: string | null
-  memoria: Awaited<ReturnType<typeof obterMemoria>>
-  baseUrl: string
-}): Promise<{
-  texto: string
-  enviarResultadosEstimativa?: boolean
-  textoAntesResultados?: string
-  textoDepoisResultados?: string
-} | null> {
-  const { chatId, textoPaciente, contexto, contatoId, conversaId, memoria, baseUrl } =
-    params
-  const ultimaMensagem = ultimaMensagemAssistente(memoria)
-  if (
-    !ultimaMensagem ||
-    !assistenteOfereceuEstimativaOuOrcamentoPreciso(ultimaMensagem)
-  ) {
-    return null
-  }
-
-  if (pacienteEscolheuEstimativaInicial(textoPaciente)) {
-    const filtro = filtroProcedimentoParaEstimativa(contexto.procedimento)
-    console.log("[Agente] Fast-path de estimativa inicial escolhido", {
-      contatoId,
-      conversaId,
-      filtro,
-    })
-
-    const resultado = await executarFerramenta(
-      "consultar_procedimentos",
-      { filtro },
-      baseUrl
-    )
-    const estimativa = extrairEstimativaDaConsulta(resultado)
-
-    if (!estimativa) {
-      return {
-        texto: comVocativo(
-          contexto,
-          "Consigo te orientar melhor com uma estimativa, mas não encontrei uma faixa segura aqui agora{nome}.\n---\nSe você preferir, posso te fazer algumas perguntas rápidas pra buscar um orçamento mais preciso com o Dr. Lucas."
-        ),
-      }
-    }
-
-    await adicionarFatoAoContato(
-      contatoId,
-      contexto,
-      `Estimativa enviada ao paciente: ${estimativa.faixa}${
-        estimativa.procedimento ? ` (${estimativa.procedimento})` : ""
-      }.`
-    )
-    await salvarEstadoAgendamento(chatId, {
-      origem: "estimativa",
-      slots: [],
-      slotEscolhido: null,
-      estimativa,
-      atualizadoEm: agora(),
-    })
-
-    try {
-      await executarFerramenta(
-        "atualizar_lead",
-        {
-          contatoId,
-          conversaId,
-          etapaCorreta: "orcamento",
-        },
-        baseUrl
-      )
-      contexto.etapa = "orcamento"
-    } catch (err) {
-      console.warn(
-        "[Agente] Falha ao mover lead para orcamento apos estimativa inicial:",
-        err
-      )
-    }
-
-    const partes = montarRespostaEstimativaInicialPartes(contexto, estimativa)
-    return {
-      texto: `${partes.textoAntesResultados}\n---\n${partes.textoDepoisResultados}`,
-      enviarResultadosEstimativa: true,
-      textoAntesResultados: partes.textoAntesResultados,
-      textoDepoisResultados: partes.textoDepoisResultados,
-    }
-  }
-
-  if (pacienteEscolheuOrcamentoPreciso(textoPaciente)) {
-    console.log("[Agente] Fast-path de orcamento preciso escolhido", {
-      contatoId,
-      conversaId,
-    })
-    if (contexto.etapa !== "qualificacao") {
-      try {
-        await executarFerramenta(
-          "atualizar_lead",
-          {
-            contatoId,
-            conversaId,
-            etapaCorreta: "qualificacao",
-          },
-          baseUrl
-        )
-        contexto.etapa = "qualificacao"
-      } catch (err) {
-        console.warn(
-          "[Agente] Falha ao mover lead para qualificacao apos escolha inicial:",
-          err
-        )
-      }
-    }
-
-    return { texto: montarProximaPerguntaQualificacao(contexto) }
-  }
-
-  if (pacienteRespondeuSimAmbiguoEscolhaInicial(textoPaciente)) {
-    return {
-      texto: comVocativo(
-        contexto,
-        "Você prefere que eu te mande uma estimativa agora ou que eu faça algumas perguntas pra buscar um orçamento mais preciso{nome}?"
-      ),
-    }
-  }
-
-  return null
 }
 
 async function persistirIntencaoInicialLead(params: {
@@ -622,39 +456,6 @@ function consentiuComQualificacao(
     : false
 }
 
-function assistentePediuDadoQualificacao(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-
-  return [
-    "voce ja fez algum procedimento estetico antes",
-    "procedimento estetico antes",
-    "principal incomodo",
-    "gordura localizada",
-    "flacidez",
-    "contorno",
-    "como esta sua saude",
-    "problema de saude",
-    "restricao",
-    "manda uma foto",
-    "consegue mandar uma foto",
-    "consegue me enviar uma foto",
-    "enviar uma foto atual",
-    "foto atual da regiao",
-    "foto da regiao",
-    "mandar um caso bem completo",
-    "qual regiao",
-    "quais regioes",
-    "area especifica",
-    "regiao especifica",
-    "regioes do corpo",
-    "parte gostaria de tratar",
-    "o que te incomoda",
-    "objetivo",
-    "resultado que busca",
-    "referencia do resultado",
-  ].some((termo) => normalizado.includes(termo))
-}
-
 function respondeuPerguntaQualificacao(
   textoPaciente: string,
   memoria: Awaited<ReturnType<typeof obterMemoria>>,
@@ -702,218 +503,14 @@ function pacienteFezPerguntaOuMudouAssunto(texto: string): boolean {
   ].some((termo) => normalizado.includes(normalizarTextoBusca(termo)))
 }
 
-function perguntaPediuRegiao(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  return (
-    normalizado.includes("qual regiao") ||
-    normalizado.includes("quais regioes") ||
-    normalizado.includes("regioes do corpo") ||
-    normalizado.includes("area especifica") ||
-    normalizado.includes("regiao especifica") ||
-    normalizado.includes("parte gostaria de tratar")
-  )
-}
-
-function perguntaPediuTempo(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  return (
-    normalizado.includes("ha quanto tempo") ||
-    normalizado.includes("quanto tempo essa regiao") ||
-    normalizado.includes("desde quando")
-  )
-}
-
-function pareceRespostaTemporalQualificacao(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto).trim()
-  if (!normalizado || normalizado.length > 120) return false
-
-  return (
-    normalizado.includes("desde sempre") ||
-    normalizado.includes("faz tempo") ||
-    normalizado.includes("ha muito tempo") ||
-    normalizado.includes("a muito tempo") ||
-    normalizado.includes("desde crianca") ||
-    normalizado.includes("desde a infancia") ||
-    normalizado.includes("desde adolescente") ||
-    normalizado.includes("desde a adolescencia") ||
-    /\b(?:ha|faz|tem)\s+\d+\s+(?:dia|dias|semana|semanas|mes|meses|ano|anos)\b/.test(
-      normalizado
-    ) ||
-    /\b\d+\s+(?:dia|dias|semana|semanas|mes|meses|ano|anos)\b/.test(
-      normalizado
-    )
-  )
-}
-
-function perguntaPediuHistoricoSaude(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  return (
-    normalizado.includes("procedimento estetico antes") ||
-    normalizado.includes("como esta sua saude") ||
-    normalizado.includes("problema de saude") ||
-    normalizado.includes("restricao")
-  )
-}
-
-function perguntaPediuIncomodo(texto: string): boolean {
-  const normalizado = normalizarTextoBusca(texto)
-  return (
-    normalizado.includes("principal incomodo") ||
-    normalizado.includes("gordura localizada") ||
-    normalizado.includes("flacidez") ||
-    normalizado.includes("contorno") ||
-    normalizado.includes("o que te incomoda") ||
-    normalizado.includes("objetivo")
-  )
-}
-
-const FATO_FOTO_QUALIFICACAO = "Foto atual da região recebida pelo WhatsApp."
-
-function estadoQualificacao(contexto: ContextoContato) {
-  const info = normalizarTextoBusca(contexto.sobreOPaciente || "")
-  const procedimento = normalizarTextoBusca(contexto.procedimento || "")
-  const temRegiao =
-    info.includes("regiao de interesse") ||
-    info.includes("regiao do procedimento") ||
-    info.includes("regiao de abdomen") ||
-    info.includes("regiao de abdome") ||
-    procedimento.includes("abdomen") ||
-    procedimento.includes("abdome") ||
-    procedimento.includes("flancos") ||
-    procedimento.includes("papada") ||
-    procedimento.includes("culote") ||
-    procedimento.includes("axila") ||
-    procedimento.includes("costas")
-
-  return {
-    temProcedimento: Boolean(
-      contexto.procedimento ||
-      procedimento ||
-      info.includes("mini lipo") ||
-      temRegiao
-    ),
-    temRegiao,
-    temTempo: info.includes("tempo de incomodo"),
-    temHistorico: info.includes("historico de procedimentos e saude"),
-    temIncomodo:
-      info.includes("principal incomodo") ||
-      info.includes("gordura localizada") ||
-      info.includes("flacidez") ||
-      info.includes("contorno"),
-    temFoto: info.includes(normalizarTextoBusca(FATO_FOTO_QUALIFICACAO)),
-  }
-}
-
-function qualificacaoTemDadosMinimos(contexto: ContextoContato): boolean {
-  const estado = estadoQualificacao(contexto)
-  return Boolean(
-    estado.temProcedimento &&
-    estado.temRegiao &&
-    estado.temTempo &&
-    estado.temHistorico &&
-    estado.temIncomodo &&
-    estado.temFoto
-  )
-}
-
+/**
+ * Próxima pergunta do fluxo, derivada de `ETAPAS_QUALIFICACAO`. Quando não há
+ * etapa pendente, o caso está pronto para ir ao Dr. Lucas.
+ */
 function montarProximaPerguntaQualificacao(contexto: ContextoContato): string {
-  const estado = estadoQualificacao(contexto)
-
-  if (!estado.temRegiao) {
-    return comVocativo(
-      contexto,
-      "Perfeito{nome}. Qual região do corpo você quer tratar com a mini lipo?"
-    )
-  }
-
-  if (!estado.temTempo) {
-    return comVocativo(
-      contexto,
-      "Entendi{nome}. Há quanto tempo essa região te incomoda?"
-    )
-  }
-
-  if (!estado.temHistorico) {
-    return comVocativo(
-      contexto,
-      "Certo{nome}. Você já fez algum procedimento estético antes ou tem algum problema de saúde importante?"
-    )
-  }
-
-  if (!estado.temIncomodo) {
-    return comVocativo(
-      contexto,
-      "Perfeito{nome}. E hoje o principal incômodo nessa região é gordura localizada, flacidez ou contorno?"
-    )
-  }
-
-  if (!estado.temFoto) {
-    return comVocativo(
-      contexto,
-      "Perfeito{nome}. Pra eu mandar seus dados pro Dr. Lucas definir um orçamento exato, consegue me enviar uma foto atual da região?"
-    )
-  }
-
-  return montarRespostaFotoQualificacaoCompleta(contexto)
-}
-
-function regiaoQualificacaoTexto(contexto: ContextoContato): string {
-  const fonte = normalizarTextoBusca(
-    [contexto.procedimento, contexto.sobreOPaciente].filter(Boolean).join(" ")
-  )
-
-  if (fonte.includes("abdomen") || fonte.includes("abdome")) {
-    return "no abdômen"
-  }
-
-  return "nessa região"
-}
-
-function montarRespostaTempoIncomodo(
-  contexto: ContextoContato,
-  respostaPaciente: string
-): string {
-  const tempo = normalizarTextoBusca(respostaPaciente)
-  const pareceLongo =
-    tempo.includes("desde sempre") ||
-    tempo.includes("faz tempo") ||
-    tempo.includes("muito tempo") ||
-    tempo.includes("desde crianca") ||
-    tempo.includes("desde a infancia") ||
-    tempo.includes("desde adolescente") ||
-    tempo.includes("desde a adolescencia") ||
-    /\b(?:ha|faz|tem)\s+\d+\s+anos?\b/.test(tempo) ||
-    /\b\d+\s+anos?\b/.test(tempo)
-
-  return comVocativo(
-    contexto,
-    [
-      pareceLongo
-        ? "Entendi{nome}. Quando isso incomoda há tanto tempo, faz sentido querer uma solução mais direcionada."
-        : "Entendi{nome}. Esse tempo de incômodo ajuda o Dr. Lucas a avaliar seu caso com mais contexto.",
-      "Vou deixar esse contexto claro pro Dr. Lucas avaliar melhor. Você já fez algum procedimento estético antes ou tem algum problema de saúde importante?",
-    ].join("\n---\n")
-  )
-}
-
-function montarRespostaHistoricoSaude(contexto: ContextoContato): string {
-  return comVocativo(
-    contexto,
-    [
-      "Perfeito{nome}. Isso ajuda bastante a entender seu caso com mais segurança.",
-      `E hoje o que mais te incomoda ${regiaoQualificacaoTexto(contexto)}: gordura localizada, flacidez ou contorno?`,
-    ].join("\n---\n")
-  )
-}
-
-function montarRespostaPrincipalIncomodo(contexto: ContextoContato): string {
-  return comVocativo(
-    contexto,
-    [
-      "Entendi{nome}. Esse é justamente o tipo de detalhe que ajuda o Dr. Lucas a avaliar melhor a indicação e o planejamento.",
-      "Pra eu mandar um caso bem completo pra ele, consegue me enviar uma foto atual da região?",
-    ].join("\n---\n")
-  )
+  const etapa = proximaEtapaPendente(contexto)
+  if (!etapa) return montarRespostaFotoQualificacaoCompleta(contexto)
+  return comVocativo(contexto, etapa.pergunta)
 }
 
 function montarRespostaFotoQualificacaoCompleta(
@@ -932,23 +529,25 @@ function montarRespostaFotoQualificacaoCompleta(
 function montarRespostaFotoQualificacaoIncompleta(
   contexto: ContextoContato
 ): string {
+  const etapa = proximaEtapaPendente(contexto)
+  if (!etapa) return montarRespostaFotoQualificacaoCompleta(contexto)
+
   return comVocativo(
     contexto,
     [
       "Recebi{nome}. Obrigada por enviar.",
-      `Pra eu completar seu caso antes de mandar pro Dr. Lucas, ${montarProximaPerguntaQualificacao(
-        contexto
-      ).replace(/^[^.?!]+[.?!]\s*/, "")}`,
+      `Pra eu completar seu caso antes de mandar pro Dr. Lucas, ${etapa.continuacao}`,
     ].join("\n---\n")
   )
 }
 
 function montarContinuidadeQualificacao(contexto: ContextoContato): string {
+  const etapa = proximaEtapaPendente(contexto)
+  if (!etapa) return montarRespostaFotoQualificacaoCompleta(contexto)
+
   return comVocativo(
     contexto,
-    `Pra eu completar seu caso com segurança, ${montarProximaPerguntaQualificacao(
-      contexto
-    ).replace(/^[^.?!]+[.?!]\s*/, "")}`
+    `Pra eu completar seu caso com segurança, ${etapa.continuacao}`
   )
 }
 
@@ -1019,64 +618,21 @@ function montarFastPathQualificacao(params: {
     }
   }
 
-  const estadoAtual = estadoQualificacao(contexto)
-  if (!estadoAtual.temTempo && pareceRespostaTemporalQualificacao(textoPaciente)) {
-    const fato = `Tempo de incômodo informado pelo paciente: ${textoPaciente.trim()}`
-    return {
-      tipo: "tempo_incomodo_fallback",
-      fato,
-      texto: montarRespostaTempoIncomodo(
-        contextoComFato(contexto, fato),
-        textoPaciente
-      ),
-    }
-  }
-
   const ultimaMensagem = ultimaMensagemAssistente(memoria)
-  if (!ultimaMensagem || !assistentePediuDadoQualificacao(ultimaMensagem)) {
-    return null
-  }
+  if (!ultimaMensagem) return null
 
-  if (perguntaPediuRegiao(ultimaMensagem)) {
-    const fato = `Região de interesse informada pelo paciente para mini lipo: ${textoPaciente.trim()}`
-    return {
-      tipo: "regiao_interesse",
-      fato,
-      texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
-    }
-  }
+  // O paciente respondeu a pergunta que a Ana acabou de fazer: grava o fato da
+  // etapa correspondente e emenda direto na próxima etapa pendente. Sem
+  // `if` por pergunta — a etapa vem de ETAPAS_QUALIFICACAO.
+  const etapaRespondida = etapaPerguntadaPeloAssistente(ultimaMensagem)
+  if (!etapaRespondida || etapaRespondida.chave === "foto") return null
 
-  if (perguntaPediuTempo(ultimaMensagem)) {
-    const fato = `Tempo de incômodo informado pelo paciente: ${textoPaciente.trim()}`
-    return {
-      tipo: "tempo_incomodo",
-      fato,
-      texto: montarRespostaTempoIncomodo(
-        contextoComFato(contexto, fato),
-        textoPaciente
-      ),
-    }
+  const fato = etapaRespondida.montarFato(textoPaciente)
+  return {
+    tipo: `qualificacao_${etapaRespondida.chave}`,
+    fato,
+    texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
   }
-
-  if (perguntaPediuHistoricoSaude(ultimaMensagem)) {
-    const fato = `Histórico de procedimentos e saúde informado pelo paciente: ${textoPaciente.trim()}`
-    return {
-      tipo: "historico_saude",
-      fato,
-      texto: montarRespostaHistoricoSaude(contextoComFato(contexto, fato)),
-    }
-  }
-
-  if (perguntaPediuIncomodo(ultimaMensagem)) {
-    const fato = `Principal incômodo informado pelo paciente: ${textoPaciente.trim()}`
-    return {
-      tipo: "principal_incomodo",
-      fato,
-      texto: montarRespostaPrincipalIncomodo(contextoComFato(contexto, fato)),
-    }
-  }
-
-  return null
 }
 
 function deadlineAproximando(inicioMs: number): boolean {
@@ -3267,6 +2823,25 @@ export async function processarMensagens(
         procedimento: contextoContato.procedimento,
       })
 
+      // O pos-nome ja entra na qualificacao. Sem esta sincronia a proxima
+      // resposta do paciente cairia fora de `montarFastPathQualificacao`
+      // (que exige etapa === "qualificacao") e voltaria pro loop da OpenAI.
+      if (contatoId && contextoContato.etapa !== "qualificacao") {
+        try {
+          await executarFerramenta(
+            "atualizar_lead",
+            { contatoId, conversaId, etapaCorreta: "qualificacao" },
+            baseUrl
+          )
+          contextoContato.etapa = "qualificacao"
+        } catch (err) {
+          console.warn(
+            "[Agente] Falha ao mover lead para qualificacao apos o nome:",
+            err
+          )
+        }
+      }
+
       await enviarRespostaAgente({
         chatId,
         whatsapp,
@@ -3274,112 +2849,12 @@ export async function processarMensagens(
         conversaId,
         configWa: configEnvio,
         textoUsuario: textoBuffer,
-        textoResposta: montarRespostaPosNomeComIntencao(contextoContato),
+        textoResposta: montarRespostaPosNome(contextoContato),
       })
 
       return contatoId ? { contatoId, conversaId } : null
     }
 
-    if (contatoId) {
-      const respostaEscolhaInicial = await montarFastPathEscolhaInicial({
-        chatId,
-        textoPaciente: textoBuffer,
-        contexto: contextoContato,
-        contatoId,
-        conversaId,
-        memoria,
-        baseUrl,
-      })
-
-      if (respostaEscolhaInicial) {
-        if (
-          respostaEscolhaInicial.enviarResultadosEstimativa &&
-          respostaEscolhaInicial.textoAntesResultados &&
-          respostaEscolhaInicial.textoDepoisResultados
-        ) {
-          const enviouTextoAntes = await enviarRespostaAgente({
-            chatId,
-            whatsapp,
-            contatoId,
-            conversaId,
-            configWa: configEnvio,
-            textoUsuario: textoBuffer,
-            textoResposta: respostaEscolhaInicial.textoAntesResultados,
-          })
-
-          if (enviouTextoAntes) {
-            const resultadoMidias = await enviarResultadosProcedimento({
-              contatoId,
-              conversaId,
-              whatsapp,
-              configWa: configEnvio,
-              procedimentoInteresse: contextoContato.procedimento,
-              origem: "orcamento_estimado",
-              chatId,
-            })
-
-            if (resultadoMidias.enviadas === 0) {
-              console.warn("[Agente] Orçamento estimado sem resultados enviados", {
-                contatoId,
-                conversaId,
-                procedimentoInteresse: contextoContato.procedimento,
-                motivo: resultadoMidias.motivo,
-                diagnostico: resultadoMidias.diagnostico,
-              })
-            }
-
-            await enviarRespostaAgente({
-              chatId,
-              whatsapp,
-              contatoId,
-              conversaId,
-              configWa: configEnvio,
-              textoUsuario: textoBuffer,
-              textoResposta: respostaEscolhaInicial.textoDepoisResultados,
-            })
-          }
-
-          return { contatoId, conversaId }
-        }
-
-        const enviouEscolhaInicial = await enviarRespostaAgente({
-          chatId,
-          whatsapp,
-          contatoId,
-          conversaId,
-          configWa: configEnvio,
-          textoUsuario: textoBuffer,
-          textoResposta: respostaEscolhaInicial.texto,
-        })
-
-        if (
-          enviouEscolhaInicial &&
-          respostaEscolhaInicial.enviarResultadosEstimativa
-        ) {
-          const resultadoMidias = await enviarResultadosProcedimento({
-            contatoId,
-            conversaId,
-            whatsapp,
-            configWa: configEnvio,
-            procedimentoInteresse: contextoContato.procedimento,
-            origem: "orcamento_estimado",
-            chatId,
-          })
-
-          if (resultadoMidias.enviadas === 0) {
-            console.warn("[Agente] Orçamento estimado sem resultados enviados", {
-              contatoId,
-              conversaId,
-              procedimentoInteresse: contextoContato.procedimento,
-              motivo: resultadoMidias.motivo,
-              diagnostico: resultadoMidias.diagnostico,
-            })
-          }
-        }
-
-        return { contatoId, conversaId }
-      }
-    }
 
     const pacienteAceitouQualificacao = consentiuComQualificacao(
       textoBuffer,
