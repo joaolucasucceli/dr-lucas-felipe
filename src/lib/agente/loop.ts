@@ -17,6 +17,11 @@ import {
 } from "@/lib/agente/gatilho-midia"
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import {
+  avaliarEnvio,
+  bufferTemConteudoUtil,
+  limparFreio,
+} from "@/lib/agente/circuit-breaker"
+import {
   FATO_FOTO_QUALIFICACAO,
   assistentePediuDadoQualificacao,
   etapaPerguntadaPeloAssistente,
@@ -2088,6 +2093,35 @@ async function registrarMensagemAgenteLocal(params: {
     .eq("id", conversaId)
 }
 
+/**
+ * Quando o freio dispara, a conversa não pode simplesmente emudecer: alguém
+ * precisa olhar. Move para atendimento humano, o que também PAUSA a IA naquela
+ * conversa — sem isso o próximo gatilho tentaria responder de novo.
+ */
+async function acionarHandoffPorFreio(params: {
+  contatoId: string | null
+  conversaId: string | null
+  motivo: string
+  detalhe: string
+}): Promise<void> {
+  const { contatoId, conversaId, motivo, detalhe } = params
+  if (!contatoId || !conversaId) return
+
+  try {
+    await executarFerramenta(
+      "acionar_atendimento_humano",
+      {
+        contatoId,
+        conversaId,
+        motivo: `Atendimento pausado automaticamente: ${detalhe} (${motivo}). Possível interlocutor automático ou conversa em loop — conferir antes de retomar.`,
+      },
+      getBaseUrl()
+    )
+  } catch (err) {
+    console.error("[Agente] Falha ao acionar handoff apos freio:", err)
+  }
+}
+
 async function enviarRespostaAgente(params: {
   chatId: string
   whatsapp: string
@@ -2110,6 +2144,27 @@ async function enviarRespostaAgente(params: {
   const segmentos = segmentarResposta(textoFinal)
 
   if (segmentos.length === 0) return false
+
+  // FREIO — este é o funil único de saída do agente, então é aqui que o limite
+  // tem que existir. Ver src/lib/agente/circuit-breaker.ts para o incidente de
+  // 17/07/2026 (5.016 mensagens iguais para o mesmo contato em 16 horas).
+  const veredicto = await avaliarEnvio(chatId, textoFinal)
+  if (!veredicto.permitido) {
+    console.error("[Agente] FREIO acionado — envio bloqueado", {
+      chatId,
+      contatoId,
+      conversaId,
+      motivo: veredicto.motivo,
+      detalhe: veredicto.detalhe,
+    })
+    await acionarHandoffPorFreio({
+      contatoId,
+      conversaId,
+      motivo: veredicto.motivo,
+      detalhe: veredicto.detalhe,
+    })
+    return false
+  }
 
   for (let i = 0; i < segmentos.length; i++) {
     const segmento = segmentos[i]
@@ -2208,6 +2263,19 @@ export async function processarMensagens(
   })
   if (buffer.length === 0) return null
 
+  // FREIO CAMADA 1 — mensagem sem texto e sem mídia não é pergunta, é ruído de
+  // protocolo (botão, lista, template entregue sem corpo). No incidente de
+  // 17/07/2026, 4.573 das mensagens recebidas eram assim, e cada uma disparava
+  // um "Deu uma travadinha aqui" que realimentava o bot do outro lado.
+  if (!bufferTemConteudoUtil(buffer)) {
+    console.warn("[Agente] Buffer sem conteudo util — nada a responder", {
+      chatId,
+      mensagens: buffer.length,
+      tipos: [...new Set(buffer.map((m) => m.tipo))],
+    })
+    return null
+  }
+
   const textoBuffer = buffer.map((m) => m.conteudo).join("\n")
   const recebeuImagem = buffer.some((m) => m.tipo === "imagem")
   const whatsapp = extrairNumero(chatId)
@@ -2303,9 +2371,12 @@ export async function processarMensagens(
         Boolean(conversaId) && !(await conversaTemRespostaAgente(conversaId))
 
       if (primeiraRespostaDaConversa) {
+        // Zera o freio junto: conversa nova nao pode herdar um bloqueio de
+        // repeticao/volume de um atendimento anterior do mesmo numero.
         await Promise.all([
           limparMemoria(chatId),
           limparEstadoAgendamento(chatId),
+          limparFreio(chatId),
         ])
         console.log(
           "[Agente] Memoria antiga limpa para primeira resposta da conversa",

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { requireRole } from "@/lib/auth-helpers"
 import { limparMemoria } from "@/lib/agente/memoria"
 import { limparBuffer, limparDebounce } from "@/lib/agente/buffer"
+import { limparFreio } from "@/lib/agente/circuit-breaker"
 
 export async function POST(request: NextRequest) {
   const auth = await requireRole("gestor")
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     limparMemoria(chatId),
     limparBuffer(chatId),
     limparDebounce(chatId),
+    limparFreio(chatId),
   ])
 
   return NextResponse.json({ ok: true, chatId })

@@ -2,6 +2,7 @@ import { createHash } from "crypto"
 import { supabaseAdmin } from "@/lib/supabase"
 import { limparMemoria } from "@/lib/agente/memoria"
 import { limparBuffer, limparDebounce } from "@/lib/agente/buffer"
+import { limparFreio } from "@/lib/agente/circuit-breaker"
 import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
 import { cancelarEvento } from "@/lib/google-calendar"
 
@@ -347,6 +348,7 @@ export async function limparDependenciasDoContato(params: {
       limparMemoria(chatId),
       limparBuffer(chatId),
       limparDebounce(chatId),
+      limparFreio(chatId),
     ])
 
     for (const result of redisResults) {
