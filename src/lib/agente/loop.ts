@@ -2105,14 +2105,23 @@ async function acionarHandoffPorFreio(params: {
   detalhe: string
 }): Promise<void> {
   const { contatoId, conversaId, motivo, detalhe } = params
-  if (!contatoId || !conversaId) return
+  // A rota aceita conversaId opcional (ela busca a conversa aberta sozinha).
+  // Exigir os dois deixava o freio bloquear o envio sem avisar ninguém — a
+  // conversa ficava muda e a IA seguia sendo acionada a cada mensagem nova.
+  if (!contatoId) {
+    console.error(
+      "[Agente] FREIO acionado sem contatoId — impossivel acionar handoff",
+      { motivo, detalhe }
+    )
+    return
+  }
 
   try {
     await executarFerramenta(
       "acionar_atendimento_humano",
       {
         contatoId,
-        conversaId,
+        ...(conversaId ? { conversaId } : {}),
         motivo: `Atendimento pausado automaticamente: ${detalhe} (${motivo}). Possível interlocutor automático ou conversa em loop — conferir antes de retomar.`,
       },
       getBaseUrl()

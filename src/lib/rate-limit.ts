@@ -23,6 +23,13 @@ const CONFIGS: Record<string, RateLimitConfig> = {
   // Webhook WhatsApp por numero do remetente. Paciente real digita ~5-15
   // msgs/min em pico de conversa; 30/60s deixa margem confortavel e barra
   // floods de bot/abuso (cada msg vira call OpenAI = $$).
+  //
+  // ATENCAO (22/07/2026): este limite pega flood RAPIDO, nao loop LENTO. No
+  // incidente de 17/07 o outro bot mandava ~13 msgs/min — sempre abaixo de 30
+  // — e sustentou isso por 16 horas sem nunca disparar o rate-limit. Quem
+  // barra esse caso e o freio do agente (src/lib/agente/circuit-breaker.ts),
+  // que limita o que a Ana ENVIA. Os dois se complementam: aqui e por
+  // remetente, la e por resposta do agente.
   whatsappWebhook: {
     prefixo: "rate_wa_webhook:",
     maxTentativas: 30,

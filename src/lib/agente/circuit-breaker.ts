@@ -37,6 +37,30 @@ function chave(chatId: string): string {
   return `agente:freio:${chatId}`
 }
 
+function chaveVolume(chatId: string): string {
+  return `agente:freio:vol:${chatId}`
+}
+
+/**
+ * Contador de volume com INCR atômico.
+ *
+ * A contagem de repetição tolera corrida (o pior caso é uma mensagem a mais
+ * antes de bloquear), mas o teto de volume é a última linha de defesa: precisa
+ * valer mesmo com dois processamentos simultâneos do mesmo chat, o que o
+ * debounce de 6s reduz mas não elimina.
+ */
+async function incrementarVolume(chatId: string): Promise<number> {
+  try {
+    const k = chaveVolume(chatId)
+    const valor = await redis.incr(k)
+    if (valor === 1) await redis.expire(k, JANELA_ENVIOS_SEGUNDOS)
+    return valor
+  } catch (err) {
+    console.warn("[freio] Falha ao contar volume — liberando envio:", err)
+    return 0
+  }
+}
+
 /** Hash barato e estável — só precisa distinguir textos, não ser seguro. */
 function digerir(texto: string): string {
   let h = 0
@@ -92,7 +116,7 @@ async function gravarEstado(chatId: string, estado: EstadoFreio): Promise<void> 
 
 export async function limparFreio(chatId: string): Promise<void> {
   try {
-    await redis.del(chave(chatId))
+    await Promise.all([redis.del(chave(chatId)), redis.del(chaveVolume(chatId))])
   } catch (err) {
     console.warn("[freio] Falha ao limpar estado:", err)
   }
@@ -179,9 +203,25 @@ export async function avaliarEnvio(
   chatId: string,
   textoResposta: string
 ): Promise<VeredictoFreio> {
-  const anterior = await lerEstado(chatId)
+  const [anterior, volume] = await Promise.all([
+    lerEstado(chatId),
+    incrementarVolume(chatId),
+  ])
+
   const { estado, veredicto } = decidirEnvio(anterior, textoResposta, Date.now())
   await gravarEstado(chatId, estado)
+
+  if (!veredicto.permitido) return veredicto
+
+  // Teto duro, checado com o contador atômico e não com o estado serializado.
+  if (volume > MAX_ENVIOS_POR_JANELA) {
+    return {
+      permitido: false,
+      motivo: "volume",
+      detalhe: `${volume} mensagens na ultima hora`,
+    }
+  }
+
   return veredicto
 }
 
