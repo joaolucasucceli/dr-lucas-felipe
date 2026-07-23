@@ -30,7 +30,7 @@ import {
   qualificacaoTemDadosMinimos,
 } from "@/lib/agente/fluxo-qualificacao"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
-import { criarId, agora } from "@/lib/db-utils"
+import { criarId, agora, instanteDoBanco } from "@/lib/db-utils"
 import { redis } from "@/lib/redis"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
@@ -2691,7 +2691,9 @@ export async function processarMensagens(
         .maybeSingle()
 
       if (ag) {
-        const data = new Date(ag.dataHora)
+        // Coluna naive em UTC — ver `instanteDoBanco`. Esse label vai pro
+        // paciente; ler pelo fuso do processo diria a hora errada.
+        const data = new Date(instanteDoBanco(ag.dataHora))
         const label = new Intl.DateTimeFormat("pt-BR", {
           timeZone: "America/Sao_Paulo",
           weekday: "short",

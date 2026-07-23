@@ -4,6 +4,7 @@ import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarId, agora } from "@/lib/db-utils"
+import { obterOuAbrirAtendimento } from "@/lib/conversas/atendimento"
 
 const schema = z.object({
   conversaId: z.string().min(1).optional(),
@@ -37,19 +38,27 @@ export async function POST(request: NextRequest) {
   let { conversaId } = parsed.data
 
   if (!conversaId) {
-    const novoId = criarId()
-    const { error: convError } = await supabaseAdmin
-      .from("conversas")
-      .insert({
-        id: novoId,
-        atualizadoEm: agora(),
-        contatoId,
-      })
+    // Nunca criar conversa as cegas: se o contato ja tem atendimento aberto,
+    // a mensagem pertence a ele. Criar outra abriria um segundo atendimento
+    // paralelo (e agora bate no indice unico parcial do banco).
+    const { data: contato } = await supabaseAdmin
+      .from("contatos")
+      .select("cicloAtual")
+      .eq("id", contatoId)
+      .maybeSingle()
 
-    if (convError) {
-      return NextResponse.json({ error: convError.message }, { status: 500 })
+    const atendimento = await obterOuAbrirAtendimento({
+      contatoId,
+      ciclo: contato?.cicloAtual ?? 1,
+    })
+
+    if (!atendimento) {
+      return NextResponse.json(
+        { error: "Nao consegui abrir o atendimento do contato" },
+        { status: 500 }
+      )
     }
-    conversaId = novoId
+    conversaId = atendimento.conversa.id
   }
 
   const { data: mensagem, error } = await supabaseAdmin

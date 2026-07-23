@@ -14,6 +14,7 @@ import {
 } from "@/lib/agente/processar-midia"
 import { baixarMidia, enviarDigitando, enviarMensagem } from "@/lib/uazapi"
 import { criarId, agora } from "@/lib/db-utils"
+import { obterOuAbrirAtendimento } from "@/lib/conversas/atendimento"
 import { BUCKET_FOTOS_CONTATO } from "@/lib/contatos/constantes"
 import { processarRespostaDrLucas } from "@/lib/orcamento/processar-resposta-dr-lucas"
 import {
@@ -619,33 +620,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { data: conversaExistente } = await supabaseAdmin
-      .from("conversas")
-      .select("*")
-      .eq("contatoId", contato!.id)
-      .order("criadoEm", { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    // Conversa aberta = atendimento corrente. Se a anterior foi encerrada
+    // (auto-close, follow-up de 48h), o paciente que volta abre atendimento
+    // NOVO — ver src/lib/conversas/atendimento.ts.
+    const atendimento = await obterOuAbrirAtendimento({
+      contatoId: contato!.id,
+      ciclo: (contato as { cicloAtual?: number }).cicloAtual ?? 1,
+    })
 
-    let conversa = conversaExistente
-
-    if (!conversa) {
-      const { data: novaConversa, error: convErr } = await supabaseAdmin
-        .from("conversas")
-        .insert({
-          id: criarId(),
-          atualizadoEm: agora(),
-          contatoId: contato!.id,
-        })
-        .select("*")
-        .single()
-
-      if (convErr) {
-        console.error("[Webhook] Falha ao criar conversa:", convErr.message)
-        continue
-      }
-      conversa = novaConversa
+    if (!atendimento) {
+      console.error("[Webhook] Falha ao abrir atendimento do contato:", contato!.id)
+      continue
     }
+
+    const conversa = atendimento.conversa
 
     const { error: msgErr } = await supabaseAdmin
       .from("mensagens_whatsapp")

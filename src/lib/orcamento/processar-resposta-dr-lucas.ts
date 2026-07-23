@@ -3,6 +3,7 @@ import { agora, criarId } from "@/lib/db-utils"
 import { enviarMensagem, enviarMidia } from "@/lib/uazapi"
 import { gerarEHospedarOrcamento, formatarBrl } from "@/lib/orcamento/gerar"
 import { adicionarAMemoria } from "@/lib/agente/memoria"
+import { obterAtendimentoAberto } from "@/lib/conversas/atendimento"
 
 /**
  * Ingestao da resposta do Dr. Lucas pelo WhatsApp pessoal dele.
@@ -578,14 +579,10 @@ async function registrarDocumentoOrcamentoNoHistorico(params: {
 }): Promise<void> {
   let convId = params.conversaId
   if (!convId) {
-    const { data: conv } = await supabaseAdmin
-      .from("conversas")
-      .select("id")
-      .eq("contatoId", params.contatoId)
-      .order("criadoEm", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    convId = conv?.id ?? null
+    // Atendimento ABERTO: o PDF acabou de ser enviado ao paciente agora, entao
+    // pertence a conversa corrente — nao a ultima de qualquer estado.
+    const aberta = await obterAtendimentoAberto(params.contatoId)
+    convId = aberta?.id ?? null
   }
   if (!convId) return
 
@@ -614,14 +611,10 @@ async function registrarMensagemAna(
 ): Promise<void> {
   let convId = conversaId
   if (!convId) {
-    const { data: conv } = await supabaseAdmin
-      .from("conversas")
-      .select("id")
-      .eq("contatoId", contatoId)
-      .order("criadoEm", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    convId = conv?.id ?? null
+    // Mesma regra do documento: a mensagem esta saindo agora, entao pertence ao
+    // atendimento aberto.
+    const aberta = await obterAtendimentoAberto(contatoId)
+    convId = aberta?.id ?? null
   }
   if (!convId) return
 

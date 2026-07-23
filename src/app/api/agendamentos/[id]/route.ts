@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { requireAnyRole, requireRole } from "@/lib/auth-helpers"
 import { atualizarAgendamentoSchema } from "@/lib/validations/agendamento"
 import { atualizarEvento, cancelarEvento } from "@/lib/google-calendar"
-import { agora } from "@/lib/db-utils"
+import { agora, instanteDoBanco } from "@/lib/db-utils"
 import { registrarAuditLog } from "@/lib/audit"
 import { validarSlotManual } from "@/lib/agendamento/validar-slot"
 
@@ -80,7 +80,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const duracaoMudou = parsed.data.duracao !== undefined && parsed.data.duracao !== atual.duracao
 
   if (atualizado.googleEventId && (dataHoraMudou || duracaoMudou)) {
-    const inicio = new Date(atualizado.dataHora)
+    // Coluna naive em UTC. Este valor vai direto pro Google Calendar: ler pelo
+    // fuso do processo moveria a reuniao de verdade na agenda do paciente.
+    const inicio = new Date(instanteDoBanco(atualizado.dataHora))
     const fim = new Date(inicio.getTime() + (atualizado.duracao ?? 60) * 60_000)
     const resultadoCalendar = await atualizarEvento(atualizado.googleEventId, {
       inicio,

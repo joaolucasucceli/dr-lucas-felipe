@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
+import { instanteDoBanco } from "@/lib/db-utils"
 import { listarEventos } from "@/lib/google-calendar"
 import {
   gerarSlotsCandidatos,
@@ -56,7 +57,10 @@ export async function POST(request: NextRequest) {
   const ocupacoes: Ocupacao[] = [
     ...eventosCalendar.map((e) => ({ inicio: e.inicio, fim: e.fim })),
     ...(agendamentosDb ?? []).map((a) => {
-      const inicio = new Date(a.dataHora)
+      // `agendamentos.dataHora` e `timestamp WITHOUT time zone` guardando UTC.
+      // Sem `instanteDoBanco` a ocupacao desloca pelo fuso do processo e o
+      // agente ofereceria horario ja ocupado (ou bloquearia um livre).
+      const inicio = new Date(instanteDoBanco(a.dataHora))
       const dur = a.duracao ?? DURACAO_AVALIACAO_MIN
       return { inicio, fim: new Date(inicio.getTime() + dur * 60_000) }
     }),

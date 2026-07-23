@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase"
 import { listarEventos } from "@/lib/google-calendar"
+import { instanteDoBanco } from "@/lib/db-utils"
 import {
   gerarSlotsCandidatos,
   slotConflitaCom,
@@ -80,7 +81,8 @@ export async function validarSlotManual(
   const ocupacoesDb: Ocupacao[] = (agendamentosDb.data ?? [])
     .filter((a) => a.id !== ignorarAgendamentoId)
     .map((a) => {
-      const inicio = new Date(a.dataHora)
+      // Coluna naive em UTC — ver `instanteDoBanco`.
+      const inicio = new Date(instanteDoBanco(a.dataHora))
       const dur = a.duracao ?? 60
       return { inicio, fim: new Date(inicio.getTime() + dur * 60_000) }
     })

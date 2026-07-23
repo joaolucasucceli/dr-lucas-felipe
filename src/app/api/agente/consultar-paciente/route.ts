@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarId, agora } from "@/lib/db-utils"
 import { buscarContatoAtivoPorWhatsappNormalizado } from "@/lib/contatos/whatsapp"
+import { obterAtendimentoAberto } from "@/lib/conversas/atendimento"
 import type { Database } from "@/lib/types/database"
 
 const SELECT_CONTATO =
@@ -89,14 +90,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Contato nao encontrado" }, { status: 500 })
   }
 
-  const { data: conversa } = await supabaseAdmin
-    .from("conversas")
-    .select("id, etapa")
-    .eq("contatoId", contato.id)
-    .eq("ciclo", contato.cicloAtual)
-    .order("criadoEm", { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  // Conversa ABERTA — a mesma que o webhook acabou de resolver/abrir.
+  // Antes filtrava por `ciclo` e ignorava `encerradaEm`, entao o agente podia
+  // apontar para uma conversa encerrada enquanto o webhook gravava a mensagem
+  // em outra. Fonte unica: src/lib/conversas/atendimento.ts.
+  const conversa = await obterAtendimentoAberto(contato.id)
 
   let ultimoProcedimento: string | null = null
   if (contato.ehRetorno && contato.ciclosCompletos > 0) {

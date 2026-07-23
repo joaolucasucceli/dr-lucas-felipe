@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase"
 import { openai } from "@/lib/openai"
 import { enviarMensagem } from "@/lib/uazapi"
-import { agora } from "@/lib/db-utils"
+import { agora, instanteDoBanco } from "@/lib/db-utils"
 import type { ContatoAgente, ConfigWhatsappAtivo } from "./types"
 
 interface ConversaComContato {
@@ -66,7 +66,10 @@ export async function buscarConversasParaFollowUp(): Promise<FollowUpPendente[]>
 
     if (agendamentoAtivo) continue
 
-    const ultimaMsg = new Date(conversaRaw.ultimaMensagemEm)
+    // `conversas.ultimaMensagemEm` e `timestamp WITHOUT time zone` guardando
+    // UTC: `new Date()` direto interpretaria pelo fuso do processo e deslocaria
+    // a janela de 24h/48h. Ver `instanteDoBanco`.
+    const ultimaMsg = new Date(instanteDoBanco(conversaRaw.ultimaMensagemEm))
     const followUps = conversaRaw.followUpEnviados ?? []
 
     const conversa: ConversaComContato = {
