@@ -22,6 +22,7 @@ import {
   mascararDataBr,
 } from "@/lib/agendamento/data-br"
 import type { AgendamentoAgenda } from "@/hooks/use-agenda"
+import { instanteDoBanco } from "@/lib/db-utils"
 
 interface ReagendarDialogProps {
   agendamento: AgendamentoAgenda | null
@@ -65,7 +66,9 @@ export function ReagendarDialog({
 
     if (!agendamento) return
 
-    if (novaIso === new Date(agendamento.dataHora).toISOString()) {
+    // `agendamentos.dataHora` e naive em UTC — comparar com `new Date` cru
+    // usaria o fuso do BROWSER (nunca UTC) e a checagem erraria por 3h.
+    if (novaIso === new Date(instanteDoBanco(agendamento.dataHora)).toISOString()) {
       setErro("Data/hora não mudou")
       return
     }

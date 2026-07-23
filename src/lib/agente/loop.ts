@@ -31,6 +31,7 @@ import {
 } from "@/lib/agente/fluxo-qualificacao"
 import { enviarMensagem, enviarDigitando } from "@/lib/uazapi"
 import { criarId, agora, instanteDoBanco } from "@/lib/db-utils"
+import { orcamentoVigente, type OrcamentoVigente } from "@/lib/orcamento/vigencia"
 import { redis } from "@/lib/redis"
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
@@ -647,13 +648,6 @@ function textoPrometeEnvioOrcamento(texto: string): boolean {
   return mencionaOrcamento && prometeuEnvio
 }
 
-interface OrcamentoRespondidoContexto {
-  id: string
-  respondidoEm: string | null
-  observacoes: string | null
-  resumoCaso: string | null
-}
-
 interface SlotAgendamentoOferecido {
   label: string
   dataIso: string
@@ -829,21 +823,13 @@ function pacienteAprovouOrcamento(texto: string): boolean {
   ].some((termo) => normalizado.includes(termo))
 }
 
-function extrairValorOrcamento(observacoes: string | null): string | null {
-  return observacoes?.match(/R\$\s*[\d.]+(?:,\d{2})?/i)?.[0] ?? null
-}
-
-function extrairPdfOrcamento(observacoes: string | null): string | null {
-  return observacoes?.match(/https?:\/\/\S+/i)?.[0] ?? null
-}
-
 function montarRespostaAgendamentoAposOrcamento(
   contexto: ContextoContato,
-  orcamento: OrcamentoRespondidoContexto
+  orcamento: OrcamentoVigente
 ): string {
   const primeiroNome = contexto.nome?.trim().split(/\s+/)[0]
   const vocativo = primeiroNome ? `, ${primeiroNome}` : ""
-  const valor = extrairValorOrcamento(orcamento.observacoes)
+  const valor = orcamento.valorFormatado
   const prefixo = valor
     ? `Esse orcamento de ${valor} ja foi definido pelo Dr. Lucas`
     : "Esse orcamento ja foi definido pelo Dr. Lucas"
@@ -1523,7 +1509,7 @@ async function montarFastPathAgendamento(params: {
   contatoId: string
   conversaId: string | null
   baseUrl: string
-  orcamentoRespondido: OrcamentoRespondidoContexto | null
+  orcamentoRespondido: OrcamentoVigente | null
 }): Promise<string | null> {
   const {
     chatId,
@@ -1984,27 +1970,6 @@ async function montarFastPathReagendamentoCancelamento(params: {
   return null
 }
 
-async function obterUltimoOrcamentoRespondido(
-  contatoId: string
-): Promise<OrcamentoRespondidoContexto | null> {
-  const { data, error } = await supabaseAdmin
-    .from("eventos_orcamento_pendente")
-    .select("id, respondidoEm, observacoes, resumoCaso")
-    .eq("contatoId", contatoId)
-    .not("respondidoEm", "is", null)
-    .is("canceladoEm", null)
-    .order("respondidoEm", { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (error) {
-    console.warn("[Agente] Erro ao buscar orcamento respondido:", error.message)
-    return null
-  }
-
-  return (data as OrcamentoRespondidoContexto | null) ?? null
-}
-
 function anexarFatoContexto(
   sobreOPaciente: string | undefined,
   fato: string
@@ -2131,6 +2096,38 @@ async function acionarHandoffPorFreio(params: {
   }
 }
 
+/**
+ * Ultima barreira contra link de arquivo no texto da Ana.
+ *
+ * Mira SO endereco de storage/PDF — o link do Google Meet a Ana precisa mandar
+ * (o convite por e-mail falha: spam, caixa cheia, endereco errado), entao
+ * bloquear todo `http` quebraria a reuniao.
+ *
+ * Fica no funil unico de saida, ao lado do circuit-breaker: qualquer caminho de
+ * envio novo herda a protecao sem ninguem lembrar dela. Arquivo se entrega como
+ * documento (`reenviar_orcamento_pdf`), nunca como endereco escrito.
+ */
+function removerLinkDeArquivo(texto: string): string {
+  const LINK_ARQUIVO = /\[?[^\]\s]*\]?\(?\bhttps?:\/\/\S*(?:supabase\.co\/storage|\.pdf)\S*\)?/gi
+
+  if (!LINK_ARQUIVO.test(texto)) return texto
+  LINK_ARQUIVO.lastIndex = 0
+
+  const limpo = texto
+    .replace(LINK_ARQUIVO, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+([.,!?])/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+
+  console.warn(
+    "[Agente] Link de arquivo removido da resposta — PDF se entrega como documento",
+    { trecho: texto.slice(0, 160) }
+  )
+
+  return limpo
+}
+
 async function enviarRespostaAgente(params: {
   chatId: string
   whatsapp: string
@@ -2149,7 +2146,7 @@ async function enviarRespostaAgente(params: {
     textoUsuario,
     textoResposta,
   } = params
-  const textoFinal = humanizarTexto(textoResposta)
+  const textoFinal = removerLinkDeArquivo(humanizarTexto(textoResposta))
   const segmentos = segmentarResposta(textoFinal)
 
   if (segmentos.length === 0) return false
@@ -2307,7 +2304,7 @@ export async function processarMensagens(
   let contatoId: string | null = null
   let conversaId: string | null = null
   let primeiraRespostaDaConversa = false
-  let orcamentoRespondidoAtual: OrcamentoRespondidoContexto | null = null
+  let orcamentoRespondidoAtual: OrcamentoVigente | null = null
   let pacienteAprovouOrcamentoRespondido = false
   let orcamentoPendenteConsultivo = false
   const enviarResultadosDuranteEsperaOrcamento = async () => {
@@ -2633,11 +2630,12 @@ export async function processarMensagens(
   }
 
   if (contatoId) {
-    orcamentoRespondidoAtual = await obterUltimoOrcamentoRespondido(contatoId)
+    // Portao unico: so entra no contexto orcamento deste atendimento e dentro
+    // da validade impressa no PDF (src/lib/orcamento/vigencia.ts).
+    orcamentoRespondidoAtual = await orcamentoVigente({ contatoId, conversaId })
     if (orcamentoRespondidoAtual) {
       contextoContato.orcamentoRespondido = {
-        valor: extrairValorOrcamento(orcamentoRespondidoAtual.observacoes),
-        pdfUrl: extrairPdfOrcamento(orcamentoRespondidoAtual.observacoes),
+        valor: orcamentoRespondidoAtual.valorFormatado,
         respondidoEm: orcamentoRespondidoAtual.respondidoEm,
       }
     }

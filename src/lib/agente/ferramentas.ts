@@ -308,6 +308,28 @@ export const ferramentasAgente: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "reenviar_orcamento_pdf",
+      description:
+        "Reenvia o PDF do orcamento como DOCUMENTO no WhatsApp. Use quando o paciente pedir o arquivo de novo (\"perdi o PDF\", \"manda de novo\", \"nao abriu\"). Voce NAO tem o endereco do arquivo e nunca deve escrever um: esta tool e o unico jeito de entregar. Se ela responder enviado: false, nao prometa o arquivo — siga o motivo retornado.",
+      parameters: {
+        type: "object",
+        properties: {
+          contatoId: {
+            type: "string",
+            description: "ID do lead/paciente",
+          },
+          conversaId: {
+            type: "string",
+            description: "ID da conversa ativa",
+          },
+        },
+        required: ["contatoId", "conversaId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "enviar_midia",
       description:
         "Envia uma mídia específica para o paciente via WhatsApp. Passe o midiaId escolhido após ler o array `midias` retornado por buscar_conteudo. Prefira midias com jaEnviada: false.",

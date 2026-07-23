@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabase"
+import { orcamentoVigente } from "@/lib/orcamento/vigencia"
 import { validarApiSecret } from "@/lib/api-auth"
 import { criarId, agora } from "@/lib/db-utils"
 import { notificarDrLucasOrcamento } from "@/lib/agente/notificar-handoff"
@@ -119,25 +120,22 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // Se o Dr. Lucas ja respondeu um orcamento neste ciclo, nao cria uma nova
-  // pendencia so porque o modelo perdeu contexto ou o paciente aprovou seguir.
-  const { data: respondido } = await supabaseAdmin
-    .from("eventos_orcamento_pendente")
-    .select("id, respondidoEm, observacoes")
-    .eq("contatoId", contatoId)
-    .not("respondidoEm", "is", null)
-    .is("canceladoEm", null)
-    .order("respondidoEm", { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  // Se o Dr. Lucas ja respondeu um orcamento VIGENTE neste atendimento, nao cria
+  // outra pendencia so porque o modelo perdeu contexto.
+  //
+  // Ate 23/07/2026 esta query nao filtrava atendimento nem validade, apesar do
+  // comentario dizer "neste ciclo": um orcamento de qualquer epoca bloqueava
+  // orcamento novo PARA SEMPRE, e em silencio — lead real em numero reaproveitado
+  // nunca conseguiria ter o proprio. Ver OPE-427.
+  const vigente = await orcamentoVigente({ contatoId, conversaId: conversaId ?? null })
 
-  if (respondido) {
+  if (vigente) {
     return NextResponse.json({
       ok: true,
       jaRespondido: true,
-      orcamentoRespondidoId: respondido.id,
-      respondidoEm: respondido.respondidoEm,
-      observacoes: respondido.observacoes,
+      orcamentoRespondidoId: vigente.id,
+      respondidoEm: vigente.respondidoEm,
+      validoAte: vigente.validoAte,
     })
   }
 

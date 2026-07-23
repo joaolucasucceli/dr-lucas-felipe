@@ -11,7 +11,22 @@ import { OrcamentoPDF, type DadosOrcamento } from "@/lib/orcamento/pdf"
  */
 
 const BUCKET = "atendimento-midias"
-const VALIDADE_PADRAO_DIAS = 7
+
+/**
+ * Validade do orcamento em dias (decisao do Joao, 23/07/2026).
+ *
+ * FONTE UNICA: e o prazo impresso no PDF que o paciente recebe E o prazo que
+ * `orcamentoVigente()` usa para decidir se aquele orcamento ainda entra na
+ * conversa. Mudar aqui muda os dois juntos — nunca escrever o numero de novo
+ * em outro lugar.
+ */
+export const VALIDADE_PADRAO_DIAS = 15
+
+/** Fim da validade de um orcamento respondido em `respondidoEmIso`. */
+export function calcularValidoAte(respondidoEmIso: string): string {
+  const base = new Date(respondidoEmIso).getTime()
+  return new Date(base + VALIDADE_PADRAO_DIAS * 24 * 60 * 60 * 1000).toISOString()
+}
 
 /** Foto do Dr. Lucas usada no cabecalho do PDF (URL absoluta). */
 export function urlFotoDrLucas(): string {

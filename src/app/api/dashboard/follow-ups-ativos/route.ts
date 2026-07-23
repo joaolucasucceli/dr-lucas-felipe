@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireAuth } from "@/lib/auth-helpers"
+import { instanteDoBanco } from "@/lib/db-utils"
 
 export async function GET() {
   const { error } = await requireAuth()
@@ -54,7 +55,7 @@ export async function GET() {
     .sort((a, b) => {
       if (!a.ultimaMensagemEm) return 1
       if (!b.ultimaMensagemEm) return -1
-      return new Date(a.ultimaMensagemEm).getTime() - new Date(b.ultimaMensagemEm).getTime()
+      return instanteDoBanco(a.ultimaMensagemEm) - instanteDoBanco(b.ultimaMensagemEm)
     })
 
   return NextResponse.json({

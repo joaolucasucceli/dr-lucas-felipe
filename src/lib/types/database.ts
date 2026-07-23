@@ -803,11 +803,15 @@ export type Database = {
           conversaId: string | null
           criadoEm: string
           id: string
+          nomeArquivo: string | null
           notificacaoEnviadaEm: string | null
           observacoes: string | null
+          pdfUrl: string | null
           prioridade: string
           respondidoEm: string | null
           resumoCaso: string
+          validoAte: string | null
+          valorCentavos: number | null
         }
         Insert: {
           canceladoEm?: string | null
@@ -815,11 +819,15 @@ export type Database = {
           conversaId?: string | null
           criadoEm?: string
           id: string
+          nomeArquivo?: string | null
           notificacaoEnviadaEm?: string | null
           observacoes?: string | null
+          pdfUrl?: string | null
           prioridade?: string
           respondidoEm?: string | null
           resumoCaso: string
+          validoAte?: string | null
+          valorCentavos?: number | null
         }
         Update: {
           canceladoEm?: string | null
@@ -827,11 +835,15 @@ export type Database = {
           conversaId?: string | null
           criadoEm?: string
           id?: string
+          nomeArquivo?: string | null
           notificacaoEnviadaEm?: string | null
           observacoes?: string | null
+          pdfUrl?: string | null
           prioridade?: string
           respondidoEm?: string | null
           resumoCaso?: string
+          validoAte?: string | null
+          valorCentavos?: number | null
         }
         Relationships: [
           {

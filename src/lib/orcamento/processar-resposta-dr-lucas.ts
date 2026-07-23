@@ -1,7 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase"
 import { agora, criarId } from "@/lib/db-utils"
 import { enviarMensagem, enviarMidia } from "@/lib/uazapi"
-import { gerarEHospedarOrcamento, formatarBrl } from "@/lib/orcamento/gerar"
+import {
+  gerarEHospedarOrcamento,
+  formatarBrl,
+  calcularValidoAte,
+} from "@/lib/orcamento/gerar"
 import { adicionarAMemoria } from "@/lib/agente/memoria"
 import { obterAtendimentoAberto } from "@/lib/conversas/atendimento"
 
@@ -315,13 +319,19 @@ export async function processarRespostaDrLucas(args: {
       console.error("[orcamento-dr-lucas] falha ao anexar PDF ao contato:", err)
     }
 
-    // Marca pendencia respondida (guarda o valor em `observacoes` pra auditoria)
-    // e retoma o atendimento da cliente.
+    // Marca pendencia respondida e retoma o atendimento da cliente.
+    // Valor, PDF e validade vao em COLUNAS (OPE-426); `observacoes` sobra como
+    // log legivel de auditoria e ninguem mais o parseia.
+    const respondidoEm = agora()
     await Promise.all([
       supabaseAdmin
         .from("eventos_orcamento_pendente")
         .update({
-          respondidoEm: agora(),
+          respondidoEm,
+          valorCentavos: Math.round(valor * 100),
+          pdfUrl,
+          nomeArquivo,
+          validoAte: calcularValidoAte(respondidoEm),
           observacoes: `Valor informado pelo Dr. Lucas: ${valorFormatado}. PDF: ${pdfUrl}`,
         })
         .eq("id", pendencia.id),

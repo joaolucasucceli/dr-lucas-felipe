@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useSession } from "next-auth/react"
 import { Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { instanteDoBanco } from "@/lib/db-utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -157,7 +158,7 @@ export default function UsuariosPage() {
       titulo: "Criado em",
       classesCelula: "hidden lg:table-cell",
       renderizar: (u) =>
-        new Date(u.criadoEm).toLocaleDateString("pt-BR"),
+        new Date(instanteDoBanco(u.criadoEm)).toLocaleDateString("pt-BR"),
     },
     ...(isGestor
       ? [

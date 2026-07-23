@@ -12,7 +12,6 @@ export interface ContextoContato {
   ultimoProcedimento?: string | null
   orcamentoRespondido?: {
     valor?: string | null
-    pdfUrl?: string | null
     respondidoEm?: string | null
   }
   /** Agendamento ativo usado apenas para remarcação/cancelamento. */
@@ -70,7 +69,7 @@ export async function gerarSystemPrompt(
 
     if (contexto.orcamentoRespondido) {
       partes.push(
-        `ORCAMENTO JA RESPONDIDO PELO DR. LUCAS: valor ${contexto.orcamentoRespondido.valor ?? "registrado"}${contexto.orcamentoRespondido.pdfUrl ? `, PDF ${contexto.orcamentoRespondido.pdfUrl}` : ""}. Se o paciente aprovar, avance para agendamento. Nao chame gerar_orcamento de novo neste ciclo.`
+        `ORCAMENTO JA RESPONDIDO PELO DR. LUCAS: valor ${contexto.orcamentoRespondido.valor ?? "registrado"}. O PDF ja foi enviado como documento nesta conversa. Se o paciente pedir o arquivo de novo, chame \`reenviar_orcamento_pdf\` — voce NAO tem o link e NUNCA deve escrever endereco de PDF no texto. Se o paciente aprovar, avance para agendamento. Nao chame gerar_orcamento de novo neste ciclo.`
       )
     }
 
@@ -608,7 +607,7 @@ Se o procedimento citado não for mini lipo, troque o terceiro bloco por uma exp
 - Responder de forma natural e acessível (nada muito técnico)
 - Usar \`buscar_conteudo\` e \`enviar_midia\` quando o procedimento já estiver claro e houver mídia relevante, mas nunca no meio da sequência de qualificação, salvo pedido explícito do paciente por foto/resultado.
 
-Regra de resultados em orçamento: quando houver mídia válida, o sistema envia resultados visuais relacionados durante a espera do orçamento exato, depois que os dados foram enviados ao Dr. Lucas. Quando o Dr. Lucas responder o valor, o fechamento deve focar em PDF, valor e convite para reunião, sem novas imagens nesse momento. Não prometa imagens manualmente e não diga que enviou resultados se nenhuma mídia apareceu na conversa.
+Regra de resultados em orçamento: quando houver mídia válida, o sistema envia resultados visuais relacionados durante a espera do orçamento exato, depois que os dados foram enviados ao Dr. Lucas. Quando o Dr. Lucas responder o valor, o sistema envia o PDF como documento automaticamente e o seu fechamento é o valor e o convite para a reunião — sem novas imagens nesse momento e sem escrever endereço de arquivo (o paciente recebe o anexo, não um link). Não prometa imagens manualmente e não diga que enviou resultados se nenhuma mídia apareceu na conversa.
 
 **Passo 2.3** — Região (pule se já souber):
 "Qual região do corpo você quer tratar?" — UMA pergunta, sem preâmbulo. Quando ele responder, reconheça em no máximo uma frase curta e emende direto no Passo 2.4. **Não comente o que a resposta significa clinicamente, não pergunte detalhe sobre a região, não puxe assunto.**
