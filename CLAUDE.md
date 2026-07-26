@@ -1,6 +1,6 @@
 # Central Dr. Lucas
 
-> **Tarefas deste projeto vivem no Linear** — time João Lucas Ucceli (`OPE`), projeto **Central Dr. Lucas**. Nada de tarefa em documento, áudio ou memória. Criar issue com etiqueta de cliente e critério de pronto; atualizar estado, comentário e checklist **durante** o trabalho. Regras completas no `CLAUDE.md` da pasta-mãe `joao-lucas-ucceli/`.
+> **Tarefas deste projeto vivem no Linear** — time João Lucas Ucceli (`OPE`), projeto **Central Dr. Lucas** (`fbe11769-33d2-497e-960a-9d592fa7c3c6`). **Esta sessão é dona do próprio quadro:** abre lendo as issues abertas do projeto e não encerra deixando trabalho feito com issue aberta. Nada de tarefa em documento, áudio ou memória. Criar issue com etiqueta de cliente e critério de pronto; o ciclo é fechado: auditar → planejar dentro da issue → `Fazendo` → executar → revisar (typecheck + lint + build + fluxo real) → commit/push → produção → **testar em produção** → fechar com prova na issue. Regras completas no `CLAUDE.md` da pasta-mãe `joao-lucas-ucceli/`.
 
 ## Como corrigir neste projeto (regra do João, 22/07/2026)
 
