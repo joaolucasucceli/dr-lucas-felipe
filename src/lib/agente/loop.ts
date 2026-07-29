@@ -2396,7 +2396,23 @@ export async function processarMensagens(
         nome: nomePaciente,
         email: resultadoPaciente.contato.email,
         procedimento: resultadoPaciente.contato.procedimentoInteresse,
-        etapa: resultadoPaciente.contato.statusFunil,
+        // A etapa que governa os fast-paths é a do ATENDIMENTO corrente, nunca
+        // a do contato (OPE-561). `contatos.statusFunil` é permanente: um
+        // paciente que chegou uma vez em `consulta_agendada` carregava esse
+        // valor para sempre, e como todo fast-path exige etapa inicial, nenhum
+        // voltava a rodar — a conversa inteira caía no GPT-4o sem trilho. Foi o
+        // que produziu os sintomas do teste de 28/07 (não pediu nome, não
+        // reconheceu a região, não acionou o orçamento, não mandou resultados).
+        //
+        // `conversas.etapa` nasce em `acolhimento` (default do banco) e
+        // acompanha só este atendimento. Sem conversa identificada, tratar como
+        // acolhimento é o lado seguro: no pior caso a Ana repete uma pergunta
+        // de abertura; o contrário é atender no escuro.
+        //
+        // O contato segue sendo a ficha permanente da pessoa — nome, região,
+        // histórico, `sobreOPaciente` — e o `statusFunil` continua governando
+        // kanban e relatórios. O que muda é só quem manda no comportamento.
+        etapa: resultadoPaciente.conversa?.etapa ?? "acolhimento",
         sobreOPaciente: resultadoPaciente.sobreOPaciente,
         ehRetorno: resultadoPaciente.contato.ehRetorno,
         cicloAtual: resultadoPaciente.contato.cicloAtual,

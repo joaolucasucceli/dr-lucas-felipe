@@ -36,6 +36,9 @@ export async function POST(req: Request) {
     .from("conversas")
     .update({
       modoConversa: "humano",
+      // Mesma razao do handoff pela tool: `conversas.etapa` governa o
+      // comportamento do agente desde a OPE-561, entao ela acompanha a pausa.
+      etapa: "atendimento_humano" as never,
       atendenteId: auth.session.user.id,
       atualizadoEm: agora(),
     })

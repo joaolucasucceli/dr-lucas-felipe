@@ -7,7 +7,17 @@ export interface EstadoAtualContato {
   nome: string
   origem: string | null
   tipo: TipoContato | null
+  /** Ficha permanente da pessoa. Governa kanban e relatorios. */
   statusFunil: StatusFunil | null
+  /**
+   * Etapa do ATENDIMENTO corrente (`conversas.etapa`), quando ha conversa.
+   *
+   * E ela que decide se uma transicao e valida (OPE-561). Validar contra o
+   * `statusFunil` fazia a Ana travar de vez em quem ja tinha agendado alguma
+   * vez: `TRANSICOES_PERMITIDAS` nao tem entrada para `consulta_agendada`, entao
+   * a lista de permitidas vinha vazia e todo avanco era recusado em silencio.
+   */
+  etapaAtendimento?: StatusFunil | null
   procedimentoInteresse: string | null
   sobreOPaciente: string | null
 }
@@ -149,11 +159,13 @@ export async function aplicarMudancasLead(params: {
     }
   }
 
-  // Etapa: so avanca se TRANSICOES_PERMITIDAS autoriza.
+  // Etapa: so avanca se TRANSICOES_PERMITIDAS autoriza. A referencia e a etapa
+  // do ATENDIMENTO corrente — ver `etapaAtendimento` (OPE-561).
   let etapaAvancada: string | null = null
   const etapaCorreta = mudancas.etapaCorreta
-  if (etapaCorreta && etapaCorreta !== "manter" && etapaCorreta !== estadoAtual.statusFunil) {
-    const etapaAtual = estadoAtual.statusFunil ?? "acolhimento"
+  const etapaAtual =
+    estadoAtual.etapaAtendimento ?? estadoAtual.statusFunil ?? "acolhimento"
+  if (etapaCorreta && etapaCorreta !== "manter" && etapaCorreta !== etapaAtual) {
     const permitidas = TRANSICOES_PERMITIDAS[etapaAtual] || []
     if (permitidas.includes(etapaCorreta)) {
       const dataLead: Record<string, unknown> = {
@@ -179,10 +191,10 @@ export async function aplicarMudancasLead(params: {
       }
 
       etapaAvancada = etapaCorreta
-      camposAtualizados.push(`statusFunil (${estadoAtual.statusFunil} -> ${etapaCorreta})`)
+      camposAtualizados.push(`etapa (${etapaAtual} -> ${etapaCorreta})`)
     } else {
       ignorados.push(
-        `statusFunil (${estadoAtual.statusFunil} -> ${etapaCorreta} nao e transicao permitida)`
+        `etapa (${etapaAtual} -> ${etapaCorreta} nao e transicao permitida)`
       )
     }
   }
