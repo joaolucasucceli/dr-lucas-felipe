@@ -14,6 +14,8 @@
  * mudar o que a Ana pergunta antes do orçamento, edite APENAS este array.
  */
 
+import { temRegiaoNoTexto } from "@/lib/procedimentos/regioes"
+
 export const FATO_FOTO_QUALIFICACAO =
   "Foto atual da região recebida pelo WhatsApp."
 
@@ -58,15 +60,10 @@ export interface EtapaQualificacao {
   montarFato: (resposta: string) => string
 }
 
-const REGIOES_CONHECIDAS = [
-  "abdomen",
-  "abdome",
-  "flancos",
-  "papada",
-  "culote",
-  "axila",
-  "costas",
-]
+// As regiões vêm de `REGIOES_CORPO` (procedimentos/regioes.ts), a fonte única.
+// Esta lista era escrita à mão aqui e ficava fora de sincronia com as outras
+// três que existiam dentro de `loop.ts` — foi assim que "abdome" acabou
+// reconhecido em três lugares e ignorado no quarto (OPE-557).
 
 /**
  * ORDEM É O FLUXO. Cortar uma etapa daqui a remove do prompt E dos
@@ -81,12 +78,16 @@ export const ETAPAS_QUALIFICACAO: readonly EtapaQualificacao[] = [
   {
     chave: "regiao",
     rotuloPrompt: "região que o paciente quer tratar",
+    // A região é dada por coletada quando um marcador explícito foi gravado, ou
+    // quando ela está no `procedimentoInteresse` (campo estruturado, ex.: "mini
+    // lipo abdome"). De propósito NÃO se procura região no texto livre das
+    // anotações: "paciente perguntou se faz lipo de abdome" não é a região do
+    // caso dela, e o falso positivo faria a Ana pular a pergunta e mandar o
+    // caso ao Dr. Lucas sem região.
     jaColetado: ({ info, procedimento }) =>
       info.includes("regiao de interesse") ||
       info.includes("regiao do procedimento") ||
-      info.includes("regiao de abdomen") ||
-      info.includes("regiao de abdome") ||
-      REGIOES_CONHECIDAS.some((regiao) => procedimento.includes(regiao)),
+      temRegiaoNoTexto(procedimento),
     pergunta: "Perfeito{nome}. Qual região do corpo você quer tratar?",
     continuacao: "qual região do corpo você quer tratar?",
     perguntaFeita: (normalizado) =>

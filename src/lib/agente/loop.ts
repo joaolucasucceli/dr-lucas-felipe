@@ -18,6 +18,10 @@ import {
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { sanitizarSobreOPaciente } from "@/lib/agente/sanitizar-contexto"
 import {
+  primeiraRegiaoDoTexto,
+  temRegiaoNoTexto,
+} from "@/lib/procedimentos/regioes"
+import {
   avaliarEnvio,
   bufferTemConteudoUtil,
   limparFreio,
@@ -192,18 +196,7 @@ function detectarServicoAbertura(texto: string): {
   regiao?: string
 } | null {
   const normalizado = normalizarTextoBusca(texto)
-  const regioes = [
-    { termo: "abdomen", label: "abdômen" },
-    { termo: "abdome", label: "abdômen" },
-    { termo: "barriga", label: "abdômen" },
-    { termo: "flanco", label: "flancos" },
-    { termo: "papada", label: "papada" },
-    { termo: "culote", label: "culote" },
-    { termo: "costas", label: "costas" },
-    { termo: "axila", label: "axilas" },
-    { termo: "braco", label: "braços" },
-  ]
-  const regiao = regioes.find((item) => normalizado.includes(item.termo))?.label
+  const regiao = primeiraRegiaoDoTexto(texto) ?? undefined
 
   if (
     normalizado.includes("mini lipo") ||
@@ -741,18 +734,10 @@ function detectarInteresseQualificacao(texto: string): {
     normalizado.includes("minilipo") ||
     normalizado.includes("lipo")
 
-  const regioes = [
-    { termo: "abdomen", label: "abdômen" },
-    { termo: "barriga", label: "abdômen" },
-    { termo: "flanco", label: "flancos" },
-    { termo: "papada", label: "papada" },
-    { termo: "culote", label: "culote" },
-    { termo: "costas", label: "costas" },
-    { termo: "axila", label: "axilas" },
-    { termo: "braco", label: "bracos" },
-  ]
-
-  const regiao = regioes.find((r) => normalizado.includes(r.termo))?.label
+  // Esta lista era escrita à mão aqui e não tinha "abdome" — o paciente dizia
+  // "lipo fracionada de abdome" e a Ana perguntava a região logo depois
+  // (OPE-557). Agora vem de `REGIOES_CORPO`, a fonte única.
+  const regiao = primeiraRegiaoDoTexto(texto)
   if (!indicouIntencao || !regiao) return null
 
   const procedimentoBase =
@@ -777,18 +762,8 @@ function devePersistirProcedimentoInteresse(
   if (!atualNorm) return true
   if (atualNorm === novoNorm) return false
 
-  const regioes = [
-    "abdomen",
-    "abdome",
-    "flancos",
-    "papada",
-    "culote",
-    "costas",
-    "axilas",
-    "bracos",
-  ]
-  const atualTemRegiao = regioes.some((regiao) => atualNorm.includes(regiao))
-  const novoTemRegiao = regioes.some((regiao) => novoNorm.includes(regiao))
+  const atualTemRegiao = temRegiaoNoTexto(atualNorm)
+  const novoTemRegiao = temRegiaoNoTexto(novoNorm)
   if (!atualTemRegiao && novoTemRegiao) return true
 
   return novoNorm.includes(atualNorm) && novoNorm.length > atualNorm.length
