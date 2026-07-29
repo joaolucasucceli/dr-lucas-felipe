@@ -628,23 +628,55 @@ function assistenteJaAvisouAguardandoOrcamento(
   )
 }
 
-function textoPrometeEnvioOrcamento(texto: string): boolean {
+/**
+ * A resposta está dizendo ao paciente que o caso foi (ou vai ser) levado ao
+ * Dr. Lucas? Se sim e a tool não rodou, o loop aciona `gerar_orcamento` antes
+ * de enviar — é a guarda anti-promessa.
+ *
+ * A lista era fechada e não reconhecia a frase que o PRÓPRIO sistema gera em
+ * `montarRespostaFotoQualificacaoCompleta` — "Agora tenho o que o Dr. Lucas
+ * precisa pra definir o orçamento exato". Foi assim que, em 28/07/2026, a Ana
+ * anunciou o envio sem nenhum registro em `eventos_orcamento_pendente`: o
+ * Dr. Lucas nunca foi chamado e a paciente ficou esperando um valor que não
+ * viria (OPE-549).
+ *
+ * Agora a detecção é por COMPOSIÇÃO, não por frase inteira: menção ao assunto
+ * (orçamento/valor) + sinal de que o caso está com ele (posse ou envio). Frase
+ * nova do modelo continua sendo pega sem precisar entrar numa lista.
+ */
+export function textoPrometeEnvioOrcamento(texto: string): boolean {
   const normalizado = normalizarTextoBusca(texto)
+
   const mencionaOrcamento =
-    normalizado.includes("orcamento") || normalizado.includes("valor certinho")
-  const prometeuEnvio =
-    normalizado.includes("mandei seus dados") ||
-    normalizado.includes("enviei seus dados") ||
-    normalizado.includes("vou mandar seus dados") ||
-    normalizado.includes("vou enviar seus dados") ||
-    normalizado.includes("vou deixar o dr lucas") ||
-    normalizado.includes("vou passar pro dr lucas") ||
-    normalizado.includes("vou mandar pro dr lucas") ||
+    normalizado.includes("orcamento") ||
+    normalizado.includes("valor certinho") ||
+    normalizado.includes("valor exato") ||
+    normalizado.includes("definir o valor")
+
+  if (!mencionaOrcamento) return false
+
+  // "já tenho o que ele precisa", "tenho os dados principais" — o caso está
+  // completo do lado dela. É a família que faltava.
+  const anunciaPosseDoCaso =
+    /\b(ja\s+)?tenho\s+(o\s+que|os\s+dados|tudo\s+que|as\s+informacoes)/.test(
+      normalizado
+    )
+
+  // "vou enviar pra ele", "mandei seus dados", "vou passar pro Dr. Lucas"
+  const anunciaEnvio =
+    /\b(vou|ja)\s+(enviar|mandar|passar|deixar|encaminhar)\b/.test(normalizado) ||
+    /\b(mandei|enviei|passei|encaminhei|deixei)\b/.test(normalizado) ||
     normalizado.includes("dados foram enviados") ||
-    normalizado.includes("deixei o dr lucas com esses dados") ||
     normalizado.includes("ja usei essas informacoes pra gerar")
 
-  return mencionaOrcamento && prometeuEnvio
+  // `normalizarTextoBusca` tira acento, mas não pontuação: o modelo escreve
+  // "Dr. Lucas" com ponto na maior parte das vezes.
+  const mencionaDrLucas =
+    /\b(dr\.?|doutor)\s+lucas\b/.test(normalizado) ||
+    normalizado.includes("pra ele") ||
+    normalizado.includes("para ele")
+
+  return anunciaPosseDoCaso || (anunciaEnvio && mencionaDrLucas)
 }
 
 interface SlotAgendamentoOferecido {
