@@ -1022,6 +1022,38 @@ async function conversaTemMidiaDoAgente(
   return Boolean(data)
 }
 
+/**
+ * A Ana já mandou mídia nesta conversa depois de `desde`?
+ *
+ * Sem a data, o envio de resultados repetiria a cada mensagem do paciente
+ * durante a espera do orçamento (OPE-551). Com ela, sai uma vez por espera.
+ */
+async function conversaTemMidiaDoAgenteDesde(
+  conversaId: string | null,
+  desde: string | null | undefined
+): Promise<boolean> {
+  if (!conversaId) return false
+
+  let query = supabaseAdmin
+    .from("mensagens_whatsapp")
+    .select("id")
+    .eq("conversaId", conversaId)
+    .eq("remetente", "agente")
+    .not("mediaUrl", "is", null)
+
+  if (desde) query = query.gte("criadoEm", desde)
+
+  const { data, error } = await query.limit(1).maybeSingle()
+
+  if (error) {
+    // Na dúvida, assume que já enviou: repetir mídia é pior que não enviar.
+    console.warn("[Agente] Falha ao checar midia da espera:", error.message)
+    return true
+  }
+
+  return Boolean(data)
+}
+
 async function conversaTemRespostaAgente(
   conversaId: string | null
 ): Promise<boolean> {
@@ -2646,7 +2678,7 @@ export async function processarMensagens(
     // mas nao pode criar novo orcamento nem iniciar agenda antes do valor voltar.
     const { data: contatoHandoff } = await supabaseAdmin
       .from("contatos")
-      .select("aguardandoOrcamentoHumano")
+      .select("aguardandoOrcamentoHumano, aguardandoOrcamentoDesde")
       .eq("id", contatoId)
       .maybeSingle()
 
@@ -2655,6 +2687,21 @@ export async function processarMensagens(
         ?.aguardandoOrcamentoHumano
     ) {
       orcamentoPendenteConsultivo = true
+
+      // Resultados na espera do orçamento: condição de ESTADO, não da rodada
+      // (OPE-551). Antes isso dependia de `gerar_orcamento` ter retornado ok
+      // naquele exato processamento — se a tool falhasse, ou se o caminho
+      // fosse outro, o paciente ficava esperando sem nada e ninguém sabia.
+      // Agora: está aguardando e ainda não recebeu resultados nesta espera →
+      // envia. A checagem por data é o que impede repetir a cada mensagem.
+      const esperaDesde = (
+        contatoHandoff as { aguardandoOrcamentoDesde?: string | null }
+      )?.aguardandoOrcamentoDesde
+
+      if (!(await conversaTemMidiaDoAgenteDesde(conversaId, esperaDesde))) {
+        await enviarResultadosDuranteEsperaOrcamento()
+      }
+
       if (ehRespostaAfirmativaCurta(textoBuffer)) {
         const memoriaAtual = await obterMemoria(chatId)
         if (assistenteJaAvisouAguardandoOrcamento(memoriaAtual)) {
