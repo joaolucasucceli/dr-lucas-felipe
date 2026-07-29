@@ -17,6 +17,7 @@ import {
 } from "@/lib/agente/gatilho-midia"
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { sanitizarSobreOPaciente } from "@/lib/agente/sanitizar-contexto"
+import { validarSaida } from "@/lib/agente/validar-saida"
 import {
   primeiraRegiaoDoTexto,
   temRegiaoNoTexto,
@@ -2143,6 +2144,10 @@ async function enviarRespostaAgente(params: {
   configWa: { uazapiUrl: string; instanceToken: string }
   textoUsuario: string
   textoResposta: string
+  /** A rodada enviou mídia, ou vai enviar logo depois desta mensagem. */
+  midiaNaRodada?: boolean
+  /** Contexto usado para devolver a pergunta da etapa pendente, se preciso. */
+  contexto?: ContextoContato
 }): Promise<boolean> {
   const {
     chatId,
@@ -2152,8 +2157,35 @@ async function enviarRespostaAgente(params: {
     configWa,
     textoUsuario,
     textoResposta,
+    midiaNaRodada = false,
+    contexto,
   } = params
-  const textoFinal = removerLinkDeArquivo(humanizarTexto(textoResposta))
+
+  // Validador de saída (OPE-558): o script proíbe fecho passivo, relato de erro
+  // interno e anúncio de mídia sem envio, mas isso vivia só no prompt — 8 das
+  // 24 mensagens do teste de 28/07 terminaram com frase da lista negra. Fica
+  // aqui, no funil único, ao lado do freio e do `removerLinkDeArquivo`.
+  const validado = validarSaida(
+    removerLinkDeArquivo(humanizarTexto(textoResposta)),
+    {
+      midiaNaRodada,
+      perguntaDeContinuidade: contexto
+        ? montarProximaPerguntaQualificacao(contexto)
+        : null,
+    }
+  )
+
+  if (validado.bloqueios.length > 0) {
+    console.warn("[Agente] Validador de saida removeu trecho proibido", {
+      contatoId,
+      conversaId,
+      regras: validado.bloqueios,
+      antes: textoResposta.slice(0, 200),
+      depois: validado.texto.slice(0, 200),
+    })
+  }
+
+  const textoFinal = validado.texto
   const segmentos = segmentarResposta(textoFinal)
 
   if (segmentos.length === 0) return false
@@ -2888,6 +2920,8 @@ export async function processarMensagens(
         configWa: configEnvio,
         textoUsuario: textoBuffer,
         textoResposta: textoRetry,
+        midiaNaRodada: enviarResultadosOrcamentoPendente,
+        contexto: contextoContato,
       })
 
       if (enviouRetry && enviarResultadosOrcamentoPendente) {
@@ -3011,6 +3045,8 @@ export async function processarMensagens(
         configWa: configEnvio,
         textoUsuario: textoBuffer,
         textoResposta: textoRespostaFastPath,
+        midiaNaRodada: enviarResultadosOrcamentoPendente,
+        contexto: contextoContato,
       })
 
       if (enviouResposta && enviarResultadosOrcamentoPendente) {
@@ -3560,6 +3596,9 @@ export async function processarMensagens(
       configWa: configEnvio,
       textoUsuario: textoBuffer,
       textoResposta,
+      midiaNaRodada:
+        enviouMidiaNestaRodada || enviarResultadosOrcamentoPendenteAposResposta,
+      contexto: contextoContato,
     })
 
     if (enviouResposta && enviarResultadosOrcamentoPendenteAposResposta) {
