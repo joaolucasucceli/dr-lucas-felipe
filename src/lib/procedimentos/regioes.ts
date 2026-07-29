@@ -112,8 +112,22 @@ export function rotuloRegiao(chave: string): string {
  * e a Ana perguntava a região logo em seguida (OPE-557).
  */
 export function primeiraRegiaoDoTexto(texto: string): string | null {
-  const regiao = REGIOES_CORPO.find((r) => r.padrao.test(texto))
-  return regiao ? regiao.rotulo.toLocaleLowerCase("pt-BR") : null
+  // Pela POSIÇÃO no texto, não pela ordem de `REGIOES_CORPO`. A primeira versão
+  // usava `find`, então quem dissesse "quero no glúteo e na barriga" tinha
+  // "abdome" gravado no cadastro — abdome é o primeiro item da lista. O nome da
+  // função prometia uma coisa e ela fazia outra.
+  let melhor: { indice: number; rotulo: string } | null = null
+
+  for (const regiao of REGIOES_CORPO) {
+    // `padrao` não tem flag `g`, então `exec` não guarda estado entre chamadas.
+    const encontrado = regiao.padrao.exec(texto)
+    if (!encontrado) continue
+    if (!melhor || encontrado.index < melhor.indice) {
+      melhor = { indice: encontrado.index, rotulo: regiao.rotulo }
+    }
+  }
+
+  return melhor ? melhor.rotulo.toLocaleLowerCase("pt-BR") : null
 }
 
 /** O texto cita alguma região conhecida? */
