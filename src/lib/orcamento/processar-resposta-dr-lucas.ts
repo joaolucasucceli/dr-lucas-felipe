@@ -295,7 +295,7 @@ export async function processarRespostaDrLucas(args: {
       )
     }
 
-    const notaOrcamento = montarNotaOrcamento(valorFormatado, pdfUrl)
+    const notaOrcamento = montarNotaOrcamento()
     const sobreOPacienteAtualizado = anexarNotaContato(
       contato.sobreOPaciente,
       notaOrcamento
@@ -348,8 +348,6 @@ export async function processarRespostaDrLucas(args: {
 
     await registrarOrcamentoNaMemoria({
       chatId: `${contato.whatsapp}@s.whatsapp.net`,
-      valorFormatado,
-      pdfUrl,
       apresentacao,
     })
 
@@ -487,8 +485,19 @@ function formatarAgoraBR(): string {
   }).format(new Date())
 }
 
-function montarNotaOrcamento(valorFormatado: string, pdfUrl: string): string {
-  return `Orcamento enviado ao paciente: ${valorFormatado} em ${formatarAgoraBR()}. PDF: ${pdfUrl}`
+/**
+ * Rastro no cadastro de que houve orçamento — sem valor e sem link.
+ *
+ * Até 28/07/2026 esta nota gravava `R$ <valor>` e a URL do PDF. Como
+ * `contatos.sobreOPaciente` inteiro é entregue ao modelo como "Informações já
+ * coletadas", o número sobrevivia ao fim do atendimento e voltava na conversa
+ * seguinte: a Ana anunciou "o valor foi de R$ 10.000,00" para um lead que nunca
+ * pediu orçamento (OPE-550). Valor, PDF e validade vivem em
+ * `eventos_orcamento_pendente` e `anexos_contato`, e aparecem no card
+ * "Orçamentos" da tela do contato — que é onde o Dr. Lucas os consulta.
+ */
+function montarNotaOrcamento(): string {
+  return `Orcamento respondido pelo Dr. Lucas e enviado ao paciente em ${formatarAgoraBR()}. Valor e PDF ficam no card Orcamentos do contato.`
 }
 
 function anexarNotaContato(
@@ -500,18 +509,26 @@ function anexarNotaContato(
   return [atual, notaOrcamento].filter(Boolean).join("\n---\n")
 }
 
+/**
+ * A memória diz que o orçamento saiu; ela não guarda o número (OPE-550).
+ *
+ * A memória vive por chatId com TTL de 48h e sobrevive à troca de atendimento
+ * em alguns caminhos. O valor que a Ana pode citar é sempre o de
+ * `orcamentoVigente`, que está preso à conversa atual e à validade do PDF — uma
+ * fonte só. O texto da apresentação (que já foi enviado ao paciente e cita o
+ * valor) continua no histórico como fala real dela.
+ */
 async function registrarOrcamentoNaMemoria(params: {
   chatId: string
-  valorFormatado: string
-  pdfUrl: string
   apresentacao: string
 }): Promise<void> {
-  const { chatId, valorFormatado, pdfUrl, apresentacao } = params
+  const { chatId, apresentacao } = params
 
   try {
     await adicionarAMemoria(chatId, {
       role: "system",
-      content: `Orcamento do Dr. Lucas ja foi enviado ao paciente no valor de ${valorFormatado}. PDF: ${pdfUrl}. Se o paciente aprovar, avance para agendamento. Nao gere novo orcamento neste ciclo.`,
+      content:
+        "O orcamento do Dr. Lucas ja foi enviado ao paciente nesta conversa. O valor esta no contexto do atendimento — nao repita valor de memoria e nao gere novo orcamento neste ciclo. Se o paciente aprovar, avance para agendamento.",
     })
     await adicionarAMemoria(chatId, {
       role: "assistant",

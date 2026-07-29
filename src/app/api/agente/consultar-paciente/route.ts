@@ -5,6 +5,7 @@ import { validarApiSecret } from "@/lib/api-auth"
 import { criarId, agora } from "@/lib/db-utils"
 import { buscarContatoAtivoPorWhatsappNormalizado } from "@/lib/contatos/whatsapp"
 import { obterAtendimentoAberto } from "@/lib/conversas/atendimento"
+import { sanitizarSobreOPaciente } from "@/lib/agente/sanitizar-contexto"
 import type { Database } from "@/lib/types/database"
 
 const SELECT_CONTATO =
@@ -131,7 +132,11 @@ export async function POST(request: NextRequest) {
       responsavelId: contato.responsavelId,
     },
     conversa: conversa ? { id: conversa.id, etapa: conversa.etapa } : null,
-    sobreOPaciente: contato.sobreOPaciente || null,
+    // Este retorno alimenta o system prompt da Ana Júlia. Valor de orçamento e
+    // endereço de arquivo não podem chegar até ela por aqui — o único valor
+    // válido é o de `orcamentoVigente`, preso ao atendimento atual (OPE-550).
+    // O painel e a notificação do Dr. Lucas leem o campo direto do banco.
+    sobreOPaciente: sanitizarSobreOPaciente(contato.sobreOPaciente),
     ultimoProcedimento,
     criadoAgora,
   })
