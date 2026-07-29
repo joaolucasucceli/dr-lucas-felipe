@@ -10,7 +10,13 @@ import { supabaseAdmin } from "@/lib/supabase"
 
 // "orcamento_estimado" saiu em 22/07/2026 junto com a estimativa automatica:
 // resultados visuais so acompanham a espera do orcamento exato do Dr. Lucas.
-type OrigemResultadosProcedimento = "orcamento_exato_pendente"
+//
+// "pedido_do_paciente" (OPE-552) e quando ele pede o conjunto — "me envie
+// todos", "tem mais?". Ai o limite sobe: o Dr. Lucas reclamou que precisava
+// ficar pedindo uma a uma.
+type OrigemResultadosProcedimento =
+  | "orcamento_exato_pendente"
+  | "pedido_do_paciente"
 
 type MidiaSelecionada = {
   midia: MidiaMarketingEnvio

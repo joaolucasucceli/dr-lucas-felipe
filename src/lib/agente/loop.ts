@@ -19,6 +19,10 @@ import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { sanitizarSobreOPaciente } from "@/lib/agente/sanitizar-contexto"
 import { validarSaida } from "@/lib/agente/validar-saida"
 import {
+  ehPedidoDeLoteDeResultados,
+  LIMITE_LOTE_RESULTADOS,
+} from "@/lib/agente/pedido-de-lote"
+import {
   primeiraRegiaoDoTexto,
   temRegiaoNoTexto,
 } from "@/lib/procedimentos/regioes"
@@ -956,6 +960,34 @@ async function limparEstadoAgendamento(chatId: string): Promise<void> {
       err
     )
   }
+}
+
+/**
+ * A conversa já teve mídia enviada pela Ana?
+ *
+ * Define o "contexto visual" do pedido de lote: sem ele, um "tem mais?" solto
+ * poderia ser sobre horários ou formas de pagamento (OPE-552).
+ */
+async function conversaTemMidiaDoAgente(
+  conversaId: string | null
+): Promise<boolean> {
+  if (!conversaId) return false
+
+  const { data, error } = await supabaseAdmin
+    .from("mensagens_whatsapp")
+    .select("id")
+    .eq("conversaId", conversaId)
+    .eq("remetente", "agente")
+    .not("mediaUrl", "is", null)
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.warn("[Agente] Falha ao checar midia previa da conversa:", error.message)
+    return false
+  }
+
+  return Boolean(data)
 }
 
 async function conversaTemRespostaAgente(
@@ -2989,6 +3021,67 @@ export async function processarMensagens(
           configWa: configEnvio,
           textoUsuario: textoBuffer,
           textoResposta: fastPathAgendamento,
+        })
+
+        return { contatoId, conversaId }
+      }
+    }
+
+    // Pedido do CONJUNTO de resultados (OPE-552). Sai do caminho do modelo de
+    // propósito: o limite de 1 mídia por rodada é regra de prompt, e mesmo que
+    // o modelo quisesse mandar tudo, `MAX_TOOL_ITERATIONS` cortaria em 2 ou 3.
+    // O Dr. Lucas precisou pedir três vezes para ver três fotos.
+    if (contatoId) {
+      const conversaJaFalouDeMidia =
+        detectarGatilhoVisualMidia(textoBuffer) ||
+        (await conversaTemMidiaDoAgente(conversaId))
+
+      if (ehPedidoDeLoteDeResultados(textoBuffer, conversaJaFalouDeMidia)) {
+        const lote = await enviarResultadosProcedimento({
+          contatoId,
+          conversaId,
+          whatsapp,
+          configWa: configEnvio,
+          procedimentoInteresse: contextoContato.procedimento,
+          limite: LIMITE_LOTE_RESULTADOS,
+          origem: "pedido_do_paciente",
+          chatId,
+        })
+
+        console.log("[Agente] Fast-path de lote de resultados", {
+          contatoId,
+          conversaId,
+          enviadas: lote.enviadas,
+          motivo: lote.motivo,
+        })
+
+        // Sem nada novo para mandar, não invente: conduza a etapa pendente. A
+        // regra "nunca anuncie mídia sem enviar" vale aqui também.
+        const textoLote =
+          lote.enviadas > 0
+            ? comVocativo(
+                contextoContato,
+                lote.enviadas === 1
+                  ? "Esse é o que eu tenho aqui{nome}."
+                  : `Prontinho{nome}, mandei os ${lote.enviadas} resultados que tenho aqui.`
+              )
+            : comVocativo(
+                contextoContato,
+                "Esses são os que eu tenho por aqui{nome}. O Dr. Lucas mostra mais casos na reunião, com o perfil parecido com o seu."
+              )
+
+        const perguntaPendente = montarProximaPerguntaQualificacao(contextoContato)
+
+        enviouResposta = await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: `${textoLote}\n---\n${perguntaPendente}`,
+          midiaNaRodada: lote.enviadas > 0,
+          contexto: contextoContato,
         })
 
         return { contatoId, conversaId }
