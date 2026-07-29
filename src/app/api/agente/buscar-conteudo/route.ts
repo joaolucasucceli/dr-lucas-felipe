@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { filtrarMidiasComArquivo } from "@/lib/agente/midia-marketing-storage"
+import { ordenarPorRelevancia } from "@/lib/agente/relevancia-conteudo"
 
 /** JLAU-1042: busca unificada de conteudo da IA.
  *  Retorna textos da base de conhecimento + midias de marketing relevantes
@@ -21,57 +22,56 @@ export async function POST(request: NextRequest) {
   const { filtro, conversaId } = body
 
   // === TEXTOS: base_conhecimento ===
-  let queryTextos = supabaseAdmin
+  //
+  // Sem filtro no banco, de propósito (OPE-555). A busca era `ilike` literal e
+  // errava por acento, hífen e por exigir a frase contígua: a Ana disse duas
+  // vezes que não tinha encontrado o pós-operatório com o registro cadastrado.
+  // A relação entre a pergunta e o registro é de interpretação — todo
+  // procedimento tem material de pós-operatório — e casar string não cobre
+  // isso. Carregamos a base (pequena) e ordenamos por relevância; quem escolhe
+  // o que responde é o modelo.
+  const { data: todosTextos, error: erroTextos } = await supabaseAdmin
     .from("base_conhecimento")
     .select("titulo, conteudo")
     .is("deletadoEm", null)
-
-  if (filtro) {
-    queryTextos = queryTextos.or(
-      `titulo.ilike.%${filtro}%,conteudo.ilike.%${filtro}%`
-    )
-  }
-
-  const { data: textos, error: erroTextos } = await queryTextos.order("titulo", {
-    ascending: true,
-  })
+    .order("titulo", { ascending: true })
 
   if (erroTextos) {
     return NextResponse.json({ error: erroTextos.message }, { status: 500 })
   }
 
+  const textos = ordenarPorRelevancia(
+    (todosTextos ?? []).map((texto) => ({
+      ...texto,
+      textoParaBusca: `${texto.titulo} ${texto.conteudo}`,
+      peso: (texto.titulo?.length ?? 0) + (texto.conteudo?.length ?? 0),
+    })),
+    filtro
+  ).map(({ titulo, conteudo }) => ({ titulo, conteudo }))
+
   // === MIDIAS: midia_marketing ===
-  let queryMidias = supabaseAdmin
+  //
+  // Mesma mudança dos textos (OPE-555): o `ilike` na descrição também errava
+  // por acento. O catálogo já vinha inteiro no fallback — agora vem sempre,
+  // ordenado por relevância, e o modelo decide se alguma serve. A regra de não
+  // enviar mídia que não bate com o caso continua no prompt.
+  const { data: todasMidias, error: erroMidias } = await supabaseAdmin
     .from("midia_marketing")
     .select("id, descricao, url")
     .is("deletadoEm", null)
-
-  if (filtro) {
-    queryMidias = queryMidias.ilike("descricao", `%${filtro}%`)
-  }
-
-  const { data: midias, error: erroMidias } = await queryMidias
 
   if (erroMidias) {
     return NextResponse.json({ error: erroMidias.message }, { status: 500 })
   }
 
-  // Fallback: filtro nao casou com nenhuma midia. Retorna catalogo inteiro
-  // pra IA avaliar via descricao e decidir se cabe enviar (regra do
-  // prompt.ts:544 "se nao bate com perfil, NAO envie"). Sem isso, paciente
-  // que pergunta "papada" nunca recebe foto se descricao diz "Mini Lipo
-  // abdome". GPT continua livre pra cair no fallback consultivo se nada
-  // fizer sentido — mesmo comportamento de hoje, so com mais opcao.
-  let midiasFinais = midias ?? []
-  let usouFallback = false
-  if (midiasFinais.length === 0 && filtro) {
-    const { data: todas } = await supabaseAdmin
-      .from("midia_marketing")
-      .select("id, descricao, url")
-      .is("deletadoEm", null)
-    midiasFinais = todas ?? []
-    usouFallback = true
-  }
+  let midiasFinais = ordenarPorRelevancia(
+    (todasMidias ?? []).map((midia) => ({
+      ...midia,
+      textoParaBusca: midia.descricao ?? "",
+      peso: (midia.descricao?.length ?? 0) + 40,
+    })),
+    filtro
+  ).map(({ id, descricao, url }) => ({ id, descricao, url }))
 
   midiasFinais = await filtrarMidiasComArquivo(
     midiasFinais,
@@ -106,10 +106,13 @@ export async function POST(request: NextRequest) {
   }))
 
   return NextResponse.json({
-    textos: textos ?? [],
+    textos,
     midias: midiasEnriquecidas,
-    totalTextos: textos?.length ?? 0,
+    totalTextos: textos.length,
     totalMidias: midiasEnriquecidas.length,
-    fonteMidias: usouFallback ? "fallback_tudo" : "filtro",
+    // Textos e mídias vêm SEMPRE ordenados por relevância ao filtro, do mais
+    // provável para o menos. Nada é escondido do modelo por não ter casado
+    // string — ver `relevancia-conteudo.ts` (OPE-555).
+    ordenadoPorRelevancia: true,
   })
 }
