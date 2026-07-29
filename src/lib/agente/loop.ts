@@ -52,6 +52,18 @@ const OPENAI_TIMEOUT_MAX_MS = 18_000
 const DEADLINE_MARGIN_MS = 5_000
 const AGENDAMENTO_ESTADO_TTL = 60 * 60 * 3
 
+/**
+ * Quantas vezes a Ana insiste no nome antes de seguir sem ele (OPE-556).
+ *
+ * Dois é o limite do script para o e-mail no agendamento, e vale a mesma
+ * lógica aqui: o nome melhora o atendimento e a notificação que o Dr. Lucas
+ * recebe, mas não pode custar a paciente.
+ */
+const NOME_MAX_TENTATIVAS = 2
+
+/** Separador que vira mensagem nova no WhatsApp — ver `segmentarResposta`. */
+const SEPARADOR_BLOCOS = ["", "---", ""].join("\n")
+
 export function segmentarResposta(texto: string): string[] {
   if (!texto) return []
 
@@ -375,15 +387,50 @@ async function persistirIntencaoInicialLead(params: {
   }
 }
 
-function deveUsarFastPathAbertura(
+/**
+ * A abertura (saudação + apresentação + pergunta do nome) precisa acontecer?
+ *
+ * Antes isto dependia SÓ de ser a primeira resposta da conversa. Se aquela
+ * primeira mensagem escapasse — e em 28/07/2026 escapou, por causa da
+ * OPE-561 — ninguém perguntava o nome nunca mais, e o atendimento inteiro
+ * corria sem saber com quem estava falando (OPE-556).
+ *
+ * Agora a condição inclui o ESTADO DO CADASTRO: sem nome confirmado pelo
+ * paciente e ainda no começo do funil, a abertura vale — seja na primeira
+ * mensagem ou na quinta.
+ *
+ * `NOME_MAX_TENTATIVAS` existe para isto não virar muro: quem não quer dizer
+ * o nome segue o fluxo assim mesmo. Melhor um caso sem nome do que uma
+ * paciente irritada que desiste.
+ */
+export function deveUsarFastPathAbertura(
   contexto: ContextoContato,
   memoria: Awaited<ReturnType<typeof obterMemoria>>,
   primeiraRespostaDaConversa = false
 ): boolean {
-  return (
-    ["acolhimento", "qualificacao"].includes(contexto.etapa ?? "") &&
-    (primeiraRespostaDaConversa || !ultimaMensagemAssistente(memoria))
-  )
+  if (!["acolhimento", "qualificacao"].includes(contexto.etapa ?? "")) {
+    return false
+  }
+
+  if (primeiraRespostaDaConversa || !ultimaMensagemAssistente(memoria)) {
+    return true
+  }
+
+  // A conversa andou sem nome: a abertura ainda não cumpriu seu papel.
+  return !contexto.nome && vezesQuePerguntouONome(memoria) < NOME_MAX_TENTATIVAS
+}
+
+/** Quantas vezes a Ana já pediu o nome nesta conversa. */
+export function vezesQuePerguntouONome(
+  memoria: Awaited<ReturnType<typeof obterMemoria>>
+): number {
+  return memoria.filter(
+    (mensagem) =>
+      mensagem.role === "assistant" &&
+      /como posso te chamar|como voce se chama|qual (o )?seu nome|como te chamo/.test(
+        normalizarTextoBusca(mensagem.content)
+      )
+  ).length
 }
 
 function consentiuComQualificacao(
@@ -511,12 +558,13 @@ interface FastPathQualificacao {
   acionarOrcamento?: boolean
 }
 
-function montarFastPathQualificacao(params: {
+export function montarFastPathQualificacao(params: {
   textoPaciente: string
   contexto: ContextoContato
   memoria: Awaited<ReturnType<typeof obterMemoria>>
   pacienteAceitouQualificacao: boolean
   recebeuImagem: boolean
+  podePedirNome: boolean
 }): FastPathQualificacao | null {
   const {
     textoPaciente,
@@ -524,6 +572,7 @@ function montarFastPathQualificacao(params: {
     memoria,
     pacienteAceitouQualificacao,
     recebeuImagem,
+    podePedirNome,
   } = params
 
   if (contexto.etapa !== "qualificacao") return null
@@ -532,6 +581,21 @@ function montarFastPathQualificacao(params: {
     const fato = FATO_FOTO_QUALIFICACAO
     const proximoContexto = contextoComFato(contexto, fato)
     if (qualificacaoTemDadosMinimos(proximoContexto)) {
+      // Caso completo, mas sem nome: o Dr. Lucas receberia a notificação como
+      // "Orçamento - Paciente", sem saber de quem é. Pede o nome primeiro — a
+      // foto já fica gravada, então nada se perde (OPE-556). Depois de
+      // `NOME_MAX_TENTATIVAS`, segue sem ele.
+      if (!contexto.nome && podePedirNome) {
+        return {
+          tipo: "pedir_nome_antes_do_orcamento",
+          fato,
+          texto: [
+            "Recebi. Obrigada por enviar.",
+            "Antes de levar seu caso pro Dr. Lucas, como posso te chamar?",
+          ].join(SEPARADOR_BLOCOS),
+        }
+      }
+
       return {
         tipo: "foto_qualificacao_completa",
         fato,
@@ -3218,6 +3282,7 @@ ${comVocativo(contextoContato, pendente.pergunta)}`
       memoria,
       pacienteAceitouQualificacao,
       recebeuImagem: fotoServeParaOrcamento,
+      podePedirNome: vezesQuePerguntouONome(memoria) < NOME_MAX_TENTATIVAS,
     })
 
     if (fastPath && contatoId) {
