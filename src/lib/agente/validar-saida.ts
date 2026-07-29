@@ -146,11 +146,23 @@ function ehCopyOficial(bloco: string): boolean {
 }
 
 /**
- * Divide em sentenças sem quebrar "Dr. Lucas" nem "R$ 10.000,00".
+ * Divide em sentenças sem quebrar "Dr. Lucas".
  *
  * A primeira versão deste arquivo removia só o TRECHO proibido e deixava
  * restos: *"...região do corpo está interessado,!"*. Pior que a frase original.
  * A unidade de remoção passou a ser a sentença inteira.
+ *
+ * **A cola de dígito foi retirada na revisão de 29/07/2026.** Ela existia para
+ * proteger "R$ 10.000,00", mas o `split` só corta onde o ponto é seguido de
+ * ESPAÇO — e num decimal não é. Ou seja: a cola nunca protegeu valor nenhum, e
+ * cobrava caro. Qualquer frase legítima terminada em dígito grudava na
+ * seguinte, então uma frase proibida logo depois levava as duas embora:
+ *
+ *   "O valor foi de R$ 10.000,00. Caso tenha dúvida, é só me chamar!"
+ *   → mensagem inteira apagada, em vez de sobrar a primeira frase.
+ *
+ * Apareceu passando as 50 mensagens reais da Ana pelo validador. Sobrou só o
+ * caso que a cola de fato resolve: marcador de lista numerada ("1." sozinho).
  */
 function dividirEmSentencas(texto: string): string[] {
   const partes = texto.split(/(?<=[.!?])\s+/)
@@ -158,7 +170,11 @@ function dividirEmSentencas(texto: string): string[] {
 
   for (const parte of partes) {
     const anterior = sentencas[sentencas.length - 1]
-    if (anterior && /(\b(dr|dra|sr|sra|prof)\.|\d\.)$/i.test(anterior.trim())) {
+    const anteriorLimpo = anterior?.trim() ?? ""
+    const ehAbreviacao = /\b(dr|dra|sr|sra|prof)\.$/i.test(anteriorLimpo)
+    const ehMarcadorDeLista = /^\d+[.)]$/.test(anteriorLimpo)
+
+    if (anterior && (ehAbreviacao || ehMarcadorDeLista)) {
       sentencas[sentencas.length - 1] = `${anterior} ${parte}`
       continue
     }
