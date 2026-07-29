@@ -7,6 +7,7 @@ interface MidiaMarketing {
   id: string
   descricao: string
   url: string
+  tipo: "comparativo" | "antes" | "pos_operatorio" | "outro"
   criadoEm: string
 }
 

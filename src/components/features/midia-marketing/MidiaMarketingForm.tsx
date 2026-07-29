@@ -11,7 +11,17 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { FormDialog } from "@/components/features/shared/FormDialog"
-import { criarMidiaMarketingSchema } from "@/lib/validations/midia-marketing"
+import {
+  criarMidiaMarketingSchema,
+  TIPOS_MIDIA_MARKETING,
+} from "@/lib/validations/midia-marketing"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { z } from "zod"
 
 type FormData = z.infer<typeof criarMidiaMarketingSchema>
@@ -24,6 +34,7 @@ interface Props {
     id: string
     descricao: string
     url: string
+    tipo?: FormData["tipo"]
   } | null
 }
 
@@ -39,14 +50,18 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
 
   const form = useForm<FormData>({
     resolver: zodResolver(criarMidiaMarketingSchema) as never,
-    defaultValues: { descricao: "", url: "" },
+    defaultValues: { descricao: "", url: "", tipo: "comparativo" },
   })
 
   useEffect(() => {
     if (aberto && registro) {
-      form.reset({ descricao: registro.descricao, url: registro.url })
+      form.reset({
+        descricao: registro.descricao,
+        url: registro.url,
+        tipo: registro.tipo ?? "comparativo",
+      })
     } else if (aberto) {
-      form.reset({ descricao: "", url: "" })
+      form.reset({ descricao: "", url: "", tipo: "comparativo" })
     }
   }, [aberto, registro, form])
 
@@ -129,6 +144,33 @@ export function MidiaMarketingForm({ aberto, onFechar, onSalvo, registro }: Prop
       largura="md"
       desabilitarSalvar={uploading || !urlAtual}
     >
+      <div className="grid gap-2">
+        <Label>O que a imagem mostra</Label>
+        <Select
+          value={form.watch("tipo")}
+          onValueChange={(valor) =>
+            form.setValue("tipo", valor as FormData["tipo"], { shouldDirty: true })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione" />
+          </SelectTrigger>
+          <SelectContent>
+            {TIPOS_MIDIA_MARKETING.map((opcao) => (
+              <SelectItem key={opcao.valor} value={opcao.valor}>
+                {opcao.rotulo}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {
+            TIPOS_MIDIA_MARKETING.find((o) => o.valor === form.watch("tipo"))
+              ?.ajuda
+          }
+        </p>
+      </div>
+
       <div className="grid gap-2">
         <Label>
           Descrição

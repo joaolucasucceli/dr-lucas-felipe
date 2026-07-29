@@ -1061,6 +1061,7 @@ export type Database = {
           deletadoEm: string | null
           descricao: string
           id: string
+          tipo: Database["public"]["Enums"]["TipoMidiaMarketing"]
           url: string
         }
         Insert: {
@@ -1069,6 +1070,7 @@ export type Database = {
           deletadoEm?: string | null
           descricao: string
           id?: string
+          tipo?: Database["public"]["Enums"]["TipoMidiaMarketing"]
           url: string
         }
         Update: {
@@ -1077,6 +1079,7 @@ export type Database = {
           deletadoEm?: string | null
           descricao?: string
           id?: string
+          tipo?: Database["public"]["Enums"]["TipoMidiaMarketing"]
           url?: string
         }
         Relationships: []
@@ -1510,6 +1513,7 @@ export type Database = {
         | "prescricao"
         | "intercorrencia"
         | "observacao"
+      TipoMidiaMarketing: "comparativo" | "antes" | "pos_operatorio" | "outro"
       TipoMensagem:
         | "texto"
         | "audio"
@@ -1705,6 +1709,7 @@ export const Constants = {
         "intercorrencia",
         "observacao",
       ],
+      TipoMidiaMarketing: ["comparativo", "antes", "pos_operatorio", "outro"],
       TipoMensagem: [
         "texto",
         "audio",

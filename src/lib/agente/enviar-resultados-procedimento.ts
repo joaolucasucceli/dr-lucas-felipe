@@ -201,9 +201,13 @@ async function selecionarResultados(params: {
   const termos = termosDeBusca(procedimentoInteresse)
   const urlsJaEnviadas = await obterUrlsJaEnviadas(conversaId)
 
+  // Mesma regra do `buscar_conteudo`: só comparativo chega ao paciente
+  // (OPE-553). A ordenação por data cai para desempate — quem manda é a
+  // pontuação por relevância logo abaixo.
   const { data, error } = await supabaseAdmin
     .from("midia_marketing")
     .select("id, descricao, url")
+    .eq("tipo", "comparativo")
     .is("deletadoEm", null)
     .order("criadoEm", { ascending: false })
 
