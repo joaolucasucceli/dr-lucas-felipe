@@ -101,6 +101,26 @@ export function rotuloRegiao(chave: string): string {
   return REGIOES_CORPO.find((r) => r.chave === chave)?.rotulo ?? chave
 }
 
+/**
+ * Primeira região citada no texto, com o rótulo pronto para entrar em frase
+ * ("abdome", "flancos"). `null` quando o texto não cita nenhuma.
+ *
+ * Existe para o fluxo da Ana Júlia parar de manter listas próprias. Até
+ * 29/07/2026 havia QUATRO listas de região escritas à mão dentro de
+ * `src/lib/agente/`, e uma delas — justamente a que grava o interesse no
+ * cadastro — não tinha "abdome". Paciente escrevia "lipo fracionada de abdome"
+ * e a Ana perguntava a região logo em seguida (OPE-557).
+ */
+export function primeiraRegiaoDoTexto(texto: string): string | null {
+  const regiao = REGIOES_CORPO.find((r) => r.padrao.test(texto))
+  return regiao ? regiao.rotulo.toLocaleLowerCase("pt-BR") : null
+}
+
+/** O texto cita alguma região conhecida? */
+export function temRegiaoNoTexto(texto: string): boolean {
+  return REGIOES_CORPO.some((r) => r.padrao.test(texto))
+}
+
 /** Todas as regiões citadas num texto do paciente. */
 export function extrairRegioesDoTexto(texto: string): {
   chaves: string[]
