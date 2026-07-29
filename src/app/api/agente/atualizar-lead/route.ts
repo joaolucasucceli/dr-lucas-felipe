@@ -70,11 +70,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
   }
 
+  // Etapa do atendimento corrente: e ela que decide se a transicao pedida pela
+  // Ana e valida (OPE-561). O `statusFunil` do contato e permanente e travava
+  // qualquer avanco em quem ja tinha agendado alguma vez.
+  const { data: conversaAtual } = conversaId
+    ? await supabaseAdmin
+        .from("conversas")
+        .select("etapa")
+        .eq("id", conversaId)
+        .eq("contatoId", contatoId)
+        .maybeSingle()
+    : { data: null }
+
   const estadoAtual: EstadoAtualContato = {
     nome: contato.nome ?? "",
     origem: contato.origem ?? null,
     tipo: (contato.tipo as TipoContato | null) ?? null,
     statusFunil: (contato.statusFunil as StatusFunil | null) ?? null,
+    etapaAtendimento: (conversaAtual?.etapa as StatusFunil | null) ?? null,
     procedimentoInteresse: contato.procedimentoInteresse ?? null,
     sobreOPaciente: contato.sobreOPaciente ?? null,
   }

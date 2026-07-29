@@ -83,6 +83,11 @@ export async function POST(request: NextRequest) {
       .from("conversas")
       .update({
         modoConversa: "humano",
+        // A etapa do atendimento acompanha o handoff junto com o contato: desde
+        // a OPE-561 e `conversas.etapa` que governa o comportamento do agente,
+        // entao deixa-la para tras faria a conversa voltar do handoff com a
+        // etapa anterior ao pedido de humano.
+        etapa: "atendimento_humano" as never,
         atendenteId: "usr-lucas",
         atualizadoEm: tsAgora,
       })
