@@ -16,6 +16,7 @@ import {
   detectarGatilhoVisualMidia,
 } from "@/lib/agente/gatilho-midia"
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
+import { sanitizarSobreOPaciente } from "@/lib/agente/sanitizar-contexto"
 import {
   avaliarEnvio,
   bufferTemConteudoUtil,
@@ -1997,13 +1998,44 @@ function montarResumoOrcamento(
   )
 }
 
+/**
+ * Anexa um fato ao cadastro do contato.
+ *
+ * O append acontece sobre o texto REAL do banco, nunca sobre
+ * `contexto.sobreOPaciente`: desde a OPE-550 o contexto chega sanitizado (sem
+ * nota de orçamento e sem link), e gravar a partir dele apagaria esses trechos
+ * do cadastro sem ninguém ter pedido — só porque a Ana anotou algo novo. O
+ * painel e a notificação do Dr. Lucas leem esse campo e precisam dele inteiro.
+ */
 async function adicionarFatoAoContato(
   contatoId: string,
   contexto: ContextoContato,
   fato: string
 ): Promise<void> {
-  const novoSobrePaciente = anexarFatoContexto(contexto.sobreOPaciente, fato)
-  if (novoSobrePaciente === contexto.sobreOPaciente) return
+  if (contexto.sobreOPaciente?.includes(fato)) return
+
+  const { data: atual, error: erroLeitura } = await supabaseAdmin
+    .from("contatos")
+    .select("sobreOPaciente")
+    .eq("id", contatoId)
+    .maybeSingle()
+
+  if (erroLeitura) {
+    console.error("[Agente] Fast-path falhou ao ler cadastro antes do append:", {
+      contatoId,
+      erro: erroLeitura.message,
+    })
+    throw new Error(`Falha ao salvar qualificação: ${erroLeitura.message}`)
+  }
+
+  const textoBanco = atual?.sobreOPaciente ?? undefined
+
+  if (textoBanco?.includes(fato)) {
+    contexto.sobreOPaciente = sanitizarSobreOPaciente(textoBanco) ?? undefined
+    return
+  }
+
+  const novoSobrePaciente = anexarFatoContexto(textoBanco, fato)
 
   const { error } = await supabaseAdmin
     .from("contatos")
@@ -2021,7 +2053,7 @@ async function adicionarFatoAoContato(
     throw new Error(`Falha ao salvar qualificação: ${error.message}`)
   }
 
-  contexto.sobreOPaciente = novoSobrePaciente
+  contexto.sobreOPaciente = sanitizarSobreOPaciente(novoSobrePaciente) ?? undefined
 }
 
 async function registrarMensagemAgenteLocal(params: {
