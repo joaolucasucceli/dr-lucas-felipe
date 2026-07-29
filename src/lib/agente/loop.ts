@@ -352,6 +352,27 @@ function montarPedidoDeOkParaOrcamento(contexto: ContextoContato): string {
   )
 }
 
+/**
+ * Pergunta que o validador de saída pode anexar quando a remoção deixa a
+ * mensagem sem fecho. `null` quando não há nada seguro a dizer.
+ *
+ * O pedido de ok só serve a quem AINDA está na qualificação. Dito a quem já
+ * está esperando o valor do Dr. Lucas, ele sugere que nada foi feito e pede uma
+ * confirmação que o bloco de orçamento pendente engole em silêncio — a paciente
+ * responde "ok" e não recebe nada. Diferente dos outros fallbacks, este roda no
+ * funil de saída, que atende TODAS as etapas.
+ */
+function montarContinuidadeParaValidador(
+  contexto: ContextoContato
+): string | null {
+  const etapa = proximaEtapaPendente(contexto)
+  if (etapa) return comVocativo(contexto, etapa.pergunta)
+
+  return ["acolhimento", "qualificacao"].includes(contexto.etapa ?? "")
+    ? montarPedidoDeOkParaOrcamento(contexto)
+    : null
+}
+
 async function persistirIntencaoInicialLead(params: {
   contatoId: string | null
   conversaId: string | null
@@ -2382,7 +2403,7 @@ async function enviarRespostaAgente(params: {
     {
       midiaNaRodada,
       perguntaDeContinuidade: contexto
-        ? montarProximaPerguntaQualificacao(contexto)
+        ? montarContinuidadeParaValidador(contexto)
         : null,
     }
   )

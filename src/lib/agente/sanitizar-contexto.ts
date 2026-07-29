@@ -36,6 +36,29 @@ const SEPARADOR_NOTAS = "\n---\n"
  */
 const NOTAS_DE_ORCAMENTO = /^\s*or[çc]amento\s+(enviado|respondido|gerado)/i
 
+/**
+ * Qualquer anotação em que o SISTEMA narra o que mandou para o paciente.
+ *
+ * **A direção é o critério.** "…enviada AO paciente" é o sistema contando o que
+ * saiu, e é aí que moram valor e link. "…informado PELO paciente" é fala dele e
+ * fica — é contexto legítimo do caso.
+ *
+ * Esta regra existe porque a primeira versão do filtro só olhava notas que
+ * COMEÇAVAM com "Orçamento". Passava batido:
+ *
+ *   "Estimativa enviada ao paciente: R$ 8k a R$ 11k (Mini Lipo (Lipo Fracionada))."
+ *
+ * Onze contatos ainda carregavam essa linha em 29/07/2026 — e o número é
+ * exatamente a faixa genérica que causou o incidente de 22/07, quando a
+ * estimativa automática mandava R$ 8k–11k para qualquer região. A OPE-550
+ * fechou nove notas e deixou onze abertas.
+ *
+ * Ninguém escreve mais essa nota (a estimativa saiu do fluxo em 22/07), mas o
+ * cadastro é permanente: o texto continua no banco e continuaria indo ao modelo.
+ */
+const NOTA_DO_SISTEMA_AO_PACIENTE =
+  /\b(enviad[oa]|informad[oa]|respondid[oa]|gerad[oa]|apresentad[oa])\s+ao\s+paciente\b/i
+
 /** Qualquer endereço http(s). O modelo nunca precisa de link no contexto. */
 const URL = /\bhttps?:\/\/\S+/gi
 
@@ -52,7 +75,11 @@ export function sanitizarSobreOPaciente(
 
   const segmentosLimpos = texto
     .split(SEPARADOR_NOTAS)
-    .filter((segmento) => !NOTAS_DE_ORCAMENTO.test(segmento))
+    .filter(
+      (segmento) =>
+        !NOTAS_DE_ORCAMENTO.test(segmento) &&
+        !NOTA_DO_SISTEMA_AO_PACIENTE.test(segmento)
+    )
     .map((segmento) => segmento.replace(URL, "").replace(/[ \t]{2,}/g, " ").trim())
     .filter(Boolean)
 
