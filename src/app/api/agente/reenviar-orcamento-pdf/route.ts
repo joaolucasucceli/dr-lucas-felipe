@@ -5,6 +5,7 @@ import { validarApiSecret } from "@/lib/api-auth"
 import { criarId } from "@/lib/db-utils"
 import { enviarMidia } from "@/lib/uazapi"
 import { orcamentoVigente } from "@/lib/orcamento/vigencia"
+import { MOTIVOS_TOOL } from "@/lib/agente/motivos-tool"
 
 /**
  * Tool `reenviar_orcamento_pdf`.
@@ -35,20 +36,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       enviado: false,
-      motivo: "contatoId e conversaId sao obrigatorios",
+      motivoCodigo: MOTIVOS_TOOL.PARAMETROS_AUSENTES,
     })
   }
 
   const orcamento = await orcamentoVigente({ contatoId, conversaId })
 
   if (!orcamento?.pdfUrl) {
-    // Sem orcamento vigente nao existe PDF para reenviar. A IA deve conduzir a
-    // qualificacao em vez de prometer um arquivo que nao ha.
+    // Sem orcamento vigente nao existe PDF para reenviar. O loop trata esse
+    // codigo de forma deterministica (OPE-554) — nada de prosa aqui, que era
+    // exatamente o que a Ana parafraseava para a paciente.
     return NextResponse.json({
       ok: true,
       enviado: false,
-      motivo:
-        "Nao ha orcamento vigente com PDF neste atendimento. Nao prometa o arquivo: conduza a qualificacao ou gere um orcamento novo.",
+      motivoCodigo: MOTIVOS_TOOL.SEM_ORCAMENTO_VIGENTE,
     })
   }
 
@@ -62,11 +63,19 @@ export async function POST(request: NextRequest) {
   ])
 
   if (!contato?.whatsapp) {
-    return NextResponse.json({ ok: false, error: "Contato sem WhatsApp" }, { status: 400 })
+    return NextResponse.json({
+      ok: true,
+      enviado: false,
+      motivoCodigo: MOTIVOS_TOOL.CONTATO_NAO_ENCONTRADO,
+    })
   }
 
   if (!configWa?.uazapiUrl || !configWa?.instanceToken) {
-    return NextResponse.json({ ok: false, error: "WhatsApp nao configurado" }, { status: 502 })
+    return NextResponse.json({
+      ok: true,
+      enviado: false,
+      motivoCodigo: MOTIVOS_TOOL.WHATSAPP_NAO_CONFIGURADO,
+    })
   }
 
   const nomeArquivo = orcamento.nomeArquivo ?? "orcamento.pdf"
@@ -85,10 +94,11 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const detalhe = err instanceof Error ? err.message : String(err)
     console.error("[reenviar-orcamento-pdf] falha ao enviar documento:", detalhe)
-    return NextResponse.json(
-      { ok: false, error: "Nao consegui enviar o PDF agora", detalhe },
-      { status: 502 }
-    )
+    return NextResponse.json({
+      ok: true,
+      enviado: false,
+      motivoCodigo: MOTIVOS_TOOL.FALHA_ENVIO,
+    })
   }
 
   // Historico, para o documento aparecer no atendimento (best-effort).

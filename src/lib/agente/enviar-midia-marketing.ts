@@ -2,6 +2,7 @@ import { criarId, agora } from "@/lib/db-utils"
 import { supabaseAdmin } from "@/lib/supabase"
 import { enviarMidia } from "@/lib/uazapi"
 import { midiaMarketingExisteNoStorage } from "@/lib/agente/midia-marketing-storage"
+import { MOTIVOS_TOOL } from "@/lib/agente/motivos-tool"
 
 export interface MidiaMarketingEnvio {
   id: string
@@ -53,7 +54,7 @@ export async function enviarMidiaMarketing(params: {
 }): Promise<{
   ok: boolean
   enviado: boolean
-  motivo?: string
+  motivoCodigo?: string
   midiaId?: string
   mediaUrl?: string
   tipo?: "imagem" | "video"
@@ -61,12 +62,20 @@ export async function enviarMidiaMarketing(params: {
   const { contatoId, whatsapp, configWa, midia, baseUrl, contextoLog } = params
 
   if (!configWa?.uazapiUrl || !configWa?.instanceToken) {
-    return { ok: true, enviado: false, motivo: "WhatsApp nao configurado" }
+    return {
+      ok: true,
+      enviado: false,
+      motivoCodigo: MOTIVOS_TOOL.WHATSAPP_NAO_CONFIGURADO,
+    }
   }
 
   const conversaId = await resolverConversaAtiva(contatoId, params.conversaId)
   if (!conversaId) {
-    return { ok: true, enviado: false, motivo: "Conversa nao encontrada" }
+    return {
+      ok: true,
+      enviado: false,
+      motivoCodigo: MOTIVOS_TOOL.CONVERSA_NAO_ENCONTRADA,
+    }
   }
 
   const arquivoExiste = await midiaMarketingExisteNoStorage(midia.url)
@@ -75,7 +84,11 @@ export async function enviarMidiaMarketing(params: {
       midiaId: midia.id,
       contexto: contextoLog,
     })
-    return { ok: true, enviado: false, motivo: "Midia indisponivel no Storage" }
+    return {
+      ok: true,
+      enviado: false,
+      motivoCodigo: MOTIVOS_TOOL.ARQUIVO_INDISPONIVEL,
+    }
   }
 
   const mediaUrl = urlPublicaMidia(midia.url, baseUrl)
@@ -101,7 +114,7 @@ export async function enviarMidiaMarketing(params: {
     return {
       ok: true,
       enviado: false,
-      motivo: "Falha ao enviar midia",
+      motivoCodigo: MOTIVOS_TOOL.FALHA_ENVIO,
       midiaId: midia.id,
     }
   }

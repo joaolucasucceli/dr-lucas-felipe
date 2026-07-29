@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { validarApiSecret } from "@/lib/api-auth"
 import { enviarMidiaMarketing } from "@/lib/agente/enviar-midia-marketing"
+import { MOTIVOS_TOOL } from "@/lib/agente/motivos-tool"
 
 export async function POST(request: NextRequest) {
   const erro = validarApiSecret(request)
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       enviado: false,
-      motivo: "Parametros ausentes — chame listar_midias para obter midiaId valido antes de enviar_midia",
+      motivoCodigo: MOTIVOS_TOOL.PARAMETROS_AUSENTES,
     })
   }
 
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       enviado: false,
-      motivo: "Mídia não encontrada ou inativa",
+      motivoCodigo: MOTIVOS_TOOL.MIDIA_NAO_ENCONTRADA,
     })
   }
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       enviado: false,
-      motivo: "Lead nao encontrado",
+      motivoCodigo: MOTIVOS_TOOL.CONTATO_NAO_ENCONTRADO,
     })
   }
 
@@ -64,12 +65,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       enviado: false,
-      motivo: "WhatsApp não configurado",
+      motivoCodigo: MOTIVOS_TOOL.WHATSAPP_NAO_CONFIGURADO,
     })
   }
 
   if (!lead.whatsapp) {
-    return NextResponse.json({ error: "Contato sem WhatsApp" }, { status: 400 })
+    return NextResponse.json({
+      ok: true,
+      enviado: false,
+      motivoCodigo: MOTIVOS_TOOL.CONTATO_NAO_ENCONTRADO,
+    })
   }
 
   const resultado = await enviarMidiaMarketing({
