@@ -36,9 +36,17 @@ export async function POST(req: Request) {
     .from("conversas")
     .update({
       modoConversa: "humano",
-      // Mesma razao do handoff pela tool: `conversas.etapa` governa o
-      // comportamento do agente desde a OPE-561, entao ela acompanha a pausa.
-      etapa: "atendimento_humano" as never,
+      // `conversas.etapa` NAO acompanha a pausa, de proposito. Ela e o ponto de
+      // retorno: `retomar-ia` le esse campo via `etapaRetornoIASegura`, e
+      // "atendimento_humano" nao esta em ETAPAS_RETORNO_IA — entao gravar aqui
+      // fazia o valor real ("agendamento", "consulta_agendada") ser perdido e a
+      // conversa voltar do humano em "qualificacao", com a Ana pedindo regiao e
+      // foto de quem ja tinha reuniao marcada. O contato tambem era rebobinado,
+      // porque `retomar-ia` grava o mesmo valor em `statusFunil`.
+      //
+      // Quem pausa o agente e `contatos.statusFunil = atendimento_humano` +
+      // `responsavelId`, checados no inicio de `processarMensagens` — nao esta
+      // coluna. Escrito na revisao de 29/07/2026, depois da OPE-561.
       atendenteId: auth.session.user.id,
       atualizadoEm: agora(),
     })

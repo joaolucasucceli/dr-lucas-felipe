@@ -463,7 +463,7 @@ function deveUsarFastPathAbertura(
 }
 
 /** Quantas vezes a Ana já pediu o nome nesta conversa. */
-export function vezesQuePerguntouONome(
+function vezesQuePerguntouONome(
   memoria: Awaited<ReturnType<typeof obterMemoria>>
 ): number {
   return memoria.filter(
@@ -600,7 +600,7 @@ interface FastPathQualificacao {
   acionarOrcamento?: boolean
 }
 
-export function montarFastPathQualificacao(params: {
+function montarFastPathQualificacao(params: {
   textoPaciente: string
   contexto: ContextoContato
   memoria: Awaited<ReturnType<typeof obterMemoria>>
@@ -774,7 +774,7 @@ function assistenteJaAvisouAguardandoOrcamento(
  * (orçamento/valor) + sinal de que o caso está com ele (posse ou envio). Frase
  * nova do modelo continua sendo pega sem precisar entrar numa lista.
  */
-export function textoPrometeEnvioOrcamento(texto: string): boolean {
+function textoPrometeEnvioOrcamento(texto: string): boolean {
   const normalizado = normalizarTextoBusca(texto)
 
   const mencionaOrcamento =
@@ -2418,7 +2418,30 @@ async function enviarRespostaAgente(params: {
     })
   }
 
-  const textoFinal = validado.texto
+  // O validador pode apagar a mensagem inteira — 14 das 50 mensagens reais da
+  // Ana eram 100% frase proibida. Quando isso acontece e não há etapa pendente
+  // para devolver, o texto volta vazio e a Ana ficaria MUDA: `segmentarResposta`
+  // devolve lista vazia e o envio é abortado logo abaixo. Silêncio para um lead
+  // é pior que um fecho fraco, e o freio de emergência não cobre isso — ele
+  // conta mensagem enviada, não mensagem que deixou de sair.
+  //
+  // "Combinado" é o último recurso de propósito: reconhece o que a pessoa disse,
+  // não promete nada, não convida a chamar depois e é frase que a própria Ana já
+  // usa. Encontrado na revisão de 29/07/2026, ao passar as mensagens reais pelo
+  // validador.
+  const textoFinal =
+    validado.texto.trim() ||
+    (contexto ? comVocativo(contexto, "Combinado{nome}!") : "Combinado!")
+
+  if (!validado.texto.trim()) {
+    console.warn("[Agente] Validador esvaziou a resposta — usando fecho neutro", {
+      contatoId,
+      conversaId,
+      regras: validado.bloqueios,
+      antes: textoResposta.slice(0, 200),
+    })
+  }
+
   const segmentos = segmentarResposta(textoFinal)
 
   if (segmentos.length === 0) return false

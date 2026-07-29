@@ -83,11 +83,16 @@ export async function POST(request: NextRequest) {
       .from("conversas")
       .update({
         modoConversa: "humano",
-        // A etapa do atendimento acompanha o handoff junto com o contato: desde
-        // a OPE-561 e `conversas.etapa` que governa o comportamento do agente,
-        // entao deixa-la para tras faria a conversa voltar do handoff com a
-        // etapa anterior ao pedido de humano.
-        etapa: "atendimento_humano" as never,
+        // `conversas.etapa` fica onde estava, de proposito — voltar do handoff
+        // na etapa anterior e o comportamento CORRETO, nao um defeito. Ela e o
+        // ponto de retorno que `retomar-ia` le via `etapaRetornoIASegura`, e
+        // "atendimento_humano" nao esta em ETAPAS_RETORNO_IA: gravar aqui fazia
+        // o retorno cair em "qualificacao" e a Ana pedir regiao e foto de quem
+        // ja tinha reuniao marcada. Como o freio de emergencia chama esta rota,
+        // qualquer paciente que estourasse o teto voltaria rebobinado.
+        //
+        // A pausa e garantida por `contatos.statusFunil = atendimento_humano` +
+        // `responsavelId`, abaixo. Revisao de 29/07/2026, depois da OPE-561.
         atendenteId: "usr-lucas",
         atualizadoEm: tsAgora,
       })
