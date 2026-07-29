@@ -322,10 +322,34 @@ function deveUsarFastPathPosNome(
  */
 function montarRespostaPosNome(contexto: ContextoContato): string {
   const etapa = proximaEtapaPendente(contexto)
-  if (!etapa) return montarRespostaFotoQualificacaoCompleta(contexto)
+  if (!etapa) return montarPedidoDeOkParaOrcamento(contexto)
 
   const frase = etapa.continuacao.charAt(0).toUpperCase() + etapa.continuacao.slice(1)
   return `${comVocativo(contexto, "Perfeito{nome}!")}\n---\n${frase}`
+}
+
+/**
+ * O que dizer quando não sobrou etapa pendente e o caminho atual NÃO aciona
+ * `gerar_orcamento`.
+ *
+ * Cinco fallbacks caíam em `montarRespostaFotoQualificacaoCompleta`, que
+ * anuncia *"vou enviar pra ele definir o orçamento exato"*: pós-nome, fast-path
+ * de consentimento, fast-path de etapa respondida, fallback de deadline e a
+ * continuidade que o validador de saída anexa. Nenhum deles chama a tool —
+ * então cada um era a OPE-549 de volta por outra porta, e três delas nasceram
+ * nas correções de 29/07/2026.
+ *
+ * A regra que fecha a classe: **`montarRespostaFotoQualificacaoCompleta` só
+ * pode ser dita por quem aciona `gerar_orcamento` na mesma rodada.** Quem não
+ * aciona pede o ok — e a frase é reconhecida por `assistentePediuRetryOrcamento`,
+ * que dispara a tool na resposta seguinte. Anúncio e acionamento voltam a andar
+ * juntos.
+ */
+function montarPedidoDeOkParaOrcamento(contexto: ContextoContato): string {
+  return comVocativo(
+    contexto,
+    "Perfeito{nome}! Me manda um ok que eu sigo com seu orçamento."
+  )
 }
 
 async function persistirIntencaoInicialLead(params: {
@@ -390,34 +414,31 @@ async function persistirIntencaoInicialLead(params: {
 /**
  * A abertura (saudação + apresentação + pergunta do nome) precisa acontecer?
  *
- * Antes isto dependia SÓ de ser a primeira resposta da conversa. Se aquela
- * primeira mensagem escapasse — e em 28/07/2026 escapou, por causa da
- * OPE-561 — ninguém perguntava o nome nunca mais, e o atendimento inteiro
- * corria sem saber com quem estava falando (OPE-556).
+ * Só na primeira resposta do atendimento. A OPE-556 tentou estender isto ao
+ * ESTADO DO CADASTRO — "sem nome, a abertura vale na quinta mensagem também" —
+ * e a revisão de 29/07/2026 mostrou que o remédio era pior:
  *
- * Agora a condição inclui o ESTADO DO CADASTRO: sem nome confirmado pelo
- * paciente e ainda no começo do funil, a abertura vale — seja na primeira
- * mensagem ou na quinta.
+ *   1. `montarAberturaObrigatoria` se APRESENTA ("Meu nome é Ana Júlia, sou do
+ *      time de pré-atendimento"). Repetir isso no meio da conversa é pior do
+ *      que não saber o nome da paciente.
+ *   2. Este ramo devolve `return` na hora, engolindo a mensagem da rodada — a
+ *      foto que a paciente acabou de mandar não seria processada.
+ *   3. Ele rodava ANTES de `montarFastPathQualificacao`, então o ramo
+ *      `pedir_nome_antes_do_orcamento` criado na mesma issue ficava inalcançável.
  *
- * `NOME_MAX_TENTATIVAS` existe para isto não virar muro: quem não quer dizer
- * o nome segue o fluxo assim mesmo. Melhor um caso sem nome do que uma
- * paciente irritada que desiste.
+ * Quem cobre o buraco da OPE-556 é aquele ramo: no momento em que o caso fecha
+ * e o Dr. Lucas seria acionado como "Orçamento - Paciente", a Ana pede o nome
+ * uma vez. É lá que a falta do nome custa dinheiro — e não custa a abertura.
  */
-export function deveUsarFastPathAbertura(
+function deveUsarFastPathAbertura(
   contexto: ContextoContato,
   memoria: Awaited<ReturnType<typeof obterMemoria>>,
   primeiraRespostaDaConversa = false
 ): boolean {
-  if (!["acolhimento", "qualificacao"].includes(contexto.etapa ?? "")) {
-    return false
-  }
-
-  if (primeiraRespostaDaConversa || !ultimaMensagemAssistente(memoria)) {
-    return true
-  }
-
-  // A conversa andou sem nome: a abertura ainda não cumpriu seu papel.
-  return !contexto.nome && vezesQuePerguntouONome(memoria) < NOME_MAX_TENTATIVAS
+  return (
+    ["acolhimento", "qualificacao"].includes(contexto.etapa ?? "") &&
+    (primeiraRespostaDaConversa || !ultimaMensagemAssistente(memoria))
+  )
 }
 
 /** Quantas vezes a Ana já pediu o nome nesta conversa. */
@@ -499,7 +520,7 @@ function pacienteFezPerguntaOuMudouAssunto(texto: string): boolean {
  */
 function montarProximaPerguntaQualificacao(contexto: ContextoContato): string {
   const etapa = proximaEtapaPendente(contexto)
-  if (!etapa) return montarRespostaFotoQualificacaoCompleta(contexto)
+  if (!etapa) return montarPedidoDeOkParaOrcamento(contexto)
   return comVocativo(contexto, etapa.pergunta)
 }
 
@@ -520,7 +541,7 @@ function montarRespostaFotoQualificacaoIncompleta(
   contexto: ContextoContato
 ): string {
   const etapa = proximaEtapaPendente(contexto)
-  if (!etapa) return montarRespostaFotoQualificacaoCompleta(contexto)
+  if (!etapa) return montarPedidoDeOkParaOrcamento(contexto)
 
   return comVocativo(
     contexto,
@@ -533,7 +554,7 @@ function montarRespostaFotoQualificacaoIncompleta(
 
 function montarContinuidadeQualificacao(contexto: ContextoContato): string {
   const etapa = proximaEtapaPendente(contexto)
-  if (!etapa) return montarRespostaFotoQualificacaoCompleta(contexto)
+  if (!etapa) return montarPedidoDeOkParaOrcamento(contexto)
 
   return comVocativo(
     contexto,
@@ -621,7 +642,7 @@ export function montarFastPathQualificacao(params: {
   if (pacienteAceitouQualificacao) {
     return {
       tipo: "consentimento_qualificacao",
-      texto: montarProximaPerguntaQualificacao(contexto),
+      ...conduzirOuFechar(contexto),
     }
   }
 
@@ -638,8 +659,31 @@ export function montarFastPathQualificacao(params: {
   return {
     tipo: `qualificacao_${etapaRespondida.chave}`,
     fato,
-    texto: montarProximaPerguntaQualificacao(contextoComFato(contexto, fato)),
+    ...conduzirOuFechar(contextoComFato(contexto, fato)),
   }
+}
+
+/**
+ * Conduz para a próxima etapa — ou fecha o caso, acionando o orçamento.
+ *
+ * Existe para que nenhum ramo do fast-path escolha o texto de fecho sem ligar
+ * `acionarOrcamento`. Era o furo dos dois ramos abaixo: quem mandava a foto
+ * primeiro e a região depois recebia *"vou enviar pra ele definir o orçamento
+ * exato"* e o Dr. Lucas nunca era chamado — porque só o ramo da foto ligava a
+ * flag. Agora a decisão é uma só, aqui.
+ */
+function conduzirOuFechar(contexto: ContextoContato): {
+  texto: string
+  acionarOrcamento?: boolean
+} {
+  if (qualificacaoTemDadosMinimos(contexto)) {
+    return {
+      texto: montarRespostaFotoQualificacaoCompleta(contexto),
+      acionarOrcamento: true,
+    }
+  }
+
+  return { texto: montarProximaPerguntaQualificacao(contexto) }
 }
 
 function deadlineAproximando(inicioMs: number): boolean {
@@ -722,7 +766,14 @@ export function textoPrometeEnvioOrcamento(texto: string): boolean {
 
   // "já tenho o que ele precisa", "tenho os dados principais" — o caso está
   // completo do lado dela. É a família que faltava.
+  //
+  // A negação precisa sair antes: `normalizarTextoBusca` tira acento mas não
+  // muda a frase, então *"ainda não tenho o que preciso pro orçamento"* casava
+  // igual — e a guarda acionava `gerar_orcamento` no exato momento em que a Ana
+  // dizia que faltava dado. Encontrado na revisão de 29/07/2026.
+  const negaPosseDoCaso = /\bn[ãa]o\s+(ja\s+)?tenho\b/.test(normalizado)
   const anunciaPosseDoCaso =
+    !negaPosseDoCaso &&
     /\b(ja\s+)?tenho\s+(o\s+que|os\s+dados|tudo\s+que|as\s+informacoes)/.test(
       normalizado
     )
@@ -3075,15 +3126,29 @@ export async function processarMensagens(
       )
       const parsed = JSON.parse(resultadoOrcamento)
       let enviarResultadosOrcamentoPendente = false
-      const textoRetry =
-        parsed?.ok === true
-          ? montarRespostaFotoQualificacaoCompleta(contextoContato)
+
+      // `jaRespondido` precisa sair do caminho do fecho: quem já recebeu o
+      // valor do Dr. Lucas não pode ouvir "vou enviar pra ele definir o
+      // orçamento exato". Os outros dois pontos que chamam `gerar_orcamento`
+      // já tratavam esse retorno; aqui não, e a revisão de 29/07/2026 passou a
+      // mandar mais gente por este ramo (é ele que atende o "ok" pedido pelos
+      // fallbacks). Segue para agendamento, que é o próximo passo real.
+      const acionouOrcamentoNovo =
+        parsed?.ok === true && parsed?.jaRespondido !== true
+
+      const textoRetry = acionouOrcamentoNovo
+        ? montarRespostaFotoQualificacaoCompleta(contextoContato)
+        : parsed?.jaRespondido === true && orcamentoRespondidoAtual
+          ? montarRespostaAgendamentoAposOrcamento(
+              contextoContato,
+              orcamentoRespondidoAtual
+            )
           : comVocativo(
               contextoContato,
               "Certo{nome}. Deixei seu caso separado aqui e sigo com seu orçamento por aqui."
             )
 
-      if (parsed?.ok === true) {
+      if (acionouOrcamentoNovo) {
         contextoContato.etapa = "orcamento"
         enviarResultadosOrcamentoPendente = true
       }
@@ -3236,7 +3301,16 @@ export async function processarMensagens(
     // era o tipo do anexo, e uma foto de bancada fechou a qualificação (OPE-560).
     // `recebeuFotoDaRegiao` é fail-open: erro, timeout ou dúvida = aceita.
     let fotoServeParaOrcamento = recebeuImagem
-    if (recebeuImagem && contatoId) {
+    // Só classifica quando a foto ainda é dado que falta. Sem este portão a
+    // checagem rodava em QUALQUER imagem de QUALQUER etapa: quem já estava
+    // agendado e mandasse um print recebia "preciso de uma foto da região" —
+    // e, pior, a mensagem dele era engolida pelo `return` abaixo. Furo da
+    // OPE-560, encontrado na revisão de 29/07/2026.
+    const fotoAindaEDadoPendente =
+      proximaEtapaPendente(contextoContato) !== null &&
+      ["acolhimento", "qualificacao"].includes(contextoContato.etapa ?? "")
+
+    if (recebeuImagem && contatoId && fotoAindaEDadoPendente) {
       const desdeIso = new Date(inicioProcessamento - 120_000).toISOString()
       fotoServeParaOrcamento = await recebeuFotoDaRegiao({ contatoId, desdeIso })
 

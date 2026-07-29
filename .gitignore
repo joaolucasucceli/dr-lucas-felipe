@@ -48,3 +48,6 @@ next-env.d.ts
 
 # supabase CLI cache
 /supabase/.temp/
+
+# Credenciais de MCP da empresa — NUNCA versionar
+.mcp.json
