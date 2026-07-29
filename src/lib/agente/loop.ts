@@ -18,6 +18,7 @@ import {
 import { humanizarTexto } from "@/lib/agente/humanizar-texto"
 import { sanitizarSobreOPaciente } from "@/lib/agente/sanitizar-contexto"
 import { validarSaida } from "@/lib/agente/validar-saida"
+import { recebeuFotoDaRegiao } from "@/lib/agente/classificar-foto"
 import {
   ehPedidoDeLoteDeResultados,
   LIMITE_LOTE_RESULTADOS,
@@ -3167,12 +3168,56 @@ export async function processarMensagens(
       }
     }
 
+    // A imagem chegou — mas é a foto da região? Até 29/07/2026 o único critério
+    // era o tipo do anexo, e uma foto de bancada fechou a qualificação (OPE-560).
+    // `recebeuFotoDaRegiao` é fail-open: erro, timeout ou dúvida = aceita.
+    let fotoServeParaOrcamento = recebeuImagem
+    if (recebeuImagem && contatoId) {
+      const desdeIso = new Date(inicioProcessamento - 120_000).toISOString()
+      fotoServeParaOrcamento = await recebeuFotoDaRegiao({ contatoId, desdeIso })
+
+      if (!fotoServeParaOrcamento) {
+        console.log("[Agente] Imagem recebida nao e da regiao — foto segue pendente", {
+          contatoId,
+          conversaId,
+        })
+
+        // Agradece o envio e repete o pedido, SEM dizer o que veio na imagem
+        // nem que estava errada: a Ana não vê a foto (regra do script) e não
+        // conta problema interno (regra #11). Para a paciente, é só o pedido
+        // ficando mais específico.
+        const pendente = proximaEtapaPendente(contextoContato)
+        const textoFotoPendente =
+          pendente?.chave === "foto" || !pendente
+            ? comVocativo(
+                contextoContato,
+                "Recebi{nome}! Pra eu levar seu caso pro Dr. Lucas, preciso de uma foto da região que você quer tratar. Consegue me enviar uma foto atual dela?"
+              )
+            : `${comVocativo(contextoContato, "Recebi{nome}!")}
+---
+${comVocativo(contextoContato, pendente.pergunta)}`
+
+        enviouResposta = await enviarRespostaAgente({
+          chatId,
+          whatsapp,
+          contatoId,
+          conversaId,
+          configWa: configEnvio,
+          textoUsuario: textoBuffer,
+          textoResposta: textoFotoPendente,
+          contexto: contextoContato,
+        })
+
+        return { contatoId, conversaId }
+      }
+    }
+
     const fastPath = montarFastPathQualificacao({
       textoPaciente: textoBuffer,
       contexto: contextoContato,
       memoria,
       pacienteAceitouQualificacao,
-      recebeuImagem,
+      recebeuImagem: fotoServeParaOrcamento,
     })
 
     if (fastPath && contatoId) {
