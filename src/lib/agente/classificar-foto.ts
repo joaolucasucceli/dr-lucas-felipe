@@ -4,15 +4,16 @@ import { supabaseAdmin } from "@/lib/supabase"
 /**
  * A imagem que chegou é mesmo a foto da região que o Dr. Lucas precisa?
  *
- * Incidente de 28/07/2026 (OPE-560): a imagem enviada no teste era uma foto de
- * bancada — produtos, pia — e a Ana deu a qualificação por encerrada oito
- * segundos depois: *"Agora tenho o que o Dr. Lucas precisa pra definir o
- * orçamento exato"*. O único critério do código era o tipo do anexo
- * (`tipo === "imagem"`), nada sobre o conteúdo.
+ * O único critério do código era o tipo do anexo (`tipo === "imagem"`), nada
+ * sobre o conteúdo: print de anúncio, captura de tela, documento ou retrato
+ * vestido fechavam a qualificação igual, e depois da OPE-549 passariam a ser
+ * enviados ao WhatsApp do Dr. Lucas como "foto do caso".
  *
- * Em produção isso significa print de anúncio, selfie de rosto, foto de
- * documento ou captura de tela fechando a qualificação e ocupando o Dr. Lucas
- * com um caso que ele não tem como orçar.
+ * Nota honesta sobre a origem desta issue: ela nasceu de uma leitura errada
+ * minha do print de 28/07/2026 — descrevi a imagem enviada como "foto de
+ * bancada" olhando a miniatura cortada no WhatsApp. O arquivo original é uma
+ * selfie de abdome no espelho, legítima, e a Ana acertou ao aceitá-la. O risco
+ * geral continua real; o caso que motivou a issue é que não era exemplo dele.
  *
  * ## Decisões deste arquivo
  *
@@ -108,7 +109,10 @@ export async function recebeuFotoDaRegiao(params: {
     .eq("contatoId", params.contatoId)
     .gte("criadoEm", params.desdeIso)
     .order("criadoEm", { ascending: false })
-    .limit(3)
+    // Duas, não três: o processamento inteiro tem 45s de deadline e cada
+    // classificação pode levar até 8s. Em rajada de fotos, o que importa é
+    // responder o paciente — não auditar o álbum dele.
+    .limit(2)
 
   if (error || !fotos || fotos.length === 0) {
     // Sem conseguir ler, não bloqueia o fluxo: assume que a foto serve.
@@ -118,19 +122,22 @@ export async function recebeuFotoDaRegiao(params: {
     return true
   }
 
-  let algumaServe = false
+  // Em paralelo, não em sequência: duas fotos em série custariam até 16s do
+  // deadline de 45s. Assim o custo de tempo é o da foto mais lenta.
+  const vereditos = await Promise.all(
+    fotos.map(async (foto) => {
+      const veredito = await classificarFotoRecebida(foto.url)
 
-  for (const foto of fotos) {
-    const veredito = await classificarFotoRecebida(foto.url)
-    if (veredito !== "nao_corporal") algumaServe = true
+      // Guarda o veredito para o painel separar foto de caso de imagem
+      // qualquer. Best-effort: falhar aqui não muda a decisão.
+      await supabaseAdmin
+        .from("fotos_contato")
+        .update({ tipoAnalise: veredito })
+        .eq("id", foto.id)
 
-    // Guarda o veredito para o painel poder separar foto de caso de imagem
-    // qualquer. Best-effort: falhar aqui não muda a decisão.
-    await supabaseAdmin
-      .from("fotos_contato")
-      .update({ tipoAnalise: veredito })
-      .eq("id", foto.id)
-  }
+      return veredito
+    })
+  )
 
-  return algumaServe
+  return vereditos.some((veredito) => veredito !== "nao_corporal")
 }
