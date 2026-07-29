@@ -25,10 +25,13 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  // A trava do tipo tambem vale aqui: o modelo pode mandar um midiaId que ele
+  // viu em outra rodada, ou alucinar um id. So comparativo sai (OPE-553).
   const { data: midia } = await supabaseAdmin
     .from("midia_marketing")
     .select("id, descricao, url")
     .eq("id", midiaId)
+    .eq("tipo", "comparativo")
     .is("deletadoEm", null)
     .maybeSingle()
 

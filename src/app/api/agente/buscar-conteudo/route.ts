@@ -55,9 +55,13 @@ export async function POST(request: NextRequest) {
   // por acento. O catálogo já vinha inteiro no fallback — agora vem sempre,
   // ordenado por relevância, e o modelo decide se alguma serve. A regra de não
   // enviar mídia que não bate com o caso continua no prompt.
+  // Só `comparativo` (antes e depois na mesma imagem) pode ser oferecido a um
+  // lead. Foto de antes isolada e registro cirúrgico ficam de fora — ver
+  // OPE-553 e o comentário da coluna `tipo`.
   const { data: todasMidias, error: erroMidias } = await supabaseAdmin
     .from("midia_marketing")
     .select("id, descricao, url")
+    .eq("tipo", "comparativo")
     .is("deletadoEm", null)
 
   if (erroMidias) {

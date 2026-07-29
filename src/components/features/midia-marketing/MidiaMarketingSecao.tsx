@@ -23,6 +23,7 @@ import { useMidiaMarketing } from "@/hooks/use-midia-marketing"
 interface MidiaMarketing {
   id: string
   descricao: string
+  tipo: "comparativo" | "antes" | "pos_operatorio" | "outro"
   url: string
   criadoEm: string
 }
@@ -34,6 +35,14 @@ function ehVideo(url: string): boolean {
 function truncar(texto: string, max = 120): string {
   if (texto.length <= max) return texto
   return texto.slice(0, max).trim() + "…"
+}
+
+/** Rótulos curtos do tipo, para caber na tabela. Ver OPE-553. */
+const ROTULO_TIPO: Record<string, string> = {
+  comparativo: "Antes e depois",
+  antes: "Só o antes",
+  pos_operatorio: "Registro cirúrgico",
+  outro: "Outro",
 }
 
 export interface MidiaMarketingSecaoHandle {
@@ -143,6 +152,29 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
           {truncar(m.descricao, 120)}
         </button>
       ),
+    },
+    {
+      chave: "tipo",
+      titulo: "Tipo",
+      renderizar: (m) => {
+        const enviavel = m.tipo === "comparativo"
+        return (
+          <span
+            className={
+              enviavel
+                ? "inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400"
+                : "inline-flex items-center rounded-full border border-muted-foreground/30 px-2 py-0.5 text-xs text-muted-foreground"
+            }
+            title={
+              enviavel
+                ? "A Ana Júlia pode enviar esta mídia ao paciente"
+                : "Fica no acervo, mas a Ana Júlia não envia"
+            }
+          >
+            {ROTULO_TIPO[m.tipo] ?? m.tipo}
+          </span>
+        )
+      },
     },
     {
       chave: "acoes" as keyof MidiaMarketing,
