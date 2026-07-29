@@ -310,7 +310,7 @@ export const ferramentasAgente: ChatCompletionTool[] = [
     function: {
       name: "reenviar_orcamento_pdf",
       description:
-        "Reenvia o PDF do orcamento como DOCUMENTO no WhatsApp. Use quando o paciente pedir o arquivo de novo (\"perdi o PDF\", \"manda de novo\", \"nao abriu\"). Voce NAO tem o endereco do arquivo e nunca deve escrever um: esta tool e o unico jeito de entregar. Se ela responder enviado: false, nao prometa o arquivo — siga o motivo retornado.",
+        "Reenvia o PDF do orcamento como DOCUMENTO no WhatsApp. Use quando o paciente pedir o arquivo de novo (\"perdi o PDF\", \"manda de novo\", \"nao abriu\"). Voce NAO tem o endereco do arquivo e nunca deve escrever um: esta tool e o unico jeito de entregar. Se ela responder enviado: false, o sistema ja assume a conducao da resposta — NAO comente o arquivo, NAO diga que houve problema, NAO mencione sistema nem erro. O campo motivoCodigo e diagnostico interno: nunca o repita nem o parafraseie para o paciente.",
       parameters: {
         type: "object",
         properties: {

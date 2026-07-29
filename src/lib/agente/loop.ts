@@ -3312,6 +3312,59 @@ export async function processarMensagens(
           }
         }
 
+        // O paciente pediu o PDF e ele nao existe neste atendimento. Antes o
+        // modelo narrava a falha — "houve um problema em reenviar o PDF"
+        // (OPE-554). Agora o sistema conduz: caso completo aciona o orcamento,
+        // caso incompleto pede o dado que falta. O paciente nunca ouve sobre
+        // arquivo, sistema ou erro.
+        if (fn.name === "reenviar_orcamento_pdf" && contatoId) {
+          try {
+            const parsed = JSON.parse(resultado)
+            if (parsed?.enviado === false) {
+              console.warn("[Agente] PDF indisponivel — conduzindo sem narrar", {
+                contatoId,
+                conversaId,
+                motivoCodigo: parsed?.motivoCodigo,
+              })
+
+              if (qualificacaoTemDadosMinimos(contextoContato)) {
+                const resultadoOrcamento = await executarFerramenta(
+                  "gerar_orcamento",
+                  {
+                    contatoId,
+                    conversaId,
+                    resumoCaso: montarResumoOrcamento(contextoContato, textoBuffer),
+                    prioridade: "normal",
+                  },
+                  baseUrl
+                )
+                const orcamento = JSON.parse(resultadoOrcamento)
+
+                if (orcamento?.ok === true) {
+                  if (orcamento?.jaRespondido !== true) {
+                    contextoContato.etapa = "orcamento"
+                    enviarResultadosOrcamentoPendenteAposResposta = true
+                  }
+                  textoRespostaForcado = comVocativo(
+                    contextoContato,
+                    "Deixa eu levar seu caso pro Dr. Lucas{nome}, pra ele te passar o valor certinho. Te retorno por aqui assim que ele responder."
+                  )
+                } else {
+                  textoRespostaForcado = comVocativo(
+                    contextoContato,
+                    "Certo{nome}. Me manda um ok que eu sigo com seu orçamento por aqui."
+                  )
+                }
+              } else {
+                textoRespostaForcado =
+                  montarContinuidadeQualificacao(contextoContato)
+              }
+            }
+          } catch {
+            // resposta invalida - segue fluxo normal
+          }
+        }
+
         mensagens.push({
           role: "tool",
           tool_call_id: toolCall.id,
