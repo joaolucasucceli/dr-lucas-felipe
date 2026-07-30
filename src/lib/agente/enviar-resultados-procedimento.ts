@@ -55,6 +55,9 @@ type SelecaoResultados = {
   diagnostico: DiagnosticoResultados
 }
 
+/** Ação em `audit_logs` para o não-envio de resultados (OPE-559). */
+const ACAO_NAO_ENVIO = "resultados_nao_enviados"
+
 function normalizar(texto: string | null | undefined): string {
   return (texto || "")
     .normalize("NFD")
@@ -190,6 +193,70 @@ function completarSelecao(params: {
       .slice(0, faltantes)
       .map((midia) => ({ midia, jaEnviada: params.jaEnviada })),
   ]
+}
+
+/**
+ * Registra, UMA vez por atendimento e por motivo, que nada foi enviado.
+ *
+ * A dedupe não é enfeite. Enquanto o paciente espera o orçamento, o envio de
+ * resultados é tentado a cada mensagem dele — de propósito, porque a condição é
+ * de estado (OPE-551) e uma mídia pode ser cadastrada no meio da espera. Só que
+ * quando não há nada para enviar, a tentativa se repete e nunca muda de
+ * resultado: sem dedupe, um paciente falante geraria uma linha de auditoria por
+ * mensagem, todas idênticas, até o teto de 25/hora do freio.
+ *
+ * Um registro por (atendimento, motivo) é exatamente o sinal útil — "neste
+ * atendimento os resultados não saíram por X". Repetir não acrescenta nada e
+ * afoga a tabela que um humano precisa ler.
+ *
+ * Best-effort: falhar aqui não pode derrubar o atendimento.
+ */
+async function registrarNaoEnvio(params: {
+  conversaId: string
+  contatoId: string
+  origem: OrigemResultadosProcedimento
+  procedimentoInteresse: string | null
+  motivo: MotivoSemEnvio | null
+  ignoradas: number
+  diagnostico: DiagnosticoResultados
+}): Promise<void> {
+  try {
+    const { data: jaRegistrado } = await supabaseAdmin
+      .from("audit_logs")
+      .select("dadosDepois")
+      .eq("acao", ACAO_NAO_ENVIO)
+      .eq("entidadeId", params.conversaId)
+
+    const motivoAtual = params.motivo ?? null
+    const repetido = (jaRegistrado ?? []).some(
+      (linha) =>
+        ((linha.dadosDepois as { motivo?: string | null } | null)?.motivo ?? null) ===
+        motivoAtual
+    )
+
+    if (repetido) return
+  } catch (err) {
+    // Não conseguir conferir não pode impedir o registro: perder o rastro é
+    // pior que uma linha duplicada.
+    console.warn(
+      "[resultados-procedimento] Falha ao checar registro previo de nao-envio:",
+      err instanceof Error ? err.message : err
+    )
+  }
+
+  await registrarAuditLog({
+    acao: ACAO_NAO_ENVIO,
+    entidade: "conversas",
+    entidadeId: params.conversaId,
+    dadosDepois: {
+      contatoId: params.contatoId,
+      origem: params.origem,
+      procedimentoInteresse: params.procedimentoInteresse,
+      motivo: params.motivo,
+      ignoradas: params.ignoradas,
+      diagnostico: params.diagnostico,
+    },
+  })
 }
 
 async function selecionarResultados(params: {
@@ -508,24 +575,18 @@ export async function enviarResultadosProcedimento(params: {
   // Não-envio vira REGISTRO, não só log (OPE-559). O `console.warn` morre no
   // Vercel em algumas horas e ninguém vai olhar: o Dr. Lucas achava que tinha
   // deixado 5 resultados prontos, o sistema achava que não tinha nenhum, e não
-  // havia onde conferir quem estava certo. Agora fica em `audit_logs`, ligado à
-  // conversa, com o diagnóstico inteiro.
+  // havia onde conferir quem estava certo.
   //
-  // Só quando nada saiu. Envio parcial não é problema — é o limite por rodada
-  // funcionando, e registrar isso encheria a auditoria de ruído.
-  if (enviadas === 0) {
-    await registrarAuditLog({
-      acao: "resultados_nao_enviados",
-      entidade: "conversas",
-      entidadeId: conversaId ?? undefined,
-      dadosDepois: {
-        contatoId: params.contatoId,
-        origem: params.origem,
-        procedimentoInteresse: params.procedimentoInteresse ?? null,
-        motivo: motivo ?? null,
-        ignoradas,
-        diagnostico,
-      },
+  // Só quando nada saiu. Envio parcial é o limite por rodada funcionando.
+  if (enviadas === 0 && conversaId) {
+    await registrarNaoEnvio({
+      conversaId,
+      contatoId: params.contatoId,
+      origem: params.origem,
+      procedimentoInteresse: params.procedimentoInteresse ?? null,
+      motivo: motivo ?? null,
+      ignoradas,
+      diagnostico,
     })
   }
 

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { criarMidiaMarketingSchema } from "@/lib/validations/midia-marketing"
-import { midiaMarketingExisteNoStorage } from "@/lib/agente/midia-marketing-storage"
+import { verificarArquivosNoStorage } from "@/lib/agente/midia-marketing-storage"
 import { criarId, agora } from "@/lib/db-utils"
 
 export async function GET(request: NextRequest) {
@@ -36,14 +36,12 @@ export async function GET(request: NextRequest) {
   // paralelo — o mesmo que o agente já paga a cada envio, e aqui só quando
   // alguém abre a tela.
   const midias = data ?? []
-  const arquivos = await Promise.all(
-    midias.map((midia) => midiaMarketingExisteNoStorage(midia.url))
-  )
+  const arquivos = await verificarArquivosNoStorage(midias.map((midia) => midia.url))
 
   return NextResponse.json({
-    dados: midias.map((midia, indice) => ({
+    dados: midias.map((midia) => ({
       ...midia,
-      arquivoOk: arquivos[indice],
+      arquivoOk: arquivos.get(midia.url) ?? true,
     })),
   })
 }
