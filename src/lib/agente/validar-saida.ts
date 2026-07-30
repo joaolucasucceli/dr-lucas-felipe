@@ -80,15 +80,23 @@ const REGRAS: RegraSaida[] = [
     // Só o "me avisa" vago. "Me avisa qual desses horários encaixa melhor?" é
     // pergunta concreta do próximo passo e não pode ser tocada — por isso as
     // alternativas são fechadas, e não um `[^.!?]*` solto.
+    //
+    // O `r?` cobre o infinitivo: em 30/07/2026 passou *"é só me avisar."* para
+    // o Dr. Lucas, porque `avis[ae]\b` casa "avisa"/"avise" e a borda de palavra
+    // derrubava "avisar".
     padrao:
-      /\bme\s+avis[ae]\b(\s+(se|quando|qualquer)\b[^.!?]*|\s+que\s+(eu\s+)?(envio|mando|te\s+envio|te\s+mando)\b[^.!?]*|\s*,\s*t[áa]\s+bom\b[^.!?]*|\s*[.!])/gi,
+      /\bme\s+avis[ae]r?\b(\s+(se|quando|qualquer)\b[^.!?]*|\s+que\s+(eu\s+)?(envio|mando|te\s+envio|te\s+mando)\b[^.!?]*|\s*,\s*t[áa]\s+bom\b[^.!?]*|\s*[.!])/gi,
   },
 
   // ── Erro interno (regra #11) ────────────────────────────────────────────
   {
     nome: "erro_interno",
+    // "confusão" e "me confundi" entraram em 30/07/2026: o Dr. Lucas recebeu
+    // *"Parece que tive uma pequena confusão aqui, mas agora já foi tudo
+    // resolvido."* A lista pegava só a família "problema/erro/falha" — o modelo
+    // achou outra palavra para contar o mesmo defeito interno.
     padrao:
-      /[^.!?]*\b(houve\s+um\s+problema|probleminha|problema\s+t[ée]cnico|tive\s+(um\s+erro|uma\s+falha)|deu\s+erro|n[ãa]o\s+consegui\s+processar|erro\s+ao\s+(registrar|enviar|gerar))\b[^.!?]*/gi,
+      /[^.!?]*\b(houve\s+um\s+problema|probleminha|problema\s+t[ée]cnico|tive\s+(um\s+erro|uma\s+falha|uma\s+pequena\s+confus[ãa]o|uma\s+confus[ãa]o)|me\s+confundi|houve\s+(uma\s+)?confus[ãa]o|equ[íi]voco|deu\s+erro|n[ãa]o\s+consegui\s+processar|erro\s+ao\s+(registrar|enviar|gerar))\b[^.!?]*/gi,
   },
 
   // ── Anúncio de ausência (OPE-555) ───────────────────────────────────────

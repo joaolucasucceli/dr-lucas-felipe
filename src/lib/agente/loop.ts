@@ -53,6 +53,15 @@ const DEADLINE_MARGIN_MS = 5_000
 const AGENDAMENTO_ESTADO_TTL = 60 * 60 * 3
 
 /**
+ * Quanto tempo a marca de "abertura já enviada" vale.
+ *
+ * 48h é a mesma janela que define o fim de um atendimento
+ * (`JANELA_ATENDIMENTO_HORAS` em conversas/atendimento.ts): passado isso, a
+ * próxima mensagem abre atendimento novo e a apresentação deve sair de novo.
+ */
+const ABERTURA_TTL = 60 * 60 * 48
+
+/**
  * Quantas vezes a Ana insiste no nome antes de seguir sem ele (OPE-556).
  *
  * Dois é o limite do script para o e-mail no agendamento, e vale a mesma
@@ -365,12 +374,20 @@ function montarPedidoDeOkParaOrcamento(contexto: ContextoContato): string {
 function montarContinuidadeParaValidador(
   contexto: ContextoContato
 ): string | null {
+  // Nada de continuidade de qualificação fora da qualificação. Eu tinha travado
+  // por etapa só o pedido de ok e deixado a pergunta pendente valendo em
+  // qualquer etapa — e como o marcador da foto podia nunca ser gravado (ver o
+  // `adicionarFatoAoContato` na chegada da imagem), a pergunta da foto passou a
+  // grudar em toda mensagem aparada, até em `consulta_agendada`. Foi o que o
+  // Dr. Lucas viu quatro vezes no teste de 30/07/2026.
+  if (!["acolhimento", "qualificacao"].includes(contexto.etapa ?? "")) {
+    return null
+  }
+
   const etapa = proximaEtapaPendente(contexto)
   if (etapa) return comVocativo(contexto, etapa.pergunta)
 
-  return ["acolhimento", "qualificacao"].includes(contexto.etapa ?? "")
-    ? montarPedidoDeOkParaOrcamento(contexto)
-    : null
+  return montarPedidoDeOkParaOrcamento(contexto)
 }
 
 async function persistirIntencaoInicialLead(params: {
@@ -1031,6 +1048,70 @@ function slotsSemIgnorados(
 
 function chaveEstadoAgendamento(chatId: string): string {
   return `agente:agendamento:${chatId}`
+}
+
+/**
+ * A chave é por ATENDIMENTO, não por número.
+ *
+ * Se fosse por `chatId`, a marca do atendimento anterior bloquearia a
+ * apresentação do próximo — e limpá-la ao abrir conversa nova reabriria a
+ * corrida que esta marca existe para fechar (os dois processamentos se acham a
+ * primeira resposta, os dois limpam, os dois se apresentam). Amarrando na
+ * `conversaId`, o atendimento novo já nasce com chave nova, sem ninguém limpar
+ * nada.
+ */
+function chaveAberturaEnviada(chatId: string, conversaId: string | null): string {
+  return `agente:abertura:${conversaId ?? chatId}`
+}
+
+/**
+ * A abertura já saiu neste atendimento?
+ *
+ * Existe porque `primeiraRespostaDaConversa` é calculada no INÍCIO do
+ * processamento e duas mensagens seguidas viram dois processamentos: em
+ * 30/07/2026 o Dr. Lucas mandou "Bom dia" e, 9 segundos depois, "Boa tarde" —
+ * acima da janela de 6s do debounce. Os dois se acharam a primeira resposta e a
+ * apresentação inteira saiu duas vezes, os três blocos repetidos.
+ *
+ * A marca é gravada ANTES do envio, para que o segundo processamento já a
+ * encontre. Falha de Redis não pode emudecer a abertura, então o erro devolve
+ * `false` — repetir a saudação é ruim, não ter saudação nenhuma é pior.
+ */
+async function aberturaJaEnviada(
+  chatId: string,
+  conversaId: string | null
+): Promise<boolean> {
+  try {
+    return Boolean(await redis.get(chaveAberturaEnviada(chatId, conversaId)))
+  } catch (err) {
+    console.warn("[Agente] Falha ao checar marca de abertura:", err)
+    return false
+  }
+}
+
+async function marcarAberturaEnviada(
+  chatId: string,
+  conversaId: string | null
+): Promise<void> {
+  try {
+    await redis.set(chaveAberturaEnviada(chatId, conversaId), "1", {
+      ex: ABERTURA_TTL,
+    })
+  } catch (err) {
+    console.warn("[Agente] Falha ao marcar abertura enviada:", err)
+  }
+}
+
+/** Desfaz a marca quando a abertura não chegou a sair. */
+async function limparMarcaAbertura(
+  chatId: string,
+  conversaId: string | null
+): Promise<void> {
+  try {
+    await redis.del(chaveAberturaEnviada(chatId, conversaId))
+  } catch (err) {
+    console.warn("[Agente] Falha ao limpar marca de abertura:", err)
+  }
 }
 
 function normalizarSlotPersistido(
@@ -3047,7 +3128,11 @@ export async function processarMensagens(
         contextoContato,
         memoria,
         primeiraRespostaDaConversa
-      )
+      ) &&
+      // A marca no Redis é o que impede a apresentação sair duas vezes quando o
+      // paciente manda duas mensagens fora da janela do debounce — ver
+      // `aberturaJaEnviada`.
+      !(await aberturaJaEnviada(chatId, conversaId))
     ) {
       console.log("[Agente] Fast-path de abertura obrigatoria usado", {
         contatoId,
@@ -3056,7 +3141,11 @@ export async function processarMensagens(
         primeiraRespostaDaConversa,
       })
 
-      await enviarRespostaAgente({
+      // Marca ANTES de enviar: o processamento vizinho precisa encontrar a
+      // marca já gravada, não depois que esta resposta terminar de sair.
+      await marcarAberturaEnviada(chatId, conversaId)
+
+      const enviouAbertura = await enviarRespostaAgente({
         chatId,
         whatsapp,
         contatoId,
@@ -3065,6 +3154,11 @@ export async function processarMensagens(
         textoUsuario: textoBuffer,
         textoResposta: montarAberturaObrigatoria(textoBuffer),
       })
+
+      // Se não saiu (freio, WhatsApp fora), a marca estaria mentindo e o
+      // paciente ficaria sem saudação nenhuma. Melhor arriscar repetir do que
+      // abrir a conversa muda.
+      if (!enviouAbertura) await limparMarcaAbertura(chatId, conversaId)
 
       return contatoId ? { contatoId, conversaId } : null
     }
@@ -3284,7 +3378,12 @@ export async function processarMensagens(
     // propósito: o limite de 1 mídia por rodada é regra de prompt, e mesmo que
     // o modelo quisesse mandar tudo, `MAX_TOOL_ITERATIONS` cortaria em 2 ou 3.
     // O Dr. Lucas precisou pedir três vezes para ver três fotos.
-    if (contatoId) {
+    //
+    // A partir do orçamento, como todo o resto (30/07/2026). Este caminho chama
+    // `enviarResultadosProcedimento` direto e por isso NÃO passa pela trava da
+    // rota `enviar-midia` — sem esta linha, "manda todos" seria a porta dos
+    // fundos para a mesma imagem que a trava recusa pela porta da frente.
+    if (contatoId && !["acolhimento", "qualificacao"].includes(contextoContato.etapa ?? "")) {
       const conversaJaFalouDeMidia =
         detectarGatilhoVisualMidia(textoBuffer) ||
         (await conversaTemMidiaDoAgente(conversaId))
@@ -3392,6 +3491,25 @@ ${comVocativo(contextoContato, pendente.pergunta)}`
 
         return { contatoId, conversaId }
       }
+
+      // A foto serve: grava o marcador AQUI, antes de qualquer caminho decidir
+      // a resposta. Até 30/07/2026 quem gravava era só o fast-path — se o
+      // atendimento corresse pelo modelo, ele anotava com as palavras dele
+      // ("Lucas (...) enviou uma foto da região") e o marcador que
+      // `ETAPAS_QUALIFICACAO.foto.jaColetado` procura nunca aparecia.
+      //
+      // O efeito era permanente: `proximaEtapaPendente` devolvia "foto" para
+      // sempre, e o Dr. Lucas recebeu quatro vezes "consegue me enviar uma foto
+      // atual?" — com o orçamento entregue e a consulta já marcada. Era o pior
+      // sintoma do teste dele.
+      //
+      // Gravar na raiz, e não em cada rota, é o que impede o próximo caminho
+      // novo de nascer com o mesmo furo.
+      await adicionarFatoAoContato(
+        contatoId,
+        contextoContato,
+        FATO_FOTO_QUALIFICACAO
+      )
     }
 
     const fastPath = montarFastPathQualificacao({
