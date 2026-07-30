@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { urlDeMidiaSuportada } from "@/lib/agente/midia-marketing-url"
 
 /**
  * O que a imagem mostra. Só `comparativo` pode ser enviado a um lead — ver
@@ -37,7 +38,16 @@ export const tipoMidiaMarketingSchema = z.enum([
 
 export const criarMidiaMarketingSchema = z.object({
   descricao: z.string().min(3, "Descreva a midia").max(1000),
-  url: z.string().min(1, "Anexe um arquivo"),
+  // A URL precisa ser de um endereço que o sistema saiba ler na hora de enviar.
+  // Sem esta trava, mídia com endereço estranho entrava no catálogo, aparecia
+  // saudável na tela e era descartada em silêncio no envio (OPE-559).
+  url: z
+    .string()
+    .min(1, "Anexe um arquivo")
+    .refine(urlDeMidiaSuportada, {
+      message:
+        "Endereço não suportado. Use o botão de anexar arquivo — a Ana Júlia não consegue enviar mídia de endereço externo.",
+    }),
   tipo: tipoMidiaMarketingSchema,
 })
 

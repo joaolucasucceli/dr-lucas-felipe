@@ -1,7 +1,7 @@
 "use client"
 
 import { forwardRef, useImperativeHandle, useState } from "react"
-import { MoreHorizontal, Pencil, Trash2, Film, ImageIcon } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Film, ImageIcon, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,8 @@ interface MidiaMarketing {
   tipo: "comparativo" | "antes" | "pos_operatorio" | "outro"
   url: string
   criadoEm: string
+  /** O arquivo foi achado no Storage? `false` = a Ana Júlia não envia. */
+  arquivoOk: boolean
 }
 
 function ehVideo(url: string): boolean {
@@ -127,7 +129,9 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
           className="rounded p-1 hover:bg-muted transition-colors"
           title="Ver preview"
         >
-          {ehVideo(m.url) ? (
+          {m.arquivoOk === false ? (
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+          ) : ehVideo(m.url) ? (
             <Film className="h-4 w-4 text-muted-foreground" />
           ) : (
             <ImageIcon className="h-4 w-4 text-muted-foreground" />
@@ -157,6 +161,21 @@ export const MidiaMarketingSecao = forwardRef<MidiaMarketingSecaoHandle>(
       chave: "tipo",
       titulo: "Tipo",
       renderizar: (m) => {
+        // Arquivo faltando manda no tipo: por mais que seja "antes e depois",
+        // sem arquivo ela não sai. Mostrar o rótulo verde aqui seria repetir na
+        // tela a mentira que a OPE-559 veio consertar.
+        if (m.arquivoOk === false) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-xs text-destructive"
+              title="O arquivo não foi encontrado no Storage. A Ana Júlia não consegue enviar esta mídia — cadastre o arquivo de novo."
+            >
+              <AlertTriangle className="h-3 w-3" />
+              Arquivo não encontrado
+            </span>
+          )
+        }
+
         const enviavel = m.tipo === "comparativo"
         return (
           <span

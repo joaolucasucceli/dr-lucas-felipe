@@ -6,6 +6,7 @@ import {
   resolverConversaAtiva,
 } from "@/lib/agente/enviar-midia-marketing"
 import { filtrarMidiasComArquivo } from "@/lib/agente/midia-marketing-storage"
+import { registrarAuditLog } from "@/lib/audit"
 import { supabaseAdmin } from "@/lib/supabase"
 
 // "orcamento_estimado" saiu em 22/07/2026 junto com a estimativa automatica:
@@ -503,6 +504,30 @@ export async function enviarResultadosProcedimento(params: {
   })
 
   const motivo = enviadas === 0 && ignoradas > 0 ? "falha_envio_midia" : diagnostico.motivo
+
+  // Não-envio vira REGISTRO, não só log (OPE-559). O `console.warn` morre no
+  // Vercel em algumas horas e ninguém vai olhar: o Dr. Lucas achava que tinha
+  // deixado 5 resultados prontos, o sistema achava que não tinha nenhum, e não
+  // havia onde conferir quem estava certo. Agora fica em `audit_logs`, ligado à
+  // conversa, com o diagnóstico inteiro.
+  //
+  // Só quando nada saiu. Envio parcial não é problema — é o limite por rodada
+  // funcionando, e registrar isso encheria a auditoria de ruído.
+  if (enviadas === 0) {
+    await registrarAuditLog({
+      acao: "resultados_nao_enviados",
+      entidade: "conversas",
+      entidadeId: conversaId ?? undefined,
+      dadosDepois: {
+        contatoId: params.contatoId,
+        origem: params.origem,
+        procedimentoInteresse: params.procedimentoInteresse ?? null,
+        motivo: motivo ?? null,
+        ignoradas,
+        diagnostico,
+      },
+    })
+  }
 
   if (params.chatId && enviadas > 0) {
     await adicionarAMemoria(params.chatId, {

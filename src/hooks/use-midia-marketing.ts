@@ -9,6 +9,8 @@ interface MidiaMarketing {
   url: string
   tipo: "comparativo" | "antes" | "pos_operatorio" | "outro"
   criadoEm: string
+  /** O arquivo foi achado no Storage? `false` = a Ana Julia nao envia (OPE-559). */
+  arquivoOk: boolean
 }
 
 interface Opcoes {

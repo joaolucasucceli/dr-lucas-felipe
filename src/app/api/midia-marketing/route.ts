@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireRole } from "@/lib/auth-helpers"
 import { criarMidiaMarketingSchema } from "@/lib/validations/midia-marketing"
+import { midiaMarketingExisteNoStorage } from "@/lib/agente/midia-marketing-storage"
 import { criarId, agora } from "@/lib/db-utils"
 
 export async function GET(request: NextRequest) {
@@ -25,7 +26,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ dados: data ?? [] })
+  // Estado real do arquivo, por registro (OPE-559). Sem isto a tela mostrava
+  // como saudável uma mídia que a Ana Júlia nunca conseguiria enviar, e o
+  // Dr. Lucas não tinha como saber que os resultados dele estavam fora do ar —
+  // o descarte só existia em `console.warn`.
+  //
+  // Usa a MESMA função do caminho de envio, de propósito: se um dia as duas
+  // divergirem, a tela volta a mentir. O custo é uma checagem por mídia, em
+  // paralelo — o mesmo que o agente já paga a cada envio, e aqui só quando
+  // alguém abre a tela.
+  const midias = data ?? []
+  const arquivos = await Promise.all(
+    midias.map((midia) => midiaMarketingExisteNoStorage(midia.url))
+  )
+
+  return NextResponse.json({
+    dados: midias.map((midia, indice) => ({
+      ...midia,
+      arquivoOk: arquivos[indice],
+    })),
+  })
 }
 
 export async function POST(request: NextRequest) {
