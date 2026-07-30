@@ -25,6 +25,39 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  // ⛔ Resultado só aparece a partir da espera do orçamento (regra do Dr. Lucas,
+  // 30/07/2026: *"essa imagem tem que ficar só no fluxo dos resultados até sair
+  // o orçamento"*).
+  //
+  // No teste dele, dizer "quero saber sobre lipo de abdômen" já trazia foto de
+  // resultado — porque o prompt mandava enviar uma mídia no início da
+  // qualificação, regra que ELE tinha pedido em 25/05. Como a regra mudou, a
+  // trava fica no CÓDIGO: prompt é instrução, não garantia (lição da OPE-558),
+  // e o modelo volta a enviar assim que o contexto ficar longo.
+  //
+  // Só esta rota é travada, de propósito. O bloco de resultados da espera usa
+  // `enviarMidiaMarketing` direto (`enviar-resultados-procedimento.ts`) e
+  // continua funcionando — é justamente o "fluxo dos resultados" que ele quer.
+  const { data: conversaAtual } = await supabaseAdmin
+    .from("conversas")
+    .select("etapa")
+    .eq("id", conversaId)
+    .maybeSingle()
+
+  const etapaAtual = (conversaAtual?.etapa as string | null) ?? "acolhimento"
+  if (["acolhimento", "qualificacao"].includes(etapaAtual)) {
+    console.log("[enviar-midia] Bloqueado antes do orcamento", {
+      contatoId,
+      conversaId,
+      etapa: etapaAtual,
+    })
+    return NextResponse.json({
+      ok: true,
+      enviado: false,
+      motivoCodigo: MOTIVOS_TOOL.MIDIA_FORA_DA_ETAPA,
+    })
+  }
+
   // A trava do tipo tambem vale aqui: o modelo pode mandar um midiaId que ele
   // viu em outra rodada, ou alucinar um id. So comparativo sai (OPE-553).
   const { data: midia } = await supabaseAdmin

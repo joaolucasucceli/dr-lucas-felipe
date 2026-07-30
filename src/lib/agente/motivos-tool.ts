@@ -30,6 +30,11 @@ export const MOTIVOS_TOOL = {
   PARAMETROS_AUSENTES: "parametros_ausentes",
   /** O id de mídia não existe mais (ou foi removido do catálogo). */
   MIDIA_NAO_ENCONTRADA: "midia_nao_encontrada",
+  /**
+   * Ainda não é hora de mostrar resultado — o caso não chegou ao orçamento.
+   * Regra do Dr. Lucas de 30/07/2026; ver a trava em `enviar-midia/route.ts`.
+   */
+  MIDIA_FORA_DA_ETAPA: "midia_fora_da_etapa",
   /** O arquivo não está no Storage — ver midia-marketing-storage.ts. */
   ARQUIVO_INDISPONIVEL: "arquivo_indisponivel",
   /** Falha de rede/Uazapi no envio. */
